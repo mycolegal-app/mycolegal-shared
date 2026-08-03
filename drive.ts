@@ -15,7 +15,18 @@
 
 import type { StorageClient } from './storage';
 
-export type DriveArea = 'DOCUMENTS' | 'SHARED' | 'PERSONAL';
+// PARTNER = "Área de archivos": intercambio Notaría ↔ partner tercero (gestoría/
+// banco), aislado por partner. Raíz `rootKey = "PARTNER:{partnerOrgId}"`, prefijo
+// físico `_partners/{partnerOrgId}`. Ver PLAN_TECNICO_UNIDAD_DE_RED.md §B.1.
+export type DriveArea = 'DOCUMENTS' | 'SHARED' | 'PERSONAL' | 'PARTNER';
+
+/** Nombre de la carpeta bandeja (única zona escribible por el partner). */
+export const BANDEJA_FOLDER_NAME = '_bandeja';
+
+/** rootKey de la raíz de intercambio de un partner. */
+export function partnerRootKey(partnerOrgId: string): string {
+  return `PARTNER:${partnerOrgId}`;
+}
 
 export interface DriveNodeRecord {
   id: string;
@@ -27,6 +38,9 @@ export interface DriveNodeRecord {
   ownerUserId: string | null;
   managedBy: string | null;
   rootKey: string | null;
+  partnerOrgId: string | null;
+  partnerDeptId: string | null;
+  partnerInbox: boolean;
   gcsBucket: string | null;
   gcsPath: string | null;
   mimeType: string | null;
@@ -52,6 +66,9 @@ export interface DriveNodeWriteData {
   ownerUserId?: string | null;
   managedBy?: string | null;
   rootKey?: string | null;
+  partnerOrgId?: string | null;
+  partnerDeptId?: string | null;
+  partnerInbox?: boolean;
   gcsBucket?: string | null;
   gcsPath?: string | null;
   mimeType?: string | null;
@@ -78,16 +95,18 @@ export interface DriveDb {
 
 // ---- Raíces y prefijos físicos por área ------------------------------------
 
-function rootKeyFor(area: DriveArea, app?: string, userId?: string): string {
+function rootKeyFor(area: DriveArea, app?: string, userId?: string, partnerOrgId?: string): string {
   if (area === 'DOCUMENTS') return `APP:${app}`;
   if (area === 'PERSONAL') return `MIESPACIO:${userId}`;
+  if (area === 'PARTNER') return partnerRootKey(partnerOrgId!);
   return 'COMPARTIDO';
 }
 
 /** Prefijo físico dentro de `{orgId}/…` (sin el orgId). */
-function rootPrefixFor(area: DriveArea, app?: string, userId?: string): string {
+function rootPrefixFor(area: DriveArea, app?: string, userId?: string, partnerOrgId?: string): string {
   if (area === 'DOCUMENTS') return app!;
   if (area === 'PERSONAL') return `_users/${userId}`;
+  if (area === 'PARTNER') return `_partners/${partnerOrgId}`;
   return '_shared';
 }
 
@@ -106,12 +125,14 @@ export interface AreaContext {
   area: DriveArea;
   app?: string; // requerido si area=DOCUMENTS
   userId?: string; // requerido si area=PERSONAL
+  partnerOrgId?: string; // requerido si area=PARTNER (authOrgId de la Organization externa)
+  partnerDeptId?: string | null; // departamento del banco (cascada); null en gestorías
   createdBy?: string | null;
 }
 
 /** Garantiza la raíz del área (FOLDER con rootKey) y devuelve su id. */
 async function ensureRoot(db: DriveDb, ctx: AreaContext): Promise<string> {
-  const rootKey = rootKeyFor(ctx.area, ctx.app, ctx.userId);
+  const rootKey = rootKeyFor(ctx.area, ctx.app, ctx.userId, ctx.partnerOrgId);
   const existing = await db.driveNode.findFirst({ where: { orgId: ctx.orgId, rootKey } });
   if (existing) return existing.id;
   const created = await db.driveNode.create({
@@ -124,6 +145,9 @@ async function ensureRoot(db: DriveDb, ctx: AreaContext): Promise<string> {
       visibility: areaVisibility(ctx.area),
       ownerUserId: ctx.area === 'PERSONAL' ? ctx.userId ?? null : null,
       managedBy: ctx.area === 'DOCUMENTS' ? ctx.app ?? null : null,
+      // La raíz lleva el eje partner (el filtro de aislamiento lo usa); el
+      // sub-scope por departamento se fija en las subcarpetas, no en la raíz.
+      partnerOrgId: ctx.area === 'PARTNER' ? ctx.partnerOrgId ?? null : null,
       createdBy: ctx.createdBy ?? null,
     },
   });
@@ -160,6 +184,8 @@ export async function ensureFolderChain(
         visibility: areaVisibility(ctx.area),
         ownerUserId: ctx.area === 'PERSONAL' ? ctx.userId ?? null : null,
         managedBy: ctx.area === 'DOCUMENTS' ? ctx.app ?? null : null,
+        partnerOrgId: ctx.area === 'PARTNER' ? ctx.partnerOrgId ?? null : null,
+        partnerDeptId: ctx.area === 'PARTNER' ? ctx.partnerDeptId ?? null : null,
         createdBy: ctx.createdBy ?? null,
       },
     });
@@ -191,6 +217,103 @@ export async function mkdir(
     },
   });
   return created.id;
+}
+
+// ---- Área de archivos: intercambio Notaría ↔ partner (B.1) ------------------
+
+export interface PartnerExchangeInput {
+  orgId: string; // notaría
+  partnerOrgId: string; // authOrgId de la Organization externa (gestoría/banco)
+  partnerDeptId?: string | null; // departamento del banco (cascada); null en gestorías
+  expediente: { id: string; label: string };
+  createdBy?: string | null;
+}
+
+export interface PartnerExchangeResult {
+  rootId: string; // raíz PARTNER:{partnerOrgId}
+  expedienteFolderId: string; // subcarpeta del expediente (entity-tagged)
+  bandejaId: string; // carpeta `_bandeja` (partnerInbox) escribible por el partner
+}
+
+/**
+ * Garantiza el árbol de intercambio de un partner para un expediente concreto:
+ *   PARTNER:{partnerOrgId}/  →  {expediente.label}/  →  _bandeja/
+ *
+ * Idempotente: la raíz por (orgId, rootKey); la carpeta de expediente por
+ * (orgId, parentId, entityType='EXPEDIENTE', entityId) — no por nombre, para
+ * tolerar renombrados; `_bandeja` por (orgId, parentId, name). La carpeta de
+ * expediente lleva `entityType/entityId/entityLabel` + `partnerDeptId` (sub-scope
+ * de banco); `_bandeja` lleva `partnerInbox=true` (única zona escribible por el
+ * externo). El aislamiento entre partners lo impone el gate (Fase 2+), no este
+ * helper. Ver PLAN_TECNICO_UNIDAD_DE_RED.md §B.1.
+ */
+export async function ensurePartnerExchangeFolder(
+  db: DriveDb,
+  input: PartnerExchangeInput,
+): Promise<PartnerExchangeResult> {
+  const { orgId, partnerOrgId, expediente } = input;
+  const partnerDeptId = input.partnerDeptId ?? null;
+  const createdBy = input.createdBy ?? null;
+
+  const ctx: AreaContext = { orgId, area: 'PARTNER', partnerOrgId, partnerDeptId, createdBy };
+  const rootId = await ensureRoot(db, ctx);
+
+  // Subcarpeta del expediente (idempotente por entidad, no por nombre).
+  let expFolder = await db.driveNode.findFirst({
+    where: {
+      orgId,
+      parentId: rootId,
+      type: 'FOLDER',
+      entityType: 'EXPEDIENTE',
+      entityId: expediente.id,
+      trashedAt: null,
+    },
+  });
+  if (!expFolder) {
+    expFolder = await db.driveNode.create({
+      data: {
+        orgId,
+        parentId: rootId,
+        type: 'FOLDER',
+        name: expediente.label,
+        visibility: 'ORG',
+        partnerOrgId,
+        partnerDeptId,
+        entityType: 'EXPEDIENTE',
+        entityId: expediente.id,
+        entityLabel: expediente.label,
+        createdBy,
+      },
+    });
+  }
+
+  // Bandeja de entrada del partner (única zona escribible por el externo).
+  let bandeja = await db.driveNode.findFirst({
+    where: {
+      orgId,
+      parentId: expFolder.id,
+      type: 'FOLDER',
+      name: BANDEJA_FOLDER_NAME,
+      trashedAt: null,
+    },
+  });
+  if (!bandeja) {
+    bandeja = await db.driveNode.create({
+      data: {
+        orgId,
+        parentId: expFolder.id,
+        type: 'FOLDER',
+        name: BANDEJA_FOLDER_NAME,
+        visibility: 'ORG',
+        partnerOrgId,
+        partnerDeptId,
+        partnerInbox: true,
+        createdBy,
+      },
+    });
+  }
+
+  return { rootId, expedienteFolderId: expFolder.id, bandejaId: bandeja.id };
 }
 
 // ---- Alta de ficheros -------------------------------------------------------
@@ -230,7 +353,7 @@ export async function storeFile(
   storage: StorageClient,
   input: StoreFileInput,
 ): Promise<StoreFileResult> {
-  const prefix = rootPrefixFor(input.area, input.app, input.userId);
+  const prefix = rootPrefixFor(input.area, input.app, input.userId, input.partnerOrgId);
   const safeName = sanitizeSegment(input.name);
 
   let gcsPath = input.gcsPath;
@@ -269,6 +392,8 @@ export async function storeFile(
     visibility: input.visibility ?? areaVisibility(input.area),
     ownerUserId: input.area === 'PERSONAL' ? input.userId ?? null : null,
     managedBy: input.area === 'DOCUMENTS' ? input.app ?? null : null,
+    partnerOrgId: input.area === 'PARTNER' ? input.partnerOrgId ?? null : null,
+    partnerDeptId: input.area === 'PARTNER' ? input.partnerDeptId ?? null : null,
     gcsBucket: input.gcsBucket ?? null,
     gcsPath,
     mimeType: input.mime ?? null,
@@ -305,6 +430,8 @@ export async function linkExisting(
     visibility: input.visibility ?? areaVisibility(input.area),
     ownerUserId: input.area === 'PERSONAL' ? input.userId ?? null : null,
     managedBy: input.area === 'DOCUMENTS' ? input.app ?? null : null,
+    partnerOrgId: input.area === 'PARTNER' ? input.partnerOrgId ?? null : null,
+    partnerDeptId: input.area === 'PARTNER' ? input.partnerDeptId ?? null : null,
     gcsBucket: input.gcsBucket ?? null,
     gcsPath: input.gcsPath,
     mimeType: input.mime ?? null,
