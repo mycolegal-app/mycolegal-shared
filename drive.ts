@@ -18,7 +18,7 @@ import type { StorageClient } from './storage';
 // PARTNER = "Área de archivos": intercambio Notaría ↔ partner tercero (gestoría/
 // banco), aislado por partner. Raíz `rootKey = "PARTNER:{partnerOrgId}"`, prefijo
 // físico `_partners/{partnerOrgId}`. Ver PLAN_TECNICO_UNIDAD_DE_RED.md §B.1.
-export type DriveArea = 'DOCUMENTS' | 'SHARED' | 'PERSONAL' | 'PARTNER';
+export type DriveArea = 'DOCUMENTS' | 'SHARED' | 'PERSONAL' | 'PARTNER' | 'GLOBAL';
 
 /** Nombre de la carpeta bandeja (única zona escribible por el partner). */
 export const BANDEJA_FOLDER_NAME = '_bandeja';
@@ -97,6 +97,7 @@ export interface DriveDb {
 
 function rootKeyFor(area: DriveArea, app?: string, userId?: string, partnerOrgId?: string): string {
   if (area === 'DOCUMENTS') return `APP:${app}`;
+  if (area === 'GLOBAL') return 'GLOBAL:BIBLIOTECA';
   if (area === 'PERSONAL') return `MIESPACIO:${userId}`;
   if (area === 'PARTNER') return partnerRootKey(partnerOrgId!);
   return 'COMPARTIDO';
@@ -105,6 +106,7 @@ function rootKeyFor(area: DriveArea, app?: string, userId?: string, partnerOrgId
 /** Prefijo físico dentro de `{orgId}/…` (sin el orgId). */
 function rootPrefixFor(area: DriveArea, app?: string, userId?: string, partnerOrgId?: string): string {
   if (area === 'DOCUMENTS') return app!;
+  if (area === 'GLOBAL') return '_global/biblioteca';
   if (area === 'PERSONAL') return `_users/${userId}`;
   if (area === 'PARTNER') return `_partners/${partnerOrgId}`;
   return '_shared';
@@ -144,7 +146,7 @@ async function ensureRoot(db: DriveDb, ctx: AreaContext): Promise<string> {
       rootKey,
       visibility: areaVisibility(ctx.area),
       ownerUserId: ctx.area === 'PERSONAL' ? ctx.userId ?? null : null,
-      managedBy: ctx.area === 'DOCUMENTS' ? ctx.app ?? null : null,
+      managedBy: ctx.area === 'DOCUMENTS' || ctx.area === 'GLOBAL' ? ctx.app ?? 'consultor' : null,
       // La raíz lleva el eje partner (el filtro de aislamiento lo usa); el
       // sub-scope por departamento se fija en las subcarpetas, no en la raíz.
       partnerOrgId: ctx.area === 'PARTNER' ? ctx.partnerOrgId ?? null : null,
@@ -183,7 +185,7 @@ export async function ensureFolderChain(
         name,
         visibility: areaVisibility(ctx.area),
         ownerUserId: ctx.area === 'PERSONAL' ? ctx.userId ?? null : null,
-        managedBy: ctx.area === 'DOCUMENTS' ? ctx.app ?? null : null,
+        managedBy: ctx.area === 'DOCUMENTS' || ctx.area === 'GLOBAL' ? ctx.app ?? 'consultor' : null,
         partnerOrgId: ctx.area === 'PARTNER' ? ctx.partnerOrgId ?? null : null,
         partnerDeptId: ctx.area === 'PARTNER' ? ctx.partnerDeptId ?? null : null,
         createdBy: ctx.createdBy ?? null,
@@ -212,7 +214,7 @@ export async function mkdir(
       name: input.name,
       visibility: areaVisibility(input.area),
       ownerUserId: input.area === 'PERSONAL' ? input.userId ?? null : null,
-      managedBy: input.area === 'DOCUMENTS' ? input.app ?? null : null,
+      managedBy: input.area === 'DOCUMENTS' || input.area === 'GLOBAL' ? input.app ?? 'consultor' : null,
       createdBy: input.createdBy ?? null,
     },
   });
@@ -391,7 +393,7 @@ export async function storeFile(
     name: input.name,
     visibility: input.visibility ?? areaVisibility(input.area),
     ownerUserId: input.area === 'PERSONAL' ? input.userId ?? null : null,
-    managedBy: input.area === 'DOCUMENTS' ? input.app ?? null : null,
+    managedBy: input.area === 'DOCUMENTS' || input.area === 'GLOBAL' ? input.app ?? 'consultor' : null,
     partnerOrgId: input.area === 'PARTNER' ? input.partnerOrgId ?? null : null,
     partnerDeptId: input.area === 'PARTNER' ? input.partnerDeptId ?? null : null,
     gcsBucket: input.gcsBucket ?? null,
@@ -429,7 +431,7 @@ export async function linkExisting(
     name: input.name,
     visibility: input.visibility ?? areaVisibility(input.area),
     ownerUserId: input.area === 'PERSONAL' ? input.userId ?? null : null,
-    managedBy: input.area === 'DOCUMENTS' ? input.app ?? null : null,
+    managedBy: input.area === 'DOCUMENTS' || input.area === 'GLOBAL' ? input.app ?? 'consultor' : null,
     partnerOrgId: input.area === 'PARTNER' ? input.partnerOrgId ?? null : null,
     partnerDeptId: input.area === 'PARTNER' ? input.partnerDeptId ?? null : null,
     gcsBucket: input.gcsBucket ?? null,
