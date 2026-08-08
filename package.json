@@ -1,6 +1,6 @@
 {
   "name": "@mycolegal-app/sharedlib",
-  "version": "0.9.16",
+  "version": "0.9.17",
   "type": "module",
   "main": "./index.ts",
   "publishConfig": {
@@ -28,6 +28,7 @@
     "storage.ts",
     "drive.ts",
     "text-extract.ts",
+    "vertex.ts",
     "seeds.ts",
     "index.ts",
     "tsconfig.json",
