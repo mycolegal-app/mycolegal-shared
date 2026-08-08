@@ -59,7 +59,8 @@
     }
   },
   "dependencies": {
-    "unpdf": "^1.6.2"
+    "unpdf": "^1.6.2",
+    "google-auth-library": "^9.6.3"
   },
   "devDependencies": {
     "@types/node": "^22.19.17",
