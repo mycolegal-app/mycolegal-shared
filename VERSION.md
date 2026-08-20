@@ -1,5 +1,18 @@
 # mycolegal-sharedlib — Changelog
 
+## 0.9.21 — storage: preview inline de objetos octet-stream (2026-08-19)
+
+Type: **revision**
+
+- `storage.ts` (`getSignedUrl`): las signed URLs de lectura con `disposition:'inline'`
+  ahora fuerzan `response-content-type` inferido de la extensión del path (o del
+  nuevo `SignOptions.responseType` si se pasa explícito). Antes, los objetos
+  guardados como `application/octet-stream` (subidos sin tipo o vía ETL histórica)
+  se **descargaban** en el `<iframe>` del visor en vez de previsualizarse, aunque el
+  `Content-Disposition` fuese `inline`. Afecta a la previsualización de la Unidad de
+  Red en todas las apps. Sólo se repone el tipo de los formatos renderizables
+  nativamente (pdf, imágenes, audio/vídeo, texto).
+
 ##  — Fixes de TEST y mejoras del proceso de suscripción (2026-07-13)
 
 Type: **revision**

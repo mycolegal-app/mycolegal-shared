@@ -16,6 +16,45 @@ import { Agent } from 'node:https';
 const noKeepAliveAgent = new Agent({ keepAlive: false });
 
 /**
+ * Content-Type por extensión para forzar `response-content-type` en las signed
+ * URLs de **previsualización** (`disposition:'inline'`). Muchos objetos se
+ * guardaron con `application/octet-stream` (el navegador no envió tipo al subir,
+ * o vienen de ETL histórica); con ese tipo, el navegador DESCARGA el fichero en
+ * el `<iframe>` en vez de renderizarlo, aunque `Content-Disposition` sea `inline`.
+ * Reponiendo el tipo real por extensión, la preview inline funciona. Solo cubre
+ * los tipos que el visor sabe renderizar de forma nativa.
+ */
+const INLINE_CONTENT_TYPES: Record<string, string> = {
+  pdf: 'application/pdf',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  svg: 'image/svg+xml',
+  bmp: 'image/bmp',
+  avif: 'image/avif',
+  mp3: 'audio/mpeg',
+  wav: 'audio/wav',
+  ogg: 'audio/ogg',
+  mp4: 'video/mp4',
+  webm: 'video/webm',
+  html: 'text/html',
+  htm: 'text/html',
+  md: 'text/markdown',
+  csv: 'text/csv',
+  txt: 'text/plain',
+  json: 'application/json',
+  xml: 'application/xml',
+};
+
+/** Content-Type inferido de la extensión del path (o `undefined` si desconocida). */
+function inlineContentTypeFromPath(path: string): string | undefined {
+  const ext = path.slice(path.lastIndexOf('.') + 1).toLowerCase();
+  return INLINE_CONTENT_TYPES[ext];
+}
+
+/**
  * StorageService compartido — cliente GCS unificado para todas las apps.
  *
  * Reemplaza las copias casi idénticas de `gcs.ts`/`storage.ts` que vivían en
@@ -105,6 +144,12 @@ export interface SignOptions {
   contentType?: string;
   /** Sólo `read`: fuerza `Content-Disposition` (`inline` preview / `attachment` descarga). */
   disposition?: 'inline' | 'attachment';
+  /**
+   * Sólo `read`: fuerza el `Content-Type` de la respuesta (`response-content-type`).
+   * Útil para previsualizar inline objetos guardados como `application/octet-stream`.
+   * Si se omite en un `read` con `disposition:'inline'`, se infiere de la extensión.
+   */
+  responseType?: string;
   /** Nombre de fichero sugerido (sólo con `attachment`). */
   filename?: string;
   /** Override del bucket por defecto (p.ej. plantillas en blanco). */
@@ -257,6 +302,14 @@ export function createStorageClient(config: StorageClientConfig): StorageClient 
           const safe = (opts.filename ?? '').replace(/["\\]/g, '');
           responseDisposition = safe ? `attachment; filename="${safe}"` : 'attachment';
         }
+        // Preview inline: repón el Content-Type real (por extensión) para que el
+        // navegador renderice el objeto en el iframe en vez de descargarlo cuando
+        // se guardó como application/octet-stream.
+        const responseType =
+          opts.action === 'read'
+            ? opts.responseType ??
+              (opts.disposition === 'inline' ? inlineContentTypeFromPath(opts.path) : undefined)
+            : undefined;
         const [url] = await s
           .bucket(b.name)
           .file(opts.path)
@@ -268,6 +321,7 @@ export function createStorageClient(config: StorageClientConfig): StorageClient 
               ? { contentType: opts.contentType ?? 'application/octet-stream' }
               : {}),
             ...(responseDisposition ? { responseDisposition } : {}),
+            ...(responseType ? { responseType } : {}),
           });
         return { ok: true, url };
       } catch (e) {
