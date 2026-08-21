@@ -9,7 +9,7 @@
   "scripts": {},
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mycolegal-app/mycolegal-sharedlib.git"
+    "url": "git+https://github.com/mycolegal-app/mycolegal-shared.git"
   },
   "files": [
     "src",
