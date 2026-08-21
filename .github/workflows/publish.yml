@@ -1,0 +1,56 @@
+name: publish
+
+# Monorepo mycolegal-shared: publica @mycolegal-app/ui y @mycolegal-app/sharedlib
+# a GitHub Packages. Cada paquete se publica desde su subdirectorio SOLO si su
+# versión aún no existe en el registry → un push a main publica únicamente el
+# paquete cuya versión se ha bumpeado. Sustituye a los dos publish.yml separados
+# de los repos mycolegal-ui / mycolegal-sharedlib.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/**'
+      - '.github/workflows/publish.yml'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        pkg: [ui, sharedlib]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://npm.pkg.github.com
+          scope: '@mycolegal-app'
+
+      - name: Install workspace (deps para el build de prepublishOnly)
+        run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish ${{ matrix.pkg }} si la versión es nueva
+        working-directory: packages/${{ matrix.pkg }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          NAME=$(node -p "require('./package.json').name")
+          VER=$(node -p "require('./package.json').version")
+          if npm view "$NAME@$VER" version --registry=https://npm.pkg.github.com >/dev/null 2>&1; then
+            echo "· $NAME@$VER ya está publicado — nada que hacer."
+          else
+            echo "· Publicando $NAME@$VER …"
+            # npm publish ejecuta prepublishOnly (en ui: build:e2e = tsc) automáticamente
+            npm publish
+            echo "· Publicado $NAME@$VER ✅"
+          fi
