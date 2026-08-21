@@ -1,0 +1,32 @@
+{
+  "name": "@mycolegal-app/text-extract",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./index.ts",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mycolegal-app/mycolegal-shared.git"
+  },
+  "files": [
+    "index.ts",
+    "word.ts",
+    "pdf.ts",
+    "ocr-client.ts",
+    "types",
+    "tsconfig.json",
+    "VERSION.md"
+  ],
+  "dependencies": {
+    "unpdf": "^1.6.2",
+    "word-extractor": "^1.0.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.17",
+    "typescript": "^6.0.2"
+  },
+  "description": "Extracción de texto de documentos para la flota MycoLegal: Word (.doc/.docx), capa de texto de PDF y OCR (vía el servicio de platform). Fuente única, hermano de @mycolegal-app/ui y @mycolegal-app/sharedlib."
+}
