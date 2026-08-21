@@ -5,6 +5,19 @@
 
 ---
 
+## 1.99.22 — unidad-routes: extractText desde @mycolegal-app/text-extract (2026-08-21)
+
+Type: **revision**
+
+- `server/unidad-routes.ts`: la extracción de texto (INBOX IA) pasa de
+  `@mycolegal-app/sharedlib/text-extract` (retirado en sharedlib 0.9.22) a
+  `@mycolegal-app/text-extract`, el package que consolida Word + PDF + OCR.
+- Las apps que montan `createUnidadRoutes` (archivo, legifirma, notaria,
+  peticiones, polizas, tramitacion, tributos) deben declarar
+  `@mycolegal-app/text-extract` y añadirlo a `transpilePackages`.
+
+---
+
 ##  — Fixes ded incidencias TEST (2026-08-05)
 
 Type: **revision**
