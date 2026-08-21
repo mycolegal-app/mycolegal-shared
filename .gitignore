@@ -1,7 +1,4 @@
 node_modules/
-.DS_Store
 .npmrc
-
-# Build output (reservado por simetría con ui; el paquete se publica como TS fuente)
-dist/
-*.tsbuildinfo
+*.log
+.DS_Store
