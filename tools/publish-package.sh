@@ -97,8 +97,15 @@ fi
 if $already_published; then
   yellow "  ⚠ $PKG_SCOPED@$VERSION ya está en el registry — salto publish."
 else
-  if [ -n "$(git -C "$SHARED_DIR" status --porcelain -- "packages/$PKG")" ]; then
-    run "git -C '$SHARED_DIR' add 'packages/$PKG'"                     # SOLO este paquete (repo compartido)
+  # Committear el paquete + el package-lock.json de la RAÍZ. En workspaces,
+  # `npm version` del workspace reescribe packages/<pkg>.version DENTRO del
+  # lockfile de la raíz, que queda FUERA de packages/<pkg>; si no lo añadimos
+  # aquí se orfanaría — ningún otro camino de admin.sh lo commitea (new_version
+  # excluye mycolegal-shared por completo). Rutas sin espacios → split seguro.
+  TO_ADD="packages/$PKG"
+  [ -n "$(git -C "$SHARED_DIR" status --porcelain -- package-lock.json)" ] && TO_ADD="$TO_ADD package-lock.json"
+  if [ -n "$(git -C "$SHARED_DIR" status --porcelain -- $TO_ADD)" ]; then
+    run "git -C '$SHARED_DIR' add $TO_ADD"                             # el paquete + lockfile raíz
     run "git -C '$SHARED_DIR' commit -m '$PKG: versión $VERSION'"
   else
     dim "  · sin cambios pendientes en packages/$PKG — sólo push"
