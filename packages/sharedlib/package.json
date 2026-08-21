@@ -1,6 +1,6 @@
 {
   "name": "@mycolegal-app/sharedlib",
-  "version": "0.9.21",
+  "version": "0.9.22",
   "type": "module",
   "main": "./index.ts",
   "publishConfig": {
@@ -27,14 +27,12 @@
     "api.ts",
     "storage.ts",
     "drive.ts",
-    "text-extract.ts",
     "vertex.ts",
     "seeds.ts",
     "index.ts",
     "tsconfig.json",
     "VERSION.md",
-    "pdf-client.ts",
-    "ocr-client.ts"
+    "pdf-client.ts"
   ],
   "peerDependencies": {
     "@google-cloud/storage": ">=7",
@@ -61,7 +59,6 @@
     }
   },
   "dependencies": {
-    "unpdf": "^1.6.2",
     "google-auth-library": "^9.6.3"
   },
   "devDependencies": {

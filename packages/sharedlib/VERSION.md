@@ -1,5 +1,18 @@
 # mycolegal-sharedlib — Changelog
 
+## 0.9.22 — extracción de texto → @mycolegal-app/text-extract (2026-08-21)
+
+Type: **revision**
+
+- `text-extract.ts` (capa de texto PDF) y `ocr-client.ts` (OCR vía platform) se
+  **mueven** al package nuevo `@mycolegal-app/text-extract`, que consolida toda
+  la extracción de texto (Word + PDF + OCR) en una fuente única.
+- Se retira la dependencia `unpdf` (solo la usaba `text-extract.ts`).
+- `pdf-client.ts` (generación de PDF vía platform) SE QUEDA — es otra prestación.
+- Consumidores afectados (repin del import): `mycolegal-tramitacion`
+  (`sharedlib/text-extract` → `text-extract`) y `mycolegal-consultor`
+  (`sharedlib/ocr-client` → `text-extract`).
+
 ## 0.9.21 — storage: preview inline de objetos octet-stream (2026-08-19)
 
 Type: **revision**
