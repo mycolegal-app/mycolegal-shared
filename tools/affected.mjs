@@ -19,9 +19,10 @@ import { execSync } from 'child_process';
 
 const MONO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const APPS_ROOT = resolve(MONO, '..');
-const PKG_DIRS = { ui: join(MONO, 'packages/ui'), sharedlib: join(MONO, 'packages/sharedlib') };
-const PKG_NAME = { ui: '@mycolegal-app/ui', sharedlib: '@mycolegal-app/sharedlib' };
-const NAME_TO_PKG = { '@mycolegal-app/ui': 'ui', '@mycolegal-app/sharedlib': 'sharedlib' };
+const PKG_DIRS = { ui: join(MONO, 'packages/ui'), sharedlib: join(MONO, 'packages/sharedlib'), 'text-extract': join(MONO, 'packages/text-extract') };
+const PKG_NAME = { ui: '@mycolegal-app/ui', sharedlib: '@mycolegal-app/sharedlib', 'text-extract': '@mycolegal-app/text-extract' };
+const NAME_TO_PKG = { '@mycolegal-app/ui': 'ui', '@mycolegal-app/sharedlib': 'sharedlib', '@mycolegal-app/text-extract': 'text-extract' };
+const PKG_KEYS = ['ui', 'sharedlib', 'text-extract'];
 const SKIP_DIRS = new Set(['node_modules', '.git', '.next', 'dist', '.turbo']);
 const CODE_EXT = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']);
 
@@ -116,14 +117,14 @@ function addEdge(from, to) {
   if (!rev.has(to)) rev.set(to, new Set());
   fwd.get(from).add(to); rev.get(to).add(from);
 }
-const pkgFiles = { ui: [], sharedlib: [] };
-for (const pkg of ['ui', 'sharedlib']) {
+const pkgFiles = { ui: [], sharedlib: [], 'text-extract': [] };
+for (const pkg of PKG_KEYS) {
   for (const f of walk(PKG_DIRS[pkg])) {
     if (!CODE_EXT.has(extname(f)) && extname(f) !== '.css') continue;
     pkgFiles[pkg].push(f); allModules.add(f);
   }
 }
-for (const pkg of ['ui', 'sharedlib']) {
+for (const pkg of PKG_KEYS) {
   for (const f of pkgFiles[pkg]) {
     if (extname(f) === '.css') continue;
     let text; try { text = readFileSync(f, 'utf8'); } catch { continue; }
@@ -133,7 +134,7 @@ for (const pkg of ['ui', 'sharedlib']) {
       if (!imp.spec) continue;
       if (imp.spec.startsWith('.')) {
         const tgt = resolveFrom(dirname(f), imp.spec);
-        if (tgt && (tgt.startsWith(PKG_DIRS.ui) || tgt.startsWith(PKG_DIRS.sharedlib))) addEdge(f, tgt);
+        if (tgt && PKG_KEYS.some((k) => tgt.startsWith(PKG_DIRS[k]))) addEdge(f, tgt);
       } else if (NAME_TO_PKG[imp.spec.split('/').slice(0, 2).join('/')]) {
         // cross-package import by name (e.g. ui importing sharedlib subpath)
         const op = imp.spec.split('/').slice(0, 2).join('/');
@@ -209,9 +210,9 @@ function consumerApps() {
     const pj = join(APPS_ROOT, e.name, 'package.json');
     if (!isFile(pj)) continue;
     let deps = {}; try { const j = JSON.parse(readFileSync(pj, 'utf8')); deps = { ...j.dependencies, ...j.devDependencies }; } catch { continue; }
-    const usesUi = !!deps[PKG_NAME.ui]; const usesSl = !!deps[PKG_NAME.sharedlib];
-    if (!usesUi && !usesSl) continue;
-    apps.push({ name: e.name, dir: join(APPS_ROOT, e.name), usesUi, usesSl });
+    const usesUi = !!deps[PKG_NAME.ui]; const usesSl = !!deps[PKG_NAME.sharedlib]; const usesTe = !!deps[PKG_NAME['text-extract']];
+    if (!usesUi && !usesSl && !usesTe) continue;
+    apps.push({ name: e.name, dir: join(APPS_ROOT, e.name), usesUi, usesSl, usesTe });
   }
   return apps.sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -236,6 +237,7 @@ function analyzeApp(app) {
       if (sub === '') {
         // barrel import
         if (pkg === 'sharedlib') { wholePkg = true; reasons.add('sharedlib-barrel'); continue; }
+        if (pkg === 'text-extract') { wholePkg = true; reasons.add('text-extract-barrel'); continue; }
         usesBarrel = true;
         if (imp.star || imp.dynamic) { wholeBarrel = true; reasons.add('barrel-namespace/dynamic'); }
         else for (const n of imp.named) { const m = barrelSymbol.get(n); if (m) used.add(m); else { wholeBarrel = true; reasons.add(`barrel-unknown:${n}`); } }
@@ -255,8 +257,8 @@ function analyzeApp(app) {
   if (broadCssChannel && app.usesUi) return { app, affected: true, reason: 'canal CSS/tokens/preset (afecta a todo consumidor de ui)', used: used.size };
   if (barrelChanged && usesBarrel) return { app, affected: true, reason: 'cambió el barrel index.ts y la app lo importa', used: used.size };
   if (wholePkg) { // conservador: usa el paquete de forma irresoluble → afectada si hubo cualquier cambio en ese pkg
-    const anyUi = changedArr.some(inUi), anySl = changedArr.some((f) => f.startsWith(PKG_DIRS.sharedlib));
-    if ((app.usesUi && anyUi) || (app.usesSl && anySl)) return { app, affected: true, reason: `uso irresoluble (${[...reasons].join(', ')})`, used: used.size };
+    const anyUi = changedArr.some(inUi), anySl = changedArr.some((f) => f.startsWith(PKG_DIRS.sharedlib)), anyTe = changedArr.some((f) => f.startsWith(PKG_DIRS['text-extract']));
+    if ((app.usesUi && anyUi) || (app.usesSl && anySl) || (app.usesTe && anyTe)) return { app, affected: true, reason: `uso irresoluble (${[...reasons].join(', ')})`, used: used.size };
   }
   for (const m of used) if (reverseClosure.has(m)) hits.push(m);
   return { app, affected: hits.length > 0, reason: hits.length ? `usa ${hits.length} entrypoint(s) afectado(s)` : 'sin solape', used: used.size, hits, flags: [...reasons], wholeBarrel, wholePkg };

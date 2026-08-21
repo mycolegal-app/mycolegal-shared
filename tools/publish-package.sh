@@ -26,7 +26,7 @@ while [ $# -gt 0 ]; do
     --since) SINCE_OVERRIDE="${2:-}"; shift ;;
   esac; shift
 done
-case "$PKG" in ui|sharedlib) ;; *) echo "uso: publish-package.sh <ui|sharedlib> [--dry-run] [--since <ref>]"; exit 2 ;; esac
+case "$PKG" in ui|sharedlib|text-extract) ;; *) echo "uso: publish-package.sh <ui|sharedlib|text-extract> [--dry-run] [--since <ref>]"; exit 2 ;; esac
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SHARED_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"        # mycolegal-shared (repo raíz)
@@ -49,11 +49,15 @@ PKG_SCOPED="@mycolegal-app/$PKG"
 PKG_DIR="$SHARED_DIR/packages/$PKG"
 [ -d "$PKG_DIR" ] || die "no existe $PKG_DIR (¿monorepo montado?)"
 
-if [ "$PKG" = "ui" ]; then
-  CONSUMERS="$UI_CONSUMER_APPS"; MARKER="$PUBLISHED_UI_MARKER"; PUB_PATHS="$UI_PUBLISHED_PATHS"; FORCE_ADOPT=true
-else
-  CONSUMERS="$SHAREDLIB_CONSUMER_APPS"; MARKER="$PUBLISHED_SHAREDLIB_MARKER"; PUB_PATHS="$SHAREDLIB_PUBLISHED_PATHS"; FORCE_ADOPT=false
-fi
+case "$PKG" in
+  ui)
+    CONSUMERS="$UI_CONSUMER_APPS"; MARKER="$PUBLISHED_UI_MARKER"; PUB_PATHS="$UI_PUBLISHED_PATHS"; FORCE_ADOPT=true ;;
+  sharedlib)
+    CONSUMERS="$SHAREDLIB_CONSUMER_APPS"; MARKER="$PUBLISHED_SHAREDLIB_MARKER"; PUB_PATHS="$SHAREDLIB_PUBLISHED_PATHS"; FORCE_ADOPT=false ;;
+  text-extract)
+    # Consumidores declaran la dep explícitamente → no forzar adopción (como sharedlib).
+    CONSUMERS="$TEXTEXTRACT_CONSUMER_APPS"; MARKER="$PUBLISHED_TEXTEXTRACT_MARKER"; PUB_PATHS="$TEXTEXTRACT_PUBLISHED_PATHS"; FORCE_ADOPT=false ;;
+esac
 
 $DRY_RUN && yellow "  «DRY-RUN» — no se publica, pushea ni bumpea nada."
 cyan "── publish-package: $PKG (monorepo mycolegal-shared) ──"

@@ -1,7 +1,8 @@
 name: publish
 
-# Monorepo mycolegal-shared: publica @mycolegal-app/ui y @mycolegal-app/sharedlib
-# a GitHub Packages. Cada paquete se publica desde su subdirectorio SOLO si su
+# Monorepo mycolegal-shared: publica @mycolegal-app/ui, @mycolegal-app/sharedlib
+# y @mycolegal-app/text-extract a GitHub Packages. Cada paquete se publica desde
+# su subdirectorio SOLO si su
 # versión aún no existe en el registry → un push a main publica únicamente el
 # paquete cuya versión se ha bumpeado. Sustituye a los dos publish.yml separados
 # de los repos mycolegal-ui / mycolegal-sharedlib.
@@ -23,7 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        pkg: [ui, sharedlib]
+        pkg: [ui, sharedlib, text-extract]
     steps:
       - uses: actions/checkout@v4
 
