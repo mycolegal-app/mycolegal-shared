@@ -1,0 +1,30 @@
+export type {
+  AdminAuth,
+  AdminRouteCtx,
+  AdminHandler,
+  AdminNextHandler,
+  WithPermissionFn,
+  SuccessFn,
+  ErrorFn,
+  FetchFromAuthFn,
+  AdminPrisma,
+  UserRolePrismaTable,
+  AuditEvent,
+  AuditFn,
+  UsuariosRoutesDeps,
+} from './types';
+
+export {
+  createUsuariosRoutes,
+  createUsuariosByIdRoutes,
+  createUsuariosInviteRoute,
+  createUsuariosAppsCatalogRoute,
+  createUsuariosByIdPermissionsRoute,
+  createUsuariosByIdResendInvitationRoute,
+  createUsuariosByIdProfileRoute,
+  createUsuariosByIdSendPasswordResetRoute,
+  createUsuariosByIdAuditRoute,
+  createUsuariosCreateWithPasswordRoute,
+  createUsuariosByIdAppPermRoute,
+  createUsuariosAppPermsCatalogRoute,
+} from './usuarios-routes';
