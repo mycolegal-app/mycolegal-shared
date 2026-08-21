@@ -176,7 +176,8 @@ function normalizeChanged(list) {
 let changedList = [];
 const since = getArg('--since');
 if (since) {
-  const out = execSync(`git -C "${MONO}" diff --name-only ${since}..HEAD -- packages/`, { encoding: 'utf8' });
+  const scope = getArg('--scope') || 'packages/';   // acotar el diff a un paquete concreto
+  const out = execSync(`git -C "${MONO}" diff --name-only ${since}..HEAD -- ${scope}`, { encoding: 'utf8' });
   changedList = out.split('\n').filter(Boolean).map((p) => join(MONO, p));
 } else {
   const c = getArg('--changed');
