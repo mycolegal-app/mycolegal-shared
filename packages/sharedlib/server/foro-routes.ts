@@ -12,7 +12,7 @@ import { NextResponse, type NextRequest } from 'next/server';
  * PASS-THROUGH del cuerpo, sin bufferizar ni reinterpretar el content-type.
  *
  *   // src/app/api/foro/[[...path]]/route.ts   (en cada app consumidora)
- *   import { createForoRoutes } from '@mycolegal-app/ui/server/foro-routes';
+ *   import { createForoRoutes } from '@mycolegal-app/sharedlib/server/foro-routes';
  *   export const dynamic = 'force-dynamic';
  *   export const runtime = 'nodejs';
  *   const routes = createForoRoutes({ hostUrl: process.env.FORO_HOST_URL || process.env.CONSULTOR_INTERNAL_URL || '' });

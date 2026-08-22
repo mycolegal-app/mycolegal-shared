@@ -17,7 +17,7 @@ import { forwardExpiredPasswordChange } from './expired-password';
  * `createIncidentsRoutes` / `createNotificationsRoutes`.
  *
  *   // src/lib/auth-server.ts
- *   import { createAuthRoutes } from '@mycolegal-app/ui/server/auth-routes';
+ *   import { createAuthRoutes } from '@mycolegal-app/sharedlib/server/auth-routes';
  *   import { AUTH_INTERNAL_URL, JWT_COOKIE_NAME, REFRESH_COOKIE_NAME,
  *     SECURE_COOKIES, COOKIE_DOMAIN, COOKIE_MAX_AGE, REFRESH_COOKIE_MAX_AGE } from './config';
  *   export const authRoutes = createAuthRoutes({

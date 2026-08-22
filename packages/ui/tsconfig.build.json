@@ -14,9 +14,7 @@
     "index.ts",
     "components/**/*",
     "hooks/**/*",
-    "lib/**/*",
-    "server/**/*",
-    "i18n/**/*",
+    "lib/**/*",    "i18n/**/*",
     "tailwind-preset.ts"
   ],
   "exclude": [

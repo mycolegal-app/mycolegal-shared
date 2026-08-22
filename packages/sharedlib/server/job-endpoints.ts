@@ -13,7 +13,7 @@ import { OAuth2Client } from 'google-auth-library';
  * (`catalog()`), así "publicado == gated".
  *
  *   // src/lib/jobs-server.ts
- *   import { createJobEndpointRoutes } from '@mycolegal-app/ui/server/job-endpoints';
+ *   import { createJobEndpointRoutes } from '@mycolegal-app/sharedlib/server/job-endpoints';
  *   export const jobRoutes = createJobEndpointRoutes({
  *     appSlug: 'consultor',
  *     selfUrl: SELF_SERVICE_URL,           // mycolegal-<app>-service-url

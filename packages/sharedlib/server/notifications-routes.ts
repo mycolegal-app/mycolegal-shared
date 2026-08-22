@@ -8,7 +8,7 @@ import { proxyToAuth, type AuthProxyConfig } from './auth-proxy';
  * single optional catch-all route:
  *
  *   // src/lib/notifications-server.ts
- *   import { createNotificationsRoutes } from '@mycolegal-app/ui/server/notifications-routes';
+ *   import { createNotificationsRoutes } from '@mycolegal-app/sharedlib/server/notifications-routes';
  *   import { AUTH_INTERNAL_URL, JWT_COOKIE_NAME } from './config';
  *   export const notificationsRoutes = createNotificationsRoutes({
  *     jwtCookieName: JWT_COOKIE_NAME,

@@ -18,7 +18,7 @@ import { NextResponse, type NextRequest } from 'next/server';
  *
  *   // src/app/api/resoluciones/[[...path]]/route.ts
  *   import { withAuth, errorResponse } from '@/lib/api-utils';
- *   import { forwardResoluciones } from '@mycolegal-app/ui/server/resoluciones-routes';
+ *   import { forwardResoluciones } from '@mycolegal-app/sharedlib/server/resoluciones-routes';
  *
  *   const CONSULTOR_URL = process.env.CONSULTOR_INTERNAL_URL || '';
  *   const INTER_SERVICE_KEY = process.env.INTER_SERVICE_KEY || '';

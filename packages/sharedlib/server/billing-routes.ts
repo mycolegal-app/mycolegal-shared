@@ -15,7 +15,7 @@ import { NextResponse, type NextRequest } from 'next/server';
  * Uso desde una app:
  *
  *   // src/lib/billing-server.ts
- *   import { createBillingRoutes } from '@mycolegal-app/ui/server/billing-routes';
+ *   import { createBillingRoutes } from '@mycolegal-app/sharedlib/server/billing-routes';
  *   import { withPermission } from '@/lib/api-utils';
  *   import { PLATFORM_INTERNAL_URL, APPS_REGISTER_SECRET } from './config';
  *   export const billingRoutes = createBillingRoutes({

@@ -23,7 +23,7 @@ type PrismaLike = { $transaction: (...args: any[]) => any };
  * **Usage from a consumer app**:
  *
  *   // src/lib/rls.ts
- *   import { createRlsHelpers } from '@mycolegal-app/ui/server/rls';
+ *   import { createRlsHelpers } from '@mycolegal-app/sharedlib/server/rls';
  *   import { prisma } from './db';
  *   export const { withOrgContext, withoutOrgContext } = createRlsHelpers(prisma);
  *

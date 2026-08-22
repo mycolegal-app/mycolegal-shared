@@ -20,7 +20,7 @@ import { proxyToAuth, type AuthProxyConfig } from './auth-proxy';
  *   export const { GET } = incidentsRoutes.mine;
  *
  * Where `incidents-server.ts` does:
- *   import { createIncidentsRoutes } from '@mycolegal-app/ui/server/incidents-routes';
+ *   import { createIncidentsRoutes } from '@mycolegal-app/sharedlib/server/incidents-routes';
  *   import { AUTH_INTERNAL_URL, JWT_COOKIE_NAME } from './config';
  *   export const incidentsRoutes = createIncidentsRoutes({
  *     jwtCookieName: JWT_COOKIE_NAME,
