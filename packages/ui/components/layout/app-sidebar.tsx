@@ -11,6 +11,7 @@ import {
   Sliders,
   User,
 } from "lucide-react";
+import { clearMeCache } from "./app-shell";
 import { NavLink as Link } from "../shared/nav-link";
 import { NotificationsBell } from "../shared/notifications-bell";
 import { UserAccountDialog } from "../shared/user-account-dialog";
@@ -458,6 +459,7 @@ export function AppSidebar({
             {userFooterExtra}
             <button
               onClick={() => {
+                clearMeCache();
                 fetch("/api/auth/logout", { method: "POST" }).then(() => {
                   window.location.href = "/login";
                 });
@@ -525,6 +527,7 @@ export function AppSidebar({
 
             <button
               onClick={() => {
+                clearMeCache();
                 fetch("/api/auth/logout", { method: "POST" }).then(() => {
                   window.location.href = "/login";
                 });

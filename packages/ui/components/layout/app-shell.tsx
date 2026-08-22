@@ -24,6 +24,41 @@ import {
   useSidebarCollapse,
 } from "./sidebar-collapse-context";
 
+// Cache SWR del perfil (`/api/auth/me`) para que la toolbar aparezca poblada al
+// instante en recargas/navegación dentro de la misma app, en vez de esperar el
+// round-trip. Se guarda en sessionStorage (por-origen y efímero: se limpia al
+// cerrar la pestaña) y SIEMPRE se revalida en background al montar. Se limpia en
+// logout/timeout para no filtrar datos entre usuarios en el mismo navegador.
+// NO cacheamos impersonación ni billing notices (banners sensibles/efímeros):
+// esos se pintan solo con la respuesta fresca.
+const ME_CACHE_KEY = "mc:me:v1";
+
+function readMeCache(): any | null {
+  try {
+    const raw = window.sessionStorage.getItem(ME_CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeMeCache(d: unknown) {
+  try {
+    window.sessionStorage.setItem(ME_CACHE_KEY, JSON.stringify(d));
+  } catch {
+    /* sessionStorage lleno/bloqueado — degradamos a solo-red */
+  }
+}
+
+/** Limpia el cache del perfil. Llamar en logout/timeout. */
+export function clearMeCache() {
+  try {
+    window.sessionStorage.removeItem(ME_CACHE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 interface UserInfo {
   displayName: string;
   email: string;
@@ -321,6 +356,33 @@ export default function AppShell({
     let attempt = 0;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
 
+    // Aplica los campos que alimentan la toolbar (usuario, org, apps, extras).
+    // `fromCache`: al pintar desde el cache NO tocamos impersonación ni billing
+    // notices (banners sensibles/efímeros) — esos esperan a la respuesta fresca.
+    const applyProfile = (d: any, fromCache: boolean) => {
+      setUser({
+        displayName: d.displayName || d.email,
+        email: d.email,
+        role: d.appRole || "",
+      });
+      if (d.org) setOrg({ name: d.org.name, logo: d.org.logo || null });
+      if (d.apps) setApps(d.apps);
+      if (Array.isArray(d.sellableExtras)) setSellableExtras(d.sellableExtras);
+      setSubscribeUrl(d.subscribeUrl ?? null);
+      if (d.inactivityTimeout) setInactivityTimeout(d.inactivityTimeout);
+      if (!fromCache) {
+        if (Array.isArray(d.notices)) setBillingNotices(d.notices);
+        setImpersonatedAs(
+          d.impersonatedBy ? d.displayName || d.email || "" : null,
+        );
+      }
+    };
+
+    // Pintado inmediato desde el cache (si lo hay): la toolbar aparece poblada
+    // sin esperar al fetch. La revalidación de abajo la corrige/actualiza.
+    const cached = readMeCache();
+    if (cached) applyProfile(cached, true);
+
     const load = async () => {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 8000);
@@ -331,20 +393,8 @@ export default function AppShell({
         if (cancelled) return;
         if (!json?.data) throw new Error("me: respuesta sin data");
         const d = json.data;
-        setUser({
-          displayName: d.displayName || d.email,
-          email: d.email,
-          role: d.appRole || "",
-        });
-        if (d.org) setOrg({ name: d.org.name, logo: d.org.logo || null });
-        if (d.apps) setApps(d.apps);
-        if (Array.isArray(d.sellableExtras)) setSellableExtras(d.sellableExtras);
-        setSubscribeUrl(d.subscribeUrl ?? null);
-        if (Array.isArray(d.notices)) setBillingNotices(d.notices);
-        if (d.inactivityTimeout) setInactivityTimeout(d.inactivityTimeout);
-        setImpersonatedAs(
-          d.impersonatedBy ? d.displayName || d.email || "" : null,
-        );
+        applyProfile(d, false);
+        writeMeCache(d);
       } catch {
         if (cancelled) return;
         // Backoff 2s → 4s → 8s → 15s (tope). Sigue reintentando para
@@ -436,6 +486,7 @@ export default function AppShell({
           // redirect immediately instead of waiting for the fetch to settle —
           // otherwise a slow or hung logout call leaves the user sitting on
           // the page after clicking "Cerrar sesión".
+          clearMeCache();
           fetch("/api/auth/logout", { method: "POST", keepalive: true });
           window.location.href = "/login";
         }}
@@ -443,6 +494,7 @@ export default function AppShell({
           // Inactivity expiry — record SESSION_TIMEOUT in the audit trail
           // instead of LOGOUT. Best-effort, fire-and-forget with keepalive so
           // the request survives the immediate navigation below.
+          clearMeCache();
           fetch("/api/auth/session/timeout", { method: "POST", keepalive: true });
           window.location.href = "/login";
         }}
