@@ -1,38 +1,103 @@
 {
   "name": "@mycolegal-app/ui",
-  "version": "1.99.22",
+  "version": "2.0.0",
   "type": "module",
-  "main": "./index.ts",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./components/admin": {
+      "types": "./dist/components/admin/index.d.ts",
+      "import": "./dist/components/admin/index.js"
+    },
+    "./components/help": {
+      "types": "./dist/components/help/index.d.ts",
+      "import": "./dist/components/help/index.js"
+    },
+    "./components/i18n": {
+      "types": "./dist/components/i18n/index.d.ts",
+      "import": "./dist/components/i18n/index.js"
+    },
+    "./components/layout": {
+      "types": "./dist/components/layout/index.d.ts",
+      "import": "./dist/components/layout/index.js"
+    },
+    "./components/manual": {
+      "types": "./dist/components/manual/index.d.ts",
+      "import": "./dist/components/manual/index.js"
+    },
+    "./components/*": {
+      "types": "./dist/components/*.d.ts",
+      "import": "./dist/components/*.js"
+    },
+    "./hooks/*": {
+      "types": "./dist/hooks/*.d.ts",
+      "import": "./dist/hooks/*.js"
+    },
+    "./lib/*": {
+      "types": "./dist/lib/*.d.ts",
+      "import": "./dist/lib/*.js"
+    },
+    "./server/admin": {
+      "types": "./dist/server/admin/index.d.ts",
+      "import": "./dist/server/admin/index.js"
+    },
+    "./server/catalogs": {
+      "types": "./dist/server/catalogs/index.d.ts",
+      "import": "./dist/server/catalogs/index.js"
+    },
+    "./server/*": {
+      "types": "./dist/server/*.d.ts",
+      "import": "./dist/server/*.js"
+    },
+    "./i18n": {
+      "types": "./dist/i18n/index.d.ts",
+      "import": "./dist/i18n/index.js"
+    },
+    "./tokens/*": "./tokens/*",
+    "./assets/*": "./dist/assets/*",
+    "./globals.css": "./globals.css",
+    "./tailwind-preset": {
+      "types": "./dist/tailwind-preset.d.ts",
+      "import": "./dist/tailwind-preset.js",
+      "default": "./dist/tailwind-preset.js"
+    },
+    "./e2e/*": "./e2e/*.js",
+    "./package.json": "./package.json"
+  },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
   },
   "scripts": {
+    "build": "tsc -p tsconfig.build.json && node scripts/copy-assets.mjs",
     "build:e2e": "tsc -p tsconfig.e2e.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "prepublishOnly": "npm run build:e2e"
+    "prepublishOnly": "npm run build && npm run build:e2e"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mycolegal-app/mycolegal-shared.git"
   },
   "files": [
-    "components",
+    "dist",
     "e2e",
-    "hooks",
-    "i18n",
-    "lib",
-    "server",
     "tokens",
     "globals.css",
-    "index.ts",
-    "tailwind-preset.ts",
     "tsconfig.json",
     "tsconfig.e2e.json"
   ],
   "peerDependencies": {
     "@playwright/test": ">=1.40",
     "google-auth-library": ">=9",
+    "jose": ">=5",
     "next": ">=14",
     "react": ">=18",
     "react-dom": ">=18",
@@ -40,6 +105,9 @@
   },
   "peerDependenciesMeta": {
     "next": {
+      "optional": true
+    },
+    "jose": {
       "optional": true
     },
     "@playwright/test": {
@@ -85,7 +153,9 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "google-auth-library": "^9.15.0",
+    "jose": "^6.2.10",
     "jsdom": "^29.1.1",
+    "next": "^16.3.2",
     "typescript": "^6.0.2",
     "vitest": "^2.1.9"
   },

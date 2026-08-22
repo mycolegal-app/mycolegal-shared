@@ -1,5 +1,16 @@
-import type { PrismaClient } from '@prisma/client';
 import { buildScopeWhere, type ScopeContext } from './scopes';
+
+/**
+ * Structural shape of a Prisma client — just enough for this factory.
+ *
+ * We deliberately avoid `import type { PrismaClient } from '@prisma/client'`:
+ * this shared package has no Prisma schema to generate against, so the generated
+ * `PrismaClient` type isn't available when building the package's `dist`. Every
+ * consumer passes its OWN fully-typed client, so `TPrisma` binds to the concrete
+ * client and `Tx` still derives precisely from it. The permissive `any[]` bound
+ * guarantees any real client (with a `$transaction` method) satisfies it.
+ */
+type PrismaLike = { $transaction: (...args: any[]) => any };
 
 /**
  * Tenant context wrapper for Row-Level Security (RLS).
@@ -34,7 +45,7 @@ import { buildScopeWhere, type ScopeContext } from './scopes';
 
 const ORG_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
 
-export function createRlsHelpers<TPrisma extends PrismaClient>(client: TPrisma) {
+export function createRlsHelpers<TPrisma extends PrismaLike>(client: TPrisma) {
   type Tx = Parameters<Parameters<TPrisma['$transaction']>[0]>[0];
 
   /**

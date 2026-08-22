@@ -1,0 +1,29 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": ".",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "noEmit": false,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "types": ["node", "react", "react-dom"]
+  },
+  "include": [
+    "index.ts",
+    "components/**/*",
+    "hooks/**/*",
+    "lib/**/*",
+    "server/**/*",
+    "i18n/**/*",
+    "tailwind-preset.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "e2e/**/*",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "scripts/**"
+  ]
+}
