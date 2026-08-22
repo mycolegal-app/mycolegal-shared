@@ -423,7 +423,7 @@ export function IncidentReporter({
           onClick={openReporter}
           title={t("ui.incidentReporter.btnTooltip", { shortcut: shortcutLabel })}
           aria-label={t("ui.incidentReporter.btnAria", { shortcut: shortcutLabel })}
-          className="fixed bottom-6 right-6 z-[60] inline-flex h-10 w-10 items-center justify-center rounded-full bg-navy text-white shadow-lg ring-1 ring-white/40 transition-transform hover:scale-105 hover:bg-navy-800 focus:outline-none focus:ring-2 focus:ring-cyan print:hidden"
+          className="fixed bottom-6 right-6 z-[130] inline-flex h-10 w-10 items-center justify-center rounded-full bg-navy text-white shadow-lg ring-1 ring-white/40 transition-transform hover:scale-105 hover:bg-navy-800 focus:outline-none focus:ring-2 focus:ring-cyan print:hidden"
         >
           <Bug className="h-5 w-5" />
         </button>
@@ -431,7 +431,7 @@ export function IncidentReporter({
 
       {/* #306 — barra minimizada: deja ver la pantalla sin perder el borrador. */}
       {open && minimized && (
-        <div className="fixed bottom-6 right-6 z-[60] flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-lg print:hidden">
+        <div className="fixed bottom-6 right-6 z-[130] flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-lg print:hidden">
           {isImprovement ? (
             <Lightbulb className="h-4 w-4 shrink-0 text-navy" />
           ) : (
@@ -462,7 +462,9 @@ export function IncidentReporter({
       )}
 
       <Dialog open={open && !minimized} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-w-2xl">
+        {/* z-[130] > backdrop/panel del foro (109/110): permite comunicar
+            incidencias con el drawer de Comunidad abierto (#593). */}
+        <DialogContent className="max-w-2xl z-[130]" overlayClassName="z-[129]">
           {/* #306 — minimizar a una barra para echar un vistazo a la pantalla. */}
           <button
             type="button"
