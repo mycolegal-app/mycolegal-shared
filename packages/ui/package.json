@@ -1,6 +1,6 @@
 {
   "name": "@mycolegal-app/ui",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "type": "module",
   "sideEffects": [
     "**/*.css"
@@ -69,6 +69,7 @@
       "import": "./dist/tailwind-preset.js",
       "default": "./dist/tailwind-preset.js"
     },
+    "./e2e/*.js": "./e2e/*.js",
     "./e2e/*": "./e2e/*.js",
     "./package.json": "./package.json"
   },
