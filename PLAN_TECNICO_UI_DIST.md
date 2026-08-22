@@ -1,6 +1,6 @@
 # PLAN TÉCNICO — Migración de `@mycolegal-app/ui` a `dist` compilado (compile-no-bundle)
 
-**Estado:** Fases 0–3 COMPLETADAS. `@mycolegal-app/ui@2.0.0` (dist) PUBLICADO y adoptado por las 13 apps (React 19 + ui@^2.0.0, commiteado+pusheado). Pendiente SOLO: Fase 4 (quitar `transpilePackages`, opcional/gradual).
+**Estado:** ✅ COMPLETADO (Fases 0–4). `@mycolegal-app/ui@2.0.0` (dist) publicado y adoptado por las 13 apps (React 19 + ui@^2.0.0), `transpilePackages` de ui retirado en las 13 (Fase 4, builds verdes), todo commiteado+pusheado. `optimizePackageImports` conserva ui. PENDIENTE solo: desplegar (manual, deploy-all.sh) escalonado + vigilar CI.
 **Repo:** `mycolegal-shared` · package `packages/ui`
 **Fecha:** 2026-08-21
 
@@ -11,8 +11,12 @@
 - Builds verdes contra el dist 2.0.0 publicado en ≥7 apps (migradas + originales); las 13 instalan ui@2.0.0 sin conflictos.
 - Commit+push de las 13 apps (deploy.yml es CI Test&Build, NO despliega → push seguro; deploy es central/manual vía deploy-all.sh).
 
-## PENDIENTE — Fase 4 (opcional, gradual)
-Quitar `transpilePackages: "@mycolegal-app/ui"` de cada next.config (dejar sharedlib/text-extract). El dist funciona CON transpilePackages puesto (retrocompat validada), así que esto solo reclama el ahorro de re-transpilación en CI; hacerlo app por app cuando convenga. Mantener `optimizePackageImports`.
+## Fase 4 — HECHA (21-ago-2026)
+`transpilePackages: "@mycolegal-app/ui"` retirado de las 13 (dejando sharedlib/text-extract; `optimizePackageImports` conserva ui). Builds verdes consumiendo el dist directamente. Commiteado+pusheado. admin queda con `transpilePackages: []` (no consumía sharedlib/text-extract).
+
+## PENDIENTE (fuera de este plan)
+- **Desplegar** (manual, `deploy-all.sh`) escalonado — es un major de React; empezar por 1-2 apps y verificar en prod.
+- Vigilar los runs de CI de los pushes.
 
 ## RESULTADO DEL GATE (ejecutado 21-ago-2026)
 - ✅ `tsc` preserva `"use client"` (95/95) y emite 1:1 (153=153).
