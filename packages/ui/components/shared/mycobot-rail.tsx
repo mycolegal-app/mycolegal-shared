@@ -8,6 +8,7 @@ import {
   Maximize2,
   Minimize2,
   Send,
+  Paperclip,
   Loader2,
   ExternalLink,
   Scale,
@@ -320,6 +321,11 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
   // #563(a) — textarea de entrada auto-crece con el contenido (hasta un máximo,
   // luego scroll interno). El hilo de arriba se reajusta solo por el layout flex.
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  // F1 — chat con documento: adjunto EFÍMERO de la conversación (el server extrae solo el
+  // texto y lo inyecta como contexto; no persiste el binario). Se limpia en conversación nueva.
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [attachedDoc, setAttachedDoc] = useState<{ fileName: string } | null>(null);
+  const [attaching, setAttaching] = useState(false);
 
   // Carga la selección de clases (cookie compartida) al montar, al abrir el modal y
   // cuando otro consumidor del mismo origen (la página de Biblioteca) la cambia.
@@ -653,16 +659,64 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
 
   // Empieza un hilo nuevo (no borra el historial persistido en el servidor).
   const newConversation = useCallback(() => {
+    const prev = conversacionId;
     setMessages([]);
     setConversacionId(null);
     setViewer(null);
     setView("chat");
+    setAttachedDoc(null);
+    // F1 — borra el contexto documental efímero de la conversación anterior.
+    if (prev) {
+      void fetch(`${baseUrl}/doc-context?conversacionId=${encodeURIComponent(prev)}`, {
+        method: "DELETE",
+      }).catch(() => {});
+    }
     try {
       window.sessionStorage.removeItem(THREAD_STORAGE_KEY);
     } catch {
       /* ignore */
     }
-  }, []);
+  }, [conversacionId, baseUrl]);
+
+  // F1 — adjunta un documento a la conversación: el server extrae el texto y lo guarda
+  // como contexto efímero por conversacionId. Si aún no hay conversación, se pre-genera
+  // el id para colgar el documento de ESTA conversación desde ya.
+  const attachDoc = useCallback(
+    async (file: File) => {
+      setAttaching(true);
+      try {
+        let cid = conversacionId;
+        if (!cid) {
+          cid = crypto.randomUUID();
+          setConversacionId(cid);
+        }
+        const fd = new FormData();
+        fd.append("file", file);
+        fd.append("conversacionId", cid);
+        const res = await fetch(`${baseUrl}/doc-context`, { method: "POST", body: fd });
+        if (!res.ok) {
+          setAttachedDoc(null);
+          return;
+        }
+        setAttachedDoc({ fileName: file.name });
+      } catch {
+        setAttachedDoc(null);
+      } finally {
+        setAttaching(false);
+      }
+    },
+    [conversacionId, baseUrl],
+  );
+
+  const removeDoc = useCallback(async () => {
+    const cid = conversacionId;
+    setAttachedDoc(null);
+    if (cid) {
+      await fetch(`${baseUrl}/doc-context?conversacionId=${encodeURIComponent(cid)}`, {
+        method: "DELETE",
+      }).catch(() => {});
+    }
+  }, [conversacionId, baseUrl]);
 
   // Carga la lista de conversaciones (sin cambiar de vista). La usan tanto el panel
   // de historial (vista "history") como la columna izquierda del modo expandido.
@@ -1522,7 +1576,42 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
                 }}
                 className="border-t p-3"
               >
+                {attachedDoc && (
+                  <div className="mb-2 flex items-center gap-2 rounded-md border bg-gray-50 px-2 py-1 text-xs text-gray-700">
+                    <Paperclip className="h-3.5 w-3.5 shrink-0 text-cyan-600" />
+                    <span className="flex-1 truncate" title={attachedDoc.fileName}>{attachedDoc.fileName}</span>
+                    <button
+                      type="button"
+                      onClick={() => void removeDoc()}
+                      aria-label={t("ui.mycobot.attachRemove")}
+                      className="rounded p-0.5 text-gray-400 hover:text-gray-700"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
                 <div className="flex items-end gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.doc,.docx,image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) void attachDoc(f);
+                      e.target.value = "";
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={attaching || loading}
+                    aria-label={t("ui.mycobot.attach")}
+                    title={t("ui.mycobot.attach")}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border text-gray-500 hover:bg-gray-50 disabled:opacity-40"
+                  >
+                    {attaching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+                  </button>
                   <textarea
                     ref={inputRef}
                     value={input}

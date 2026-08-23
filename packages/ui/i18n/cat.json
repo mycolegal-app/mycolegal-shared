@@ -1061,7 +1061,9 @@
         "LEGISLACION_UE": "Legisl. UE",
         "GUIAS": "Guies",
         "OTROS": "Altres"
-      }
+      },
+      "attach": "Adjuntar document a la conversa",
+      "attachRemove": "Treure document"
     },
     "registradorPicker": {
       "placeholder": "Cercar registre per nom o població…",

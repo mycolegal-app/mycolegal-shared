@@ -1060,7 +1060,9 @@
         "LEGISLACION_UE": "Lexisl. UE",
         "GUIAS": "Guías",
         "OTROS": "Outros"
-      }
+      },
+      "attach": "Anexar documento á conversa",
+      "attachRemove": "Quitar documento"
     },
     "registradorPicker": {
       "placeholder": "Buscar rexistro por nome ou poboación…",

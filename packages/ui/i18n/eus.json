@@ -1060,7 +1060,9 @@
         "LEGISLACION_UE": "EB legeria",
         "GUIAS": "Gidak",
         "OTROS": "Bestel."
-      }
+      },
+      "attach": "Erantsi dokumentua elkarrizketari",
+      "attachRemove": "Kendu dokumentua"
     },
     "registradorPicker": {
       "placeholder": "Bilatu erregistroa izenez edo herriz…",
