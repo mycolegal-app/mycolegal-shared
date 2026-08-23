@@ -13,7 +13,7 @@ import { useI18n } from "../i18n/i18n-context";
 export interface BillingNotice {
   appSlug: string;
   appName: string;
-  /** APP_COURTESY_EXPIRED | APP_TRIAL_EXPIRED | APP_SUBSCRIPTION_EXPIRED */
+  /** APP_COURTESY_EXPIRED | APP_TRIAL_EXPIRED | APP_SUBSCRIPTION_EXPIRED | PAYMENT_METHOD_EXPIRING */
   code: string;
   canSubscribe: boolean;
 }
@@ -22,14 +22,20 @@ const CODE_KEY: Record<string, string> = {
   APP_COURTESY_EXPIRED: "courtesyExpired",
   APP_TRIAL_EXPIRED: "trialExpired",
   APP_SUBSCRIPTION_EXPIRED: "subscriptionExpired",
+  PAYMENT_METHOD_EXPIRING: "paymentMethodExpiring",
 };
+
+/** Códigos org-level de tarjeta: CTA a actualizar tarjeta, no a suscribirse. */
+const CARD_CODES = new Set(["PAYMENT_METHOD_EXPIRING"]);
 
 export function BillingNoticeBanner({
   notices,
   subscribeUrl,
+  paymentUrl,
 }: {
   notices: BillingNotice[];
   subscribeUrl?: string | null;
+  paymentUrl?: string | null;
 }) {
   const { t } = useI18n();
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
@@ -41,7 +47,9 @@ export function BillingNoticeBanner({
     <div className="flex flex-col gap-2 px-6 pt-3">
       {visible.map((n) => {
         const key = `${n.appSlug}:${n.code}`;
+        const isCard = CARD_CODES.has(n.code);
         const codeKey = CODE_KEY[n.code] ?? "subscriptionExpired";
+        const ctaUrl = isCard ? paymentUrl : subscribeUrl;
         return (
           <div
             key={key}
@@ -50,15 +58,22 @@ export function BillingNoticeBanner({
           >
             <AlertTriangle className="h-5 w-5 flex-shrink-0 text-mc-warning-500" />
             <p className="flex-1 text-sm text-mc-warning-700">
-              {t(`ui.billingNotice.${codeKey}`, { app: n.appName })}{" "}
-              {n.canSubscribe ? t("ui.billingNotice.subscribePrompt") : t("ui.billingNotice.askAdmin")}
+              {t(`ui.billingNotice.${codeKey}`, { app: n.appName })}
+              {!isCard && (
+                <>
+                  {" "}
+                  {n.canSubscribe
+                    ? t("ui.billingNotice.subscribePrompt")
+                    : t("ui.billingNotice.askAdmin")}
+                </>
+              )}
             </p>
-            {n.canSubscribe && subscribeUrl && (
+            {n.canSubscribe && ctaUrl && (
               <a
-                href={subscribeUrl}
+                href={ctaUrl}
                 className="flex-shrink-0 rounded-lg bg-mc-warning-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
               >
-                {t("ui.billingNotice.ctaSubscribe")}
+                {t(isCard ? "ui.billingNotice.ctaUpdateCard" : "ui.billingNotice.ctaSubscribe")}
               </a>
             )}
             <button

@@ -743,7 +743,9 @@
       "subscribePrompt": "Harpidetu bere IA funtzioak erabiltzen jarraitzeko.",
       "askAdmin": "Eskatu administratzaile bati harpidetza berritzeko, IA erabiltzen jarraitzeko.",
       "ctaSubscribe": "Harpidetza berritu",
-      "dismiss": "Baztertu"
+      "dismiss": "Baztertu",
+      "paymentMethodExpiring": "Zure ordainketa-txartela iraungitzeko zorian dago. Eguneratu ezazu harpidetza eta IA kontsumoa ez eteteko.",
+      "ctaUpdateCard": "Txartela eguneratu"
     },
     "appShell": {
       "openMobileMenu": "Alboko menua ireki"

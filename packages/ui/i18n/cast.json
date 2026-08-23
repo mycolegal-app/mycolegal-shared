@@ -744,7 +744,9 @@
       "subscribePrompt": "Suscríbete para seguir usando sus funciones de IA.",
       "askAdmin": "Pide a un administrador que renueve la suscripción para seguir usando la IA.",
       "ctaSubscribe": "Reactivar suscripción",
-      "dismiss": "Descartar"
+      "dismiss": "Descartar",
+      "paymentMethodExpiring": "Tu tarjeta de pago está a punto de caducar. Actualízala para no interrumpir tu suscripción ni el consumo de IA.",
+      "ctaUpdateCard": "Actualizar tarjeta"
     },
     "appShell": {
       "openMobileMenu": "Abrir menú lateral"

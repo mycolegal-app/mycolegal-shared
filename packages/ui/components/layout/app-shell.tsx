@@ -336,6 +336,8 @@ export default function AppShell({
   // Apps vendibles no concedidas (grayed en la toolbar, solo org_admin) + destino.
   const [sellableExtras, setSellableExtras] = useState<AppInfo[]>([]);
   const [subscribeUrl, setSubscribeUrl] = useState<string | null>(null);
+  // Destino "Actualizar tarjeta" para el aviso de tarjeta por caducar.
+  const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   // Avisos de cortesía/trial expirado por app concedida (banner descartable).
   const [billingNotices, setBillingNotices] = useState<BillingNotice[]>([]);
   const [inactivityTimeout, setInactivityTimeout] = useState(15);
@@ -369,6 +371,7 @@ export default function AppShell({
       if (d.apps) setApps(d.apps);
       if (Array.isArray(d.sellableExtras)) setSellableExtras(d.sellableExtras);
       setSubscribeUrl(d.subscribeUrl ?? null);
+      setPaymentUrl(d.paymentUrl ?? null);
       if (d.inactivityTimeout) setInactivityTimeout(d.inactivityTimeout);
       if (!fromCache) {
         if (Array.isArray(d.notices)) setBillingNotices(d.notices);
@@ -451,14 +454,22 @@ export default function AppShell({
             impersonatedAs ? <ImpersonationBanner targetLabel={impersonatedAs} /> : undefined
           }
           billingNotices={
-            // Solo el aviso de la app ACTUAL: los notices son de toda la org, pero
-            // enseñar "Consultor caducó" dentro de Notaría sería ruido fuera de contexto.
-            billingNotices.some((n) => n.appSlug === appSlug) ? (
-              <BillingNoticeBanner
-                notices={billingNotices.filter((n) => n.appSlug === appSlug)}
-                subscribeUrl={subscribeUrl}
-              />
-            ) : undefined
+            // Aviso de la app ACTUAL (los per-app son de toda la org, pero enseñar
+            // "Consultor caducó" dentro de Notaría sería ruido fuera de contexto) +
+            // los org-level de cuenta (tarjeta por caducar, appSlug '__account__'),
+            // que se muestran en cualquier app.
+            (() => {
+              const shown = billingNotices.filter(
+                (n) => n.appSlug === appSlug || n.appSlug === "__account__",
+              );
+              return shown.length ? (
+                <BillingNoticeBanner
+                  notices={shown}
+                  subscribeUrl={subscribeUrl}
+                  paymentUrl={paymentUrl}
+                />
+              ) : undefined;
+            })()
           }
           onToggleMobile={() => setMobileOpen(!mobileOpen)}
         >
