@@ -40,6 +40,12 @@ export interface WithCreditsCtx {
   orgId: string;
   actionKey: string;
   userId?: string | null;
+  /**
+   * Callback opcional con los créditos REALMENTE cobrados (según la tarifa vigente
+   * del catálogo, que el Superadmin fija en Admin). Útil para persistir el coste
+   * real de la acción. No se envía a `consume` (se retira del cuerpo).
+   */
+  onCharged?: (creditsCharged: number) => void;
 }
 
 export function createCreditsClient(config: CreditsClientConfig) {
@@ -87,8 +93,10 @@ export function createCreditsClient(config: CreditsClientConfig) {
 
     const { value, usage } = await fn();
 
+    const { onCharged, ...meterCtx } = ctx;
     try {
-      await consume({ ...ctx, ...(usage ?? {}) });
+      const res = await consume({ ...meterCtx, ...(usage ?? {}) });
+      onCharged?.(res.creditsCharged);
     } catch (err) {
       // Contabilidad best-effort: no romper la operación del usuario.
       console.error('[credits] consume failed', { actionKey: ctx.actionKey, err });
