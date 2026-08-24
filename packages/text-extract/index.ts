@@ -11,9 +11,11 @@
 export * from './pdf';
 export * from './ocr-client';
 export { extractWordText, esWord } from './word';
+export { extractXlsxText, esXlsx } from './xlsx';
 
 import { extractText as extractPdfLayer } from './pdf';
 import { extractWordText, esWord } from './word';
+import { extractXlsxText, esXlsx } from './xlsx';
 import { ocrViaPlatform } from './ocr-client';
 
 /** Config para el fallback OCR (PDF escaneado / imágenes). Los mismos valores
@@ -23,7 +25,7 @@ export interface OcrConfig {
   serviceKey: string;
 }
 
-export type ExtraerMetodo = 'word' | 'pdf-text-layer' | 'ocr' | 'empty';
+export type ExtraerMetodo = 'word' | 'xlsx' | 'pdf-text-layer' | 'ocr' | 'empty';
 
 export interface ExtraerTextoResult {
   texto: string;
@@ -50,6 +52,12 @@ export async function extraerTexto(bytes: Uint8Array, opts: ExtraerTextoOpts = {
   const mime = opts.mime ?? null;
   const fileName = opts.fileName ?? '';
   const ocr = opts.ocr;
+
+  // 0) XLSX → texto etiquetado por columna (sin OCR).
+  if (esXlsx(mime, fileName)) {
+    const texto = await extractXlsxText(bytes);
+    return { texto, chars: noEspacios(texto), metodo: texto ? 'xlsx' : 'empty' };
+  }
 
   // 1) Word → texto embebido (sin OCR).
   if (esWord(mime, fileName)) {

@@ -1,6 +1,6 @@
 {
   "name": "@mycolegal-app/text-extract",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "main": "./index.ts",
   "publishConfig": {
@@ -21,6 +21,7 @@
     "VERSION.md"
   ],
   "dependencies": {
+    "exceljs": "^4.4.0",
     "unpdf": "^1.6.2",
     "word-extractor": "^1.0.4"
   },
