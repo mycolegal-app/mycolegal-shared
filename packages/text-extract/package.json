@@ -1,6 +1,6 @@
 {
   "name": "@mycolegal-app/text-extract",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "type": "module",
   "main": "./index.ts",
   "publishConfig": {
@@ -14,6 +14,7 @@
   "files": [
     "index.ts",
     "word.ts",
+    "xlsx.ts",
     "pdf.ts",
     "ocr-client.ts",
     "types",
