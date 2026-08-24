@@ -1062,7 +1062,26 @@
         "OTROS": "Bestel."
       },
       "attach": "Erantsi dokumentua elkarrizketari",
-      "attachRemove": "Kendu dokumentua"
+      "attachRemove": "Kendu dokumentua",
+      "skillSelect": "Aplikatu skill bat elkarrizketari",
+      "skillNone": "Skill gabe",
+      "skills": "Skill-ak",
+      "skillsTitle": "Zure skill-ak",
+      "skillImport": ".myc inportatu",
+      "skillNew": "Berria",
+      "skillNombre": "Skill-aren izena",
+      "skillDescripcion": "Deskribapena (noiz erabili)",
+      "skillInstruccion": "Jarraibidea: zer egin behar duen MycoBotek",
+      "skillCancel": "Utzi",
+      "skillSave": "Gorde",
+      "skillsEmpty": "Oraindik ez dago skill-ik. Sortu bat edo inportatu .myc bat.",
+      "skillUse": "Erabili",
+      "skillExport": ".myc esportatu",
+      "skillDelete": "Ezabatu",
+      "skillEdit": "Editatu",
+      "skillDuplicate": "Bikoiztu",
+      "skillFormNew": "Skill berria",
+      "skillFormEdit": "Editatu skill-a"
     },
     "registradorPicker": {
       "placeholder": "Bilatu erregistroa izenez edo herriz…",

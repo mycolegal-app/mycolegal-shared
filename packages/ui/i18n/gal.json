@@ -1062,7 +1062,26 @@
         "OTROS": "Outros"
       },
       "attach": "Anexar documento á conversa",
-      "attachRemove": "Quitar documento"
+      "attachRemove": "Quitar documento",
+      "skillSelect": "Aplicar unha skill á conversa",
+      "skillNone": "Sen skill",
+      "skills": "Skills",
+      "skillsTitle": "As túas skills",
+      "skillImport": "Importar .myc",
+      "skillNew": "Nova",
+      "skillNombre": "Nome da skill",
+      "skillDescripcion": "Descrición (cando usala)",
+      "skillInstruccion": "Instrución: que debe facer MycoBot",
+      "skillCancel": "Cancelar",
+      "skillSave": "Gardar",
+      "skillsEmpty": "Aínda non hai skills. Crea unha ou importa un .myc.",
+      "skillUse": "Usar",
+      "skillExport": "Exportar .myc",
+      "skillDelete": "Borrar",
+      "skillEdit": "Editar",
+      "skillDuplicate": "Duplicar",
+      "skillFormNew": "Nova skill",
+      "skillFormEdit": "Editar skill"
     },
     "registradorPicker": {
       "placeholder": "Buscar rexistro por nome ou poboación…",

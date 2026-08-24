@@ -247,7 +247,7 @@ const REOPEN_STORAGE_KEY = "mycolegal:mycobot:reopen";
 // #563(a) — altura máxima del textarea de entrada antes de activar scroll interno.
 const MAX_INPUT_PX = 160;
 
-type View = "chat" | "history" | "resolucion";
+type View = "chat" | "history" | "resolucion" | "skills";
 
 interface ViewerState {
   citas: Cita[];
@@ -326,6 +326,15 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [attachedDoc, setAttachedDoc] = useState<{ fileName: string } | null>(null);
   const [attaching, setAttaching] = useState(false);
+  // F3 — skills disponibles (las de la org + las de fábrica) y la skill ACTIVA de la
+  // conversación (su instrucción se inyecta como contexto al preguntar).
+  const [skills, setSkills] = useState<{ id: string; nombre: string; descripcion: string | null; deFabrica: boolean; editable: boolean }[]>([]);
+  const [activeSkillId, setActiveSkillId] = useState<string | null>(null);
+  // F3.4 — formulario de skill (crear/editar/duplicar) e import de .myc. `id` presente = editar.
+  const [skillForm, setSkillForm] = useState<{ id?: string; nombre: string; descripcion: string; instruccion: string } | null>(null);
+  const skillImportRef = useRef<HTMLInputElement>(null);
+  // En modo expandido la columna izquierda alterna entre conversaciones y skills.
+  const [leftTab, setLeftTab] = useState<"conversaciones" | "skills">("conversaciones");
 
   // Carga la selección de clases (cookie compartida) al montar, al abrir el modal y
   // cuando otro consumidor del mismo origen (la página de Biblioteca) la cambia.
@@ -338,6 +347,88 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
 
   // Base de los endpoints de resoluciones (quita el sufijo `/ask`).
   const baseUrl = askUrl.replace(/\/ask$/, "");
+
+  // F3 — carga las skills disponibles (org + fábrica) para el selector y la tienda.
+  const loadSkills = useCallback(async () => {
+    try {
+      const r = await fetch(`${baseUrl}/skills`);
+      const j = r.ok ? await r.json() : null;
+      const d = j?.data ?? j;
+      if (Array.isArray(d)) setSkills(d);
+    } catch {
+      /* best-effort */
+    }
+  }, [baseUrl]);
+  useEffect(() => {
+    void loadSkills();
+  }, [loadSkills]);
+
+  const saveSkill = useCallback(async () => {
+    if (!skillForm || !skillForm.nombre.trim() || skillForm.instruccion.trim().length < 10) return;
+    const { id, nombre, descripcion, instruccion } = skillForm;
+    // Con id → PATCH (modificar); sin id → POST (crear / duplicar).
+    const r = await fetch(id ? `${baseUrl}/skills/${id}` : `${baseUrl}/skills`, {
+      method: id ? "PATCH" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nombre, descripcion, instruccion }),
+    });
+    if (r.ok) {
+      setSkillForm(null);
+      await loadSkills();
+    }
+  }, [skillForm, baseUrl, loadSkills]);
+
+  // Abre el formulario relleno con una skill existente. mode="edit" → guarda con PATCH;
+  // mode="duplicate" → sin id, se guarda como copia nueva. Trae la instrucción completa (la
+  // lista no la incluye) con GET /skills/[id].
+  const openSkillEditor = useCallback(
+    async (id: string, mode: "edit" | "duplicate") => {
+      try {
+        const r = await fetch(`${baseUrl}/skills/${id}`);
+        const j = r.ok ? await r.json() : null;
+        const s = j?.data ?? j;
+        if (!s) return;
+        setSkillForm({
+          id: mode === "edit" ? s.id : undefined,
+          nombre: mode === "duplicate" ? `${s.nombre} (copia)` : s.nombre,
+          descripcion: s.descripcion ?? "",
+          instruccion: s.instruccion ?? "",
+        });
+        setView("skills");
+      } catch {
+        /* best-effort */
+      }
+    },
+    [baseUrl],
+  );
+
+  const deleteSkill = useCallback(
+    async (id: string) => {
+      const r = await fetch(`${baseUrl}/skills/${id}`, { method: "DELETE" });
+      if (r.ok) {
+        setActiveSkillId((cur) => (cur === id ? null : cur));
+        await loadSkills();
+      }
+    },
+    [baseUrl, loadSkills],
+  );
+
+  const importSkill = useCallback(
+    async (file: File) => {
+      try {
+        const json = JSON.parse(await file.text());
+        const r = await fetch(`${baseUrl}/skills/import`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(json),
+        });
+        if (r.ok) await loadSkills();
+      } catch {
+        /* .myc no válido: no rompemos */
+      }
+    },
+    [baseUrl, loadSkills],
+  );
 
   // Saldo del monedero único de créditos de IA de la org (mismo canal que el
   // resto del rail: en Consultor lo sirve /api/resoluciones/credit-balance y en
@@ -549,6 +640,8 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
             clases: readClasesSel() ?? undefined,
             // Scope por FUENTE (el otro nivel del modal de Fuentes). AND con clases.
             fuentes: readFuentesSel() ?? undefined,
+            // F3 — skill activa: su instrucción se inyecta como contexto en el server.
+            skillId: activeSkillId ?? undefined,
           }),
         });
 
@@ -654,7 +747,7 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
         void refreshBalance(); // la consulta puede haber gastado créditos
       }
     },
-    [askUrl, conversacionId, loading, t, corpus, refreshBalance],
+    [askUrl, conversacionId, loading, t, corpus, refreshBalance, activeSkillId],
   );
 
   // Empieza un hilo nuevo (no borra el historial persistido en el servidor).
@@ -665,6 +758,7 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
     setViewer(null);
     setView("chat");
     setAttachedDoc(null);
+    setActiveSkillId(null);
     // F1 — borra el contexto documental efímero de la conversación anterior.
     if (prev) {
       void fetch(`${baseUrl}/doc-context?conversacionId=${encodeURIComponent(prev)}`, {
@@ -916,6 +1010,143 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
   const nClasesConsideradas = consideradas.length;
   const nDocsConsiderados = consideradas.reduce((s, c) => s + c.count, 0);
 
+  // F3.4 — gestor de skills reutilizable: tienda a pantalla completa (modo normal) y
+  // pestaña de la columna izquierda (modo expandido). Crear/editar es un modal aparte.
+  const skillsManagerEl = (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <input
+          ref={skillImportRef}
+          type="file"
+          accept=".myc,application/json"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) void importSkill(f);
+            e.target.value = "";
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => setSkillForm({ nombre: "", descripcion: "", instruccion: "" })}
+          className="rounded-md bg-cyan-600 px-2 py-1 text-xs font-semibold text-white hover:bg-cyan-700"
+        >
+          {t("ui.mycobot.skillNew")}
+        </button>
+        <button
+          type="button"
+          onClick={() => skillImportRef.current?.click()}
+          className="rounded-md border px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
+        >
+          {t("ui.mycobot.skillImport")}
+        </button>
+      </div>
+      {skills.length === 0 && <p className="text-xs text-gray-400">{t("ui.mycobot.skillsEmpty")}</p>}
+      <ul className="space-y-2">
+        {skills.map((s) => (
+          <li key={s.id} className="rounded-lg border p-2.5">
+            <p className="truncate text-sm font-medium text-gray-800">
+              {s.nombre} {s.deFabrica && <span className="text-amber-500">★</span>}
+            </p>
+            {s.descripcion && <p className="mt-0.5 line-clamp-2 text-xs text-gray-500">{s.descripcion}</p>}
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveSkillId(s.id);
+                  setView("chat");
+                }}
+                className="rounded-md bg-cyan-600 px-2 py-1 text-xs font-semibold text-white hover:bg-cyan-700"
+              >
+                {t("ui.mycobot.skillUse")}
+              </button>
+              <a
+                href={`${baseUrl}/skills/${s.id}/export`}
+                className="rounded-md border px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
+              >
+                {t("ui.mycobot.skillExport")}
+              </a>
+              {s.editable && (
+                <button
+                  type="button"
+                  onClick={() => void openSkillEditor(s.id, "edit")}
+                  className="rounded-md border px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
+                >
+                  {t("ui.mycobot.skillEdit")}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => void openSkillEditor(s.id, "duplicate")}
+                className="rounded-md border px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
+              >
+                {t("ui.mycobot.skillDuplicate")}
+              </button>
+              {s.editable && (
+                <button
+                  type="button"
+                  onClick={() => void deleteSkill(s.id)}
+                  className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50"
+                >
+                  {t("ui.mycobot.skillDelete")}
+                </button>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+
+  const skillFormModal = skillForm ? (
+    <div
+      className="fixed inset-0 z-[130] flex items-center justify-center bg-black/40 p-4"
+      onClick={() => setSkillForm(null)}
+    >
+      <div className="w-full max-w-lg rounded-lg bg-white p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <p className="mb-2 text-sm font-semibold text-gray-700">
+          {skillForm.id ? t("ui.mycobot.skillFormEdit") : t("ui.mycobot.skillFormNew")}
+        </p>
+        <input
+          value={skillForm.nombre}
+          onChange={(e) => setSkillForm((f) => (f ? { ...f, nombre: e.target.value } : f))}
+          placeholder={t("ui.mycobot.skillNombre")}
+          className="mb-2 w-full rounded-md border px-2 py-1.5 text-sm outline-none"
+        />
+        <input
+          value={skillForm.descripcion}
+          onChange={(e) => setSkillForm((f) => (f ? { ...f, descripcion: e.target.value } : f))}
+          placeholder={t("ui.mycobot.skillDescripcion")}
+          className="mb-2 w-full rounded-md border px-2 py-1.5 text-sm outline-none"
+        />
+        <textarea
+          value={skillForm.instruccion}
+          onChange={(e) => setSkillForm((f) => (f ? { ...f, instruccion: e.target.value } : f))}
+          placeholder={t("ui.mycobot.skillInstruccion")}
+          rows={12}
+          className="mb-2 w-full resize-none rounded-md border px-2 py-1.5 text-sm outline-none"
+        />
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setSkillForm(null)}
+            className="rounded-md border px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-100"
+          >
+            {t("ui.mycobot.skillCancel")}
+          </button>
+          <button
+            type="button"
+            onClick={() => void saveSkill()}
+            disabled={!skillForm.nombre.trim() || skillForm.instruccion.trim().length < 10}
+            className="rounded-md bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-700 disabled:opacity-40"
+          >
+            {t("ui.mycobot.skillSave")}
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   return (
     <>
       {/* Handle colapsado: borde derecho, vertical */}
@@ -1003,6 +1234,17 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
                 <History className="h-[18px] w-[18px]" />
               </button>
             )}
+            {!expanded && (
+              <button
+                type="button"
+                onClick={() => setView((v) => (v === "skills" ? "chat" : "skills"))}
+                aria-label={t("ui.mycobot.skills")}
+                title={t("ui.mycobot.skills")}
+                className={`rounded p-1 hover:bg-white/10 ${view === "skills" ? "bg-white/15" : ""}`}
+              >
+                <ScrollText className="h-[18px] w-[18px]" />
+              </button>
+            )}
             <button
               type="button"
               onClick={newConversation}
@@ -1028,22 +1270,37 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
           <div className="flex min-h-0 flex-1 overflow-hidden">
             {expanded && (
               <div className="hidden w-64 shrink-0 flex-col border-r bg-gray-50/70 md:flex">
-                <div className="flex shrink-0 items-center gap-2 border-b px-3 py-2">
-                  <History className="h-3.5 w-3.5 shrink-0 text-gray-400" />
-                  <span className="flex-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                    {t("ui.mycobot.conversations")}
-                  </span>
+                <div className="flex shrink-0 items-center gap-1 border-b px-2 py-1.5">
                   <button
                     type="button"
-                    onClick={newConversation}
-                    aria-label={t("ui.mycobot.newConversation")}
-                    title={t("ui.mycobot.newConversation")}
-                    className="rounded p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
+                    onClick={() => setLeftTab("conversaciones")}
+                    className={`flex-1 rounded px-2 py-1 text-xs font-semibold ${leftTab === "conversaciones" ? "bg-gray-200 text-gray-700" : "text-gray-400 hover:bg-gray-100"}`}
                   >
-                    <PlusCircle className="h-4 w-4" />
+                    {t("ui.mycobot.conversations")}
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setLeftTab("skills")}
+                    className={`flex-1 rounded px-2 py-1 text-xs font-semibold ${leftTab === "skills" ? "bg-gray-200 text-gray-700" : "text-gray-400 hover:bg-gray-100"}`}
+                  >
+                    {t("ui.mycobot.skills")}
+                  </button>
+                  {leftTab === "conversaciones" && (
+                    <button
+                      type="button"
+                      onClick={newConversation}
+                      aria-label={t("ui.mycobot.newConversation")}
+                      title={t("ui.mycobot.newConversation")}
+                      className="rounded p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
+                    >
+                      <PlusCircle className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
-                <div className="min-h-0 flex-1 overflow-y-auto p-2">
+                {leftTab === "skills" && (
+                  <div className="min-h-0 flex-1 overflow-y-auto p-2">{skillsManagerEl}</div>
+                )}
+                <div className={`min-h-0 flex-1 overflow-y-auto p-2 ${leftTab === "skills" ? "hidden" : ""}`}>
                   {historyLoading && (
                     <div className="flex items-center gap-2 px-1 py-6 text-sm text-gray-500">
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -1277,6 +1534,14 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
                 )}
               </div>
             </>
+          )}
+
+          {/* ── Tienda de skills (modo normal; en expandido va en la columna izquierda) ── */}
+          {view === "skills" && !expanded && (
+            <div className="flex-1 overflow-y-auto p-4">
+              <p className="mb-3 text-sm font-semibold text-gray-700">{t("ui.mycobot.skillsTitle")}</p>
+              {skillsManagerEl}
+            </div>
           )}
 
           {/* ── Conversación (chat) ─────────────────────────────────── */}
@@ -1576,6 +1841,26 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
                 }}
                 className="border-t p-3"
               >
+                {skills.length > 0 && (
+                  <div className="mb-2 flex items-center gap-2 text-xs text-gray-600">
+                    <Sparkles className="h-3.5 w-3.5 shrink-0 text-cyan-600" />
+                    <select
+                      value={activeSkillId ?? ""}
+                      onChange={(e) => setActiveSkillId(e.target.value || null)}
+                      aria-label={t("ui.mycobot.skillSelect")}
+                      title={t("ui.mycobot.skillSelect")}
+                      className="min-w-0 flex-1 rounded-md border bg-white px-2 py-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+                    >
+                      <option value="">{t("ui.mycobot.skillNone")}</option>
+                      {skills.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.nombre}
+                          {s.deFabrica ? " ★" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 {attachedDoc && (
                   <div className="mb-2 flex items-center gap-2 rounded-md border bg-gray-50 px-2 py-1 text-xs text-gray-700">
                     <Paperclip className="h-3.5 w-3.5 shrink-0 text-cyan-600" />
@@ -1594,7 +1879,7 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept=".pdf,.doc,.docx,image/*"
+                    accept=".pdf,.doc,.docx,.xlsx,.xls,image/*"
                     className="hidden"
                     onChange={(e) => {
                       const f = e.target.files?.[0];
@@ -1645,6 +1930,7 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
           )}
             </div>
           </div>
+          {skillFormModal}
         </aside>
       )}
 
