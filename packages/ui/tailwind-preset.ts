@@ -154,6 +154,28 @@ const preset = {
           900: '#0f1b2d',
           950: '#091420',
         },
+
+        /* Cyan (acento de marca) — usado por los componentes compartidos en su
+           forma PELADA: `bg-cyan`, `text-cyan`, `focus:ring-cyan`… Vivía solo en
+           el tailwind.config de 5 apps (admin, config, legifirma, notaria,
+           tramitacion) con estos mismos valores, así que en las otras 8 la clase
+           no se generaba: `bg-cyan text-white` daba texto blanco sobre fondo
+           transparente, es decir, invisible. Eso ocultaba el mensaje del usuario
+           en el hilo de incidencias (#604) y varios botones primarios. Al vivir
+           aquí lo heredan todas las apps y ninguna nueva vuelve a caer. */
+        cyan: {
+          DEFAULT: '#00d4aa',
+          50:  '#ecfdf7',
+          100: '#d1fae9',
+          200: '#a7f3d7',
+          300: '#6ee7bf',
+          400: '#34d4a4',
+          500: '#00d4aa',
+          600: '#00a884',
+          700: '#008568',
+          800: '#006953',
+          900: '#005644',
+        },
       },
 
       /* ----------------------------------------------------------------
