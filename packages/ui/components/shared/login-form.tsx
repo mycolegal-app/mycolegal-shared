@@ -80,6 +80,7 @@ const LOGIN_ERROR_KEYS: Record<string, string> = {
   APP_MAINTENANCE: "errAppMaintenance",
   PASSWORD_SAME: "errPasswordSame",
   RATE_LIMITED: "errRateLimited",
+  REGISTRATION_INCOMPLETE: "errRegistrationIncomplete",
 };
 
 /**
@@ -166,6 +167,27 @@ export function LoginForm({
     }
 
     if (!res.ok) {
+      // Alta de notaría sin completar (gate de auth): no es un error que se
+      // arregle tecleando otra cosa, así que en vez de un mensaje muerto se
+      // lleva al notario a la página de completar el alta. El proxy de login de
+      // cada app reenvía este 403 tal cual, de ahí que el código y el enlace
+      // vengan en la raíz y no bajo `error`.
+      const gateCode = data.code ?? data.error?.code;
+      if (gateCode === "REGISTRATION_INCOMPLETE") {
+        if (data.completionUrl) {
+          window.location.href = data.completionUrl;
+          return;
+        }
+        // Sin enlace = quien entra no es el administrador de la notaría (el
+        // enlace de pago solo se le emite a él): se le dice a quién reclamar.
+        setError(
+          data.adminEmail
+            ? t("ui.login.errRegistrationIncompleteAdmin", { email: data.adminEmail })
+            : t("ui.login.errRegistrationIncomplete"),
+        );
+        return;
+      }
+
       // Password expirada: en vez de un error muerto, abrimos el diálogo de
       // cambio (actual + nueva + repetir). La contraseña actual ya la validó el
       // login, así que la pre-rellenamos con la que acaba de teclear.

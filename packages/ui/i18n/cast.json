@@ -329,6 +329,8 @@
       "errAppMaintenance": "La aplicación está en mantenimiento. Vuelve a intentarlo en unos minutos.",
       "errPasswordSame": "La nueva contraseña debe ser distinta de la actual.",
       "errRateLimited": "Demasiados intentos. Espera un momento antes de volver a probar.",
+      "errRegistrationIncomplete": "El alta de tu notaría todavía no está completada.",
+      "errRegistrationIncompleteAdmin": "El alta de tu notaría no está completada. Pídele a {email} que configure el método de pago.",
       "expiredTitle": "Tu contraseña ha caducado",
       "expiredSubtitle": "Por seguridad debes establecer una nueva contraseña para continuar.",
       "expiredCurrent": "Contraseña actual",

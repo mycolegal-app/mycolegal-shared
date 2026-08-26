@@ -329,6 +329,8 @@
       "errAppMaintenance": "L'aplicació està en manteniment. Torna-ho a provar d'aquí a uns minuts.",
       "errPasswordSame": "La nova contrasenya ha de ser diferent de l'actual.",
       "errRateLimited": "Massa intents. Espera un moment abans de tornar a provar.",
+      "errRegistrationIncomplete": "L'alta de la teva notaria encara no està completada.",
+      "errRegistrationIncompleteAdmin": "L'alta de la teva notaria no està completada. Demana-li a {email} que configuri el mètode de pagament.",
       "expiredTitle": "La teva contrasenya ha caducat",
       "expiredSubtitle": "Per seguretat has d'establir una nova contrasenya per continuar.",
       "expiredCurrent": "Contrasenya actual",

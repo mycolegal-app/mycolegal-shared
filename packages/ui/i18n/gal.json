@@ -328,6 +328,8 @@
       "errAppMaintenance": "A aplicación está en mantemento. Téntao de novo dentro duns minutos.",
       "errPasswordSame": "A nova contrasinal debe ser distinta da actual.",
       "errRateLimited": "Demasiados intentos. Agarda un momento antes de volver tentar.",
+      "errRegistrationIncomplete": "A alta da túa notaría aínda non está completada.",
+      "errRegistrationIncompleteAdmin": "A alta da túa notaría non está completada. Pídelle a {email} que configure o método de pagamento.",
       "expiredTitle": "A túa contrasinal caducou",
       "expiredSubtitle": "Por seguridade debes establecer unha nova contrasinal para continuar.",
       "expiredCurrent": "Contrasinal actual",

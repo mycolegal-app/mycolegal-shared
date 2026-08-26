@@ -328,6 +328,8 @@
       "errAppMaintenance": "Aplikazioa mantentze-lanetan dago. Saiatu berriro minutu batzuk barru.",
       "errPasswordSame": "Pasahitz berriak oraingoaren desberdina izan behar du.",
       "errRateLimited": "Saiakera gehiegi. Itxaron une bat berriro saiatu aurretik.",
+      "errRegistrationIncomplete": "Zure notariotzaren alta oraindik ez dago osatuta.",
+      "errRegistrationIncompleteAdmin": "Zure notariotzaren alta ez dago osatuta. Eskatu {email} helbideari ordainketa-metodoa konfigura dezan.",
       "expiredTitle": "Zure pasahitza iraungi da",
       "expiredSubtitle": "Segurtasunagatik pasahitz berri bat ezarri behar duzu jarraitzeko.",
       "expiredCurrent": "Oraingo pasahitza",
