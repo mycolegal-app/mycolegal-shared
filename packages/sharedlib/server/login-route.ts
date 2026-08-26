@@ -226,8 +226,8 @@ export interface OrganizationMirrorDelegate {
   }): Promise<{ count: number }>;
   upsert(args: {
     where: { id: string };
-    update: { slug: string };
-    create: { id: string; name: string; slug: string };
+    update: { slug: string } & Record<string, unknown>;
+    create: { id: string; name: string; slug: string } & Record<string, unknown>;
   }): Promise<unknown>;
 }
 
@@ -264,6 +264,24 @@ export interface MirrorOrgAndRoleOptions<TRole extends string> {
   validRoles?: readonly TRole[];
   /** Guardar el rol también en cada login (no solo al crear la fila). */
   updateRoleOnLogin?: boolean;
+  /**
+   * Traducción propia del `appRoleKey` centralizado al enum local, cuando el
+   * catálogo global y el enum de la app no usan la misma nomenclatura (legifirma
+   * tiene su `toLocalAppRole`). Sin esto se aplica la clave tal cual si es válida.
+   */
+  mapCentralizedRole?: (key: string | undefined, fallback: TRole) => TRole;
+  /**
+   * Campos extra para el upsert de la org espejo (entran tanto en `create` como
+   * en `update`). Notaría lo usa para arrastrar la `comunidadAutonoma` que sirve
+   * auth, que gobierna la jurisdicción por defecto de la app.
+   */
+  orgExtraData?: (ctx: LoginProvisionContext) => Promise<Record<string, unknown>>;
+  /**
+   * Trabajo adicional una vez la org existe en local y ANTES de tocar el rol
+   * (legifirma siembra ahí sus catálogos de aranceles). Si lanza, el login
+   * devuelve PROVISION_FAILED como cualquier otro fallo de provisión.
+   */
+  afterOrg?: (ctx: LoginProvisionContext) => Promise<void>;
 }
 
 /**
@@ -286,23 +304,33 @@ export function mirrorOrgAndRole<TRole extends string>(
     centralizedRoleApp,
     validRoles,
     updateRoleOnLogin = false,
+    mapCentralizedRole,
+    orgExtraData,
+    afterOrg,
   } = options;
 
-  return async ({ user, accessToken, authInternalUrl }) => {
+  return async (ctx) => {
+    const { user, accessToken, authInternalUrl } = ctx;
+
     await organizationDelegate.updateMany({
       where: { slug: user.orgSlug, id: { not: user.orgId } },
       data: { slug: `${user.orgSlug}-orphan-${Date.now()}` },
     });
 
+    const extra = orgExtraData ? await orgExtraData(ctx) : {};
     await organizationDelegate.upsert({
       where: { id: user.orgId },
       // El nombre lo gobierna auth (fuente de verdad): aquí NO se toca, o cada
       // login sobrescribiría el nombre real de la notaría con su slug.
-      update: { slug: user.orgSlug },
-      create: { id: user.orgId, name: user.orgName || user.orgSlug, slug: user.orgSlug },
+      update: { slug: user.orgSlug, ...extra },
+      create: { id: user.orgId, name: user.orgName || user.orgSlug, slug: user.orgSlug, ...extra },
     });
 
-    let appRole: TRole = roleMap[user.role] || defaultRole;
+    if (afterOrg) await afterOrg(ctx);
+
+    const fallbackRole: TRole = roleMap[user.role] || defaultRole;
+    let appRole: TRole = fallbackRole;
+    let centralizedKey: string | undefined;
 
     if (centralizedRoleApp) {
       try {
@@ -311,13 +339,18 @@ export function mirrorOrgAndRole<TRole extends string>(
         });
         if (res.ok) {
           const data = (await res.json()) as { data?: { appRoleKey?: string } };
-          const key = data.data?.appRoleKey as TRole | undefined;
-          // Un `appRoleKey` del catálogo global que el enum local no conoce haría
-          // fallar el create y echaría al usuario al login: se ignora.
-          if (key && (!validRoles || validRoles.includes(key))) appRole = key;
+          centralizedKey = data.data?.appRoleKey;
         }
       } catch {
         // Sin permisos centralizados se conserva el rol del mapa.
+      }
+      if (mapCentralizedRole) {
+        appRole = mapCentralizedRole(centralizedKey, fallbackRole);
+      } else if (centralizedKey) {
+        // Un `appRoleKey` del catálogo global que el enum local no conoce haría
+        // fallar el create y echaría al usuario al login: se ignora.
+        const key = centralizedKey as TRole;
+        if (!validRoles || validRoles.includes(key)) appRole = key;
       }
     }
 
