@@ -412,7 +412,7 @@ function SmtpFields({
             type="email"
             value={values.fromAddress}
             onChange={(e) => setValues((v) => ({ ...v, fromAddress: e.target.value }))}
-            placeholder={scope === "platform" ? "noreply@mycolegal.app" : "noreply@midominio.com"}
+            placeholder={scope === "platform" ? "no-reply@mail.mycolegal.app" : "noreply@midominio.com"}
             className="w-full sm:w-64 rounded-lg border border-gray-300 px-3 py-2 text-sm"
           />
         </div>
