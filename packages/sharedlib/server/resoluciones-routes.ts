@@ -14,7 +14,10 @@ import { NextResponse, type NextRequest } from 'next/server';
  * El shim de cada app (ver más abajo) usa su `withAuth` para obtener orgId/userId
  * verificados del JWT — por eso la verificación vive en la app y aquí solo
  * reenviamos. Cubre todos los sub-paths que usa el rail: `ask` (POST),
- * `conversaciones`, `conversaciones/:id` y `:id` (GET).
+ * `conversaciones`, `conversaciones/:id` y `:id` (GET), la tienda de `skills`
+ * (GET/POST/PATCH/DELETE, `skills/:id/export`, `skills/import`) y el `doc-context`
+ * multipart del chat con documento. El shim debe exportar también PATCH y DELETE
+ * (no solo GET/POST) o esas operaciones responden 405 antes de llegar aquí.
  *
  *   // src/app/api/resoluciones/[[...path]]/route.ts
  *   import { withAuth, errorResponse } from '@/lib/api-utils';
@@ -68,10 +71,31 @@ export async function forwardResoluciones(p: ForwardResolucionesParams): Promise
   // por red interna; el navegador ya tiene esta cookie.
   const userToken = p.request.cookies.get((process.env.COOKIE_PREFIX || '') + 'mycolegal-token')?.value;
   if (userToken) headers['X-User-Token'] = userToken;
-  const init: RequestInit = { method, headers, signal: AbortSignal.timeout(wantsStream ? 120000 : 30000) };
+  // `doc-context` (chat con documento) sube el fichero en multipart. Antes esto
+  // forzaba `application/json` + `request.text()` para TODO cuerpo, lo que
+  // destruía el boundary y hacía imposible adjuntar documentos desde las apps
+  // satélite; ahora el multipart (y cualquier binario) va por PASS-THROUGH del
+  // stream, conservando su content-type, y solo el JSON se bufferiza.
+  const contentType = p.request.headers.get('content-type') || '';
+  const isJsonBody = !contentType || contentType.includes('application/json');
+  const init: RequestInit & { duplex?: 'half' } = {
+    method,
+    headers,
+    // La extracción de texto con OCR de fallback puede tardar bastante más que
+    // una llamada JSON normal, así que las subidas llevan su propio techo.
+    signal: AbortSignal.timeout(wantsStream ? 120000 : isJsonBody ? 30000 : 120000),
+  };
   if (method !== 'GET' && method !== 'HEAD') {
-    headers['Content-Type'] = 'application/json';
-    init.body = await p.request.text();
+    if (isJsonBody) {
+      headers['Content-Type'] = 'application/json';
+      init.body = await p.request.text();
+    } else {
+      // Content-Type TAL CUAL: en multipart lleva el boundary, y regenerarlo
+      // (o omitirlo) rompe el parseo en el receptor.
+      headers['Content-Type'] = contentType;
+      init.body = p.request.body;
+      init.duplex = 'half';
+    }
   }
 
   try {
