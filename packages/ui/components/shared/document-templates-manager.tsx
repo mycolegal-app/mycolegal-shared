@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import Table from "@tiptap/extension-table";
+import TableRow from "@tiptap/extension-table-row";
+import TableCell from "@tiptap/extension-table-cell";
+import TableHeader from "@tiptap/extension-table-header";
 import Link from "@tiptap/extension-link";
 import {
   Bold,
@@ -39,6 +43,15 @@ export interface DocumentTemplateEntry {
   description: string | null;
   macros: DocumentTemplateMacro[];
   defaultBody: string;
+  /**
+   * Plantilla que reproduce un impreso ajeno (un formulario oficial, un modelo de
+   * un tercero) y cuya maqueta NO es nuestra para rediseñarla. Con `true` el
+   * editor visual se deshabilita y solo queda el modo HTML: aunque TipTap ya
+   * conserva tablas, un round-trip sobre una maqueta compleja (bandas giradas,
+   * posicionados, celdas anidadas) puede alterarla, y aquí el parecido con el
+   * original es el requisito.
+   */
+  htmlOnly?: boolean;
   /** `null` = the org uses the default; anything else is the override. */
   body: string | null;
   active: boolean;
@@ -186,6 +199,15 @@ export function DocumentTemplatesManager({
     extensions: [
       StarterKit,
       Link.configure({ openOnClick: false, autolink: true, HTMLAttributes: { rel: "noopener" } }),
+      // Las plantillas de documento se maquetan con tablas (recuadros, columnas,
+      // impresos oficiales). Sin estas extensiones TipTap no reconoce
+      // <table>/<tr>/<td>, los APLANA a párrafos al cargar y al guardar se
+      // pierde la maqueta — un destrozo silencioso para quien solo quería
+      // corregir una palabra en el modo visual.
+      Table.configure({ resizable: false, HTMLAttributes: { class: "doc-template-table" } }),
+      TableRow,
+      TableHeader,
+      TableCell,
     ],
     content: parts.bodyContent,
     editorProps: {
@@ -200,6 +222,13 @@ export function DocumentTemplatesManager({
     },
     immediatelyRender: false,
   });
+
+  // Una plantilla `htmlOnly` no admite modo visual: si estaba activo al cambiar
+  // de plantilla, caemos a HTML en vez de dejar el editor en un estado imposible.
+  useEffect(() => {
+    if (selected?.htmlOnly && view === "visual") setView("html");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedKey, selected?.htmlOnly]);
 
   // Sincronizar el contenido del editor visual cuando cambia la plantilla
   // seleccionada o cuando el usuario vuelve del modo HTML al visual.
@@ -421,7 +450,9 @@ export function DocumentTemplatesManager({
                 <button
                   type="button"
                   onClick={() => setView("visual")}
-                  className={`px-2 py-0.5 rounded ${
+                  disabled={selected.htmlOnly}
+                  title={selected.htmlOnly ? t("ui.documentTemplates.htmlOnlyHint") : undefined}
+                  className={`px-2 py-0.5 rounded disabled:cursor-not-allowed disabled:opacity-40 ${
                     view === "visual"
                       ? "bg-white shadow-sm text-gray-900"
                       : "text-gray-500 hover:text-gray-700"
@@ -454,14 +485,21 @@ export function DocumentTemplatesManager({
                 )}
               </div>
             ) : (
-              <textarea
-                ref={textareaRef}
-                value={bodyHtml}
-                onChange={(ev) => setBodyHtml(ev.target.value)}
-                rows={20}
-                spellCheck={false}
-                className="w-full rounded border border-gray-300 px-2 py-1.5 text-xs font-mono leading-relaxed"
-              />
+              <>
+                <textarea
+                  ref={textareaRef}
+                  value={bodyHtml}
+                  onChange={(ev) => setBodyHtml(ev.target.value)}
+                  rows={20}
+                  spellCheck={false}
+                  className="w-full rounded border border-gray-300 px-2 py-1.5 text-xs font-mono leading-relaxed"
+                />
+                {selected.htmlOnly && (
+                  <p className="mt-1 rounded border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] text-amber-800">
+                    {t("ui.documentTemplates.htmlOnlyHint")}
+                  </p>
+                )}
+              </>
             )}
           </div>
 

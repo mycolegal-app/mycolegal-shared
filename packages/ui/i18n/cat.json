@@ -612,7 +612,8 @@
       "btnOrderedList": "Llista numerada",
       "btnLink": "Enllaç",
       "btnUndo": "Desfer",
-      "btnRedo": "Refer"
+      "btnRedo": "Refer",
+      "htmlOnlyHint": "Aquest document reprodueix un imprès oficial: el seu format no s'ha d'alterar, així que només s'edita en HTML. Canvia els textos, no la maqueta."
     },
     "commandPalette": {
       "placeholder": "Cercar...",

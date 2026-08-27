@@ -611,7 +611,8 @@
       "btnOrderedList": "Zenbakitua",
       "btnLink": "Esteka",
       "btnUndo": "Desegin",
-      "btnRedo": "Berregin"
+      "btnRedo": "Berregin",
+      "htmlOnlyHint": "Dokumentu honek inprimaki ofizial bat erreproduzitzen du: bere formatua ez da aldatu behar, beraz HTMLn bakarrik editatzen da. Aldatu testuak, ez maketa."
     },
     "commandPalette": {
       "placeholder": "Bilatu...",

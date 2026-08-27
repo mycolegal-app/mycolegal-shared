@@ -611,7 +611,8 @@
       "btnOrderedList": "Lista numerada",
       "btnLink": "Ligazón",
       "btnUndo": "Desfacer",
-      "btnRedo": "Refacer"
+      "btnRedo": "Refacer",
+      "htmlOnlyHint": "Este documento reproduce un impreso oficial: o seu formato non debe alterarse, así que só se edita en HTML. Cambia os textos, non a maqueta."
     },
     "commandPalette": {
       "placeholder": "Buscar...",
