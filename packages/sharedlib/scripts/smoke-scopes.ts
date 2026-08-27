@@ -3,6 +3,11 @@
  *
  * Run with: npx tsx scripts/smoke-scopes.ts
  *
+ * Vivía en `packages/ui/scripts/`. Al mover `ui/server` → `sharedlib/server`
+ * (33a89d6) el test se quedó atrás apuntando a un `../server/scopes` que ya no
+ * existía: compilaba en rojo y nadie podía ejecutarlo. Ahora está junto al
+ * código que prueba.
+ *
  * Validates the contract documented in `server/scopes.ts`:
  *   1. No scopes → null where, no assertion failure.
  *   2. Single IN scope → { attr: { in: [...] } }.
