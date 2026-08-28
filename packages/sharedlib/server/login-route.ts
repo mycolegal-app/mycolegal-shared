@@ -22,6 +22,7 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { languageFromJwt, setLanguageCookie } from './language';
+import { clientForwardHeaders } from './client-ip';
 
 /** Usuario tal y como lo devuelve auth en el login. */
 export interface LoginUser {
@@ -119,7 +120,9 @@ export function createLoginRoute(
     try {
       authResponse = await fetch(`${authInternalUrl}/auth/login`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        // La IP del cliente viaja hasta auth: su rate-limit del login es por IP
+        // y sin esto todas las apps compartían un único cupo. Ver client-ip.ts.
+        headers: { 'Content-Type': 'application/json', ...clientForwardHeaders(request) },
         body: JSON.stringify({
           email: body.email,
           password: body.password,

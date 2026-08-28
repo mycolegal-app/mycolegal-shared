@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { clientForwardHeaders } from './client-ip';
 
 /**
  * Forward an expired-password change to the auth service.
@@ -21,7 +22,9 @@ export async function forwardExpiredPasswordChange(
   const body = await request.text();
   const authResponse = await fetch(`${authInternalUrl}/auth/password/expired`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    // Ruta rate-limitada en auth igual que el login: hay que llevarle la IP
+    // real del cliente o el cupo se comparte entre todas las apps. Ver client-ip.ts.
+    headers: { 'Content-Type': 'application/json', ...clientForwardHeaders(request) },
     body,
   });
 
