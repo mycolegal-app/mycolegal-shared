@@ -120,8 +120,8 @@ export function createLoginRoute(
     try {
       authResponse = await fetch(`${authInternalUrl}/auth/login`, {
         method: 'POST',
-        // La IP del cliente viaja hasta auth: su rate-limit del login es por IP
-        // y sin esto todas las apps compartían un único cupo. Ver client-ip.ts.
+        // La IP real del cliente viaja hasta auth: su rate-limit del login es por
+        // IP y sin esto todas las apps compartían un único cupo. Ver client-ip.ts.
         headers: { 'Content-Type': 'application/json', ...clientForwardHeaders(request) },
         body: JSON.stringify({
           email: body.email,
