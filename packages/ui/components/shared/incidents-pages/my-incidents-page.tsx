@@ -63,6 +63,41 @@ function formatWhen(iso: string): string {
 /** Columnas ordenables (servidor). Se mapean 1:1 con el enum del backend. */
 type SortField = "number" | "appSlug" | "status" | "lastActivityAt";
 
+// #644 — Orden por defecto: nº de incidencia descendente.
+//
+// Antes era `lastActivityAt`, y como cada respuesta de la IA toca ese campo,
+// las filas saltaban de sitio entre una visita y la siguiente. El listado se
+// recorre por número ("quiero ver la 614"), así que ése es el orden estable.
+// Van como constantes de módulo porque las usan DOS sitios: el estado inicial y
+// la carga de montaje. Cuando la carga no las mandaba, la cabecera decía estar
+// ordenando por una columna y el servidor devolvía por otra.
+const DEFAULT_SORT_BY: SortField = "number";
+const DEFAULT_SORT_ORDER: "asc" | "desc" = "desc";
+
+// #644 — El ámbito elegido (Organización / Mías) se recuerda entre visitas. Sin
+// esto la página lo redecidía en cada carga y el usuario no entendía por qué
+// "unas veces salen todos y otras no".
+const SCOPE_STORAGE_KEY = "mycolegal.incidents.scope";
+
+function readStoredScope(): Scope | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const v = window.localStorage.getItem(SCOPE_STORAGE_KEY);
+    return v === "org" || v === "mine" ? v : null;
+  } catch {
+    // Modo privado o almacenamiento bloqueado: sin preferencia, no es un error.
+    return null;
+  }
+}
+
+function storeScope(s: Scope): void {
+  try {
+    window.localStorage.setItem(SCOPE_STORAGE_KEY, s);
+  } catch {
+    // Recordar la preferencia es una comodidad; si no se puede, se sigue igual.
+  }
+}
+
 /** Cabecera clicable con indicador de orden (↕ inactiva, ↑/↓ activa). */
 function SortableTh({
   field,
@@ -118,9 +153,8 @@ export function MyIncidentsPage({ onReport }: MyIncidentsPageProps = {}) {
   const [canManage, setCanManage] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // Orden por defecto = el del backend (actividad más reciente primero).
-  const [sortBy, setSortBy] = useState<SortField>("lastActivityAt");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [sortBy, setSortBy] = useState<SortField>(DEFAULT_SORT_BY);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">(DEFAULT_SORT_ORDER);
 
   const loadScope = useCallback(
     async (s: Scope, sBy: SortField, sOrder: "asc" | "desc", kFilter: KindFilter) => {
@@ -148,40 +182,64 @@ export function MyIncidentsPage({ onReport }: MyIncidentsPageProps = {}) {
     [t],
   );
 
-  // On mount: load the user's own list to learn `canManage`. A manager is
-  // escalated to the org-wide view in the same pass (loading stays on, no
-  // flash of the "mine" list). A plain user just keeps their own.
+  // On mount: decide qué lista se pinta, en UNA sola petición cuando se puede.
+  //
+  // #644 — la elección de ámbito manda sobre la heurística. Antes se pedía
+  // siempre "mine", se aprendía `canManage` y se saltaba solo a la vista de
+  // organización: el gestor que prefería ver únicamente las suyas volvía a
+  // encontrarse la lista completa en cada visita.
   useEffect(() => {
     let cancelled = false;
+    const qs = `limit=100&sortBy=${DEFAULT_SORT_BY}&sortOrder=${DEFAULT_SORT_ORDER}`;
+    const stored = readStoredScope();
+
     (async () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch("/api/incidents/mine?limit=100", { credentials: "include" });
+        // Gestor que ya eligió "organización": directo, sin el rodeo por "mine".
+        // Si responde 403 (perdió el permiso) se sigue por la vía normal.
+        if (stored === "org") {
+          const r = await fetch(`/api/incidents/org?${qs}`, { credentials: "include" });
+          if (r.ok) {
+            const b = await r.json();
+            if (cancelled) return;
+            setCanManage(true);
+            setScope("org");
+            setItems(b.data || []);
+            return;
+          }
+        }
+
+        const res = await fetch(`/api/incidents/mine?${qs}`, { credentials: "include" });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const body = await res.json();
         if (cancelled) return;
         const cm = body.canManage === true;
         setCanManage(cm);
-        if (cm) {
+
+        // Auto-escalado a la vista de organización SOLO sin preferencia previa
+        // (primera visita). `loading` sigue activo durante las dos peticiones,
+        // así que no se ve el parpadeo de una lista sustituida por otra.
+        if (cm && stored !== "mine") {
           try {
-            const r2 = await fetch("/api/incidents/org?limit=100", { credentials: "include" });
+            const r2 = await fetch(`/api/incidents/org?${qs}`, { credentials: "include" });
             if (!r2.ok) throw new Error(`HTTP ${r2.status}`);
             const b2 = await r2.json();
             if (cancelled) return;
             setScope("org");
             setItems(b2.data || []);
+            return;
           } catch {
-            // Org-wide view not wired in this app (no /api/incidents/org
-            // proxy) — degrade to the user's own list and hide the toggle.
+            // Vista de organización no montada en esta app (sin proxy
+            // /api/incidents/org): se degrada a la lista propia y se oculta el
+            // selector, que sin endpoint no llevaría a ninguna parte.
             if (cancelled) return;
             setCanManage(false);
-            setScope("mine");
-            setItems(body.data || []);
           }
-        } else {
-          setItems(body.data || []);
         }
+        setScope("mine");
+        setItems(body.data || []);
       } catch (err) {
         if (!cancelled) setError((err as Error).message || t("ui.myIncidents.errLoad"));
       } finally {
@@ -196,6 +254,7 @@ export function MyIncidentsPage({ onReport }: MyIncidentsPageProps = {}) {
   const onScope = useCallback(
     (s: Scope) => {
       setScope(s);
+      storeScope(s);
       void loadScope(s, sortBy, sortOrder, kindFilter);
     },
     [loadScope, sortBy, sortOrder, kindFilter],
