@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <!-- Paleta PLATEADA, la de la familia de atención al cliente (peticiones,
+         tramitación). El oro es la marca de las apps del despacho; la web
+         pública y el portal miran hacia el cliente de la notaría. -->
+    <radialGradient id="bg-web" cx="0.32" cy="0.22" r="1">
+      <stop offset="0" stop-color="#F4F7FA"></stop>
+      <stop offset="0.45" stop-color="#AEB7C0"></stop>
+      <stop offset="1" stop-color="#454E57"></stop>
+    </radialGradient>
+    <linearGradient id="rim-web" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.85"></stop>
+      <stop offset="0.5" stop-color="#6E7884" stop-opacity="0.5"></stop>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.7"></stop>
+    </linearGradient>
+    <linearGradient id="ink-web" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2A3138"></stop>
+      <stop offset="0.5" stop-color="#161A1E"></stop>
+      <stop offset="1" stop-color="#0A0C0E"></stop>
+    </linearGradient>
+
+    <symbol id="web-icon" viewBox="0 0 64 64">
+      <g fill-rule="evenodd">
+        <!-- Ventana de navegador (cuerpo) -->
+        <path d="M 13 13 Q 11 13 11 16 V 48 Q 11 51 13 51 H 51 Q 53 51 53 48 V 16 Q 53 13 51 13 Z"></path>
+
+        <g fill="#EEF3F7">
+          <!-- Barra de direcciones -->
+          <rect x="11" y="21.5" width="42" height="1.6"></rect>
+          <!-- Semáforo de la barra de título -->
+          <circle cx="16.5" cy="17.3" r="1.5"></circle>
+          <circle cx="21.5" cy="17.3" r="1.5"></circle>
+          <circle cx="26.5" cy="17.3" r="1.5"></circle>
+
+          <!-- Globo: aro, ecuador y meridianos — la marca de "web" -->
+          <path d="M 32 27 a 9.5 9.5 0 1 0 0.001 0 Z M 32 28.9 a 7.6 7.6 0 1 1 -0.001 0 Z"></path>
+          <rect x="23.25" y="35.7" width="17.5" height="1.6"></rect>
+          <rect x="31.2" y="27" width="1.6" height="19"></rect>
+          <path d="M 32 27 c 3.7 3.9 3.7 15.1 0 19 c -3.7 -3.9 -3.7 -15.1 0 -19 Z
+                   M 32 29.7 c -1.6 3 -1.6 10.6 0 13.6 c 1.6 -3 1.6 -10.6 0 -13.6 Z"></path>
+        </g>
+      </g>
+    </symbol>
+  </defs>
+
+  <rect width="64" height="64" rx="14" fill="url(#bg-web)"></rect>
+  <rect x="0.6" y="0.6" width="62.8" height="62.8" rx="13.4" fill="none" stroke="url(#rim-web)" stroke-width="0.9"></rect>
+  <rect x="2.4" y="2.4" width="59.2" height="59.2" rx="11.6" fill="none" stroke="#EEF3F7" stroke-width="0.5" stroke-opacity="0.45"></rect>
+
+  <g opacity="0.7" transform="translate(32 32) scale(0.82) translate(-32 -32)"><use href="#web-icon" width="64" height="64" fill="#EAF1F6" transform="translate(0.5,0.9)"></use></g>
+  <g transform="translate(32 32) scale(0.82) translate(-32 -32)"><use href="#web-icon" width="64" height="64" fill="url(#ink-web)"></use></g>
+</svg>
