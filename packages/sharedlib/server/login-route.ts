@@ -34,6 +34,8 @@ export interface LoginUser {
   orgSlug: string;
   orgName?: string | null;
   orgLogo?: string | null;
+  /** #679 — Código INE de la comunidad autónoma, tal y como lo manda auth. */
+  orgComunidadAutonoma?: string | null;
 }
 
 export interface LoginCookieConfig {
@@ -280,6 +282,12 @@ export interface MirrorOrgAndRoleOptions<TRole extends string> {
    */
   orgExtraData?: (ctx: LoginProvisionContext) => Promise<Record<string, unknown>>;
   /**
+   * #679 — Copiar la comunidad autónoma que manda auth a la fila espejo de
+   * `organizations`. Solo para apps cuyo esquema DECLARA la columna; en las
+   * demás, Prisma no conoce el campo y el login fallaría. Por defecto `false`.
+   */
+  espejarComunidadAutonoma?: boolean;
+  /**
    * Trabajo adicional una vez la org existe en local y ANTES de tocar el rol
    * (legifirma siembra ahí sus catálogos de aranceles). Si lanza, el login
    * devuelve PROVISION_FAILED como cualquier otro fallo de provisión.
@@ -310,6 +318,7 @@ export function mirrorOrgAndRole<TRole extends string>(
     mapCentralizedRole,
     orgExtraData,
     afterOrg,
+    espejarComunidadAutonoma = false,
   } = options;
 
   return async (ctx) => {
@@ -321,12 +330,37 @@ export function mirrorOrgAndRole<TRole extends string>(
     });
 
     const extra = orgExtraData ? await orgExtraData(ctx) : {};
+    // #679 — La comunidad autónoma la gobierna auth y viaja YA en la respuesta
+    // del login, así que se espeja aquí, para TODAS las apps y sin preguntarle
+    // nada a auth. Antes solo lo hacía notaría —y con un fetch extra suyo—, de
+    // modo que la fila la creaba la primera app en la que entrara el despacho y
+    // si no era notaría nacía sin comunidad: 64 de 65 organizaciones la tenían
+    // a NULL. La columna existía, tenía el nombre correcto y estaba vacía, que
+    // es la peor forma de fallar.
+    //
+    // Solo se escribe si auth manda algo —un `undefined` no debe borrar lo que
+    // ya hubiera espejado otra app— y solo si la app DECLARA la columna en su
+    // subconjunto de esquema. Hoy la traen auth, consultor, notaría y platform;
+    // en el resto, el cliente Prisma no conoce el campo y escribirlo reventaría
+    // el login entero por un dato accesorio. Para sumar una app basta con
+    // declarar `comunidadAutonoma` en su `Organization` y activar el flag: la
+    // columna ya existe en la base, que es común.
+    const ccaa =
+      espejarComunidadAutonoma && user.orgComunidadAutonoma != null
+        ? { comunidadAutonoma: user.orgComunidadAutonoma }
+        : {};
     await organizationDelegate.upsert({
       where: { id: user.orgId },
       // El nombre lo gobierna auth (fuente de verdad): aquí NO se toca, o cada
       // login sobrescribiría el nombre real de la notaría con su slug.
-      update: { slug: user.orgSlug, ...extra },
-      create: { id: user.orgId, name: user.orgName || user.orgSlug, slug: user.orgSlug, ...extra },
+      update: { slug: user.orgSlug, ...ccaa, ...extra },
+      create: {
+        id: user.orgId,
+        name: user.orgName || user.orgSlug,
+        slug: user.orgSlug,
+        ...ccaa,
+        ...extra,
+      },
     });
 
     if (afterOrg) await afterOrg(ctx);
