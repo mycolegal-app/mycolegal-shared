@@ -197,8 +197,11 @@ export function AppSwitcherBar({ apps, currentSlug, unsubscribedApps = [], subsc
             borde derecho, sobre una franja oscura de 18 px. Quien no supiera que
             existen más aplicaciones no tenía cómo enterarse: la franja se leía
             como un borde, no como algo que se pueda abrir. Un rótulo con el
-            número de aplicaciones lo dice sin que haya que descubrirlo, y da
-            además un objetivo mucho más ancho al que apuntar con el ratón. */}
+            número de aplicaciones lo dice sin que haya que descubrirlo.
+            Ojo: el problema NO era la anchura del objetivo. La franja ya ocupa
+            todo el ancho (`w-full`) y se abre con el ratón encima o al pulsarla;
+            lo que fallaba era que no se veía, y con 18 px de alto el cursor
+            entra y sale sin querer. De ahí el rótulo y el retardo más corto. */}
         <span className="text-[10px] font-medium leading-none tracking-wide text-white/70">
           {t("ui.appSwitcher.barLabel", { n: apps.length })}
         </span>
