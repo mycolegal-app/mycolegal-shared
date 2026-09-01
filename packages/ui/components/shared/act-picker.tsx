@@ -121,14 +121,27 @@ export function ActPicker({
   }
 
   // Fetch primera página al abrir o cambiar query.
+  //
+  // El debounce de 300 ms solo cancela el TEMPORIZADOR pendiente: una petición ya
+  // enviada seguía viva hasta que el servidor contestara. Mientras el catálogo
+  // respondía en milisegundos eso no se notaba, pero cuando empezó a tardar
+  // decenas de segundos, escribir una frase dejaba una decena de peticiones
+  // simultáneas abiertas contra un pool de 3 conexiones, y cada una empeoraba a
+  // las siguientes. Una notaría escribiendo "declaración de obra nueva" acabó
+  // expulsada de la aplicación (#680).
+  //
+  // Con el AbortController, teclear NUNCA acumula: solo puede haber una búsqueda
+  // en vuelo, la de lo último que se escribió, que además es la única cuyo
+  // resultado le interesa a nadie.
   useEffect(() => {
     if (!open) return;
     const debounce = query.length > 0 ? 300 : 0;
+    const controller = new AbortController();
     const timer = setTimeout(async () => {
       setLoading(true);
       setPage(1);
       try {
-        const res = await fetch(buildUrl(1));
+        const res = await fetch(buildUrl(1), { signal: controller.signal });
         const json = await res.json();
         const data: ActOption[] = json.data ?? [];
         setOptions(data);
@@ -143,13 +156,22 @@ export function ActPicker({
           if (exact) handleSelect(exact);
         }
       } catch {
+        // Una búsqueda abortada la ha reemplazado otra más reciente: no es un
+        // fallo y no debe vaciar lo que hay en pantalla ni apagar el "buscando",
+        // que le corresponde ya a la nueva.
+        if (controller.signal.aborted) return;
         setOptions([]);
         setTotal(0);
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     }, debounce);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      // Corta también lo que ya viaje por la red: al escribir la letra siguiente,
+      // al cerrar el desplegable y al desmontar el componente.
+      controller.abort();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, open, apiBase, pageSize]);
 
