@@ -980,7 +980,9 @@
         "UE": "Europar Batasuna",
         "JURISPRUDENCIA": "Jurisprudentzia",
         "AUTONOMICA": "Autonomikoa"
-      }
+      },
+      "limpiarTodas": "Guztiak garbitu",
+      "despejadoAviso": "Iturririk hautatu gabe. Markatu kontsultatu nahi dituzunak; bat ere aukeratu gabe ixten baduzu, aurreko hautaketa mantenduko da."
     },
     "mycobot": {
       "railAria": "Ireki MycoBot — ebazpenen laguntzailea",

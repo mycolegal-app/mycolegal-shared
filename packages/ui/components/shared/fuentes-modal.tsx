@@ -66,12 +66,17 @@ export function FuentesModal({ open, onClose, fuentesUrl }: FuentesModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [fuentesSel, setFuentesSel] = useState<string[] | null>(null);
   const [clasesSel, setClasesSel] = useState<string[] | null>(null);
+  // #674/#675 — Estado del modal, no de la selección guardada. Ver `limpiarTodas`.
+  const [despejado, setDespejado] = useState(false);
 
   // Carga el catálogo al abrir (una vez por apertura) y sincroniza la selección.
   useEffect(() => {
     if (!open) return;
     setFuentesSel(readFuentesSel());
     setClasesSel(readClasesSel());
+    // #674 — Abrir siempre muestra lo que hay guardado: un despeje que no llegó
+    // a usarse no debe sobrevivir al cierre del modal.
+    setDespejado(false);
     let cancel = false;
     setLoading(true);
     setError(null);
@@ -113,19 +118,54 @@ export function FuentesModal({ open, onClose, fuentesUrl }: FuentesModalProps) {
   const allFuenteIds = (cats ?? []).map((c) => c.id);
   const allClases = Array.from(new Set((cats ?? []).flatMap((c) => c.clases.map((x) => x.clase))));
 
-  const isFuenteSel = (id: string) => fuentesSel === null || fuentesSel.includes(id);
+  const isFuenteSel = (id: string) =>
+    despejado ? false : fuentesSel === null || fuentesSel.includes(id);
   const isClaseSel = (clase: string) => clasesSel === null || clasesSel.includes(clase);
+
+  /**
+   * #674/#675 — "Limpiar todas" como paso PREVIO a elegir.
+   *
+   * Quitar fuentes de una en una hasta dejar la que interesa es tedioso cuando
+   * hay muchas, y el modal además no dejaba quitar la última. La notaría propuso
+   * la salida: un botón que las despeje todas y luego marcar la que quiere.
+   *
+   * Es un estado del MODAL, no de la selección guardada, y esa distinción
+   * importa. La cookie no sabe decir "ninguna": `null` significa "todas" y
+   * guardar una lista vacía la borra, con lo que volvería a significar "todas".
+   * Persistir el vacío obligaría a que cada consumidor —la tabla, el rail de
+   * MycoBot, /sources— lo distinguiera de "sin filtro", y al primero que hiciera
+   * `if (fuentes.length)` le saldría justo lo contrario de lo que el usuario
+   * pidió: preguntar a TODO el corpus en vez de a nada.
+   *
+   * Así que despejar es una antesala: mientras está despejado no se guarda nada,
+   * y en cuanto se marca una fuente esa pasa a ser la selección. Si se cierra sin
+   * elegir, queda lo que hubiera antes.
+   */
+  const limpiarTodas = useCallback(() => setDespejado(true), []);
 
   const toggleFuente = useCallback(
     (id: string) => {
+      // Desde el estado despejado, la primera fuente que se marca ES la selección.
+      if (despejado) {
+        setDespejado(false);
+        const value = allFuenteIds.length === 1 ? null : [id];
+        setFuentesSel(value);
+        writeFuentesSel(value);
+        return;
+      }
       const current = fuentesSel === null ? allFuenteIds : fuentesSel;
       const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
-      if (next.length === 0) return; // siempre al menos una fuente considerada
+      // Quitar la última deja el modal despejado en vez de no hacer nada, que era
+      // lo que la notaría leía como "no me deja" (#675).
+      if (next.length === 0) {
+        setDespejado(true);
+        return;
+      }
       const value = next.length === allFuenteIds.length ? null : next;
       setFuentesSel(value);
       writeFuentesSel(value);
     },
-    [fuentesSel, allFuenteIds],
+    [fuentesSel, allFuenteIds, despejado],
   );
 
   const toggleClase = useCallback(
@@ -141,6 +181,7 @@ export function FuentesModal({ open, onClose, fuentesUrl }: FuentesModalProps) {
   );
 
   const resetAll = () => {
+    setDespejado(false);
     setFuentesSel(null);
     writeFuentesSel(null);
     setClasesSel(null);
@@ -190,6 +231,11 @@ export function FuentesModal({ open, onClose, fuentesUrl }: FuentesModalProps) {
           </button>
         </div>
         <p className="px-4 pt-3 text-xs text-gray-500">{t("ui.fuentes.help")}</p>
+        {despejado && (
+          <p className="mx-4 mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            {t("ui.fuentes.despejadoAviso")}
+          </p>
+        )}
 
         <div className="flex-1 overflow-y-auto px-4 py-3">
           {loading && <p className="text-xs text-gray-400">{t("ui.fuentes.loading")}</p>}
@@ -288,13 +334,24 @@ export function FuentesModal({ open, onClose, fuentesUrl }: FuentesModalProps) {
         </div>
 
         <div className="flex items-center justify-between border-t px-4 py-2.5 dark:border-gray-700">
-          <button
-            type="button"
-            onClick={resetAll}
-            className="text-xs text-gray-400 underline-offset-2 hover:text-gray-600 hover:underline"
-          >
-            {t("ui.fuentes.all")}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={resetAll}
+              className="text-xs text-gray-400 underline-offset-2 hover:text-gray-600 hover:underline"
+            >
+              {t("ui.fuentes.all")}
+            </button>
+            {/* #674 — Despejar de golpe para elegir a mano lo que interesa. */}
+            <button
+              type="button"
+              onClick={limpiarTodas}
+              disabled={despejado}
+              className="text-xs text-gray-400 underline-offset-2 hover:text-gray-600 hover:underline disabled:opacity-40 disabled:no-underline"
+            >
+              {t("ui.fuentes.limpiarTodas")}
+            </button>
+          </div>
           <button
             type="button"
             onClick={onClose}

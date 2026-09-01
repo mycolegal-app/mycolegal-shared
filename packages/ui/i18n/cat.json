@@ -981,7 +981,9 @@
         "UE": "Unió Europea",
         "JURISPRUDENCIA": "Jurisprudència",
         "AUTONOMICA": "Autonòmica"
-      }
+      },
+      "limpiarTodas": "Netejar-les totes",
+      "despejadoAviso": "Cap font seleccionada. Marca les que vulguis consultar; si tanques sense triar-ne cap, es conserva la selecció anterior."
     },
     "mycobot": {
       "railAria": "Obrir MycoBot — assistent de resolucions",

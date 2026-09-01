@@ -980,7 +980,9 @@
         "UE": "Unión Europea",
         "JURISPRUDENCIA": "Xurisprudencia",
         "AUTONOMICA": "Autonómica"
-      }
+      },
+      "limpiarTodas": "Limpar todas",
+      "despejadoAviso": "Sen fontes seleccionadas. Marca as que queiras consultar; se pechas sen elixir ningunha, consérvase a selección anterior."
     },
     "mycobot": {
       "railAria": "Abrir MycoBot — asistente de resolucións",
