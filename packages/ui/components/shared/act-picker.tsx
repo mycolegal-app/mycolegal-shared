@@ -128,7 +128,7 @@ export function ActPicker({
   // decenas de segundos, escribir una frase dejaba una decena de peticiones
   // simultáneas abiertas contra un pool de 3 conexiones, y cada una empeoraba a
   // las siguientes. Una notaría escribiendo "declaración de obra nueva" acabó
-  // expulsada de la aplicación (#680).
+  // expulsada de la aplicación (Notaría Lamarca #1).
   //
   // Con el AbortController, teclear NUNCA acumula: solo puede haber una búsqueda
   // en vuelo, la de lo último que se escribió, que además es la única cuyo
