@@ -738,7 +738,8 @@
       "expand": "Mostrar aplicaciones",
       "collapse": "Ocultar aplicaciones",
       "loadingApp": "Cargando aplicación…",
-      "unread": "{count} sin leer"
+      "unread": "{count} sin leer",
+      "barLabel": "Aplicaciones ({n})"
     },
     "billingNotice": {
       "courtesyExpired": "El acceso de cortesía a {app} ha caducado.",

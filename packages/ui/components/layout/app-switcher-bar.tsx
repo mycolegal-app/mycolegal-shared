@@ -25,7 +25,11 @@ interface AppSwitcherBarProps {
 }
 
 const STORAGE_KEY = "mc:app-switcher:open";
-const HOVER_EXPAND_DELAY_MS = 150;
+// #676 — La barra plegada tardaba en abrirse al pasar el ratón. 150 ms sobre un
+// objetivo de 18 px de alto se notan: el cursor entra y sale sin querer y el
+// temporizador se reinicia. 80 ms sigue evitando que se despliegue de paso
+// cuando solo estás cruzando la pantalla, pero responde a la intención.
+const HOVER_EXPAND_DELAY_MS = 80;
 const UNREAD_POLL_MS = 60_000;
 
 /**
@@ -187,8 +191,17 @@ export function AppSwitcherBar({ apps, currentSlug, unsubscribedApps = [], subsc
         onMouseLeave={handleHoverLeave}
         aria-label={t("ui.appSwitcher.expand")}
         title={t("ui.appSwitcher.expand")}
-        className="flex h-[18px] w-full shrink-0 items-center justify-end gap-2 border-b border-white/10 bg-[#0f1b2d] px-6 transition-colors hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
+        className="flex h-[18px] w-full shrink-0 items-center justify-end gap-1.5 border-b border-white/10 bg-[#0f1b2d] px-6 transition-colors hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
       >
+        {/* #676 — Antes aquí solo había una flecha blanca de 14 px pegada al
+            borde derecho, sobre una franja oscura de 18 px. Quien no supiera que
+            existen más aplicaciones no tenía cómo enterarse: la franja se leía
+            como un borde, no como algo que se pueda abrir. Un rótulo con el
+            número de aplicaciones lo dice sin que haya que descubrirlo, y da
+            además un objetivo mucho más ancho al que apuntar con el ratón. */}
+        <span className="text-[10px] font-medium leading-none tracking-wide text-white/70">
+          {t("ui.appSwitcher.barLabel", { n: apps.length })}
+        </span>
         {totalUnread > 0 && (
           <span className="flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold leading-none text-white">
             {totalUnread > 99 ? "99+" : totalUnread}

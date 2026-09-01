@@ -737,7 +737,8 @@
       "expand": "Aplikazioak erakutsi",
       "collapse": "Aplikazioak ezkutatu",
       "loadingApp": "Aplikazioa kargatzen…",
-      "unread": "{count} irakurri gabe"
+      "unread": "{count} irakurri gabe",
+      "barLabel": "Aplikazioak ({n})"
     },
     "billingNotice": {
       "courtesyExpired": "{app} aplikaziorako kortesiazko sarbidea iraungi da.",
