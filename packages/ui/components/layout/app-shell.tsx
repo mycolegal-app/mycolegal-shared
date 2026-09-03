@@ -487,8 +487,10 @@ export default function AppShell({
         }}
         onSilentRefresh={async () => {
           // Throwing on non-2xx lets IdleTimeout's interval guard skip
-          // updating `lastRefreshAt`, so the next activity event retries
-          // instead of waiting another full window with a stale token.
+          // updating `lastRefreshAt`, so it retries sooner instead of waiting
+          // another full window with a stale token. IdleTimeout applies its own
+          // exponential backoff to that retry (REFRESH_RETRY_BASE_MS); without
+          // it, every mousemove fired another refresh.
           const r = await fetch("/api/auth/refresh", { method: "POST" });
           if (!r.ok) throw new Error("refresh failed");
         }}

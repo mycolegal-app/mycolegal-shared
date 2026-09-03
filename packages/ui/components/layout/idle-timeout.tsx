@@ -45,6 +45,16 @@ interface IdleTimeoutProps {
 const READING_TICK_MS = 30_000;
 const READING_KEEPALIVE_CAP = 3;
 
+// Suelo de reintento tras un refresh silencioso FALLIDO, con backoff exponencial
+// (5s, 10s, 20s… topado en el intervalo normal). Un fallo NO actualiza
+// `lastRefreshAt` a propósito —así un fallo transitorio (arranque en frío, blip de
+// red) reintenta antes de esperar una ventana entera con un token rancio— pero sin
+// suelo eso significaba reintentar en CADA evento de actividad: un `mousemove`
+// sostenido con el refresh caído disparaba ~8 peticiones/segundo indefinidamente
+// (visto en prod el 3-sep-2026: ~470 POST /api/auth/refresh 401 en un día desde 5
+// sesiones). El backoff acota la ráfaga sin perder el reintento temprano.
+const REFRESH_RETRY_BASE_MS = 5_000;
+
 const ACTIVITY_EVENTS: (keyof DocumentEventMap)[] = [
   "mousemove",
   "keydown",
@@ -81,6 +91,10 @@ export function IdleTimeout({
   const lastRealActivity = useRef(Date.now());
   const lastRefreshAt = useRef(Date.now());
   const silentRefreshing = useRef(false);
+  // Fallos consecutivos del refresh silencioso y momento más temprano en que se
+  // puede volver a intentar (0 = sin restricción). Ver REFRESH_RETRY_BASE_MS.
+  const failedRefreshes = useRef(0);
+  const retryRefreshAfter = useRef(0);
   const onSilentRefreshRef = useRef(onSilentRefresh);
   useEffect(() => {
     onSilentRefreshRef.current = onSilentRefresh;
@@ -104,16 +118,28 @@ export function IdleTimeout({
     const fn = onSilentRefreshRef.current;
     if (!fn) return;
     if (silentRefreshing.current) return;
-    if (Date.now() - lastRefreshAt.current < refreshIntervalMs) return;
+    const now = Date.now();
+    if (now - lastRefreshAt.current < refreshIntervalMs) return;
+    // Suelo de backoff tras un fallo: sin esto cada evento de actividad reintentaba.
+    if (now < retryRefreshAfter.current) return;
     silentRefreshing.current = true;
     fn()
       .then(() => {
         lastRefreshAt.current = Date.now();
+        failedRefreshes.current = 0;
+        retryRefreshAfter.current = 0;
       })
       .catch(() => {
-        // Swallow — the next 401 is caught by useAuthFetchGuard, which
-        // already redirects to /login. Surfacing this here would just
-        // duplicate that path.
+        // No se propaga: si la sesión está realmente muerta, el 401 de la SIGUIENTE
+        // petición normal lo recoge `useAuthFetchGuard` y redirige a /login (ese
+        // hook excluye a propósito `/api/auth/refresh`, así que este fallo por sí
+        // solo no redirige). Aquí solo espaciamos el reintento.
+        failedRefreshes.current += 1;
+        const backoff = Math.min(
+          REFRESH_RETRY_BASE_MS * 2 ** (failedRefreshes.current - 1),
+          refreshIntervalMs,
+        );
+        retryRefreshAfter.current = Date.now() + backoff;
       })
       .finally(() => {
         silentRefreshing.current = false;
@@ -215,6 +241,9 @@ export function IdleTimeout({
       lastActivity.current = Date.now();
       lastRealActivity.current = Date.now();
       lastRefreshAt.current = Date.now();
+      // Refresh bueno: se limpia el backoff que hubieran dejado fallos anteriores.
+      failedRefreshes.current = 0;
+      retryRefreshAfter.current = 0;
       if (idleTimer.current) clearTimeout(idleTimer.current);
       idleTimer.current = setTimeout(() => {
         setShowModal(true);
