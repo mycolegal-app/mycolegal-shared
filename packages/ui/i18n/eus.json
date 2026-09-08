@@ -56,7 +56,8 @@
       "summaryTitle": "IA laburpena",
       "summaryError": "Ezin izan da dokumentua laburtu",
       "summaryNoCredits": "Ez duzu kreditu nahikorik laburtzeko",
-      "summaryNeedsOcr": "Eskaneatutako dokumentua testu-geruzarik gabe (OCR laster)"
+      "summaryNeedsOcr": "Eskaneatutako dokumentua testu-geruzarik gabe (OCR laster)",
+      "recargarCreditos": "Kredituak kargatu"
     },
     "errors": {
       "generic": "Ezin izan da ekintza osatu. Saiatu berriro.",
@@ -1119,6 +1120,11 @@
       "btn": "Fakturatu",
       "cancelar": "Utzi",
       "errGenerico": "Ezin izan da fakturatu."
+    },
+    "sinCreditos": {
+      "mensaje": "Erakundea IA krediturik gabe geratu da.",
+      "recargar": "Kredituak kargatu",
+      "avisaAdmin": "Abisatu kontua kudeatzen duenari kargatzeko."
     }
   },
   "unidad": {

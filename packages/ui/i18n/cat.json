@@ -57,7 +57,8 @@
       "summaryError": "No s'ha pogut resumir el document",
       "summaryNoCredits": "No tens prou crèdits per resumir",
       "summaryNeedsOcr": "Document escanejat sense capa de text (OCR pròximament)",
-      "truncated": "Vista prèvia truncada: el document és gran i es mostra parcialment."
+      "truncated": "Vista prèvia truncada: el document és gran i es mostra parcialment.",
+      "recargarCreditos": "Recarregar crèdits"
     },
     "errors": {
       "generic": "No s'ha pogut completar l'acció. Torna-ho a provar.",
@@ -1120,6 +1121,11 @@
       "btn": "Facturar",
       "cancelar": "Cancel·lar",
       "errGenerico": "No s'ha pogut facturar."
+    },
+    "sinCreditos": {
+      "mensaje": "L’organització s’ha quedat sense crèdits d’IA.",
+      "recargar": "Recarregar crèdits",
+      "avisaAdmin": "Avisa qui administra el compte perquè els recarregui."
     }
   },
   "unidad": {

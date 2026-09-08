@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { marked } from "marked";
 import { useI18n } from "../i18n/i18n-context";
+import { SinCreditos, esErrorDeCreditos } from "./sin-creditos";
 import { useSidebarCollapse } from "../layout/sidebar-collapse-context";
 import { cn } from "../../lib/utils";
 import { apiErrorMessage } from "../../lib/api-error";
@@ -172,10 +173,8 @@ interface Msg {
   skill?: "doctrina" | "ayuda" | "agente" | "fuera";
   sinResultado?: boolean;
   error?: boolean;
-  /** #720 — Enlace de acción del error (hoy solo: recargar créditos). */
-  ctaHref?: string;
-  /** #720 — El error es de saldo, pero este usuario no puede recargar. */
-  ctaAskAdmin?: boolean;
+  /** #720 — El error es falta de saldo: se pinta con <SinCreditos>. */
+  sinCreditos?: boolean;
   /** Pasos que siguió el bucle agéntico (para «Ver proceso»). */
   steps?: StepRecord[];
 }
@@ -220,12 +219,6 @@ interface MycoBotRailProps {
    * `undefined` → las citas no enlazan a la página completa (el visor in-rail sí funciona).
    */
   consultorUrl?: string;
-  /**
-   * #720 — Pantalla de recarga de créditos (Config). Solo se ofrece cuando el
-   * servidor marca la respuesta como comprable por ESTE usuario: la sección de
-   * Cuenta es org_admin, así que a un oficial el botón solo le daría un 403.
-   */
-  creditosUrl?: string;
   /**
    * Slug de la app desde la que se monta el rail (p.ej. "notaria"). Se envía en
    * cada `/ask` para seleccionar el addendum por-app del System Prompt y, más
@@ -285,7 +278,6 @@ export function MycoBotRail({
   available = false,
   askUrl = "/api/resoluciones/ask",
   consultorUrl,
-  creditosUrl,
   appSlug,
 }: MycoBotRailProps) {
   const { t, language } = useI18n();
@@ -299,15 +291,11 @@ export function MycoBotRail({
   // #720 — El error de saldo agotado deja de ser un callejón: si el servidor
   // dice que este usuario puede comprar, la burbuja lleva el enlace de recarga.
   // `canPurchase` lo decide el servidor, no la interfaz.
-  const ctaDeError = useCallback(
-    (e: { code?: string } | null | undefined): { ctaHref?: string; ctaAskAdmin?: boolean } => {
-      if (e?.code !== "INSUFFICIENT_CREDITS") return {};
-      // `creditosUrl` solo llega si el servidor considera que este usuario puede
-      // comprar. Al resto no se les da un botón que acabaría en un 403: se les
-      // dice a quién avisar, que es lo único accionable desde su sitio.
-      return creditosUrl ? { ctaHref: creditosUrl } : { ctaAskAdmin: true };
-    },
-    [creditosUrl],
+  // #720 — Marca de "esto es falta de saldo": el qué enseñar lo resuelve
+  // <SinCreditos>, común a toda la flota (rail, resumen de la Unidad, revisor).
+  const esSinCreditos = useCallback(
+    (e: { code?: string } | null | undefined) => (esErrorDeCreditos(e?.code) ? { sinCreditos: true } : {}),
+    [],
   );
   const [conversacionId, setConversacionId] = useState<string | null>(null);
   const [input, setInput] = useState("");
@@ -686,7 +674,7 @@ export function MycoBotRail({
             );
             setMessages((m) => [
               ...m,
-              { role: "bot", text: msg, error: true, ...ctaDeError(json?.error) },
+              { role: "bot", text: msg, error: true, ...esSinCreditos(json?.error) },
             ]);
             return;
           }
@@ -754,7 +742,7 @@ export function MycoBotRail({
 
         if (errored) {
           const msg = apiErrorMessage(t, { code: errored.code, message: errored.message }, t("ui.mycobot.error"));
-          setMessages((m) => [...m, { role: "bot", text: msg, error: true, ...ctaDeError(errored) }]);
+          setMessages((m) => [...m, { role: "bot", text: msg, error: true, ...esSinCreditos(errored) }]);
           return;
         }
         if (final?.conversacionId) setConversacionId(final.conversacionId);
@@ -1668,17 +1656,7 @@ export function MycoBotRail({
                           aparece si el servidor marcó la respuesta como comprable
                           por este usuario; al resto el propio texto ya les dice
                           que avisen a quien administra la cuenta. */}
-                      {m.ctaHref && (
-                        <a
-                          href={m.ctaHref}
-                          className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-red-600 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-700"
-                        >
-                          {t("ui.mycobot.recargarCreditos")}
-                        </a>
-                      )}
-                      {m.ctaAskAdmin && (
-                        <p className="mt-1.5 text-xs opacity-80">{t("ui.mycobot.creditosAvisaAdmin")}</p>
-                      )}
+                      {m.sinCreditos && <SinCreditos message="" />}
                       {m.role === "bot" && !m.error && m.skill !== "fuera" && m.text && (
                         <div className="mt-1.5 flex justify-end">
                           <button

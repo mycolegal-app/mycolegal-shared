@@ -106,6 +106,8 @@ export { ActSearchBox } from './components/shared/act-search-box';
 export { EmpleadoAsignadoPicker } from './components/shared/empleado-asignado-picker';
 export type { EmpleadoOption } from './components/shared/empleado-asignado-picker';
 export { IdleTimeout } from './components/layout/idle-timeout';
+export { CreditsUrlProvider, useCreditsUrl } from './components/layout/credits-url-context';
+export { SinCreditos, esErrorDeCreditos } from './components/shared/sin-creditos';
 export { Markdown, renderMarkdown } from './components/shared/markdown';
 export { MarkdownEditor } from './components/shared/markdown-editor';
 

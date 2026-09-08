@@ -3,6 +3,7 @@
 import { useState, useEffect, type ReactNode } from "react";
 import { Menu, Coins } from "lucide-react";
 import { PageHeaderProvider, usePageHeader } from "./page-header-context";
+import { CreditsUrlProvider } from "./credits-url-context";
 import { type AppInfo } from "./app-info";
 import { IdleTimeout } from "./idle-timeout";
 import { AppSwitcherBar } from "./app-switcher-bar";
@@ -424,6 +425,7 @@ export default function AppShell({
 
   const content = (
     <SidebarCollapseProvider>
+    <CreditsUrlProvider url={creditsUrl}>
     <PageHeaderProvider>
       {/* h-screen + overflow-hidden cierra la altura del shell entero. Sin
           esto, el scroll cae en <body> y la regla "página sin scroll, hijo
@@ -519,6 +521,7 @@ export default function AppShell({
         }}
       />
     </PageHeaderProvider>
+    </CreditsUrlProvider>
     </SidebarCollapseProvider>
   );
 

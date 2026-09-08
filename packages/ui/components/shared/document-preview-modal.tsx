@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { SinCreditos, esErrorDeCreditos } from "./sin-creditos";
 import { Download, FileWarning, Library, Loader2, Sparkles } from "lucide-react";
 import {
   Dialog,
@@ -238,6 +239,8 @@ export function DocumentPreviewModal({
   const [summary, setSummary] = React.useState<string | null>(null);
   const [summarizing, setSummarizing] = React.useState(false);
   const [summaryError, setSummaryError] = React.useState<string | null>(null);
+  // #720 — El fallo por saldo agotado deja de ser un mensaje sin salida.
+  const [summaryNoCredits, setSummaryNoCredits] = React.useState(false);
 
   // Reset del resumen al cambiar de documento o cerrar.
   React.useEffect(() => {
@@ -250,6 +253,7 @@ export function DocumentPreviewModal({
     if (!nodeId) return;
     setSummarizing(true);
     setSummaryError(null);
+    setSummaryNoCredits(false);
     try {
       const res = await fetch("/api/unidad/resumir", {
         method: "POST",
@@ -259,6 +263,8 @@ export function DocumentPreviewModal({
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         const code = json?.error?.code;
+        // #720 — Marca de "es falta de saldo" para poder ofrecer la recarga.
+        setSummaryNoCredits(esErrorDeCreditos(code));
         setSummaryError(
           code === "NO_CREDITS"
             ? t("ui.documentPreview.summaryNoCredits")
@@ -515,7 +521,11 @@ export function DocumentPreviewModal({
                     {t("ui.documentPreview.summarizing")}
                   </div>
                 ) : summaryError ? (
-                  <div className="text-red-600">{summaryError}</div>
+                  summaryNoCredits ? (
+                    <SinCreditos message={summaryError} className="text-red-600" />
+                  ) : (
+                    <div className="text-red-600">{summaryError}</div>
+                  )
                 ) : (
                   <div className="whitespace-pre-wrap">{summary}</div>
                 )}

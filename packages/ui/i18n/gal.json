@@ -56,7 +56,8 @@
       "summaryTitle": "Resumo IA",
       "summaryError": "Non se puido resumir o documento",
       "summaryNoCredits": "Non tes créditos suficientes para resumir",
-      "summaryNeedsOcr": "Documento escaneado sen capa de texto (OCR proximamente)"
+      "summaryNeedsOcr": "Documento escaneado sen capa de texto (OCR proximamente)",
+      "recargarCreditos": "Recargar créditos"
     },
     "errors": {
       "generic": "Non se puido completar a acción. Téntao de novo.",
@@ -1119,6 +1120,11 @@
       "btn": "Facturar",
       "cancelar": "Cancelar",
       "errGenerico": "Non se puido facturar."
+    },
+    "sinCreditos": {
+      "mensaje": "A organización quedou sen créditos de IA.",
+      "recargar": "Recargar créditos",
+      "avisaAdmin": "Avisa a quen administra a conta para recargalos."
     }
   },
   "unidad": {

@@ -57,7 +57,8 @@
       "summaryError": "No se pudo resumir el documento",
       "summaryNoCredits": "No tienes créditos suficientes para resumir",
       "summaryNeedsOcr": "Documento escaneado sin capa de texto (OCR próximamente)",
-      "truncated": "Vista previa truncada: el documento es grande y se muestra parcialmente."
+      "truncated": "Vista previa truncada: el documento es grande y se muestra parcialmente.",
+      "recargarCreditos": "Recargar créditos"
     },
     "errors": {
       "generic": "No se ha podido completar la acción. Inténtalo de nuevo.",
@@ -1120,6 +1121,11 @@
       "btn": "Facturar",
       "cancelar": "Cancelar",
       "errGenerico": "No se pudo facturar."
+    },
+    "sinCreditos": {
+      "mensaje": "La organización se ha quedado sin créditos de IA.",
+      "recargar": "Recargar créditos",
+      "avisaAdmin": "Avisa a quien administra la cuenta para recargarlos."
     }
   },
   "unidad": {

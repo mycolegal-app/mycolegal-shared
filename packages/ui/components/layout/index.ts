@@ -11,3 +11,4 @@ export { SidebarFlyout } from "./sidebar-flyout";
 export { IdleTimeout } from "./idle-timeout";
 export { AppSidebar } from "./app-sidebar";
 export type { AppSidebarProps, AppSidebarNavItem } from "./app-sidebar";
+export { CreditsUrlProvider, useCreditsUrl } from "./credits-url-context";
