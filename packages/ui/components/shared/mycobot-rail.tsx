@@ -172,6 +172,8 @@ interface Msg {
   skill?: "doctrina" | "ayuda" | "agente" | "fuera";
   sinResultado?: boolean;
   error?: boolean;
+  /** #720 — Enlace de acción del error (hoy solo: recargar créditos). */
+  ctaHref?: string;
   /** Pasos que siguió el bucle agéntico (para «Ver proceso»). */
   steps?: StepRecord[];
 }
@@ -216,6 +218,12 @@ interface MycoBotRailProps {
    * `undefined` → las citas no enlazan a la página completa (el visor in-rail sí funciona).
    */
   consultorUrl?: string;
+  /**
+   * #720 — Pantalla de recarga de créditos (Config). Solo se ofrece cuando el
+   * servidor marca la respuesta como comprable por ESTE usuario: la sección de
+   * Cuenta es org_admin, así que a un oficial el botón solo le daría un 403.
+   */
+  creditosUrl?: string;
   /**
    * Slug de la app desde la que se monta el rail (p.ej. "notaria"). Se envía en
    * cada `/ask` para seleccionar el addendum por-app del System Prompt y, más
@@ -271,7 +279,13 @@ interface ViewerState {
  * Se monta UNA vez en el app-shell de cada app (como <IncidentReporter/>), con
  * `available` calculado server-side a partir de las apps de la org.
  */
-export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask", consultorUrl, appSlug }: MycoBotRailProps) {
+export function MycoBotRail({
+  available = false,
+  askUrl = "/api/resoluciones/ask",
+  consultorUrl,
+  creditosUrl,
+  appSlug,
+}: MycoBotRailProps) {
   const { t, language } = useI18n();
   const { collapsed } = useSidebarCollapse();
   const [open, setOpen] = useState(false);
@@ -280,6 +294,14 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
   const [expanded, setExpanded] = useState(false);
   const [view, setView] = useState<View>("chat");
   const [messages, setMessages] = useState<Msg[]>([]);
+  // #720 — El error de saldo agotado deja de ser un callejón: si el servidor
+  // dice que este usuario puede comprar, la burbuja lleva el enlace de recarga.
+  // `canPurchase` lo decide el servidor, no la interfaz.
+  const ctaDeError = useCallback(
+    (e: { code?: string; canPurchase?: boolean } | null | undefined): string | undefined =>
+      e?.code === "INSUFFICIENT_CREDITS" && e.canPurchase && creditosUrl ? creditosUrl : undefined,
+    [creditosUrl],
+  );
   const [conversacionId, setConversacionId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -655,7 +677,10 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
               { status: res.status, code: json?.error?.code, message: json?.error?.message },
               t("ui.mycobot.error"),
             );
-            setMessages((m) => [...m, { role: "bot", text: msg, error: true }]);
+            setMessages((m) => [
+              ...m,
+              { role: "bot", text: msg, error: true, ctaHref: ctaDeError(json?.error) },
+            ]);
             return;
           }
           const data = json.data ?? {};
@@ -715,14 +740,14 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
             } else if (ev.event === "done") {
               final = ev.data as DonePayload;
             } else if (ev.event === "error") {
-              errored = ev.data as { code?: string; message?: string };
+              errored = ev.data as { code?: string; message?: string; canPurchase?: boolean };
             }
           }
         }
 
         if (errored) {
           const msg = apiErrorMessage(t, { code: errored.code, message: errored.message }, t("ui.mycobot.error"));
-          setMessages((m) => [...m, { role: "bot", text: msg, error: true }]);
+          setMessages((m) => [...m, { role: "bot", text: msg, error: true, ctaHref: ctaDeError(errored) }]);
           return;
         }
         if (final?.conversacionId) setConversacionId(final.conversacionId);
@@ -1630,6 +1655,19 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
                         />
                       ) : (
                         <p className="whitespace-pre-wrap leading-relaxed">{m.text}</p>
+                      )}
+                      {/* #720 — Salida del callejón: cuando el saldo se agota, el
+                          mensaje decía "compra un pack" y no había dónde. Solo
+                          aparece si el servidor marcó la respuesta como comprable
+                          por este usuario; al resto el propio texto ya les dice
+                          que avisen a quien administra la cuenta. */}
+                      {m.ctaHref && (
+                        <a
+                          href={m.ctaHref}
+                          className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-red-600 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-700"
+                        >
+                          {t("ui.mycobot.recargarCreditos")}
+                        </a>
                       )}
                       {m.role === "bot" && !m.error && m.skill !== "fuera" && m.text && (
                         <div className="mt-1.5 flex justify-end">

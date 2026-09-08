@@ -1000,6 +1000,7 @@
       "send": "Enviar",
       "disclaimer": "Respuestas generadas con IA a partir del corpus; verifica siempre la fuente citada.",
       "error": "No se pudo obtener respuesta. Inténtalo de nuevo.",
+      "recargarCreditos": "Recargar créditos",
       "rateLimited": "Demasiadas preguntas seguidas. Espera un momento.",
       "history": "Historial",
       "newConversation": "Nueva conversación",

@@ -21,7 +21,9 @@ import { MycoBotRail } from "./mycobot-rail";
  * directamente (siempre disponible, endpoints y deep-links relativos).
  */
 export function MycoBot({ appSlug }: { appSlug?: string }) {
-  const [cfg, setCfg] = useState<{ available: boolean; consultorUrl?: string }>({ available: false });
+  const [cfg, setCfg] = useState<{ available: boolean; consultorUrl?: string; creditosUrl?: string }>({
+    available: false,
+  });
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -32,10 +34,25 @@ export function MycoBot({ appSlug }: { appSlug?: string }) {
         // de las citas de doctrina.
         if (!j?.data) return;
         const c = j.data.apps?.find((a: { slug: string }) => a.slug === "consultor");
-        setCfg({ available: true, consultorUrl: c?.appUrl });
+        // #720 — Destino de recarga de créditos, del mismo sitio del que ya
+        // sacamos la URL de Consultor. Solo se usa si el servidor dice que este
+        // usuario puede comprar (la sección de Cuenta es org_admin).
+        const cfgApp = j.data.apps?.find((a: { slug: string }) => a.slug === "config");
+        setCfg({
+          available: true,
+          consultorUrl: c?.appUrl,
+          creditosUrl: cfgApp?.appUrl ? `${String(cfgApp.appUrl).replace(/\/$/, "")}/cuenta/creditos` : undefined,
+        });
       })
       .catch(() => {});
   }, []);
 
-  return <MycoBotRail available={cfg.available} consultorUrl={cfg.consultorUrl} appSlug={appSlug} />;
+  return (
+    <MycoBotRail
+      available={cfg.available}
+      consultorUrl={cfg.consultorUrl}
+      creditosUrl={cfg.creditosUrl}
+      appSlug={appSlug}
+    />
+  );
 }
