@@ -34,15 +34,12 @@ export function MycoBot({ appSlug }: { appSlug?: string }) {
         // de las citas de doctrina.
         if (!j?.data) return;
         const c = j.data.apps?.find((a: { slug: string }) => a.slug === "consultor");
-        // #720 — Destino de recarga de créditos, del mismo sitio del que ya
-        // sacamos la URL de Consultor. Solo se usa si el servidor dice que este
-        // usuario puede comprar (la sección de Cuenta es org_admin).
-        const cfgApp = j.data.apps?.find((a: { slug: string }) => a.slug === "config");
-        setCfg({
-          available: true,
-          consultorUrl: c?.appUrl,
-          creditosUrl: cfgApp?.appUrl ? `${String(cfgApp.appUrl).replace(/\/$/, "")}/cuenta/creditos` : undefined,
-        });
+        // #720 — Destino de recarga de créditos. Viene servido por auth, que
+        // solo se lo manda a quien PUEDE comprar (la sección de Cuenta en Config
+        // es org_admin). Deliberadamente no se compone aquí a partir del listado
+        // de apps: eso daría la URL a todo el mundo y un oficial acabaría en un
+        // 403. Si no llega, el rail ofrece avisar al administrador.
+        setCfg({ available: true, consultorUrl: c?.appUrl, creditosUrl: j.data.creditsUrl ?? undefined });
       })
       .catch(() => {});
   }, []);

@@ -749,7 +749,11 @@
       "ctaSubscribe": "Reactivar subscrición",
       "dismiss": "Descartar",
       "paymentMethodExpiring": "A túa tarxeta de pagamento está a piques de caducar. Actualízaa para non interromper a subscrición nin o consumo de IA.",
-      "ctaUpdateCard": "Actualizar tarxeta"
+      "ctaUpdateCard": "Actualizar tarxeta",
+      "creditsLow": "Quédanche poucos créditos de IA.",
+      "creditsExhausted": "Quedaches sen créditos de IA: as funcións de intelixencia artificial están detidas.",
+      "rechargePrompt": "Recarga para seguir usándoas.",
+      "ctaRecharge": "Recargar créditos"
     },
     "appShell": {
       "openMobileMenu": "Abrir menú lateral"
@@ -1088,7 +1092,8 @@
       "skillEdit": "Editar",
       "skillDuplicate": "Duplicar",
       "skillFormNew": "Nova skill",
-      "skillFormEdit": "Editar skill"
+      "skillFormEdit": "Editar skill",
+      "creditosAvisaAdmin": "Avisa a quen administra a conta para recargalos."
     },
     "registradorPicker": {
       "placeholder": "Buscar rexistro por nome ou poboación…",

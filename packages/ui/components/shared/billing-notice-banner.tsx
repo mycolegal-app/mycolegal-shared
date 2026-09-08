@@ -13,7 +13,7 @@ import { useI18n } from "../i18n/i18n-context";
 export interface BillingNotice {
   appSlug: string;
   appName: string;
-  /** APP_COURTESY_EXPIRED | APP_TRIAL_EXPIRED | APP_SUBSCRIPTION_EXPIRED | PAYMENT_METHOD_EXPIRING */
+  /** APP_COURTESY_EXPIRED | APP_TRIAL_EXPIRED | APP_SUBSCRIPTION_EXPIRED | PAYMENT_METHOD_EXPIRING | CREDITS_LOW | CREDITS_EXHAUSTED */
   code: string;
   canSubscribe: boolean;
 }
@@ -23,19 +23,31 @@ const CODE_KEY: Record<string, string> = {
   APP_TRIAL_EXPIRED: "trialExpired",
   APP_SUBSCRIPTION_EXPIRED: "subscriptionExpired",
   PAYMENT_METHOD_EXPIRING: "paymentMethodExpiring",
+  CREDITS_LOW: "creditsLow",
+  CREDITS_EXHAUSTED: "creditsExhausted",
 };
 
 /** Códigos org-level de tarjeta: CTA a actualizar tarjeta, no a suscribirse. */
 const CARD_CODES = new Set(["PAYMENT_METHOD_EXPIRING"]);
+/**
+ * #720 — Saldo de créditos de IA. Org-level como el de tarjeta, pero su CTA
+ * lleva a recargar. Se separa de CARD_CODES porque el destino es otro, y del
+ * bloque de apps porque no habla de ninguna app concreta: cuando el saldo se
+ * agota se paran las funciones de IA de TODAS.
+ */
+const CREDIT_CODES = new Set(["CREDITS_LOW", "CREDITS_EXHAUSTED"]);
 
 export function BillingNoticeBanner({
   notices,
   subscribeUrl,
   paymentUrl,
+  creditsUrl,
 }: {
   notices: BillingNotice[];
   subscribeUrl?: string | null;
   paymentUrl?: string | null;
+  /** Destino de recarga (#720). Solo llega al org_admin: sin él, no hay botón. */
+  creditsUrl?: string | null;
 }) {
   const { t } = useI18n();
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
@@ -48,8 +60,9 @@ export function BillingNoticeBanner({
       {visible.map((n) => {
         const key = `${n.appSlug}:${n.code}`;
         const isCard = CARD_CODES.has(n.code);
+        const isCredit = CREDIT_CODES.has(n.code);
         const codeKey = CODE_KEY[n.code] ?? "subscriptionExpired";
-        const ctaUrl = isCard ? paymentUrl : subscribeUrl;
+        const ctaUrl = isCard ? paymentUrl : isCredit ? creditsUrl : subscribeUrl;
         return (
           <div
             key={key}
@@ -63,7 +76,7 @@ export function BillingNoticeBanner({
                 <>
                   {" "}
                   {n.canSubscribe
-                    ? t("ui.billingNotice.subscribePrompt")
+                    ? t(isCredit ? "ui.billingNotice.rechargePrompt" : "ui.billingNotice.subscribePrompt")
                     : t("ui.billingNotice.askAdmin")}
                 </>
               )}
@@ -73,7 +86,13 @@ export function BillingNoticeBanner({
                 href={ctaUrl}
                 className="flex-shrink-0 rounded-lg bg-mc-warning-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
               >
-                {t(isCard ? "ui.billingNotice.ctaUpdateCard" : "ui.billingNotice.ctaSubscribe")}
+                {t(
+                  isCard
+                    ? "ui.billingNotice.ctaUpdateCard"
+                    : isCredit
+                      ? "ui.billingNotice.ctaRecharge"
+                      : "ui.billingNotice.ctaSubscribe",
+                )}
               </a>
             )}
             <button

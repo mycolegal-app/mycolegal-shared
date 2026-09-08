@@ -174,6 +174,8 @@ interface Msg {
   error?: boolean;
   /** #720 — Enlace de acción del error (hoy solo: recargar créditos). */
   ctaHref?: string;
+  /** #720 — El error es de saldo, pero este usuario no puede recargar. */
+  ctaAskAdmin?: boolean;
   /** Pasos que siguió el bucle agéntico (para «Ver proceso»). */
   steps?: StepRecord[];
 }
@@ -298,8 +300,13 @@ export function MycoBotRail({
   // dice que este usuario puede comprar, la burbuja lleva el enlace de recarga.
   // `canPurchase` lo decide el servidor, no la interfaz.
   const ctaDeError = useCallback(
-    (e: { code?: string; canPurchase?: boolean } | null | undefined): string | undefined =>
-      e?.code === "INSUFFICIENT_CREDITS" && e.canPurchase && creditosUrl ? creditosUrl : undefined,
+    (e: { code?: string } | null | undefined): { ctaHref?: string; ctaAskAdmin?: boolean } => {
+      if (e?.code !== "INSUFFICIENT_CREDITS") return {};
+      // `creditosUrl` solo llega si el servidor considera que este usuario puede
+      // comprar. Al resto no se les da un botón que acabaría en un 403: se les
+      // dice a quién avisar, que es lo único accionable desde su sitio.
+      return creditosUrl ? { ctaHref: creditosUrl } : { ctaAskAdmin: true };
+    },
     [creditosUrl],
   );
   const [conversacionId, setConversacionId] = useState<string | null>(null);
@@ -679,7 +686,7 @@ export function MycoBotRail({
             );
             setMessages((m) => [
               ...m,
-              { role: "bot", text: msg, error: true, ctaHref: ctaDeError(json?.error) },
+              { role: "bot", text: msg, error: true, ...ctaDeError(json?.error) },
             ]);
             return;
           }
@@ -747,7 +754,7 @@ export function MycoBotRail({
 
         if (errored) {
           const msg = apiErrorMessage(t, { code: errored.code, message: errored.message }, t("ui.mycobot.error"));
-          setMessages((m) => [...m, { role: "bot", text: msg, error: true, ctaHref: ctaDeError(errored) }]);
+          setMessages((m) => [...m, { role: "bot", text: msg, error: true, ...ctaDeError(errored) }]);
           return;
         }
         if (final?.conversacionId) setConversacionId(final.conversacionId);
@@ -1668,6 +1675,9 @@ export function MycoBotRail({
                         >
                           {t("ui.mycobot.recargarCreditos")}
                         </a>
+                      )}
+                      {m.ctaAskAdmin && (
+                        <p className="mt-1.5 text-xs opacity-80">{t("ui.mycobot.creditosAvisaAdmin")}</p>
                       )}
                       {m.role === "bot" && !m.error && m.skill !== "fuera" && m.text && (
                         <div className="mt-1.5 flex justify-end">

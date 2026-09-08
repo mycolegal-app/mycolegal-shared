@@ -749,7 +749,11 @@
       "ctaSubscribe": "Harpidetza berritu",
       "dismiss": "Baztertu",
       "paymentMethodExpiring": "Zure ordainketa-txartela iraungitzeko zorian dago. Eguneratu ezazu harpidetza eta IA kontsumoa ez eteteko.",
-      "ctaUpdateCard": "Txartela eguneratu"
+      "ctaUpdateCard": "Txartela eguneratu",
+      "creditsLow": "IA kreditu gutxi geratzen zaizkizu.",
+      "creditsExhausted": "IA krediturik gabe geratu zara: adimen artifizialaren funtzioak geldirik daude.",
+      "rechargePrompt": "Kargatu erabiltzen jarraitzeko.",
+      "ctaRecharge": "Kredituak kargatu"
     },
     "appShell": {
       "openMobileMenu": "Alboko menua ireki"
@@ -1088,7 +1092,8 @@
       "skillEdit": "Editatu",
       "skillDuplicate": "Bikoiztu",
       "skillFormNew": "Skill berria",
-      "skillFormEdit": "Editatu skill-a"
+      "skillFormEdit": "Editatu skill-a",
+      "creditosAvisaAdmin": "Abisatu kontua kudeatzen duenari kargatzeko."
     },
     "registradorPicker": {
       "placeholder": "Bilatu erregistroa izenez edo herriz…",

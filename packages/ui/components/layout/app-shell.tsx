@@ -340,6 +340,10 @@ export default function AppShell({
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   // Avisos de cortesía/trial expirado por app concedida (banner descartable).
   const [billingNotices, setBillingNotices] = useState<BillingNotice[]>([]);
+  // #720 — Destino de recarga de créditos. Lo sirve auth SOLO al org_admin, así
+  // que su mera presencia es el permiso: sin él, el aviso se muestra igual pero
+  // sin botón (el texto ya dice a quién avisar).
+  const [creditsUrl, setCreditsUrl] = useState<string | null>(null);
   const [inactivityTimeout, setInactivityTimeout] = useState(15);
   // Label of the impersonated user when this is an impersonation session,
   // null otherwise. Drives the persistent "acting as" banner.
@@ -372,6 +376,7 @@ export default function AppShell({
       if (Array.isArray(d.sellableExtras)) setSellableExtras(d.sellableExtras);
       setSubscribeUrl(d.subscribeUrl ?? null);
       setPaymentUrl(d.paymentUrl ?? null);
+      setCreditsUrl(d.creditsUrl ?? null);
       if (d.inactivityTimeout) setInactivityTimeout(d.inactivityTimeout);
       if (!fromCache) {
         if (Array.isArray(d.notices)) setBillingNotices(d.notices);
@@ -467,6 +472,7 @@ export default function AppShell({
                   notices={shown}
                   subscribeUrl={subscribeUrl}
                   paymentUrl={paymentUrl}
+                  creditsUrl={creditsUrl}
                 />
               ) : undefined;
             })()
