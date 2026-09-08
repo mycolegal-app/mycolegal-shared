@@ -1,6 +1,6 @@
 # PLAN — Agenda disponible en Pólizas, LegiFirma y Archivo
 
-**Estado:** 🟡 EN CURSO — Pasos 1, 2 y 3 hechos. Falta el 4 (montar en las tres apps).
+**Estado:** ✅ COMPLETO — los cuatro pasos hechos (2026-09-07). Pendiente de desplegar y de validar en ejecución.
 **Origen:** incidencia **#678** de Javier Micó — *"La agenda no debería ser visible siempre. No solo la usa Notaría, Pólizas, Legifirma… otros"*.
 **Interpretación acordada:** añadir la agenda **completa** (no solo lectura) a Pólizas, LegiFirma y Archivo.
 **Repos implicados:** `mycolegal-notaria`, `mycolegal-shared` (ui), `mycolegal-polizas`, `mycolegal-legifirma`, `mycolegal-archivo`
@@ -142,7 +142,7 @@ una prop tipo `capacidades: { expedientes: boolean }`.
 
 ---
 
-## PASO 4 — Montar en las tres apps ⬜ PENDIENTE
+## PASO 4 — Montar en las tres apps ✅ HECHO (polizas 0.1.173, legifirma 2.3.273, archivo 2.15.234)
 
 Por cada una de `polizas`, `legifirma`, `archivo`:
 
@@ -156,6 +156,16 @@ Por cada una de `polizas`, `legifirma`, `archivo`:
 Requiere `NOTARIA_INTER_URL` e `INTER_SERVICE_KEY` en las tres, que **ya están
 configuradas** (las usan para publicar citas).
 
+**CÓMO SE HIZO.** En cada app: proxy `/api/agenda/[[...path]]` hacia
+`{NOTARIA}/api/agenda/*` con service-key + `X-Org-Id` + `X-User-Id` de la sesión,
+página de 20 líneas montando `<AgendaView apiBase="/api" capacidades={{ expedientes: false }} />`,
+entrada `nav.agenda` en el sidebar (cuatro idiomas) y el icono `CalendarDays`.
+Archivo necesitó además un proxy del catálogo de empleados: es la única de las
+tres sin catálogo propio, y lo consume el selector de responsable.
+
+**Lo que NO se hizo, y es deliberado:** no se tocó `schema.prisma` en ninguna.
+No leen la agenda de su base; se la piden a Notaría.
+
 ---
 
 ## ORDEN Y RIESGOS
@@ -168,6 +178,17 @@ configuradas** (las usan para publicar citas).
 - **Validar con una sola app primero** (sugerencia: Pólizas) antes de replicar en
   las otras dos.
 - La incidencia **#678 no debe cerrarse** hasta que las tres tengan la agenda.
+  Ya la tienen: #678 y #716 (que la reformula) se pueden cerrar juntas al
+  desplegar.
+
+## PENDIENTE ANTES DE DAR EL PLAN POR BUENO
+
+- **Validar en ejecución.** Nada de esto se ha probado con la aplicación
+  levantada: `tsc` no ve un render roto ni un proxy que devuelve 404. Hay que
+  abrir la agenda en Notaría (que ahora monta el componente compartido) y en una
+  de las tres apps, y comprobar el calendario, el diálogo de tres modos, los
+  colores y el alta de una cita.
+- **Desplegar** las cinco apps implicadas.
 
 ---
 
