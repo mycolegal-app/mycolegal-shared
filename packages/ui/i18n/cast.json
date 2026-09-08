@@ -403,7 +403,8 @@
       "role": "Rol",
       "selectRole": "Seleccionar rol...",
       "inviting": "Invitando...",
-      "btnInvite": "Invitar usuario"
+      "btnInvite": "Invitar usuario",
+      "autorizarDominio": "Autorizar el dominio \"{dominio}\" en mi organización y volver a intentarlo. Solo podrán acceder personas con correo de ese dominio."
     },
     "notifications": {
       "title": "Notificaciones",

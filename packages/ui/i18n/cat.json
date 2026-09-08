@@ -403,7 +403,8 @@
       "role": "Rol",
       "selectRole": "Seleccionar rol...",
       "inviting": "Convidant...",
-      "btnInvite": "Convidar usuari"
+      "btnInvite": "Convidar usuari",
+      "autorizarDominio": "Autoritzar el domini \"{dominio}\" a la meva organització i tornar-ho a intentar. Només hi podran accedir persones amb correu d’aquest domini."
     },
     "notifications": {
       "title": "Notificacions",

@@ -81,6 +81,16 @@ export interface UsersAdminPanelProps {
   orgAdminRoleHint?: string;
   /** Override the API base — defaults to "/api/admin/usuarios". */
   apiBase?: string;
+  /**
+   * #727/#724 — Endpoint para AUTORIZAR un dominio de correo de la
+   * organización. Si se pasa, cuando el alta se rechace por dominio no
+   * autorizado se ofrece autorizarlo desde el propio diálogo y reintentar, en
+   * vez de mandar al administrador a otra pantalla a mitad de faena.
+   *
+   * Sin esta prop el aviso se muestra igual, pero sin atajo. La comprobación de
+   * permiso la hace el servidor: solo un org_admin puede autorizar dominios.
+   */
+  domainsEndpoint?: string;
   /** Slot at the top of the panel (e.g. extra filters). */
   toolbar?: React.ReactNode;
   /** Whether the org-level role toggle (org_admin) appears in the modal. */
@@ -131,6 +141,7 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
     protectedRole = 'NOTARIO',
     orgAdminRoleHint,
     apiBase = '/api/admin/usuarios',
+    domainsEndpoint,
     toolbar,
     showOrgRoleInModal = true,
     allowInitialPasswordInvite = true,
@@ -143,6 +154,10 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [inviteOpen, setInviteOpen] = useState(false);
+  // #727/#724 — Último error del alta, para pintarlo DENTRO del diálogo. El
+  // toast solo dura cinco segundos y aparece donde el usuario no está mirando.
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviteDomainOffer, setInviteDomainOffer] = useState<string | null>(null);
   const [inviteSubmitting, setInviteSubmitting] = useState(false);
   const [deleteUser, setDeleteUser] = useState<UserRow | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -226,8 +241,32 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
     phoneNumber?: string;
     appRole?: string;
     initialPassword?: string;
-  }) {
+    authorizeDomain?: boolean;
+  }): Promise<{ ok: boolean }> {
     setInviteSubmitting(true);
+    setInviteError(null);
+    setInviteDomainOffer(null);
+
+    // #727 — Autorizar primero el dominio, si el usuario marcó la casilla que le
+    // ofrecimos al fallar. Mismo orden que el alta por Telegram.
+    const dominio = data.email.split('@')[1]?.toLowerCase() ?? '';
+    if (data.authorizeDomain && dominio && domainsEndpoint) {
+      const add = await fetch(domainsEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain: dominio }),
+      }).catch(() => null);
+      if (!add || !add.ok) {
+        const e = add ? await add.json().catch(() => ({})) : {};
+        setInviteError(
+          apiErrorMessage(t, { status: add?.status, code: e?.error?.code, message: e?.error?.message },
+            t('ui.usersAdmin.toastInviteError')),
+        );
+        setInviteDomainOffer(dominio);
+        setInviteSubmitting(false);
+        return { ok: false };
+      }
+    }
     const withPassword = !!data.initialPassword;
     const endpoint = withPassword ? `${apiBase}/create-with-password` : `${apiBase}/invite`;
     const errorKey = withPassword ? 'ui.usersAdmin.toastInviteError' : 'ui.usersAdmin.toastInviteError';
@@ -241,19 +280,30 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
         body: JSON.stringify(data),
       });
       if (!res.ok) {
-        const err = await res.json();
-        toast({
-          title: apiErrorMessage(t, { status: res.status, code: err?.error?.code, message: err?.error?.message }, t(errorKey)),
-          variant: 'destructive',
-        });
-        return;
+        const err = await res.json().catch(() => ({}));
+        const code = err?.error?.code;
+        const msg = apiErrorMessage(
+          t, { status: res.status, code, message: err?.error?.message }, t(errorKey),
+        );
+        // El aviso se queda EN el diálogo; el toast era lo único que había y se
+        // borraba a los cinco segundos donde nadie miraba.
+        setInviteError(msg);
+        // Dominio no autorizado: se ofrece autorizarlo aquí. Se acepta el código
+        // y, de rebote, el texto — auth ya desplegado puede no mandar el código.
+        const esDominio = code === 'DOMAIN_NOT_AUTHORIZED' || (res.status === 400 && /dominio/i.test(msg));
+        setInviteDomainOffer(esDominio && domainsEndpoint ? dominio : null);
+        toast({ title: msg, variant: 'destructive' });
+        return { ok: false };
       }
       toast({ title: t(successKey), variant: 'success' });
       setInviteOpen(false);
       fetchUsers();
+      return { ok: true };
     } catch (error) {
       console.error(error);
+      setInviteError(t(errorKey));
       toast({ title: t(errorKey), variant: 'destructive' });
+      return { ok: false };
     } finally {
       setInviteSubmitting(false);
     }
@@ -584,7 +634,12 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
 
       <InviteUserDialog
         open={inviteOpen}
-        onOpenChange={setInviteOpen}
+        onOpenChange={(o) => {
+          if (!o) { setInviteError(null); setInviteDomainOffer(null); }
+          setInviteOpen(o);
+        }}
+        error={inviteError}
+        authorizeDomainOffer={inviteDomainOffer}
         onSubmit={handleInvite}
         roles={assignableRoles.map((r) => ({ value: r, label: roleLabel(r) }))}
         roleHint={orgAdminRoleHint}

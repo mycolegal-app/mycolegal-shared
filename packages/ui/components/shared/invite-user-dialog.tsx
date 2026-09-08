@@ -38,6 +38,8 @@ import {
 import { useI18n } from "../i18n/i18n-context";
 
 export interface InviteFormData {
+  /** #727 — Autorizar el dominio del correo antes de invitar (solo org_admin). */
+  authorizeDomain?: boolean;
   email: string;
   displayName: string;
   phoneNumber?: string;
@@ -60,7 +62,8 @@ export interface LanguageOption {
 interface InviteUserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: InviteFormData) => Promise<void>;
+  /** Devolver `{ ok: false }` deja el formulario intacto para poder reintentar. */
+  onSubmit: (data: InviteFormData) => Promise<void | { ok: boolean }>;
   /** Role options. If provided, a role selector is shown. */
   roles?: RoleOption[];
   /** Hint text shown below the role selector */
@@ -73,6 +76,25 @@ interface InviteUserDialogProps {
   emailPlaceholder?: string;
   /** Whether submission is in progress (controlled externally) */
   submitting?: boolean;
+  /**
+   * #727/#724 — Error del último intento, mostrado DENTRO del diálogo y de
+   * forma persistente.
+   *
+   * Antes el fallo solo salía en un toast de esquina que se borra a los cinco
+   * segundos, mientras el usuario mira el formulario. El caso real: un notario
+   * intentaba dar de alta a sus empleados, el alta se rechazaba porque el
+   * dominio de correo no estaba autorizado, y él concluía que "el email no le
+   * llega". El mensaje del servidor era correcto y explicaba dónde ir; sólo que
+   * nadie lo veía. 28 notarías se quedaron sin poder incorporar a su equipo.
+   */
+  error?: string | null;
+  /**
+   * #727/#724 — Dominio que el servidor rechazó. Si se pasa, se ofrece
+   * autorizarlo aquí mismo (`authorizeDomain` en el envío) en vez de mandar al
+   * administrador a otra pantalla a mitad de faena. Es el patrón que ya usa el
+   * alta por Telegram, que por eso no sufría este problema.
+   */
+  authorizeDomainOffer?: string | null;
   /**
    * Whether to expose the "create with initial password" mode toggle.
    * Default: true. When false, only the email-invite mode is shown
@@ -97,6 +119,8 @@ export function InviteUserDialog({
   open,
   onOpenChange,
   onSubmit,
+  error,
+  authorizeDomainOffer,
   roles,
   roleHint,
   languages,
@@ -111,6 +135,7 @@ export function InviteUserDialog({
   const [phoneNumber, setPhoneNumber] = useState("");
   const [appRole, setAppRole] = useState("");
   const [language, setLanguage] = useState(defaultLanguage);
+  const [authorizeDomain, setAuthorizeDomain] = useState(false);
   const [mode, setMode] = useState<Mode>("email");
   const [initialPassword, setInitialPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -140,14 +165,17 @@ export function InviteUserDialog({
     const data: InviteFormData = {
       email,
       displayName,
+      ...(authorizeDomainOffer && authorizeDomain ? { authorizeDomain: true } : {}),
       ...(phoneNumber ? { phoneNumber } : {}),
       ...(roles && appRole ? { appRole } : {}),
       ...(languages ? { language } : {}),
       ...(mode === "with_password" ? { initialPassword } : {}),
     };
 
-    await onSubmit(data);
-    resetForm();
+    // Sólo se limpia si fue bien: tras un fallo, borrar lo tecleado obliga a
+    // reescribirlo todo y refuerza la impresión de que el alta se hizo.
+    const res = await onSubmit(data);
+    if (!res || res.ok !== false) resetForm();
   }
 
   function handleOpenChange(nextOpen: boolean) {
@@ -327,6 +355,28 @@ export function InviteUserDialog({
             </div>
           )}
         </div>
+
+        {error && (
+          <div
+            role="alert"
+            className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
+          >
+            <p className="whitespace-pre-wrap">{error}</p>
+            {authorizeDomainOffer && (
+              <label className="mt-2 flex items-start gap-2 text-xs font-medium text-red-900">
+                <input
+                  type="checkbox"
+                  checked={authorizeDomain}
+                  onChange={(e) => setAuthorizeDomain(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-red-300"
+                />
+                <span>
+                  {t("ui.inviteUser.autorizarDominio", { dominio: authorizeDomainOffer })}
+                </span>
+              </label>
+            )}
+          </div>
+        )}
 
         <DialogFooter>
           <Button
