@@ -32,6 +32,14 @@ export function Toast({ toast, onDismiss }: ToastProps) {
         {toast.description && (
           <p className="mt-1 text-sm opacity-90">{toast.description}</p>
         )}
+        {toast.action && (
+          <a
+            href={toast.action.href}
+            className="mt-2 inline-flex items-center rounded-md bg-current/10 px-2.5 py-1 text-xs font-semibold underline underline-offset-2 transition-opacity hover:opacity-80"
+          >
+            {toast.action.label}
+          </a>
+        )}
       </div>
       <button
         onClick={() => onDismiss(toast.id)}

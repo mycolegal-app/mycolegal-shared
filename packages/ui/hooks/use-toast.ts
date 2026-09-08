@@ -9,6 +9,14 @@ export interface Toast {
   title: string;
   description?: string;
   variant?: ToastVariant;
+  /**
+   * #720 — Acción opcional del aviso, como enlace. Nació para que un "te has
+   * quedado sin créditos" no fuera un callejón sin salida también cuando se
+   * reporta por toast: sin esto, el usuario lee el problema y no tiene dónde
+   * resolverlo. Es un enlace y no un callback a propósito: el toast puede
+   * sobrevivir a la pantalla que lo lanzó.
+   */
+  action?: { label: string; href: string };
 }
 
 let listeners: Array<(toasts: Toast[]) => void> = [];
