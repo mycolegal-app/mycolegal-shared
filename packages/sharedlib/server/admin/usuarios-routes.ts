@@ -585,7 +585,16 @@ export function createUsuariosInviteRoute(deps: UsuariosRoutesDeps) {
           data?.message ||
           (typeof data?.error === 'string' ? data.error : null) ||
           'Error al invitar usuario';
-        return errorResponse('AUTH_ERROR', msg, inviteRes.status);
+        // #727/#724 — Se conserva el CÓDIGO que manda auth en vez de aplastarlo
+        // con 'AUTH_ERROR'. La interfaz lo necesita para reconocer el caso del
+        // dominio no autorizado y ofrecer autorizarlo ahí mismo; con un código
+        // genérico solo le quedaba adivinarlo por el texto del mensaje, que
+        // depende de cómo esté redactado y del idioma.
+        const code =
+          (typeof data?.code === 'string' && data.code) ||
+          (typeof data?.error?.code === 'string' && data.error.code) ||
+          'AUTH_ERROR';
+        return errorResponse(code, msg, inviteRes.status);
       }
 
       const newUser = inviteRes.data?.user || inviteRes.data?.data || inviteRes.data;
