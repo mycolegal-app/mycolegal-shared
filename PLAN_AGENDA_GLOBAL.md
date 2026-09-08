@@ -1,6 +1,6 @@
 # PLAN — Agenda disponible en Pólizas, LegiFirma y Archivo
 
-**Estado:** 🟡 EN CURSO — Paso 1 de 4 hecho (lectura por canal inter). Faltan 2, 3 y 4.
+**Estado:** 🟡 EN CURSO — Pasos 1, 2 y 3 hechos. Falta el 4 (montar en las tres apps).
 **Origen:** incidencia **#678** de Javier Micó — *"La agenda no debería ser visible siempre. No solo la usa Notaría, Pólizas, Legifirma… otros"*.
 **Interpretación acordada:** añadir la agenda **completa** (no solo lectura) a Pólizas, LegiFirma y Archivo.
 **Repos implicados:** `mycolegal-notaria`, `mycolegal-shared` (ui), `mycolegal-polizas`, `mycolegal-legifirma`, `mycolegal-archivo`
@@ -74,7 +74,7 @@ notaría. Por eso todo va por el canal `inter` (service-key + `X-Org-Id` +
 
 ---
 
-## PASO 2 — Resto del canal inter ⬜ PENDIENTE
+## PASO 2 — Resto del canal inter ✅ HECHO (notaria 2.11.323)
 
 Mecánico pero largo. Replicar por `inter` la superficie que hoy solo existe como
 rutas de sesión en notaría (`src/app/api/agenda/*`):
@@ -98,9 +98,19 @@ endpoint inter que actúe "como servicio" rompería las dos.
 `InterAuthOk`, devuelva el mismo objeto `auth` que usan las rutas de sesión.
 Así las rutas inter delegan en la misma lógica y no se duplica nada.
 
+**CÓMO SE HIZO (mejor que lo previsto).** No se crearon rutas nuevas bajo
+`/api/inter/agenda/*`: se enseñó a las ONCE rutas que ya existían a aceptar
+también el canal de servicio, con `withPermissionOInter` / `withAuthOInter`
+(`src/lib/api-utils.ts`) apoyados en `authDesdeInter` (`src/lib/inter-auth-context.ts`).
+Mantener dos copias de ocho grupos de rutas era la vía más corta a que las reglas
+de privacidad y autoría se separaran sin que nadie se enterase. La sesión tiene
+prioridad; el canal de servicio es el plan B y exige empleado activo. Es un
+wrapper aparte y NO un cambio en `withPermission`: abrir todas las rutas de
+sesión de Notaría al service-key sería una superficie mucho mayor.
+
 ---
 
-## PASO 3 — Extraer la página a `@mycolegal-app/ui` ⬜ PENDIENTE
+## PASO 3 — Extraer la página a `@mycolegal-app/ui` ✅ HECHO (ui 3.0.23, notaria 2.11.324)
 
 Es el grueso. `mycolegal-notaria/src/app/(dashboard)/agenda/page.tsx` son ~1.600
 líneas e incluye:
@@ -116,6 +126,14 @@ líneas e incluye:
 **Parametrizar por ruta base.** El componente no puede asumir `/api/agenda/...`:
 cada app lo montará bajo su propio proxy. Pasar un `apiBase` (como ya hace
 `ActPicker` con `apiBase`).
+
+**CÓMO SE HIZO.** `AgendaView({ apiBase, capacidades })` en
+`packages/ui/components/agenda/`, con subruta de export propia para que quien no
+monte la agenda no arrastre FullCalendar. La página de Notaría queda en 20
+líneas. Los 89 textos viajaron como DEFAULTS de i18n del paquete y NO hubo que
+renombrar claves: el proveedor cae a los del paquete cuando la app no las tiene.
+`agenda-colores` se movió a `packages/ui/lib/` (fuera de la subruta de la agenda,
+para no arrastrar FullCalendar a un servidor que solo lee una paleta).
 
 **Ojo con lo que NO es portable:** el modo "firma" busca expedientes y el enlace
 "crear expediente desde esta cita" (#672) llevan a pantallas que **solo existen
