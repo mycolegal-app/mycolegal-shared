@@ -1639,12 +1639,42 @@ export function MycoBotRail({
                             if (!el) return;
                             e.preventDefault();
                             const idx = Number(el.getAttribute("data-cita"));
-                            if (m.citas && Number.isInteger(idx)) goToCita(m.citas, idx);
+                            if (!Number.isInteger(idx)) return;
+                            if (m.citas && m.citas.length > 0) {
+                              goToCita(m.citas, idx);
+                              return;
+                            }
+                            // #694 — Respuesta del carril de AYUDA: las marcas [n]
+                            // apuntan al Manual, no al corpus. Antes no se
+                            // enlazaban en absoluto —`linkifyCitas` recibía la
+                            // longitud de `citas`, que en ayuda va vacía— y el
+                            // notario se topaba con un "[1]" que no llevaba a
+                            // ningún sitio: "no es posible clicar para que envíe
+                            // a sitio alguno. Deduzco que es el Manual".
+                            const ay = m.citasAyuda?.[idx];
+                            if (ay?.href && (!appSlug || ay.appSlug === appSlug)) {
+                              window.location.href = ay.href;
+                            }
                           }}
                           dangerouslySetInnerHTML={{
                             __html: linkifyCitas(
                               renderMarkdown(m.skill === "fuera" ? t("ui.mycobot.outOfScope") : m.text),
-                              m.citas?.length ?? 0,
+                              // #694 — La ayuda y el corpus numeran por separado y
+                              // nunca conviven en la misma respuesta (la skill
+                              // "ayuda" no trae citas de doctrina), así que basta
+                              // con enlazar contra la lista que venga llena.
+                              //
+                              // Se pasa la longitud COMPLETA, no la de las que
+                              // tienen destino. El [n] del texto es el índice en
+                              // esa lista: contar solo las enlazables desplazaría
+                              // los índices y el [3] acabaría abriendo el
+                              // documento del [1]. Las que no tienen destino —
+                              // fichas de la base de conocimiento, que no tienen
+                              // vista navegable— se marcan igual y no hacen nada
+                              // al pulsarlas; siguen listadas abajo con su título.
+                              (m.citas?.length ?? 0) > 0
+                                ? m.citas!.length
+                                : m.citasAyuda?.length ?? 0,
                             ),
                           }}
                         />
