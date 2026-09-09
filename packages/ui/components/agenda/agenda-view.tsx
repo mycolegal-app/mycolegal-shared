@@ -9,6 +9,28 @@ import listPlugin from "@fullcalendar/list";
 import interactionPlugin from "@fullcalendar/interaction";
 import esLocale from "@fullcalendar/core/locales/es";
 import type { EventContentArg } from "@fullcalendar/core";
+import {
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Download,
+  MoreHorizontal,
+  Palette,
+  Printer,
+  Tags,
+} from "lucide-react";
+import {
+  ToolbarButton,
+  ToolbarChip,
+  ToolbarGroup,
+  ToolbarGroupButton,
+  ToolbarIconButton,
+  ToolbarMenu,
+  ToolbarSegmented,
+  ToolbarSeparator,
+  ToolbarSplitButton,
+} from "./agenda-toolbar";
 import { LoadingSpinner } from "../shared/loading-spinner";
 import { NavLink } from "../shared/nav-link";
 import { PageTitle } from "../layout/page-title";
@@ -144,10 +166,19 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
   const { t } = useI18n();
   const router = useRouter();
   const calendarRef = useRef<FullCalendar | null>(null);
+  // El `<input type="date">` ya no se ve: lo dispara el icono de la
+  // barra de navegación, que necesita una referencia para abrir su calendario.
+  const fechaRef = useRef<HTMLInputElement>(null);
   // #662 — fecha del selector "ir al día". Se mantiene en sincronía con lo que
   // se está viendo (`datesSet`) para que el control no se quede mostrando una
   // fecha vieja cuando se navega con las flechas.
   const [fechaIr, setFechaIr] = useState("");
+  // La barra de navegación (flechas, «hoy», rango y vistas) la pintamos
+  // nosotros, no FullCalendar: mientras la pintara él había una segunda
+  // tipografía y unos tamaños de botón que no controlábamos. Para eso hay que
+  // reflejar aquí lo que el calendario tiene puesto en cada momento.
+  const [vista, setVista] = useState("timeGridWeek");
+  const [tituloRango, setTituloRango] = useState("");
   const [events, setEvents] = useState<AgendaEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -839,130 +870,217 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
     );
   }
 
+  /**
+   * Cambiar de vista desde el selector propio. El estado local se
+   * actualiza también en `datesSet` (por si la vista cambia desde otro sitio:
+   * el botón "hoy", clicar el número de un día…), pero se refleja ya aquí para
+   * que el segmentado no parpadee esperando al calendario.
+   */
+  function cambiarVista(v: string, fecha?: Date) {
+    calendarRef.current?.getApi().changeView(v, fecha);
+    setVista(v);
+  }
+
+  /**
+   * #631 — Imprimir lo que se está viendo. Sale del propio calendario
+   * (`view.activeStart/activeEnd`) en vez de recalcular el rango, para que el
+   * papel case con la pantalla en cualquier vista y con el filtro de empleado
+   * puesto. `activeEnd` es exclusivo: se resta un minuto o la semanal se
+   * llevaría el lunes siguiente.
+   */
+  function imprimir() {
+    const api = calendarRef.current?.getApi();
+    if (!api) return;
+    const v = api.view;
+    const hasta = new Date(v.activeEnd.getTime() - 60000);
+    const qs = new URLSearchParams({
+      from: v.activeStart.toISOString(),
+      to: hasta.toISOString(),
+      // #679 — La zona del navegador, para que el papel salga con las mismas
+      // horas que la pantalla. Sin esto el servidor formateaba en UTC e
+      // imprimía las firmas dos horas antes.
+      tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
+    if (onlyMine) qs.set("asignadoId", "CURRENT");
+    window.open(`${apiBase}/agenda/print?${qs}`, "_blank");
+  }
+
+  /**
+   * #662 — Ir a un día cualquiera: con solo "‹ › Hoy", llegar a otro mes era ir
+   * saltando semana a semana (el enlace del número de día de #651 solo sirve
+   * dentro del rango ya visible). Sigue siendo el `<input type="date">` nativo
+   * —trae el calendario del sistema, ya traducido y sin dependencia nueva—,
+   * pero ahora se esconde tras el icono de la barra de navegación: era el único
+   * control con etiqueta suelta y con una altura que no era la de nadie más.
+   * Cambia de fecha sin cambiar de vista, para no perder la semanal o la
+   * mensual que el usuario tuviera puesta.
+   */
+  function irAlDia(valor: string) {
+    setFechaIr(valor);
+    if (!valor) return;
+    // Mediodía local: construir la fecha desde "YYYY-MM-DD" la interpreta como
+    // UTC y en España caería en el día anterior.
+    const [y, m, d] = valor.split("-").map(Number);
+    calendarRef.current?.getApi().gotoDate(new Date(y, m - 1, d, 12));
+  }
+
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between gap-4 pb-4">
+      {/* Fila A: qué es esta página y qué se puede HACER en ella.
+          Antes esta única fila mezclaba crear, imprimir, navegar, configurar,
+          exportar y filtrar en nueve controles seguidos, sin jerarquía ni
+          agrupación. Ahora: acción principal · filtros de lo que se ve ·
+          desbordamiento con lo que se usa una vez por semana. */}
+      <div className="flex items-start justify-between gap-4 pb-3">
         <PageTitle title={t("agendaPage.title")} subtitle={t("agendaPage.subtitle")} />
-        <div className="flex items-center gap-3">
-          {/* #372 — alta directa de una cita manual (sin arrastrar un hueco). */}
-          <button
-            type="button"
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {/* #372/#628 — alta directa de una cita manual (sin arrastrar un
+              hueco) y, colgando de ella, el bloqueo: son la misma familia. */}
+          <ToolbarSplitButton
+            label={t("agendaPage.btnNuevaCita")}
             onClick={openNuevaCita}
-            className="rounded-md bg-cyan-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-cyan-700"
-          >
-            {t("agendaPage.btnNuevaCita")}
-          </button>
-          {/* #631 — Imprimir lo que se está viendo. Sale del propio calendario
-              (`view.activeStart/activeEnd`) en vez de recalcular el rango, para
-              que el papel case con la pantalla en cualquier vista y con el
-              filtro de empleado puesto. `activeEnd` es exclusivo: se resta un
-              minuto o la semanal se llevaría el lunes siguiente. */}
-          <button
-            type="button"
-            onClick={() => {
-              const api = calendarRef.current?.getApi();
-              if (!api) return;
-              const v = api.view;
-              const hasta = new Date(v.activeEnd.getTime() - 60000);
-              const qs = new URLSearchParams({
-                from: v.activeStart.toISOString(),
-                to: hasta.toISOString(),
-                // #679 — La zona del navegador, para que el papel salga con las
-                // mismas horas que la pantalla. Sin esto el servidor formateaba
-                // en UTC e imprimía las firmas dos horas antes.
-                tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
-              });
-              if (onlyMine) qs.set("asignadoId", "CURRENT");
-              window.open(`${apiBase}/agenda/print?${qs}`, "_blank");
-            }}
-            className="rounded-md border px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
-          >
-            {t("agendaPage.btnImprimir")}
-          </button>
-          {/* #662 — Ir a un día cualquiera. La barra solo traía "‹ › Hoy", así
-              que llegar a otro mes era ir saltando semana a semana; el enlace
-              del número de día (#651) solo sirve dentro del rango ya visible.
-              Se usa un <input type="date"> nativo a propósito: trae el
-              calendario del sistema, ya está traducido y no añade dependencia.
-              Cambia de fecha sin cambiar de vista, para no perder la semanal o
-              la mensual que el usuario tuviera puesta. */}
-          <label className="flex items-center gap-1.5 text-xs text-gray-600">
-            {t("agendaPage.irAlDia")}
-            <input
-              type="date"
-              value={fechaIr}
-              onChange={(e) => {
-                const v = e.target.value;
-                setFechaIr(v);
-                if (!v) return;
-                // Mediodía local: construir la fecha desde "YYYY-MM-DD" la
-                // interpreta como UTC y en España caería en el día anterior.
-                const [y, m, d] = v.split("-").map(Number);
-                calendarRef.current?.getApi().gotoDate(new Date(y, m - 1, d, 12));
-              }}
-              className="rounded-md border px-2 py-1 text-xs"
-            />
-          </label>
-          {/* #628 — Puerta propia del bloqueo: antes solo se llegaba por el
-              selector de modos del diálogo, que se ha retirado. */}
-          <button
-            type="button"
-            onClick={openNuevoBloqueo}
-            className="rounded-md border px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
-          >
-            {t("agendaPage.btnNuevoBloqueo")}
-          </button>
-          <button
-            type="button"
-            onClick={() => setHorarioForm(horario)}
-            className="rounded-md border px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
-          >
-            {t("agendaPage.btnHorario")}
-          </button>
-          <button
-            type="button"
-            onClick={abrirIcs}
-            className="rounded-md border px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
-          >
-            {t("agendaPage.btnIcs")}
-          </button>
-          {/* #372 — leyenda de colores plegable. */}
-          <button
-            type="button"
-            onClick={() => setShowLegend((v) => !v)}
-            aria-expanded={showLegend}
-            className="rounded-md border px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
-          >
-            {t("agendaPage.btnLeyenda")}
-          </button>
+            menuAriaLabel={t("agendaPage.masFormasDeCrear")}
+            items={[
+              { key: "cita", label: t("agendaPage.menuNuevaCita"), onClick: openNuevaCita },
+              { key: "bloqueo", label: t("agendaPage.nuevoBloqueo"), onClick: openNuevoBloqueo },
+            ]}
+          />
+          <ToolbarSeparator />
           {/* #372 — semana laboral (L-V) ↔ completa (7 días). */}
-          <label className="flex items-center gap-2 text-sm text-gray-700">
+          <ToolbarChip
+            checked={showWeekend}
+            onChange={setShowWeekend}
+            label={t("agendaPage.chipWeekend")}
+            title={t("agendaPage.showWeekend")}
+          />
+          <ToolbarChip
+            checked={showFirmados}
+            onChange={setShowFirmados}
+            label={t("agendaPage.chipFirmados")}
+            title={t("agendaPage.showFirmados")}
+          />
+          <ToolbarChip
+            checked={onlyMine}
+            onChange={setOnlyMine}
+            label={t("agendaPage.chipMine")}
+            title={t("agendaPage.onlyMine")}
+          />
+          <ToolbarSeparator />
+          <ToolbarMenu
+            ariaLabel={t("agendaPage.masOpciones")}
+            icon={<MoreHorizontal className="h-4 w-4" aria-hidden="true" />}
+            items={[
+              {
+                key: "imprimir",
+                label: t("agendaPage.btnImprimir"),
+                icon: <Printer className="h-4 w-4" aria-hidden="true" />,
+                onClick: imprimir,
+              },
+              {
+                key: "ics",
+                label: t("agendaPage.btnIcs"),
+                icon: <Download className="h-4 w-4" aria-hidden="true" />,
+                onClick: abrirIcs,
+              },
+              {
+                key: "horario",
+                label: t("agendaPage.btnHorario"),
+                icon: <Clock className="h-4 w-4" aria-hidden="true" />,
+                onClick: () => setHorarioForm(horario),
+              },
+              {
+                // #372 — leyenda de colores plegable.
+                key: "leyenda",
+                label: t("agendaPage.btnLeyenda"),
+                icon: <Tags className="h-4 w-4" aria-hidden="true" />,
+                checked: showLegend,
+                onClick: () => setShowLegend((v) => !v),
+              },
+              {
+                key: "colores",
+                label: t("agendaPage.cambiarColores"),
+                icon: <Palette className="h-4 w-4" aria-hidden="true" />,
+                onClick: () => setColoresForm({ ...colores }),
+              },
+            ]}
+          />
+        </div>
+      </div>
+
+      {/* Fila B: DÓNDE se está mirando. Es la barra que antes pintaba
+          FullCalendar con su propio CSS (botones de 40px, otra tipografía, otro
+          azul); ahora sale de las mismas primitivas que la fila A y toda la
+          navegación —incluido "ir al día"— vive junta. */}
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 pb-3">
+        <div className="flex items-center gap-2 justify-self-start">
+          <ToolbarGroup>
+            <ToolbarGroupButton
+              aria-label={t("agendaPage.navAnterior")}
+              onClick={() => calendarRef.current?.getApi().prev()}
+              className="w-8 px-0"
+            >
+              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+            </ToolbarGroupButton>
+            <ToolbarGroupButton
+              aria-label={t("agendaPage.navSiguiente")}
+              onClick={() => calendarRef.current?.getApi().next()}
+              className="w-8 px-0"
+            >
+              <ChevronRight className="h-4 w-4" aria-hidden="true" />
+            </ToolbarGroupButton>
+          </ToolbarGroup>
+          {/* #626 — "Hoy" abría la SEMANA que contiene hoy, que empieza en
+              lunes: estando ya en la semana en curso el botón no hacía nada
+              visible. Lleva al DÍA de hoy, que es lo que se espera al pedir
+              "hoy"; para volver a la semana están los botones de vista. */}
+          <ToolbarButton
+            onClick={() => cambiarVista("timeGridDay", new Date())}
+          >
+            {t("agendaPage.btnToday")}
+          </ToolbarButton>
+          <div className="relative">
+            <ToolbarIconButton
+              aria-label={t("agendaPage.irAlDiaAria")}
+              onClick={() => {
+                const el = fechaRef.current;
+                if (!el) return;
+                // `showPicker` abre el calendario del sistema anclado al icono.
+                // Donde no exista, el input queda enfocado y se puede teclear.
+                try {
+                  el.showPicker();
+                } catch {
+                  el.focus();
+                }
+              }}
+            >
+              <CalendarDays className="h-4 w-4" aria-hidden="true" />
+            </ToolbarIconButton>
             <input
-              type="checkbox"
-              checked={showWeekend}
-              onChange={(e) => setShowWeekend(e.target.checked)}
-              className="rounded border-gray-300"
+              ref={fechaRef}
+              type="date"
+              tabIndex={-1}
+              aria-label={t("agendaPage.irAlDiaAria")}
+              value={fechaIr}
+              onChange={(e) => irAlDia(e.target.value)}
+              className="pointer-events-none absolute inset-0 h-8 w-8 opacity-0"
             />
-            {t("agendaPage.showWeekend")}
-          </label>
-          <label className="flex items-center gap-2 text-sm text-gray-700">
-            <input
-              type="checkbox"
-              checked={showFirmados}
-              onChange={(e) => setShowFirmados(e.target.checked)}
-              className="rounded border-gray-300"
-            />
-            {t("agendaPage.showFirmados")}
-          </label>
-          <label className="flex items-center gap-2 text-sm text-gray-700">
-            <input
-              type="checkbox"
-              checked={onlyMine}
-              onChange={(e) => setOnlyMine(e.target.checked)}
-              className="rounded border-gray-300"
-            />
-            {t("agendaPage.onlyMine")}
-          </label>
+          </div>
+        </div>
+        <div className="justify-self-center text-sm font-semibold text-mc-slate-900">
+          {tituloRango}
+        </div>
+        <div className="justify-self-end">
+          <ToolbarSegmented
+            ariaLabel={t("agendaPage.vistasAria")}
+            value={vista}
+            onChange={(v) => cambiarVista(v)}
+            options={[
+              { value: "timeGridDay", label: t("agendaPage.btnDay") },
+              { value: "timeGridWeek", label: t("agendaPage.btnWeek") },
+              { value: "dayGridMonth", label: t("agendaPage.btnMonth") },
+              { value: "listWeek", label: t("agendaPage.btnList") },
+            ]}
+          />
         </div>
       </div>
 
@@ -1102,29 +1220,13 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
           // dice hasta dónde llega el papel. Se abre una hora por cada lado.
           slotMinTime={margenHorario(horario.horaInicio, -1)}
           slotMaxTime={margenHorario(horario.horaFin, +1)}
-          // #626 — "Hoy" abría la SEMANA que contiene hoy, que empieza en lunes:
-          // estando ya en la semana en curso el botón no hacía nada visible
-          // ("si se selecciona hoy, no pasa nada; se ve desde lunes"). Ahora
-          // lleva al DÍA de hoy, que es lo que se espera al pedir "hoy". Para
-          // volver a la semana están los botones de vista de la derecha.
-          customButtons={{
-            hoy: {
-              text: t("agendaPage.btnToday"),
-              click: () => calendarRef.current?.getApi().changeView("timeGridDay", new Date()),
-            },
-          }}
-          headerToolbar={{
-            left: "prev,next hoy",
-            center: "title",
-            right: "listWeek,dayGridMonth,timeGridWeek,timeGridDay",
-          }}
-          buttonText={{
-            today: t("agendaPage.btnToday"),
-            month: t("agendaPage.btnMonth"),
-            week: t("agendaPage.btnWeek"),
-            day: t("agendaPage.btnDay"),
-            list: t("agendaPage.btnList"),
-          }}
+          // Sin barra propia de FullCalendar. Sus botones traían un CSS
+          // que no es el nuestro (40px de alto, otra tipografía, otro azul) y
+          // era imposible que casaran con los de la cabecera. La navegación, el
+          // rango y el selector de vista los pintamos arriba con las mismas
+          // primitivas que el resto de la barra, hablando con la API del
+          // calendario (`prev`/`next`/`changeView`) y leyendo su `view.title`.
+          headerToolbar={false}
           // #651 — clicar el día (su número o su cabecera) abre la agenda de ese
           // día. Antes había que ir con las flechas semana a semana.
           navLinks
@@ -1133,6 +1235,12 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
           }
           datesSet={(info) => {
             fetchRange(info.start, info.end);
+            // La barra de navegación es nuestra: el rango que muestra y
+            // la vista que marca como activa salen de aquí, que es el único
+            // punto por el que pasan todos los cambios (flechas, "hoy", clicar
+            // el número de un día, ir a una fecha…).
+            setTituloRango(info.view.title);
+            setVista(info.view.type);
             // `info.start` es el primer día del rango visible; en la mensual
             // puede caer en el mes anterior, así que se toma la fecha que
             // FullCalendar considera actual.

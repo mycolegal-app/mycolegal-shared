@@ -1284,7 +1284,17 @@
     "coloresTitulo": "Colores de la agenda",
     "coloresRestablecer": "Restablecer los de fábrica",
     "moverFirma": "Mover firma",
-    "abrirExpediente": "Abrir expediente"
+    "abrirExpediente": "Abrir expediente",
+    "menuNuevaCita": "Nueva cita",
+    "masFormasDeCrear": "Más cosas que crear",
+    "masOpciones": "Más opciones",
+    "chipWeekend": "Fin de semana",
+    "chipFirmados": "Firmados",
+    "chipMine": "Solo mías",
+    "irAlDiaAria": "Ir al día",
+    "navAnterior": "Anterior",
+    "navSiguiente": "Siguiente",
+    "vistasAria": "Vista del calendario"
   },
   "common": {
     "save": "Guardar",

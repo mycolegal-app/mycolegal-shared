@@ -1283,7 +1283,17 @@
     "coloresTitulo": "Cores da axenda",
     "coloresRestablecer": "Restablecer as de fábrica",
     "moverFirma": "Mover sinatura",
-    "abrirExpediente": "Abrir expediente"
+    "abrirExpediente": "Abrir expediente",
+    "menuNuevaCita": "Nova cita",
+    "masFormasDeCrear": "Máis cousas que crear",
+    "masOpciones": "Máis opcións",
+    "chipWeekend": "Fin de semana",
+    "chipFirmados": "Asinados",
+    "chipMine": "Só as miñas",
+    "irAlDiaAria": "Ir ao día",
+    "navAnterior": "Anterior",
+    "navSiguiente": "Seguinte",
+    "vistasAria": "Vista do calendario"
   },
   "common": {
     "save": "Gardar",

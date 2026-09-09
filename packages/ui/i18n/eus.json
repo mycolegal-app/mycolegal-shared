@@ -1283,7 +1283,17 @@
     "coloresTitulo": "Agendaren koloreak",
     "coloresRestablecer": "Jatorrizkoak berrezarri",
     "moverFirma": "Sinadura mugitu",
-    "abrirExpediente": "Espedientea ireki"
+    "abrirExpediente": "Espedientea ireki",
+    "menuNuevaCita": "Hitzordu berria",
+    "masFormasDeCrear": "Sortzeko beste aukera batzuk",
+    "masOpciones": "Aukera gehiago",
+    "chipWeekend": "Asteburua",
+    "chipFirmados": "Sinatuak",
+    "chipMine": "Nireak soilik",
+    "irAlDiaAria": "Joan egunera",
+    "navAnterior": "Aurrekoa",
+    "navSiguiente": "Hurrengoa",
+    "vistasAria": "Egutegiaren ikuspegia"
   },
   "common": {
     "save": "Gorde",

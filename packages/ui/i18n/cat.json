@@ -1284,7 +1284,17 @@
     "coloresTitulo": "Colors de l'agenda",
     "coloresRestablecer": "Restablir els de fàbrica",
     "moverFirma": "Moure signatura",
-    "abrirExpediente": "Obrir expedient"
+    "abrirExpediente": "Obrir expedient",
+    "menuNuevaCita": "Nova cita",
+    "masFormasDeCrear": "Més coses per crear",
+    "masOpciones": "Més opcions",
+    "chipWeekend": "Cap de setmana",
+    "chipFirmados": "Signats",
+    "chipMine": "Només meves",
+    "irAlDiaAria": "Anar al dia",
+    "navAnterior": "Anterior",
+    "navSiguiente": "Següent",
+    "vistasAria": "Vista del calendari"
   },
   "common": {
     "save": "Desar",
