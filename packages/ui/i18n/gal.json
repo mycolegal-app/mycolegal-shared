@@ -1281,7 +1281,9 @@
     },
     "cambiarColores": "Cambiar cores",
     "coloresTitulo": "Cores da axenda",
-    "coloresRestablecer": "Restablecer as de fábrica"
+    "coloresRestablecer": "Restablecer as de fábrica",
+    "moverFirma": "Mover sinatura",
+    "abrirExpediente": "Abrir expediente"
   },
   "common": {
     "save": "Gardar",

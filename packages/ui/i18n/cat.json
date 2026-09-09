@@ -1282,7 +1282,9 @@
     },
     "cambiarColores": "Canviar colors",
     "coloresTitulo": "Colors de l'agenda",
-    "coloresRestablecer": "Restablir els de fàbrica"
+    "coloresRestablecer": "Restablir els de fàbrica",
+    "moverFirma": "Moure signatura",
+    "abrirExpediente": "Obrir expedient"
   },
   "common": {
     "save": "Desar",

@@ -77,6 +77,12 @@ type EventoForm = {
   // #672 — ese expediente está anulado: la cita sigue viva y hay que cancelarla
   // a mano (o abrir otro expediente), pero eso lo decide una persona.
   expedienteVinculadoAnulado: boolean;
+  // #731 — se está EDITANDO una firma ya agendada, no creando una. No basta con
+  // `id`, que es el del hito de agenda y una firma no tiene: la firma vive en el
+  // expediente. De esto dependen el título del diálogo, que no se ofrezca
+  // cambiar de modo (una firma agendada no se convierte en un bloqueo) y que se
+  // pueda saltar a la ficha.
+  firmaExistente: boolean;
 };
 
 // Convierte un Date a valor de <input type="datetime-local"> en horario local.
@@ -409,6 +415,7 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
       expedienteVinculadoId: null,
       expedienteVinculadoRef: null,
       expedienteVinculadoAnulado: false,
+      firmaExistente: false,
     });
   }
 
@@ -505,6 +512,56 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
     abrirDialogo("bloqueo", ...proximoHueco());
   }
 
+  /**
+   * #731/#732 — Abrir una FIRMA ya agendada para moverla.
+   *
+   * Antes, clicar una firma en el calendario NAVEGABA al expediente y nada más.
+   * El notario lo contaba así: "clico en la cita y no me sale más que que ya
+   * está agendado"; y desde el expediente tampoco daba con dónde cambiar la
+   * fecha, porque el editor es un lápiz diminuto al lado de la fecha prevista.
+   * O sea que mover una firma de día —cosa que pasa a diario— no tenía ningún
+   * camino evidente.
+   *
+   * Ahora abre el MISMO diálogo que ya servía para crear la firma desde un
+   * hueco, con su expediente ya vinculado. No hace falta nada nuevo en el
+   * servidor: `guardarEvento` en modo "firma" hace un PATCH del expediente con
+   * la fecha, la hora de fin, la salida y el lugar, que es exactamente lo que
+   * hay que cambiar. El enlace al expediente no se pierde: pasa a estar dentro
+   * del diálogo, que es donde se necesita.
+   */
+  function openEditarFirma(ev: AgendaEvent) {
+    const expedienteId = (ev.meta?.expedienteId as string | null) ?? null;
+    // Sin expediente no hay nada que editar; se conserva el comportamiento
+    // anterior (abrir la ficha) antes que enseñar un diálogo que no guarda.
+    if (!expedienteId) {
+      if (ev.url) router.push(ev.url);
+      return;
+    }
+    setForm({
+      id: null,
+      modo: "firma",
+      titulo: ev.title,
+      tipo: "FIRMA",
+      inicio: toLocalInput(new Date(ev.start)),
+      fin: toLocalInput(new Date(ev.end)),
+      descripcion: "",
+      visibilidad: "PUBLICA",
+      expedienteId,
+      expedienteLabel: (ev.meta?.expedienteRef as string | null) ?? ev.title,
+      usuarioId: "",
+      contactoId: null,
+      contactoLabel: "",
+      esSalida: ev.meta?.esSalida === true,
+      lugar: (ev.meta?.lugar as string | null) ?? "",
+      asignadoId: "",
+      importante: false,
+      expedienteVinculadoId: expedienteId,
+      expedienteVinculadoRef: (ev.meta?.expedienteRef as string | null) ?? null,
+      expedienteVinculadoAnulado: false,
+      firmaExistente: true,
+    });
+  }
+
   function openEditar(ev: AgendaEvent) {
     setForm({
       id: ev.eventoId ?? null,
@@ -531,6 +588,7 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
       expedienteVinculadoId: (ev.meta?.expedienteId as string | null) ?? null,
       expedienteVinculadoRef: (ev.meta?.expedienteRef as string | null) ?? null,
       expedienteVinculadoAnulado: ev.meta?.expedienteAnulado === true,
+      firmaExistente: false,
     });
   }
 
@@ -1130,8 +1188,13 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
               if (ev.url) window.open(ev.url, "_blank", "noopener,noreferrer");
               return;
             }
-            // #185 — los hitos manuales abren el editor; expedientes/protocolos navegan.
+            // #185 — los hitos manuales abren el editor.
+            // #731/#732 — y las firmas de expediente también: hasta ahora
+            // navegaban a la ficha, y mover una firma de día no tenía camino.
+            // Los protocolos siguen navegando: ya están firmados, su fecha no
+            // se mueve desde la agenda.
             if (ev.kind === "evento") openEditar(ev);
+            else if (ev.kind === "expediente") openEditarFirma(ev);
             else if (ev.url) router.push(ev.url);
           }}
         />
@@ -1144,11 +1207,13 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
             <h3 className="mb-3 text-lg font-semibold">
               {form.id
                 ? t("agendaPage.editarHito")
-                : form.modo === "firma"
-                  ? t("agendaPage.agendarFirma")
-                  : form.modo === "bloqueo"
-                    ? t("agendaPage.nuevoBloqueo")
-                    : t("agendaPage.nuevoHito")}
+                : form.firmaExistente
+                  ? t("agendaPage.moverFirma")
+                  : form.modo === "firma"
+                    ? t("agendaPage.agendarFirma")
+                    : form.modo === "bloqueo"
+                      ? t("agendaPage.nuevoBloqueo")
+                      : t("agendaPage.nuevoHito")}
             </h3>
             {/* #628 — Aquí vivía un selector de firma/hito/bloqueo con los tres
                 modos al mismo nivel; se retiró porque el preseleccionado
@@ -1158,7 +1223,7 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
                 firma, que pide expediente, y tenía que cancelar. Se ofrecen
                 solo los OTROS dos modos, como enlaces y no como botones al
                 mismo nivel: el título sigue diciendo qué se está creando. */}
-            {!form.id && (
+            {!form.id && !form.firmaExistente && (
               <p className="mb-3 text-xs text-gray-500">
                 {t("agendaPage.cambiarModoPregunta")}{" "}
                 {(["firma", "hito", "bloqueo"] as const)
@@ -1234,16 +1299,32 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
                   {form.expedienteId ? (
                     <div className="flex items-center justify-between rounded-md border bg-gray-50 px-3 py-2 text-sm">
                       <span className="font-medium">{form.expedienteLabel}</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setForm({ ...form, expedienteId: null, expedienteLabel: "" });
-                          setExpBusqueda("");
-                        }}
-                        className="text-xs text-gray-400 hover:text-gray-600"
-                      >
-                        {t("common.cancel")}
-                      </button>
+                      {/* #731 — Al editar una firma ya agendada no se ofrece
+                          desvincular el expediente: la firma ES de ese
+                          expediente, y quitarlo solo deja el botón de guardar
+                          inservible. Lo que hace falta desde aquí es lo
+                          contrario: poder abrir la ficha, que es lo que se
+                          perdió al dejar de navegar al clicar la cita. */}
+                      {form.firmaExistente ? (
+                        <button
+                          type="button"
+                          onClick={() => router.push(`/expedientes/${form.expedienteId}`)}
+                          className="text-xs font-medium text-cyan-700 underline underline-offset-2 hover:text-cyan-800"
+                        >
+                          {t("agendaPage.abrirExpediente")}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setForm({ ...form, expedienteId: null, expedienteLabel: "" });
+                            setExpBusqueda("");
+                          }}
+                          className="text-xs text-gray-400 hover:text-gray-600"
+                        >
+                          {t("common.cancel")}
+                        </button>
+                      )}
                     </div>
                   ) : (
                     <>

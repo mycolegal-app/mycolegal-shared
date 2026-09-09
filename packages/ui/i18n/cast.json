@@ -1282,7 +1282,9 @@
     },
     "cambiarColores": "Cambiar colores",
     "coloresTitulo": "Colores de la agenda",
-    "coloresRestablecer": "Restablecer los de fábrica"
+    "coloresRestablecer": "Restablecer los de fábrica",
+    "moverFirma": "Mover firma",
+    "abrirExpediente": "Abrir expediente"
   },
   "common": {
     "save": "Guardar",

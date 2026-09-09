@@ -1281,7 +1281,9 @@
     },
     "cambiarColores": "Koloreak aldatu",
     "coloresTitulo": "Agendaren koloreak",
-    "coloresRestablecer": "Jatorrizkoak berrezarri"
+    "coloresRestablecer": "Jatorrizkoak berrezarri",
+    "moverFirma": "Sinadura mugitu",
+    "abrirExpediente": "Espedientea ireki"
   },
   "common": {
     "save": "Gorde",
