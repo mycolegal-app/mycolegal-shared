@@ -545,8 +545,13 @@ export function createUsuariosInviteRoute(deps: UsuariosRoutesDeps) {
         displayName?: string;
         phoneNumber?: string;
         appRole?: string;
+        // #727 — Alta nominal: el administrador acepta dar de alta a esta
+        // persona aunque su correo no sea de un dominio de la organización, sin
+        // autorizar el dominio entero. Se reenvía tal cual: la decisión es de
+        // auth, que es quien conoce la regla.
+        confirmaFueraDeDominio?: boolean;
       };
-      const { email, displayName, phoneNumber, appRole } = body;
+      const { email, displayName, phoneNumber, appRole, confirmaFueraDeDominio } = body;
 
       if (!email || !displayName || !appRole) {
         return errorResponse(
@@ -574,6 +579,7 @@ export function createUsuariosInviteRoute(deps: UsuariosRoutesDeps) {
           displayName,
           phoneNumber: phoneNumber || undefined,
           appSlugs: [appSlug],
+          ...(confirmaFueraDeDominio ? { confirmaFueraDeDominio: true } : {}),
         },
       });
 
@@ -902,8 +908,13 @@ export function createUsuariosCreateWithPasswordRoute(deps: UsuariosRoutesDeps) 
         phoneNumber?: string;
         language?: string;
         appRole?: string;
+        /** #727 — Ver la ruta de invitación. */
+        confirmaFueraDeDominio?: boolean;
       };
-      const { email, displayName, initialPassword, phoneNumber, language, appRole } = body;
+      const {
+        email, displayName, initialPassword, phoneNumber, language, appRole,
+        confirmaFueraDeDominio,
+      } = body;
 
       if (!email || !displayName || !initialPassword || !appRole) {
         return errorResponse(
@@ -939,6 +950,7 @@ export function createUsuariosCreateWithPasswordRoute(deps: UsuariosRoutesDeps) 
             phoneNumber: phoneNumber || undefined,
             language: language || undefined,
             appSlugs: [appSlug],
+            ...(confirmaFueraDeDominio ? { confirmaFueraDeDominio: true } : {}),
           },
         },
       );

@@ -158,6 +158,10 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
   // toast solo dura cinco segundos y aparece donde el usuario no está mirando.
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [inviteDomainOffer, setInviteDomainOffer] = useState<string | null>(null);
+  // #727 — El dominio ofrecido es de los que comparten varias notarías (los del
+  // Consejo) o un correo gratuito: autorizarlo abre la organización a gente de
+  // fuera, así que el diálogo lo avisa y ofrece invitar solo a esa dirección.
+  const [inviteDomainShared, setInviteDomainShared] = useState(false);
   const [inviteSubmitting, setInviteSubmitting] = useState(false);
   const [deleteUser, setDeleteUser] = useState<UserRow | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -242,10 +246,13 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
     appRole?: string;
     initialPassword?: string;
     authorizeDomain?: boolean;
+    /** #727 — Alta nominal: no toca los dominios de la organización. */
+    confirmaFueraDeDominio?: boolean;
   }): Promise<{ ok: boolean }> {
     setInviteSubmitting(true);
     setInviteError(null);
     setInviteDomainOffer(null);
+    setInviteDomainShared(false);
 
     // #727 — Autorizar primero el dominio, si el usuario marcó la casilla que le
     // ofrecimos al fallar. Mismo orden que el alta por Telegram.
@@ -290,8 +297,13 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
         setInviteError(msg);
         // Dominio no autorizado: se ofrece autorizarlo aquí. Se acepta el código
         // y, de rebote, el texto — auth ya desplegado puede no mandar el código.
-        const esDominio = code === 'DOMAIN_NOT_AUTHORIZED' || (res.status === 400 && /dominio/i.test(msg));
+        const esCompartido = code === 'DOMAIN_NOT_AUTHORIZED_SHARED';
+        const esDominio =
+          code === 'DOMAIN_NOT_AUTHORIZED' ||
+          esCompartido ||
+          (res.status === 400 && /dominio/i.test(msg));
         setInviteDomainOffer(esDominio && domainsEndpoint ? dominio : null);
+        setInviteDomainShared(esCompartido);
         toast({ title: msg, variant: 'destructive' });
         return { ok: false };
       }
@@ -635,11 +647,12 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
       <InviteUserDialog
         open={inviteOpen}
         onOpenChange={(o) => {
-          if (!o) { setInviteError(null); setInviteDomainOffer(null); }
+          if (!o) { setInviteError(null); setInviteDomainOffer(null); setInviteDomainShared(false); }
           setInviteOpen(o);
         }}
         error={inviteError}
         authorizeDomainOffer={inviteDomainOffer}
+        authorizeDomainShared={inviteDomainShared}
         onSubmit={handleInvite}
         roles={assignableRoles.map((r) => ({ value: r, label: roleLabel(r) }))}
         roleHint={orgAdminRoleHint}

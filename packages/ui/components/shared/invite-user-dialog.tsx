@@ -40,6 +40,8 @@ import { useI18n } from "../i18n/i18n-context";
 export interface InviteFormData {
   /** #727 — Autorizar el dominio del correo antes de invitar (solo org_admin). */
   authorizeDomain?: boolean;
+  /** #727 — Alta nominal: no toca los dominios de la organización. */
+  confirmaFueraDeDominio?: boolean;
   email: string;
   displayName: string;
   phoneNumber?: string;
@@ -96,6 +98,14 @@ interface InviteUserDialogProps {
    */
   authorizeDomainOffer?: string | null;
   /**
+   * #727 — El dominio ofrecido es COMPARTIDO (del Consejo, como
+   * `@despacho.notariado.org`, o un correo gratuito). Cambia lo que se ofrece:
+   * autorizarlo sigue siendo posible, pero hay que decir que a partir de
+   * entonces valdrá CUALQUIER dirección de ese dominio, y ofrecer la
+   * alternativa de invitar solo a esta persona.
+   */
+  authorizeDomainShared?: boolean;
+  /**
    * Whether to expose the "create with initial password" mode toggle.
    * Default: true. When false, only the email-invite mode is shown
    * (matches pre-1.45.2 behaviour).
@@ -121,6 +131,7 @@ export function InviteUserDialog({
   onSubmit,
   error,
   authorizeDomainOffer,
+  authorizeDomainShared = false,
   roles,
   roleHint,
   languages,
@@ -136,6 +147,8 @@ export function InviteUserDialog({
   const [appRole, setAppRole] = useState("");
   const [language, setLanguage] = useState(defaultLanguage);
   const [authorizeDomain, setAuthorizeDomain] = useState(false);
+  // #727 — Alternativa a autorizar el dominio entero: invitar solo esta persona.
+  const [soloEstaDireccion, setSoloEstaDireccion] = useState(false);
   const [mode, setMode] = useState<Mode>("email");
   const [initialPassword, setInitialPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -149,6 +162,8 @@ export function InviteUserDialog({
     setMode("email");
     setInitialPassword("");
     setShowPassword(false);
+    setAuthorizeDomain(false);
+    setSoloEstaDireccion(false);
   }, [defaultLanguage]);
 
   const passwordTooShort =
@@ -166,6 +181,10 @@ export function InviteUserDialog({
       email,
       displayName,
       ...(authorizeDomainOffer && authorizeDomain ? { authorizeDomain: true } : {}),
+      // #727 — Invitar solo esta dirección, sin tocar los dominios de la
+      // organización. Es lo razonable cuando el dominio es compartido: bendecir
+      // `gmail.com` entero para dar de alta a una persona es desproporcionado.
+      ...(soloEstaDireccion ? { confirmaFueraDeDominio: true } : {}),
       ...(phoneNumber ? { phoneNumber } : {}),
       ...(roles && appRole ? { appRole } : {}),
       ...(languages ? { language } : {}),
@@ -363,17 +382,47 @@ export function InviteUserDialog({
           >
             <p className="whitespace-pre-wrap">{error}</p>
             {authorizeDomainOffer && (
-              <label className="mt-2 flex items-start gap-2 text-xs font-medium text-red-900">
-                <input
-                  type="checkbox"
-                  checked={authorizeDomain}
-                  onChange={(e) => setAuthorizeDomain(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 rounded border-red-300"
-                />
-                <span>
-                  {t("ui.inviteUser.autorizarDominio", { dominio: authorizeDomainOffer })}
-                </span>
-              </label>
+              <div className="mt-2 space-y-2">
+                <label className="flex items-start gap-2 text-xs font-medium text-red-900">
+                  <input
+                    type="checkbox"
+                    checked={authorizeDomain}
+                    onChange={(e) => {
+                      setAuthorizeDomain(e.target.checked);
+                      if (e.target.checked) setSoloEstaDireccion(false);
+                    }}
+                    className="mt-0.5 h-4 w-4 rounded border-red-300"
+                  />
+                  <span>
+                    {t("ui.inviteUser.autorizarDominio", { dominio: authorizeDomainOffer })}
+                    {/* #727 — Autorizar un dominio compartido no es lo mismo que
+                        autorizar el propio: hay que decir qué implica ANTES de
+                        que lo marquen, no después. */}
+                    {authorizeDomainShared && (
+                      <span className="mt-0.5 block font-normal text-red-800">
+                        {t("ui.inviteUser.dominioCompartidoAviso", { dominio: authorizeDomainOffer })}
+                      </span>
+                    )}
+                  </span>
+                </label>
+
+                {/* La salida proporcionada cuando el dominio es de todos: dar de
+                    alta a esta persona sin bendecir el dominio entero. */}
+                {authorizeDomainShared && (
+                  <label className="flex items-start gap-2 text-xs font-medium text-red-900">
+                    <input
+                      type="checkbox"
+                      checked={soloEstaDireccion}
+                      onChange={(e) => {
+                        setSoloEstaDireccion(e.target.checked);
+                        if (e.target.checked) setAuthorizeDomain(false);
+                      }}
+                      className="mt-0.5 h-4 w-4 rounded border-red-300"
+                    />
+                    <span>{t("ui.inviteUser.soloEstaDireccion")}</span>
+                  </label>
+                )}
+              </div>
             )}
           </div>
         )}

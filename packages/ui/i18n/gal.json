@@ -403,7 +403,9 @@
       "selectRole": "Seleccionar rol...",
       "inviting": "Convidando...",
       "btnInvite": "Convidar usuario",
-      "autorizarDominio": "Autorizar o dominio \"{dominio}\" na miña organización e tentalo de novo. Só poderán acceder persoas con correo dese dominio."
+      "autorizarDominio": "Autorizar o dominio \"{dominio}\" na miña organización e tentalo de novo. Só poderán acceder persoas con correo dese dominio.",
+      "dominioCompartidoAviso": "Atención: é un dominio compartido con outras notarías. Se o autorizas, calquera persoa cun enderezo de \"{dominio}\" poderá entrar na túa organización, aínda que non traballe contigo.",
+      "soloEstaDireccion": "Convidar só a este enderezo, sen autorizar o dominio (recomendado)."
     },
     "notifications": {
       "title": "Notificacións",
