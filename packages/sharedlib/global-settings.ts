@@ -21,7 +21,12 @@
 
 import { prisma } from './db';
 
-type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+// Ver la nota en safe-transaction.ts: forma que tipa con y sin cliente generado.
+type TransactionClient = typeof prisma extends {
+  $transaction: (fn: (tx: infer TX) => any, ...rest: any[]) => any;
+}
+  ? TX
+  : any;
 
 /** Cualquier cliente Prisma del consumidor (singleton o tx) con el modelo. */
 export type GlobalSettingsDb = typeof prisma | TransactionClient;

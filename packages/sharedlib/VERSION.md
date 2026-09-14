@@ -1,5 +1,25 @@
 # mycolegal-sharedlib — Changelog
 
+## 0.10.13 — server/feature-usage: señal de uso por funcionalidad (2026-09-13)
+
+Type: **revision**
+
+- Nuevo `server/feature-usage.ts`: `recordFeatureUse(permiso, orgId, userId)` +
+  `flushFeatureUsage()`. Buffer en memoria agregado por (permiso·org·usuario·día),
+  volcado cada 60 s y en SIGTERM a `AUTH_SERVICE_URL/internal/feature-usage`
+  (auth, tabla `feature_usage_daily`). Fire-and-forget. E4 de
+  `mycolegal-platform/PLAN_TECNICO_ESTADISTICAS_USO.md`.
+- Se engancha en el gate `withPermission` de cada app (consultor y notaría en
+  esta versión); sustituye a las copias locales `src/lib/feature-usage.ts`.
+- **El paquete vuelve a tipar en aislamiento** (`npm run typecheck`, 0 errores;
+  antes 8). Los peers `@prisma/client`, `jose` y `@google-cloud/storage` pasan a
+  ser también devDependencies (no viajan al consumidor). Los tipos derivados de
+  `$transaction` en `safe-transaction.ts` y `global-settings.ts` se reescriben
+  con `infer` para que resuelvan igual con cliente generado (las apps) y con el
+  stub (el paquete solo); `Prisma.TransactionIsolationLevel` → literal
+  equivalente. Sin cambio de tipos para los consumidores (verificado en
+  legifirma con aserción).
+
 ## 0.9.22 — extracción de texto → @mycolegal-app/text-extract (2026-08-21)
 
 Type: **revision**

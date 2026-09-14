@@ -1,12 +1,14 @@
 {
   "name": "@mycolegal-app/sharedlib",
-  "version": "0.10.12",
+  "version": "0.10.13",
   "type": "module",
   "main": "./index.ts",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
   },
-  "scripts": {},
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mycolegal-app/mycolegal-shared.git"
@@ -63,7 +65,10 @@
     "google-auth-library": "^9.6.3"
   },
   "devDependencies": {
+    "@google-cloud/storage": "^7.19.0",
+    "@prisma/client": "^5.11.0",
     "@types/node": "^22.19.17",
+    "jose": "^5.2.4",
     "typescript": "^6.0.2"
   },
   "description": "Código no-gráfico compartido entre apps de usuario final de MycoLegal (auth, api utils, prisma helpers, proxies, etc.). Hermano de @mycolegal-app/ui."

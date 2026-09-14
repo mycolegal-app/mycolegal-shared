@@ -6,14 +6,29 @@
 // que la app re-exporta como `@/lib/db`). `@prisma/client` es peerDependency
 // OPCIONAL: en runtime resuelve al cliente generado por la app consumidora.
 
-import { Prisma } from '@prisma/client';
 import { prisma } from './db';
 
-type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+// Tipos derivados del cliente SIN depender del namespace `Prisma` generado:
+// este paquete se tipa también en aislamiento (`npm run typecheck`), donde
+// `@prisma/client` es el stub sin `prisma generate` y `PrismaClient` es `any`.
+//   · Con cliente generado: `infer TX` toma la última sobrecarga de
+//     `$transaction` (la interactiva), igual que hacía `Parameters<…>`.
+//   · Con el stub: `any` distribuye y el resultado es `any`, sin error.
+// `Parameters<Parameters<…>[0]>[0]` reventaba en el stub con TS2344 porque
+// `Parameters<any>[0]` es `unknown`.
+type TransactionClient = typeof prisma extends {
+  $transaction: (fn: (tx: infer TX) => any, ...rest: any[]) => any;
+}
+  ? TX
+  : any;
 type TransactionFn<T> = (tx: TransactionClient) => Promise<T>;
 
+// Literal idéntico al enum `Prisma.TransactionIsolationLevel` del cliente
+// generado; el stub no lo exporta.
+type IsolationLevel = 'ReadUncommitted' | 'ReadCommitted' | 'RepeatableRead' | 'Serializable';
+
 interface SafeTransactionOptions {
-  isolationLevel?: Prisma.TransactionIsolationLevel;
+  isolationLevel?: IsolationLevel;
   maxRetries?: number;
 }
 
