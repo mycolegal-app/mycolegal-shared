@@ -101,8 +101,22 @@ export function IdleTimeout({
   }, [onSilentRefresh]);
 
   const timeoutMs = timeoutMinutes * 60 * 1000;
+  // Cadencia del refresh silencioso mientras hay actividad.
+  //
+  // Incidencia consultor #1 (Notaría Lara Domínguez, 14-sep-2026): con el
+  // tiempo de inactividad a 120 min la sesión se cerraba tras ~1 h sin tocar
+  // la pestaña. El token de acceso dura `timeout + 2` min contado desde el
+  // ÚLTIMO REFRESH, y el refresh solo se pedía cada `timeout / 2` (60 min): si
+  // la última interacción caía justo antes de esa marca, el token moría 62 min
+  // después aunque el aviso de inactividad no tocara hasta los 120. El plazo
+  // real de inactividad era, según la fase, cualquier cosa entre 62 y 122 min.
+  //
+  // Refrescando como mucho cada 10 min (o la mitad del timeout si es menor),
+  // el token siempre sobrevive al menos `timeout - 8` min desde la última
+  // actividad, que es lo que la configuración promete. El coste es una llamada
+  // ligera cada 10 min por usuario activo.
   const refreshIntervalMs =
-    (refreshIntervalMinutes ?? Math.max(timeoutMinutes / 2, 1)) * 60 * 1000;
+    (refreshIntervalMinutes ?? Math.min(Math.max(timeoutMinutes / 2, 1), 10)) * 60 * 1000;
 
   const resetIdleTimer = useCallback(() => {
     lastActivity.current = Date.now();
