@@ -441,7 +441,11 @@
       "kindImprovement": "Hobekuntza",
       "kindFilterAll": "Guztiak",
       "kindFilterIncidents": "Intzidentziak",
-      "kindFilterImprovements": "Hobekuntzak"
+      "kindFilterImprovements": "Hobekuntzak",
+      "gotoPlaceholder": "Joan zk.…",
+      "gotoLabel": "Joan intzidentziara zenbakiaren arabera",
+      "showing": "{n} / {total}",
+      "loadMore": "{n} gehiago kargatu"
     },
     "incidentDetail": {
       "errNotFound": "Ez dugu gertakari hau aurkitu.",

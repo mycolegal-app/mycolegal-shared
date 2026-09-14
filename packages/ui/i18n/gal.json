@@ -441,7 +441,11 @@
       "kindImprovement": "Mellora",
       "kindFilterAll": "Todas",
       "kindFilterIncidents": "Incidencias",
-      "kindFilterImprovements": "Melloras"
+      "kindFilterImprovements": "Melloras",
+      "gotoPlaceholder": "Ir ao nº…",
+      "gotoLabel": "Ir á incidencia polo número",
+      "showing": "{n} de {total}",
+      "loadMore": "Cargar {n} máis"
     },
     "incidentDetail": {
       "errNotFound": "Non atopamos esta incidencia.",

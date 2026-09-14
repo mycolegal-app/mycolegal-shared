@@ -442,7 +442,11 @@
       "kindImprovement": "Mejora",
       "kindFilterAll": "Todas",
       "kindFilterIncidents": "Incidencias",
-      "kindFilterImprovements": "Mejoras"
+      "kindFilterImprovements": "Mejoras",
+      "gotoPlaceholder": "Ir a nº…",
+      "gotoLabel": "Ir a la incidencia por número",
+      "showing": "{n} de {total}",
+      "loadMore": "Cargar {n} más"
     },
     "incidentDetail": {
       "errNotFound": "No encontramos esta incidencia.",

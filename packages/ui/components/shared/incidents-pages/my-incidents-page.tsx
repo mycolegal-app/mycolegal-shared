@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { NavLink as Link } from "../nav-link";
-import { Loader2, Inbox, Plus, ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react";
+import { Loader2, Inbox, Plus, ArrowUp, ArrowDown, ChevronsUpDown, ArrowRight } from "lucide-react";
 import { cn } from "../../../lib/utils";
 import { PageTitle } from "../../layout/page-title";
 import { useI18n } from "../../i18n/i18n-context";
@@ -73,6 +74,13 @@ type SortField = "number" | "appSlug" | "status" | "lastActivityAt";
 // ordenando por una columna y el servidor devolvía por otra.
 const DEFAULT_SORT_BY: SortField = "number";
 const DEFAULT_SORT_ORDER: "asc" | "desc" = "desc";
+
+// #760/#781/#782 — Tamaño de página. El listado pedía `limit=100` y se quedaba
+// ahí: en una organización con cientos de incidencias, ordenadas por número
+// descendente, todo lo anterior a las últimas cien no existía para el usuario
+// ("se corta en la 660", "no llego a la 599"). Ahora se pide por páginas y se
+// puede seguir cargando hasta el total que devuelve el servidor.
+const PAGE_SIZE = 100;
 
 // #644 — El ámbito elegido (Organización / Mías) se recuerda entre visitas. Sin
 // esto la página lo redecidía en cada carga y el usuario no entendía por qué
@@ -155,15 +163,27 @@ export function MyIncidentsPage({ onReport }: MyIncidentsPageProps = {}) {
   const [error, setError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortField>(DEFAULT_SORT_BY);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">(DEFAULT_SORT_ORDER);
+  // #760 — paginación: cuántas hay en total y qué página va cargada.
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
+  // #781 — "Ir a la nº": la forma más corta de llegar a una incidencia concreta.
+  const [gotoNumber, setGotoNumber] = useState("");
+  const router = useRouter();
 
   const loadScope = useCallback(
-    async (s: Scope, sBy: SortField, sOrder: "asc" | "desc", kFilter: KindFilter) => {
-      setLoading(true);
+    async (s: Scope, sBy: SortField, sOrder: "asc" | "desc", kFilter: KindFilter, pageToLoad = 1) => {
+      const append = pageToLoad > 1;
+      if (append) setLoadingMore(true);
+      else setLoading(true);
       setError(null);
       try {
         const ep = s === "org" ? "/api/incidents/org" : "/api/incidents/mine";
         const kindParam = kFilter !== "all" ? `&kind=${kFilter}` : "";
-        const res = await fetch(`${ep}?limit=100&sortBy=${sBy}&sortOrder=${sOrder}${kindParam}`, { credentials: "include" });
+        const res = await fetch(
+          `${ep}?page=${pageToLoad}&limit=${PAGE_SIZE}&sortBy=${sBy}&sortOrder=${sOrder}${kindParam}`,
+          { credentials: "include" },
+        );
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
           throw new Error(
@@ -171,16 +191,30 @@ export function MyIncidentsPage({ onReport }: MyIncidentsPageProps = {}) {
           );
         }
         const body = await res.json();
-        setItems(body.data || []);
+        const rows: IncidentListEntry[] = body.data || [];
+        setItems((prev) => (append ? [...prev, ...rows] : rows));
+        setTotal(typeof body.total === "number" ? body.total : rows.length);
+        setPage(pageToLoad);
         if (typeof body.canManage === "boolean") setCanManage(body.canManage);
       } catch (err) {
         setError((err as Error).message || t("ui.myIncidents.errLoad"));
       } finally {
-        setLoading(false);
+        if (append) setLoadingMore(false);
+        else setLoading(false);
       }
     },
     [t],
   );
+
+  const cargarMas = useCallback(() => {
+    void loadScope(scope, sortBy, sortOrder, kindFilter, page + 1);
+  }, [loadScope, scope, sortBy, sortOrder, kindFilter, page]);
+
+  const irANumero = useCallback(() => {
+    const n = Number.parseInt(gotoNumber.trim().replace(/^#/, ""), 10);
+    if (!Number.isFinite(n) || n < 1) return;
+    router.push(`/incidencias/${n}`);
+  }, [gotoNumber, router]);
 
   // On mount: decide qué lista se pinta, en UNA sola petición cuando se puede.
   //
@@ -190,7 +224,13 @@ export function MyIncidentsPage({ onReport }: MyIncidentsPageProps = {}) {
   // encontrarse la lista completa en cada visita.
   useEffect(() => {
     let cancelled = false;
-    const qs = `limit=100&sortBy=${DEFAULT_SORT_BY}&sortOrder=${DEFAULT_SORT_ORDER}`;
+    const qs = `page=1&limit=${PAGE_SIZE}&sortBy=${DEFAULT_SORT_BY}&sortOrder=${DEFAULT_SORT_ORDER}`;
+    const aplicar = (b: { data?: IncidentListEntry[]; total?: number }) => {
+      const rows = b.data || [];
+      setItems(rows);
+      setTotal(typeof b.total === "number" ? b.total : rows.length);
+      setPage(1);
+    };
     const stored = readStoredScope();
 
     (async () => {
@@ -206,7 +246,7 @@ export function MyIncidentsPage({ onReport }: MyIncidentsPageProps = {}) {
             if (cancelled) return;
             setCanManage(true);
             setScope("org");
-            setItems(b.data || []);
+            aplicar(b);
             return;
           }
         }
@@ -228,7 +268,7 @@ export function MyIncidentsPage({ onReport }: MyIncidentsPageProps = {}) {
             const b2 = await r2.json();
             if (cancelled) return;
             setScope("org");
-            setItems(b2.data || []);
+            aplicar(b2);
             return;
           } catch {
             // Vista de organización no montada en esta app (sin proxy
@@ -239,7 +279,7 @@ export function MyIncidentsPage({ onReport }: MyIncidentsPageProps = {}) {
           }
         }
         setScope("mine");
-        setItems(body.data || []);
+        aplicar(body);
       } catch (err) {
         if (!cancelled) setError((err as Error).message || t("ui.myIncidents.errLoad"));
       } finally {
@@ -335,6 +375,32 @@ export function MyIncidentsPage({ onReport }: MyIncidentsPageProps = {}) {
             </button>
           ))}
         </div>
+
+        {/* #781 — Ir directamente a una incidencia por su número. */}
+        <form
+          className="ml-auto inline-flex items-center gap-1"
+          onSubmit={(e) => {
+            e.preventDefault();
+            irANumero();
+          }}
+        >
+          <input
+            type="text"
+            inputMode="numeric"
+            value={gotoNumber}
+            onChange={(e) => setGotoNumber(e.target.value)}
+            placeholder={t("ui.myIncidents.gotoPlaceholder")}
+            aria-label={t("ui.myIncidents.gotoLabel")}
+            className="h-7 w-24 rounded-md border border-gray-300 px-2 text-xs"
+          />
+          <button
+            type="submit"
+            className="inline-flex h-7 items-center rounded-md border border-gray-300 bg-white px-2 text-xs text-gray-700 hover:bg-gray-50"
+            title={t("ui.myIncidents.gotoLabel")}
+          >
+            <ArrowRight className="h-3.5 w-3.5" />
+          </button>
+        </form>
       </div>
 
       {loading && (
@@ -428,6 +494,21 @@ export function MyIncidentsPage({ onReport }: MyIncidentsPageProps = {}) {
               })}
             </tbody>
           </table>
+          {/* #760 — Lo cargado frente al total, y el resto a un clic. */}
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 px-4 py-2 text-xs text-gray-500">
+            <span>{t("ui.myIncidents.showing", { n: items.length, total })}</span>
+            {items.length < total && (
+              <button
+                type="button"
+                onClick={cargarMas}
+                disabled={loadingMore}
+                className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-3 py-1 font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                {loadingMore && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                {t("ui.myIncidents.loadMore", { n: Math.min(PAGE_SIZE, total - items.length) })}
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>

@@ -442,7 +442,11 @@
       "kindImprovement": "Millora",
       "kindFilterAll": "Totes",
       "kindFilterIncidents": "Incidències",
-      "kindFilterImprovements": "Millores"
+      "kindFilterImprovements": "Millores",
+      "gotoPlaceholder": "Anar al núm.…",
+      "gotoLabel": "Anar a la incidència pel número",
+      "showing": "{n} de {total}",
+      "loadMore": "Carregar {n} més"
     },
     "incidentDetail": {
       "errNotFound": "No trobem aquesta incidència.",

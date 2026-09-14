@@ -828,9 +828,14 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
     // vistas compactas: es lo único de esta tarjeta que exige una llamada, y
     // callarlo dejaría al cliente presentándose a una hora que ya no existe.
     const expedienteAnulado = meta.expedienteAnulado === true;
+    // #689 (M-21) — En Día/Semana vuelve la hora, pero como INTERVALO (10:00 -
+    // 10:30) y solo en la primera línea: #626 la quitó porque repetir la hora
+    // de inicio no decía nada; el rango sí dice cuánto ocupa. Debajo, el acto
+    // con el responsable y el contacto, que es el orden que pidió la notaría.
+    // Con eventMinHeight=40 caben tres líneas cortas.
     return (
       <div className="overflow-hidden px-0.5 text-[11px] leading-tight">
-        {arg.timeText && !compact && <div className="font-semibold">{arg.timeText}</div>}
+        {arg.timeText && <div className={compact ? "truncate text-[10px] font-semibold opacity-90" : "font-semibold"}>{arg.timeText}</div>}
         <div className="truncate font-medium">
           {(masked || privadaMia) && <span aria-hidden="true">🔒 </span>}
           {esSalida && !masked && <span aria-hidden="true">🚗 </span>}
@@ -902,8 +907,30 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
       tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
     });
     if (onlyMine) qs.set("asignadoId", "CURRENT");
+    // #696 — El papel enseña lo mismo que la pantalla: los protocolos ya
+    // firmados (historial) solo si el chip "Firmados" está activo. Antes el
+    // PDF los sacaba siempre y en la impresión del día aparecían actos firmados
+    // fuera de la web (cancelaciones con su nº de protocolo) que en el
+    // calendario no se veían.
+    if (showFirmados) qs.set("firmados", "1");
     window.open(`${apiBase}/agenda/print?${qs}`, "_blank");
   }
+
+  // #786 — Ctrl/Cmd+P imprime la agenda de verdad (el PDF), no la página del
+  // navegador. Imprimir la pantalla recorta la rejilla del calendario en
+  // vertical y en horizontal, y es lo primero que prueba cualquiera que quiera
+  // llevarse la agenda del día en papel.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "p") {
+        e.preventDefault();
+        imprimir();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onlyMine, showFirmados]);
 
   /**
    * #662 — Ir a un día cualquiera: con solo "‹ › Hoy", llegar a otro mes era ir
@@ -966,16 +993,16 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
             title={t("agendaPage.onlyMine")}
           />
           <ToolbarSeparator />
+          {/* #786 — Imprimir a la vista: es de uso diario (la agenda del día en
+              papel) y escondido en el menú "…" nadie lo encontraba: se imprimía
+              la página con Ctrl+P y salía recortada. */}
+          <ToolbarIconButton aria-label={t("agendaPage.btnImprimir")} title={t("agendaPage.btnImprimir")} onClick={imprimir}>
+            <Printer className="h-4 w-4" aria-hidden="true" />
+          </ToolbarIconButton>
           <ToolbarMenu
             ariaLabel={t("agendaPage.masOpciones")}
             icon={<MoreHorizontal className="h-4 w-4" aria-hidden="true" />}
             items={[
-              {
-                key: "imprimir",
-                label: t("agendaPage.btnImprimir"),
-                icon: <Printer className="h-4 w-4" aria-hidden="true" />,
-                onClick: imprimir,
-              },
               {
                 key: "ics",
                 label: t("agendaPage.btnIcs"),
@@ -1201,6 +1228,13 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
           // mayoría. El bloque tiene que mostrar acto e interviniente enteros,
           // como en la agenda de papel, así que se sube a dos líneas holgadas.
           eventMinHeight={40}
+          // #689 (M-21) — La notaría quiere ver el INTERVALO en el propio
+          // cuadro ("de 10:00 a 10:30") encima del acto y del responsable, no
+          // solo la hora de inicio: sin fin, una cita corta y una larga se
+          // rotulan igual. `displayEventEnd` hace que `timeText` traiga el
+          // rango; el formato es el de la agenda de papel.
+          displayEventEnd
+          eventTimeFormat={{ hour: "2-digit", minute: "2-digit", hour12: false }}
           dayMaxEvents
           // #185 (Etapa 3) — el horario de firma sombrea las horas laborables;
           // lo libre = hueco. Acota la franja visible al horario configurado.
