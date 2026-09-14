@@ -228,6 +228,12 @@ interface MycoBotRailProps {
 }
 
 const OPEN_STORAGE_KEY = "mycolegal:mycobot:open";
+// #768 — tamaño del panel (expandido a pantalla completa o rail lateral). Se
+// pidió "grande por defecto, al menos en Biblioteca"; se decidió en cambio
+// RECORDAR lo que cada usuario eligió la última vez, que sirve a quien lo quiere
+// grande sin imponérselo a quien lo prefiere pequeño. Mismo mecanismo que
+// abierto/cerrado.
+const EXPANDED_STORAGE_KEY = "mycolegal:mycobot:expanded";
 // #1 (consultor) — el usuario que entra por primera vez no sabe que puede
 // preguntar a MycoBot. Mostramos un globo descartable junto al lanzador hasta
 // que abra el rail una vez o lo cierre; la preferencia se recuerda en
@@ -499,11 +505,14 @@ export function MycoBotRail({
     };
   }, [baseUrl, appSlug]);
 
-  // Hidrata el estado abierto/colapsado (por defecto colapsado).
+  // Hidrata el estado abierto/colapsado (por defecto colapsado) y el tamaño.
   useEffect(() => {
     try {
       const isOpen = window.localStorage.getItem(OPEN_STORAGE_KEY) === "true";
       if (isOpen) setOpen(true);
+      // #768 — el tamaño se recuerda con independencia de si estaba abierto:
+      // quien lo cerró expandido lo reencuentra expandido al abrirlo.
+      if (window.localStorage.getItem(EXPANDED_STORAGE_KEY) === "true") setExpanded(true);
       // #1 — globo de onboarding solo si nunca lo ha visto Y el rail está
       // colapsado (si ya está abierto, no aporta nada).
       if (!isOpen && window.localStorage.getItem(ONBOARD_STORAGE_KEY) !== "true") {
@@ -861,6 +870,14 @@ export function MycoBotRail({
       if (next) {
         setView((v) => (v === "history" ? "chat" : v));
         void loadConversaciones();
+      }
+      // #768 — se recuerda la elección. Fuera del setState funcional sería lo
+      // ortodoxo, pero aquí `next` solo existe dentro; escribir una clave es
+      // inocuo y evita duplicar la lógica de alternancia.
+      try {
+        window.localStorage.setItem(EXPANDED_STORAGE_KEY, String(next));
+      } catch {
+        /* ignore */
       }
       return next;
     });
@@ -1969,7 +1986,11 @@ export function MycoBotRail({
                     // #563(a) — `overflow-y-auto` + max-height activa el scroll interno
                     // una vez alcanzada la altura máxima; la altura la fija el efecto
                     // de auto-grow (inputRef) según el contenido.
-                    className="max-h-[160px] min-h-[40px] flex-1 resize-none overflow-y-auto rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+                    // #769 — fondo tintado en reposo: "apenas se ve dónde escribir".
+                    // Blanco sobre el panel claro no se distinguía de nada. Mismo
+                    // tratamiento que el buscador IA de la Biblioteca; al enfocar
+                    // vuelve a blanco, que la pista es para encontrarlo, no para escribir.
+                    className="max-h-[160px] min-h-[40px] flex-1 resize-none overflow-y-auto rounded-md border border-cyan-300 bg-cyan-100 px-3 py-2 text-sm outline-none focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-cyan-500"
                   />
                   <button
                     type="submit"
