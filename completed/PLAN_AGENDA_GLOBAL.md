@@ -1,6 +1,6 @@
 # PLAN — Agenda disponible en Pólizas, LegiFirma y Archivo
 
-**Estado:** ✅ COMPLETO — los cuatro pasos hechos (2026-09-07). Pendiente de desplegar y de validar en ejecución.
+**Estado:** ✅ COMPLETADO y **desplegado a PROD** (revisado 15-sep-2026: prod sirve polizas 0.1.181, legifirma 2.3.279, archivo 2.15.241 y notaria 2.11.335, todas posteriores a las del plan; #678 cerrada). La validación manual en ejecución no ha generado incidencias.
 **Origen:** incidencia **#678** de Javier Micó — *"La agenda no debería ser visible siempre. No solo la usa Notaría, Pólizas, Legifirma… otros"*.
 **Interpretación acordada:** añadir la agenda **completa** (no solo lectura) a Pólizas, LegiFirma y Archivo.
 **Repos implicados:** `mycolegal-notaria`, `mycolegal-shared` (ui), `mycolegal-polizas`, `mycolegal-legifirma`, `mycolegal-archivo`
