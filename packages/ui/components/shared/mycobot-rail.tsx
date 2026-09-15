@@ -1028,6 +1028,9 @@ export function MycoBotRail({
   welcomeChips.push(t("ui.mycobot.chipAyuda"));
   if (corpus?.hasDatos && appSlug === "notaria") welcomeChips.push(t("ui.mycobot.chipDatosNotaria"));
   else if (corpus?.hasDatos && appSlug === "legifirma") welcomeChips.push(t("ui.mycobot.chipDatosLegifirma"));
+  // Cualquier otra app con tools (hoy: las que montan la Unidad de Red — archivo,
+  // polizas, tributos, tramitación) recibe el ejemplo genérico de la Unidad.
+  else if (corpus?.hasDatos) welcomeChips.push(t("ui.mycobot.chipDatosUnidad"));
 
   // ── /sources: clases de la Biblioteca que MycoBot considera ───────────────
   const claseLabel = (clase: string) => t(`ui.mycobot.clases.${clase}`) || clase;
