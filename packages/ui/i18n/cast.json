@@ -1268,6 +1268,9 @@
     "errSinTitulo": "Indica un título para la cita",
     "irAlDia": "Ir al día:",
     "cambiarModoPregunta": "¿No es eso? Cambiar a:",
+    "expedienteSinCoincidencia": "No hay ningún expediente con ese texto. Si no es la firma de un expediente, créalo como:",
+    "guardarFaltaExpediente": "Elige un expediente de la lista para poder guardar",
+    "guardarFaltaTitulo": "Escribe un título para poder guardar",
     "cambiarModo": {
       "firma": "firma de expediente",
       "hito": "cita",

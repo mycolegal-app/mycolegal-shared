@@ -9,7 +9,13 @@ import { z } from 'zod';
  * una consulta o de una hora apartada. Así que el color pasa a decir QUÉ es.
  *
  * Los valores por defecto son los que pidió la notaría:
- *   firma naranja, reunión rojo, consulta azul, otros gris, bloqueo verde.
+ *   firma naranja, reunión rojo, consulta azul, otros gris.
+ *
+ * #795 — El bloqueo era verde (también a petición suya en #670), pero en la
+ * agenda el verde se lee como "libre": "un bloqueo de horas debe salir en un
+ * tono de prohibición (rojo o negro o similar)". Rojo ya es "reunión", así que
+ * el bloqueo pasa a gris oscuro, y además se pinta RAYADO (ver agenda-view),
+ * que es la marca de "no disponible" con cualquier color que elija la notaría.
  *
  * DOS COSAS QUE NO SON CONFIGURABLES, a propósito:
  *
@@ -35,8 +41,19 @@ export const COLORES_AGENDA_DEFECTO: Record<CategoriaColor, string> = {
   reunion: '#dc2626', // rojo
   consulta: '#2563eb', // azul
   otros: '#64748b', // gris
-  bloqueo: '#16a34a', // verde
+  bloqueo: '#1f2937', // gris oscuro (#795: antes verde)
 };
+
+/**
+ * #787/#795 — Fondo de un bloqueo en el calendario: el color de la paleta
+ * rebajado a un ~20% de alfa. FullCalendar pinta los bloqueos como eventos de
+ * fondo y les aplica `opacity: .3` al elemento ENTERO, texto incluido, y así el
+ * motivo del bloqueo no se leía. Se anula esa opacidad (CSS en agenda-view) y
+ * la translucidez se lleva al color, para que la etiqueta se pinte opaca.
+ */
+export function fondoBloqueo(hex: string): string {
+  return /^#[0-9a-fA-F]{6}$/.test(hex) ? `${hex}33` : hex;
+}
 
 /** Gris neutro de las citas privadas ajenas. No configurable (ver arriba). */
 export const COLOR_OCUPADO = '#94a3b8';

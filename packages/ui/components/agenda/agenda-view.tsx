@@ -39,9 +39,21 @@ import {
   CATEGORIAS_COLOR,
   COLORES_AGENDA_DEFECTO,
   colorDeEvento,
+  fondoBloqueo,
   type ColoresAgenda,
   type CategoriaColor,
 } from "../../lib/agenda-colores";
+
+// #787/#795 — Los bloqueos son eventos de FONDO de FullCalendar, que les pone
+// `opacity: .3` al elemento entero: el motivo del bloqueo se veía gris al 30%
+// sobre verde claro y no se leía ("las letras no se leen"). Aquí se anula esa
+// opacidad —la translucidez va en el propio color, ver `fondoBloqueo`— y se
+// superpone un rayado diagonal neutro: es la marca de "no disponible" con
+// cualquier color que la notaría elija en su paleta, y lo que distingue un
+// bloqueo de una reunión si alguien escoge el mismo rojo para los dos.
+const RAYADO_BLOQUEO =
+  "repeating-linear-gradient(135deg, rgba(0,0,0,0.10) 0 5px, transparent 5px 12px)";
+const CSS_BLOQUEO = `.fc .agenda-bloqueo.fc-bg-event{opacity:1;background-image:${RAYADO_BLOQUEO}}`;
 
 // F31 (Phase 10) — Agenda derivada.
 // Pinta expedientes con fechaPrevistaFirma + protocolos con fechaFirma
@@ -349,19 +361,27 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
   >([]);
   const [expBusqueda, setExpBusqueda] = useState("");
   const [expResultados, setExpResultados] = useState<{ id: string; numero: number; referencia: string | null }[]>([]);
+  // #794 — La búsqueda ya ha respondido para el texto actual. Distingue "aún no
+  // hay resultados porque no se ha buscado" de "se buscó y no hay ninguno",
+  // que es cuando hay que avisar (ver el aviso bajo el buscador).
+  const [expBuscado, setExpBuscado] = useState(false);
   useEffect(() => {
     // #716 — En Pólizas, LegiFirma o Archivo no hay expedientes: sin esto se
     // pediría a un endpoint que allí no existe y el buscador daría error.
     if (!conExpedientes || !form || form.modo !== "firma" || form.expedienteId || expBusqueda.trim().length < 2) {
       setExpResultados([]);
+      setExpBuscado(false);
       return;
     }
     let cancel = false;
+    setExpBuscado(false);
     const id = setTimeout(() => {
       fetch(`${apiBase}/expedientes?search=${encodeURIComponent(expBusqueda.trim())}&pageSize=8&incluirTerminados=true`)
         .then((r) => (r.ok ? r.json() : null))
         .then((j) => {
-          if (!cancel && Array.isArray(j?.data)) setExpResultados(j.data);
+          if (cancel) return;
+          if (Array.isArray(j?.data)) setExpResultados(j.data);
+          setExpBuscado(true);
         })
         .catch(() => {});
     }, 250);
@@ -465,7 +485,10 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
    * el ratón, y se limpian los campos propios del modo que se abandona para no
    * arrastrar un expediente a una cita que ya no lo lleva.
    */
-  function cambiarModo(nuevoModo: EventoForm["modo"]) {
+  // #794 — `titulo` opcional: al salir del modo firma porque lo tecleado no era
+  // un expediente ("visita médica en bcn…"), ese texto es el título de la cita
+  // o el motivo del bloqueo. Descartarlo obligaba a escribirlo dos veces.
+  function cambiarModo(nuevoModo: EventoForm["modo"], titulo?: string) {
     if (!form) return;
     setError("");
     setExpBusqueda("");
@@ -477,6 +500,7 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
       expedienteId: null,
       expedienteLabel: "",
       usuarioId: "",
+      ...(titulo?.trim() ? { titulo: titulo.trim() } : {}),
     });
   }
 
@@ -763,6 +787,20 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
   // titular, acto(s) y empleado bajo el título; el resto usa el render básico.
   function renderEventContent(arg: EventContentArg) {
     const kind = arg.event.extendedProps.kind as AgendaEvent["kind"] | undefined;
+    // #787/#795 — Un bloqueo no es una cita: no tiene hora en la tarjeta ni
+    // titular ni empleado, solo el motivo. Se rotula en negro y en negrita
+    // sobre el fondo translúcido rayado, con el signo de prohibido delante,
+    // que es lo que se pidió: que se lea y que no parezca que la hora está
+    // libre. Sin motivo, se pone la palabra de la leyenda para que el bloque
+    // diga al menos qué es.
+    if (kind === "bloqueo") {
+      return (
+        <div className="truncate px-1 py-0.5 text-[11px] font-semibold leading-tight text-gray-900">
+          <span aria-hidden="true">⛔ </span>
+          {arg.event.title || t("agendaPage.leyenda.bloqueo")}
+        </div>
+      );
+    }
     const meta = (arg.event.extendedProps.meta ?? {}) as Record<string, unknown>;
     const titular = (meta.titular as string | null) ?? null;
     const actos = (meta.actos as string[] | undefined) ?? [];
@@ -953,6 +991,9 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
 
   return (
     <div className="flex h-full flex-col">
+      {/* #787/#795 — ver CSS_BLOQUEO. FullCalendar solo deja fijar el color de
+          fondo por evento; la opacidad y el rayado van por clase. */}
+      <style>{CSS_BLOQUEO}</style>
       {/* Fila A: qué es esta página y qué se puede HACER en ella.
           Antes esta única fila mezclaba crear, imprimir, navegar, configurar,
           exportar y filtrar en nueve controles seguidos, sin jerarquía ni
@@ -1119,7 +1160,14 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
             <span key={cat} className="inline-flex items-center gap-1.5">
               <span
                 className="inline-block h-3 w-3 rounded-sm"
-                style={{ backgroundColor: colores[cat] }}
+                // #787/#795 — la muestra del bloqueo va como en el calendario:
+                // translúcida y rayada, no un cuadrado sólido que no se parece
+                // a lo que se pinta.
+                style={
+                  cat === "bloqueo"
+                    ? { backgroundColor: fondoBloqueo(colores[cat]), backgroundImage: RAYADO_BLOQUEO }
+                    : { backgroundColor: colores[cat] }
+                }
                 aria-hidden="true"
               />
               {t(`agendaPage.leyenda.${cat}`)}
@@ -1293,6 +1341,7 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
             .filter((ev) => showFirmados || ev.kind !== "protocolo")
             .map((ev) => {
               const color = colorDeEvento(ev, colores);
+              const esBloqueo = ev.kind === "bloqueo";
               return {
                 id: ev.id,
                 title: ev.title,
@@ -1300,10 +1349,13 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
                 end: ev.end,
                 allDay: ev.allDay,
                 url: ev.url ?? undefined,
-                backgroundColor: color,
+                // #787/#795 — el bloqueo lleva el color translúcido y la clase
+                // que anula la opacidad de FullCalendar (ver CSS_BLOQUEO).
+                backgroundColor: esBloqueo ? fondoBloqueo(color) : color,
                 borderColor: color,
+                classNames: esBloqueo ? ["agenda-bloqueo"] : undefined,
                 // #281 Fase 2 — los bloqueos se pintan como franja de fondo.
-                display: ev.kind === "bloqueo" ? "background" : undefined,
+                display: esBloqueo ? "background" : undefined,
                 // #629 — el tipo del hito llega hasta el render para distinguir
                 // una FIRMA de una consulta o una reunión.
                 extendedProps: { kind: ev.kind, tipo: ev.tipo, meta: ev.meta },
@@ -1498,6 +1550,32 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
                             </li>
                           ))}
                         </ul>
+                      )}
+                      {/* #794 — "Clico en guardar y no hace nada". El notario
+                          escribió "visita médica en bcn" en este campo, que
+                          es un buscador de expedientes: sin coincidencia no hay
+                          nada que guardar y el botón quedaba apagado sin decir
+                          por qué. Se avisa aquí mismo y se ofrece la salida
+                          —cita o bloqueo— llevándose lo tecleado. */}
+                      {expBuscado && expResultados.length === 0 && expBusqueda.trim().length >= 2 && (
+                        <p className="mt-1.5 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                          {t("agendaPage.expedienteSinCoincidencia")}{" "}
+                          <button
+                            type="button"
+                            onClick={() => cambiarModo("hito", expBusqueda)}
+                            className="font-medium underline underline-offset-2 hover:text-amber-900"
+                          >
+                            {t("agendaPage.cambiarModo.hito")}
+                          </button>
+                          {" · "}
+                          <button
+                            type="button"
+                            onClick={() => cambiarModo("bloqueo", expBusqueda)}
+                            className="font-medium underline underline-offset-2 hover:text-amber-900"
+                          >
+                            {t("agendaPage.cambiarModo.bloqueo")}
+                          </button>
+                        </p>
                       )}
                     </>
                   )}
@@ -1843,6 +1921,14 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
                       : form.modo === "hito"
                         ? !form.titulo.trim()
                         : false)
+                  }
+                  // #794 — el botón apagado explica qué le falta.
+                  title={
+                    form.modo === "firma" && !form.expedienteId
+                      ? t("agendaPage.guardarFaltaExpediente")
+                      : form.modo === "hito" && !form.titulo.trim()
+                        ? t("agendaPage.guardarFaltaTitulo")
+                        : undefined
                   }
                   className="rounded-md bg-cyan-600 px-4 py-2 text-sm font-medium text-white hover:bg-cyan-700 disabled:opacity-50"
                 >

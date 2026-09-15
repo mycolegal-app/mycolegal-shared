@@ -1268,6 +1268,9 @@
     "errSinTitulo": "Indica un títol per a la cita",
     "irAlDia": "Anar al dia:",
     "cambiarModoPregunta": "No és això? Canviar a:",
+    "expedienteSinCoincidencia": "No hi ha cap expedient amb aquest text. Si no és la signatura d'un expedient, crea-ho com a:",
+    "guardarFaltaExpediente": "Tria un expedient de la llista per poder desar",
+    "guardarFaltaTitulo": "Escriu un títol per poder desar",
     "cambiarModo": {
       "firma": "signatura d'expedient",
       "hito": "cita",

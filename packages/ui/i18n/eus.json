@@ -1267,6 +1267,9 @@
     "errSinTitulo": "Adierazi zitaren izenburua",
     "irAlDia": "Joan egunera:",
     "cambiarModoPregunta": "Ez da hori? Aldatu hona:",
+    "expedienteSinCoincidencia": "Ez dago testu hori duen espedienterik. Espediente baten sinadura ez bada, sortu honela:",
+    "guardarFaltaExpediente": "Aukeratu zerrendako espediente bat gorde ahal izateko",
+    "guardarFaltaTitulo": "Idatzi izenburu bat gorde ahal izateko",
     "cambiarModo": {
       "firma": "espedientearen sinadura",
       "hito": "hitzordua",
