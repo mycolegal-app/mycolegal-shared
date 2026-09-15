@@ -1,6 +1,11 @@
 # Plan técnico — Motor de minutación arancelaria a sharedlib
 
-**Estado:** propuesta, pendiente de aprobación. No tocar código hasta el visto bueno.
+**Estado:** **APARCADO (15-sep-2026)** — propuesta de jul-2026 no aprobada. **Reabrir como prerrequisito de la
+función 2 de `mycolegal-facturae/PLAN_FACTURAE.md`** (facturación propia): el hallazgo de §2 bis sigue vigente
+—editar un coeficiente de `MinutacionConcepto` reescribe retroactivamente lo minutado— y el **versionado por fecha
+de devengo es obligatorio antes de facturar en propio**. Desde julio el mapa cambió: el motor (1) de Tributos y el
+botón de Notaría se retiraron; quedan legifirma (en uso), archivo-copias (portado en jun), pólizas (Benavides) y la
+calculadora dormida de Notaría. Estado original: propuesta, pendiente de aprobación.
 **Fecha:** 2026-07-13
 **Decisión de negocio (fijada por el notario):** los coeficientes del arancel notarial son
 **únicos por notaría** (RD 1426/1989). No hay divergencia legítima entre apps.

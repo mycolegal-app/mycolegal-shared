@@ -1,6 +1,6 @@
 # PLAN TÉCNICO — Migración de `@mycolegal-app/ui` a `dist` compilado (compile-no-bundle)
 
-**Estado:** ✅ COMPLETADO (Fases 0–4). `@mycolegal-app/ui@2.0.0` (dist) publicado y adoptado por las 13 apps (React 19 + ui@^2.0.0), `transpilePackages` de ui retirado en las 13 (Fase 4, builds verdes), todo commiteado+pusheado. `optimizePackageImports` conserva ui. PENDIENTE solo: desplegar (manual, deploy-all.sh) escalonado + vigilar CI.
+**Estado:** ✅ COMPLETADO (Fases 0–4) y **desplegado** (revisado 15-sep-2026: prod sirve `ui 3.0.x` en todas las apps). `@mycolegal-app/ui@2.0.0` (dist) publicado y adoptado por las 13 apps (React 19 + ui@^2.0.0), `transpilePackages` de ui retirado en las 13 (Fase 4, builds verdes), todo commiteado+pusheado. `optimizePackageImports` conserva ui. PENDIENTE solo: desplegar (manual, deploy-all.sh) escalonado + vigilar CI.
 **Repo:** `mycolegal-shared` · package `packages/ui`
 **Fecha:** 2026-08-21
 
