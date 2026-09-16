@@ -76,6 +76,53 @@
   --mc-info-700:    #1d4ed8;
 
   /* ------------------------------------------------------------------
+     Cyan: acento de acción de la Línea Oro (heredado de LegiFirma).
+     Mismos hex que `cyan` en tailwind-preset.ts; viven aquí para que
+     --mc-action-* pueda apuntarlos.
+     ------------------------------------------------------------------ */
+  --mc-cyan-50:  #ecfdf7;
+  --mc-cyan-100: #d1fae9;
+  --mc-cyan-200: #a7f3d7;
+  --mc-cyan-300: #6ee7bf;
+  --mc-cyan-400: #34d4a4;
+  --mc-cyan-500: #00d4aa;
+  --mc-cyan-600: #00a884;
+  --mc-cyan-700: #008568;
+  --mc-cyan-800: #006953;
+  --mc-cyan-900: #005644;
+
+  /* ------------------------------------------------------------------
+     Action: color de ACCIÓN (botón primario, enlace en tabla, chip y
+     pestaña activa, paso actual del stepper, foco). Sigue al logo de la
+     app (PLAN_TECNICO_LINEA_PLATA.md):
+       · Línea Oro  (logo oro: notaría y apps internas)  → cian. Default.
+       · Línea Plata (logo plata: peticiones, tramitación) → grafito slate.
+     Las páginas escriben `bg-mc-action-600`, nunca `bg-cyan-600` ni
+     `bg-mc-primary-600`. La app elige línea con <html data-brand="silver">.
+     Los colores de ESTADO (success/warning/error/info) no cambian de línea.
+     ------------------------------------------------------------------ */
+  --mc-action-50:  var(--mc-cyan-50);
+  --mc-action-100: var(--mc-cyan-100);
+  --mc-action-200: var(--mc-cyan-200);
+  --mc-action-300: var(--mc-cyan-300);
+  --mc-action-400: var(--mc-cyan-400);
+  --mc-action-500: var(--mc-cyan-500);
+  --mc-action-600: var(--mc-cyan-600);
+  --mc-action-700: var(--mc-cyan-700);
+  --mc-action-800: var(--mc-cyan-800);
+  --mc-action-900: var(--mc-cyan-900);
+  /* Anillo de foco de controles y enlaces. */
+  --mc-action-ring: var(--mc-cyan-500);
+  /* Fondo suave de acción (preview de comentario, aviso de acción). */
+  --mc-action-soft: var(--mc-cyan-50);
+  /* Acento sobre fondo navy (icono de marca y avatar del sidebar). */
+  --mc-action-on-dark:    var(--mc-cyan-400);
+  --mc-action-on-dark-bg: rgba(0, 212, 170, 0.2);
+  /* Superficie suave de página (fondos de columna kanban, filas alternas).
+     Cálida en oro, fría en plata: la temperatura acompaña al logo. */
+  --mc-surface-soft: var(--mc-neutral-50);
+
+  /* ------------------------------------------------------------------
      App-specific brand colors
      ------------------------------------------------------------------ */
   --mc-app-legifirma:  #00d4aa;
@@ -106,4 +153,37 @@
   --mc-nav-border:       var(--mc-neutral-300);
   --mc-nav-text:         var(--mc-slate-700);
   --mc-nav-text-active:  var(--mc-slate-950);
+}
+
+/* =========================================================================
+   Línea Plata — apps con logo plata (peticiones, tramitación y, como base
+   neutra del whitelabel, cancelaciones-bs). Se activa con
+   <html data-brand="silver"> desde el root layout de la app.
+   Acción en grafito (escala slate), neutros fríos. El oro no aparece.
+   Los componentes compartidos que necesitan más que un color (enlace
+   subrayado permanente, chip activo sólido) lo resuelven con el mismo
+   atributo: `[data-brand="silver"] &`.
+   ========================================================================= */
+:root[data-brand="silver"] {
+  --mc-action-50:  var(--mc-slate-50);
+  --mc-action-100: var(--mc-slate-100);
+  --mc-action-200: var(--mc-slate-200);
+  --mc-action-300: var(--mc-slate-300);
+  --mc-action-400: var(--mc-slate-400);
+  --mc-action-500: var(--mc-slate-500);
+  --mc-action-600: var(--mc-slate-700);
+  --mc-action-700: var(--mc-slate-800);
+  --mc-action-800: var(--mc-slate-900);
+  --mc-action-900: var(--mc-slate-950);
+  --mc-action-ring: var(--mc-slate-500);
+  --mc-action-soft: var(--mc-slate-50);
+  --mc-action-on-dark:    var(--mc-slate-200);
+  --mc-action-on-dark-bg: rgba(174, 183, 192, 0.22);
+  --mc-surface-soft: var(--mc-slate-50);
+
+  --mc-background-muted: var(--mc-slate-50);
+  --mc-border:           var(--mc-slate-200);
+  --mc-border-subtle:    var(--mc-slate-100);
+  --mc-card-border:      var(--mc-slate-200);
+  --mc-ring:             var(--mc-slate-500);
 }

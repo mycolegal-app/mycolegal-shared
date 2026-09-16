@@ -111,6 +111,31 @@ export { SinCreditos, esErrorDeCreditos } from './components/shared/sin-creditos
 export { Markdown, renderMarkdown } from './components/shared/markdown';
 export { MarkdownEditor } from './components/shared/markdown-editor';
 
+// Canon de página (PLAN_TECNICO_LINEA_PLATA.md / UI_GUIDELINES.md)
+export { EstadoTimeline } from './components/shared/estado-timeline';
+export type { EstadoTimelineProps, EstadoTimelineStep } from './components/shared/estado-timeline';
+export { UnderlineTabs } from './components/shared/underline-tabs';
+export type { UnderlineTabsProps, UnderlineTab } from './components/shared/underline-tabs';
+export { SegmentedToggle } from './components/shared/segmented-toggle';
+export type { SegmentedToggleProps, SegmentedOption } from './components/shared/segmented-toggle';
+export { FilterChip, FilterChipDivider } from './components/shared/filter-chip';
+export type { FilterChipProps } from './components/shared/filter-chip';
+export { FormModal, FormSection, Field } from './components/shared/form-modal';
+export type { FormModalProps } from './components/shared/form-modal';
+export {
+  ACTION_LINK_CLS,
+  ACTION_LINK_MONO_CLS,
+  INPUT_CLS,
+  INPUT_SM_CLS,
+  LABEL_CLS,
+  LABEL_SM_CLS,
+  CHECKBOX_CLS,
+  SECTION_TITLE_CLS,
+  EYEBROW_CLS,
+  CARD_CLS,
+  SURFACE_SOFT_CLS,
+} from './lib/action-classes';
+
 // Utilities
 export { cn, formatCurrency, formatDate, formatDateTime } from './lib/utils';
 export { apiErrorMessage, apiErrorFromResponse } from './lib/api-error';

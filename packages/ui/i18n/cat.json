@@ -406,7 +406,8 @@
       "btnInvite": "Convidar usuari",
       "autorizarDominio": "Autoritzar el domini \"{dominio}\" a la meva organització i tornar-ho a intentar. Només hi podran accedir persones amb correu d’aquest domini.",
       "dominioCompartidoAviso": "Atenció: és un domini compartit amb altres notaries. Si l’autoritzes, qualsevol persona amb una adreça de \"{dominio}\" podrà entrar a la teva organització, encara que no treballi amb tu.",
-      "soloEstaDireccion": "Convidar només aquesta adreça, sense autoritzar el domini (recomanat)."
+      "soloEstaDireccion": "Convidar només aquesta adreça, sense autoritzar el domini (recomanat).",
+      "soloEstaDireccionSinDominio": "Convidar només aquesta adreça, sense autoritzar el domini."
     },
     "notifications": {
       "title": "Notificacions",

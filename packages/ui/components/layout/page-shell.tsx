@@ -9,6 +9,8 @@ interface PageShellProps {
   title: string;
   /** Subtitle shown below the title in the global header. */
   subtitle?: string;
+  /** Icon shown left of the title in the global header. */
+  icon?: ReactNode;
   /** Buttons rendered in the global header's right slot (Print/Excel/CSV/Nuevo, etc.). */
   actions?: ReactNode;
   /**
@@ -59,13 +61,14 @@ interface PageShellProps {
 export function PageShell({
   title,
   subtitle,
+  icon,
   actions,
   scroll = "main",
   children,
 }: PageShellProps) {
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <PageTitle title={title} subtitle={subtitle} />
+      <PageTitle title={title} subtitle={subtitle} icon={icon} />
       {actions && <HeaderActions>{actions}</HeaderActions>}
       {scroll === "main" ? (
         <div className="flex-1 min-h-0 overflow-y-auto">{children}</div>

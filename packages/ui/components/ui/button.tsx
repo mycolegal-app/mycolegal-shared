@@ -10,6 +10,15 @@ const buttonVariants = cva(
       variant: {
         default:
           "bg-mc-slate-700 text-white hover:bg-mc-slate-900",
+        /* Botón de acción principal de la página ("Nuevo …", "Guardar").
+           Color de acción de la línea de la app (cian en oro, grafito en
+           plata) — PLAN_TECNICO_LINEA_PLATA.md. Sustituye a los
+           `bg-cyan-600` / `bg-mc-primary-600` escritos a mano. */
+        primary:
+          "bg-mc-action-600 text-white hover:bg-mc-action-700 focus-visible:ring-mc-action-ring",
+        /* Acción secundaria con el acento (p.ej. "Descargar selección"). */
+        "primary-outline":
+          "border border-mc-action-200 bg-white text-mc-action-700 hover:bg-mc-action-50 focus-visible:ring-mc-action-ring",
         destructive:
           "bg-mc-error-600 text-white hover:bg-mc-error-700",
         outline:

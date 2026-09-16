@@ -106,6 +106,15 @@ interface InviteUserDialogProps {
    */
   authorizeDomainShared?: boolean;
   /**
+   * Si la app puede autorizar el dominio desde aquí (tiene endpoint de
+   * dominios). Sin esto solo se ofrece invitar a esta dirección, que no
+   * necesita nada más que el propio alta. Antes, sin endpoint no se ofrecía
+   * NINGUNA de las dos salidas y el mensaje del servidor prometía ambas: el
+   * notario veía el aviso, pulsaba otra vez y "no hacía nada" (Ciudad Rodrigo,
+   * 17 intentos seguidos desde Consultor).
+   */
+  canAuthorizeDomain?: boolean;
+  /**
    * Whether to expose the "create with initial password" mode toggle.
    * Default: true. When false, only the email-invite mode is shown
    * (matches pre-1.45.2 behaviour).
@@ -132,6 +141,7 @@ export function InviteUserDialog({
   error,
   authorizeDomainOffer,
   authorizeDomainShared = false,
+  canAuthorizeDomain = false,
   roles,
   roleHint,
   languages,
@@ -180,7 +190,7 @@ export function InviteUserDialog({
     const data: InviteFormData = {
       email,
       displayName,
-      ...(authorizeDomainOffer && authorizeDomain ? { authorizeDomain: true } : {}),
+      ...(authorizeDomainOffer && canAuthorizeDomain && authorizeDomain ? { authorizeDomain: true } : {}),
       // #727 — Invitar solo esta dirección, sin tocar los dominios de la
       // organización. Es lo razonable cuando el dominio es compartido: bendecir
       // `gmail.com` entero para dar de alta a una persona es desproporcionado.
@@ -383,43 +393,48 @@ export function InviteUserDialog({
             <p className="whitespace-pre-wrap">{error}</p>
             {authorizeDomainOffer && (
               <div className="mt-2 space-y-2">
+                {/* Invitar solo a esta dirección se ofrece SIEMPRE: no depende de
+                    ningún endpoint, solo del acuse `confirmaFueraDeDominio` que
+                    auth ya entiende. Es la salida que cabe en cualquier app. */}
                 <label className="flex items-start gap-2 text-xs font-medium text-red-900">
                   <input
                     type="checkbox"
-                    checked={authorizeDomain}
+                    checked={soloEstaDireccion}
                     onChange={(e) => {
-                      setAuthorizeDomain(e.target.checked);
-                      if (e.target.checked) setSoloEstaDireccion(false);
+                      setSoloEstaDireccion(e.target.checked);
+                      if (e.target.checked) setAuthorizeDomain(false);
                     }}
                     className="mt-0.5 h-4 w-4 rounded border-red-300"
                   />
                   <span>
-                    {t("ui.inviteUser.autorizarDominio", { dominio: authorizeDomainOffer })}
-                    {/* #727 — Autorizar un dominio compartido no es lo mismo que
-                        autorizar el propio: hay que decir qué implica ANTES de
-                        que lo marquen, no después. */}
-                    {authorizeDomainShared && (
-                      <span className="mt-0.5 block font-normal text-red-800">
-                        {t("ui.inviteUser.dominioCompartidoAviso", { dominio: authorizeDomainOffer })}
-                      </span>
-                    )}
+                    {authorizeDomainShared
+                      ? t("ui.inviteUser.soloEstaDireccion")
+                      : t("ui.inviteUser.soloEstaDireccionSinDominio")}
                   </span>
                 </label>
 
-                {/* La salida proporcionada cuando el dominio es de todos: dar de
-                    alta a esta persona sin bendecir el dominio entero. */}
-                {authorizeDomainShared && (
+                {/* Autorizar el dominio entero solo donde la app puede hacerlo
+                    (Config). Para un dominio compartido hay que decir qué implica
+                    ANTES de que lo marquen, no después (#727). */}
+                {canAuthorizeDomain && (
                   <label className="flex items-start gap-2 text-xs font-medium text-red-900">
                     <input
                       type="checkbox"
-                      checked={soloEstaDireccion}
+                      checked={authorizeDomain}
                       onChange={(e) => {
-                        setSoloEstaDireccion(e.target.checked);
-                        if (e.target.checked) setAuthorizeDomain(false);
+                        setAuthorizeDomain(e.target.checked);
+                        if (e.target.checked) setSoloEstaDireccion(false);
                       }}
                       className="mt-0.5 h-4 w-4 rounded border-red-300"
                     />
-                    <span>{t("ui.inviteUser.soloEstaDireccion")}</span>
+                    <span>
+                      {t("ui.inviteUser.autorizarDominio", { dominio: authorizeDomainOffer })}
+                      {authorizeDomainShared && (
+                        <span className="mt-0.5 block font-normal text-red-800">
+                          {t("ui.inviteUser.dominioCompartidoAviso", { dominio: authorizeDomainOffer })}
+                        </span>
+                      )}
+                    </span>
                   </label>
                 )}
               </div>

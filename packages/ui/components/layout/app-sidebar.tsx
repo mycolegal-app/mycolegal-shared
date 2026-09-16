@@ -115,11 +115,14 @@ export interface AppSidebarProps {
   onMobileClose: () => void;
 }
 
+// Acento del sidebar = color de acción de la línea de la app sobre navy
+// (cian en oro, plata en plata) — tokens `--mc-action-on-dark*`. Las apps ya
+// no necesitan pasar `accent` a mano; el prop queda para casos especiales.
 const DEFAULT_ACCENT: Required<AppSidebarAccent> = {
-  iconBgClass: "bg-mc-primary-500/20",
-  iconTextClass: "text-mc-primary-400",
-  avatarBgClass: "bg-mc-primary-500/20",
-  avatarTextClass: "text-mc-primary-400",
+  iconBgClass: "bg-mc-action-on-dark-bg",
+  iconTextClass: "text-mc-action-on-dark",
+  avatarBgClass: "bg-mc-action-on-dark-bg",
+  avatarTextClass: "text-mc-action-on-dark",
 };
 
 const ITEM_BASE =

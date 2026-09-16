@@ -134,8 +134,14 @@ function AppShellInner({
   onToggleMobile: () => void;
 }) {
   const { t } = useI18n();
-  const { header, registerActionsSlot } = usePageHeader();
+  const { header: pageHeader, registerActionsSlot } = usePageHeader();
   const { collapsed } = useSidebarCollapse();
+  // La banda se pinta SIEMPRE. Antes dependía de que la página montara
+  // <PageTitle>: una página sin él (o un detalle que se abre sin que su
+  // layout fije el título) perdía título, lupa, ayuda, info de app y badge de
+  // organización de golpe (bug B-2 de PLAN_TECNICO_LINEA_PLATA.md). Sin
+  // título de página se muestra el nombre de la app.
+  const header = pageHeader ?? { title: appName };
 
   return (
     // h-screen (no min-h-screen) so the column has a bounded height. Together
@@ -158,8 +164,7 @@ function AppShellInner({
       {impersonationBanner}
       {billingNotices}
       {appSwitcherBar}
-      {header && (
-        <header className="flex h-14 shrink-0 items-center justify-between border-b border-navy-600/30 bg-navy-700 px-6">
+      <header className="flex h-14 shrink-0 items-center justify-between border-b border-navy-600/30 bg-navy-700 px-6">
           {/* Mobile hamburger */}
           <button
             type="button"
@@ -201,7 +206,6 @@ function AppShellInner({
             {org?.name && <OrgBadge org={org} />}
           </div>
         </header>
-      )}
       {breadcrumbs}
       <main className="flex-1 overflow-y-auto overflow-x-hidden p-6">{children}</main>
     </div>

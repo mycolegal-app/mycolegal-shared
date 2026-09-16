@@ -302,7 +302,11 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
           code === 'DOMAIN_NOT_AUTHORIZED' ||
           esCompartido ||
           (res.status === 400 && /dominio/i.test(msg));
-        setInviteDomainOffer(esDominio && domainsEndpoint ? dominio : null);
+        // Se ofrece en TODAS las apps: invitar solo a esta dirección no necesita
+        // endpoint de dominios. Antes se condicionaba a `domainsEndpoint` y en
+        // las apps sin él (todas menos Config) el aviso prometía dos salidas que
+        // no aparecían en pantalla.
+        setInviteDomainOffer(esDominio ? dominio : null);
         setInviteDomainShared(esCompartido);
         toast({ title: msg, variant: 'destructive' });
         return { ok: false };
@@ -653,6 +657,7 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
         error={inviteError}
         authorizeDomainOffer={inviteDomainOffer}
         authorizeDomainShared={inviteDomainShared}
+        canAuthorizeDomain={!!domainsEndpoint}
         onSubmit={handleInvite}
         roles={assignableRoles.map((r) => ({ value: r, label: roleLabel(r) }))}
         roleHint={orgAdminRoleHint}

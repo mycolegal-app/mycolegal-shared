@@ -7,6 +7,8 @@ import { HeaderActions } from "./header-actions";
 interface PageTitleProps {
   title: string;
   subtitle?: string;
+  /** Icono a la izquierda del título en la banda azul (p.ej. el del catálogo). */
+  icon?: ReactNode;
   /**
    * @deprecated Use `<HeaderActions>` instead. The `children` slot was a
    * source of race conditions when consumers re-rendered before the
@@ -25,12 +27,15 @@ interface PageTitleProps {
  * separate `<HeaderActions>` component — it portals its children into the
  * header without storing them in context.
  */
-export function PageTitle({ title, subtitle, children }: PageTitleProps) {
+export function PageTitle({ title, subtitle, icon, children }: PageTitleProps) {
   const { setHeader, clearHeader } = usePageHeader();
 
   useEffect(() => {
-    setHeader({ title, subtitle });
+    setHeader({ title, subtitle, icon });
     return () => clearHeader();
+    // `icon` es un ReactNode: se excluye de las deps para no re-fijar la
+    // cabecera en cada render (los consumidores pasan JSX inline).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [title, subtitle, setHeader, clearHeader]);
 
   // Backward-compat: forward `children` through `HeaderActions`. New code
