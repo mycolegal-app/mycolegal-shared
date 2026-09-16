@@ -1134,6 +1134,16 @@
       "mensaje": "Erakundea IA krediturik gabe geratu da.",
       "recargar": "Kredituak kargatu",
       "avisaAdmin": "Abisatu kontua kudeatzen duenari kargatzeko."
+    },
+    "confirm": {
+      "confirm": "Berretsi",
+      "cancel": "Utzi",
+      "ok": "Ados",
+      "typeToConfirm": "Idatzi {text} berresteko",
+      "defaultTitle": "Ekintza berretsi nahi duzu?",
+      "irreversible": "Ekintza hau ezin da desegin.",
+      "notice": "Oharra",
+      "error": "Ezin izan da ekintza osatu"
     }
   },
   "unidad": {

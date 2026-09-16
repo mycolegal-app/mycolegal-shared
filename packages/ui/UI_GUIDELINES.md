@@ -65,7 +65,7 @@ PageTitle (título = "Expediente #N — Acto", subtítulo = cliente)
 
 - Acciones del detalle: `inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium` — primaria `bg-mc-action-600 text-white hover:bg-mc-action-700`, secundaria `border hover:bg-mc-neutral-50`, destructiva `bg-red-600 text-white`.
 - Modales: `Dialog` compartido (o `FormModal`). Nada de `fixed inset-0 bg-black/40` a mano.
-- Confirmaciones: `Dialog` (deuda: `confirm()` nativo aún presente; no añadir más).
+- Confirmaciones y avisos: `useConfirm()` / `useAlert()` / `usePrompt()` (provider montado por `AppShell`): `if (!(await confirmDialog({ title, tone: "destructive" }))) return;`. Para acciones irreversibles, `requireText: "ANULAR"`. `<ConfirmDialog>` declarativo cuando el diálogo lleva un formulario. Nunca `confirm()` / `alert()` / `prompt()` nativos (guardarraíl).
 
 ## 5. Formularios
 

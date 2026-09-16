@@ -121,6 +121,8 @@ export type { SegmentedToggleProps, SegmentedOption } from './components/shared/
 export { FilterChip, FilterChipDivider } from './components/shared/filter-chip';
 export type { FilterChipProps } from './components/shared/filter-chip';
 export { FormModal, FormSection, Field } from './components/shared/form-modal';
+export { ConfirmDialog, ConfirmProvider, useConfirm, useAlert, usePrompt } from './components/shared/confirm-dialog';
+export type { ConfirmDialogProps, ConfirmOptions, PromptOptions } from './components/shared/confirm-dialog';
 export type { FormModalProps } from './components/shared/form-modal';
 export {
   ACTION_LINK_CLS,

@@ -1134,6 +1134,16 @@
       "mensaje": "A organización quedou sen créditos de IA.",
       "recargar": "Recargar créditos",
       "avisaAdmin": "Avisa a quen administra a conta para recargalos."
+    },
+    "confirm": {
+      "confirm": "Confirmar",
+      "cancel": "Cancelar",
+      "ok": "Aceptar",
+      "typeToConfirm": "Escribe {text} para confirmar",
+      "defaultTitle": "Confirmas a acción?",
+      "irreversible": "Esta acción non se pode desfacer.",
+      "notice": "Aviso",
+      "error": "Non se puido completar a acción"
     }
   },
   "unidad": {

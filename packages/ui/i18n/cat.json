@@ -1135,6 +1135,16 @@
       "mensaje": "L’organització s’ha quedat sense crèdits d’IA.",
       "recargar": "Recarregar crèdits",
       "avisaAdmin": "Avisa qui administra el compte perquè els recarregui."
+    },
+    "confirm": {
+      "confirm": "Confirma",
+      "cancel": "Cancel·la",
+      "ok": "D'acord",
+      "typeToConfirm": "Escriu {text} per confirmar",
+      "defaultTitle": "Confirmes l'acció?",
+      "irreversible": "Aquesta acció no es pot desfer.",
+      "notice": "Avís",
+      "error": "No s'ha pogut completar l'acció"
     }
   },
   "unidad": {
