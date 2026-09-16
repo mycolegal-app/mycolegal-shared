@@ -404,9 +404,9 @@
       "selectRole": "Seleccionar rol...",
       "inviting": "Convidant...",
       "btnInvite": "Convidar usuari",
-      "autorizarDominio": "Autoritzar el domini \"{dominio}\" a la meva organització i tornar-ho a intentar. Només hi podran accedir persones amb correu d’aquest domini.",
-      "dominioCompartidoAviso": "Atenció: és un domini compartit amb altres notaries. Si l’autoritzes, qualsevol persona amb una adreça de \"{dominio}\" podrà entrar a la teva organització, encara que no treballi amb tu.",
-      "soloEstaDireccion": "Convidar només aquesta adreça, sense autoritzar el domini (recomanat).",
+      "autorizarDominio": "Autoritzar el domini \"{dominio}\" a la meva organització i tornar-ho a intentar. A partir d’ara podré convidar qualsevol correu d’aquest domini sense aquesta confirmació. Ningú no entra a l’organització sense que jo el convidi.",
+      "dominioCompartidoAviso": "Atenció: és un domini compartit amb altres notaries (el Consell el va assignar a empleats de qualsevol despatx), així que tenir-hi una adreça no acredita que aquesta persona treballi amb tu. Ningú no entra sense la teva invitació; el risc és que, si t’equivoques en teclejar un correu, podries estar convidant un empleat d’una altra notaria.",
+      "soloEstaDireccion": "Convidar només aquesta adreça, sense autoritzar el domini (recomanat). És més segur, encara que hagis de confirmar empleat per empleat.",
       "soloEstaDireccionSinDominio": "Convidar només aquesta adreça, sense autoritzar el domini."
     },
     "notifications": {

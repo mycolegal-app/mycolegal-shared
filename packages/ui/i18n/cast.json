@@ -404,9 +404,9 @@
       "selectRole": "Seleccionar rol...",
       "inviting": "Invitando...",
       "btnInvite": "Invitar usuario",
-      "autorizarDominio": "Autorizar el dominio \"{dominio}\" en mi organización y volver a intentarlo. Solo podrán acceder personas con correo de ese dominio.",
-      "dominioCompartidoAviso": "Atención: es un dominio compartido con otras notarías. Si lo autorizas, cualquier persona con una dirección de \"{dominio}\" podrá entrar en tu organización, aunque no trabaje contigo.",
-      "soloEstaDireccion": "Invitar solo a esta dirección, sin autorizar el dominio (recomendado).",
+      "autorizarDominio": "Autorizar el dominio \"{dominio}\" en mi organización y volver a intentarlo. A partir de ahora podré invitar a cualquier correo de ese dominio sin esta confirmación. Nadie entra en la organización sin que yo le invite.",
+      "dominioCompartidoAviso": "Atención: es un dominio compartido con otras notarías (el Consejo lo asignó a empleados de cualquier despacho), así que tener una dirección ahí no acredita que esa persona trabaje contigo. Nadie entra sin tu invitación; el riesgo es que, si te equivocas al teclear un correo, podrías estar invitando a un empleado de otra notaría.",
+      "soloEstaDireccion": "Invitar solo a esta dirección, sin autorizar el dominio (recomendado). Es más seguro, aunque tengas que confirmar empleado por empleado.",
       "soloEstaDireccionSinDominio": "Invitar solo a esta dirección, sin autorizar el dominio."
     },
     "notifications": {

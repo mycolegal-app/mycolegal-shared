@@ -100,9 +100,16 @@ interface InviteUserDialogProps {
   /**
    * #727 — El dominio ofrecido es COMPARTIDO (del Consejo, como
    * `@despacho.notariado.org`, o un correo gratuito). Cambia lo que se ofrece:
-   * autorizarlo sigue siendo posible, pero hay que decir que a partir de
-   * entonces valdrá CUALQUIER dirección de ese dominio, y ofrecer la
-   * alternativa de invitar solo a esta persona.
+   * autorizarlo sigue siendo posible, pero hay que decir qué implica y ofrecer
+   * la alternativa de invitar solo a esta persona.
+   *
+   * #820 — Cuidado con la redacción: un dominio autorizado NO abre la puerta a
+   * nadie. Solo permite al administrador invitar direcciones de ese dominio sin
+   * confirmación extra; nadie entra sin invitación (auth solo consulta `Domain`
+   * en el alta, nunca en el login). El riesgo real de un dominio compartido es
+   * que un correo mal tecleado invite a un empleado de otra notaría. El texto
+   * anterior ("cualquier persona con una dirección podrá entrar en tu
+   * organización") era falso y alarmó, con razón, a un notario.
    */
   authorizeDomainShared?: boolean;
   /**

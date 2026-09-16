@@ -403,9 +403,9 @@
       "selectRole": "Aukeratu rola...",
       "inviting": "Gonbidatzen...",
       "btnInvite": "Erabiltzailea gonbidatu",
-      "autorizarDominio": "Baimendu \"{dominio}\" domeinua nire erakundean eta saiatu berriro. Domeinu horretako helbidea dutenek soilik sartu ahal izango dute.",
-      "dominioCompartidoAviso": "Kontuz: beste notariotza batzuekin partekatutako domeinua da. Baimentzen baduzu, \"{dominio}\" domeinuko helbidea duen edonork zure erakundean sartu ahal izango du, zurekin lan egiten ez badu ere.",
-      "soloEstaDireccion": "Gonbidatu helbide hau bakarrik, domeinua baimendu gabe (gomendatua).",
+      "autorizarDominio": "Baimendu \"{dominio}\" domeinua nire erakundean eta saiatu berriro. Hemendik aurrera domeinu horretako edozein helbide gonbidatu ahal izango dut berrespen hau gabe. Inor ez da erakundean sartzen nik gonbidatu gabe.",
+      "dominioCompartidoAviso": "Kontuz: beste notariotza batzuekin partekatutako domeinua da (Kontseiluak edozein bulegotako langileei esleitu zien), beraz, bertan helbide bat izateak ez du egiaztatzen pertsona hori zurekin lan egiten duenik. Inor ez da sartzen zure gonbidapenik gabe; arriskua da, helbide bat gaizki idazten baduzu, beste notariotza bateko langile bat gonbidatzea.",
+      "soloEstaDireccion": "Gonbidatu helbide hau bakarrik, domeinua baimendu gabe (gomendatua). Seguruagoa da, nahiz eta langilez langile berretsi behar izan.",
       "soloEstaDireccionSinDominio": "Gonbidatu helbide hau bakarrik, domeinua baimendu gabe."
     },
     "notifications": {

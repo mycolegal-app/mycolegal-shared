@@ -403,9 +403,9 @@
       "selectRole": "Seleccionar rol...",
       "inviting": "Convidando...",
       "btnInvite": "Convidar usuario",
-      "autorizarDominio": "Autorizar o dominio \"{dominio}\" na miña organización e tentalo de novo. Só poderán acceder persoas con correo dese dominio.",
-      "dominioCompartidoAviso": "Atención: é un dominio compartido con outras notarías. Se o autorizas, calquera persoa cun enderezo de \"{dominio}\" poderá entrar na túa organización, aínda que non traballe contigo.",
-      "soloEstaDireccion": "Convidar só a este enderezo, sen autorizar o dominio (recomendado).",
+      "autorizarDominio": "Autorizar o dominio \"{dominio}\" na miña organización e tentalo de novo. A partir de agora poderei convidar calquera correo dese dominio sen esta confirmación. Ninguén entra na organización sen que eu o convide.",
+      "dominioCompartidoAviso": "Atención: é un dominio compartido con outras notarías (o Consello asignouno a empregados de calquera despacho), así que ter un enderezo aí non acredita que esa persoa traballe contigo. Ninguén entra sen o teu convite; o risco é que, se te equivocas ao teclear un correo, poderías estar convidando un empregado doutra notaría.",
+      "soloEstaDireccion": "Convidar só a este enderezo, sen autorizar o dominio (recomendado). É máis seguro, aínda que teñas que confirmar empregado por empregado.",
       "soloEstaDireccionSinDominio": "Convidar só a este enderezo, sen autorizar o dominio."
     },
     "notifications": {
