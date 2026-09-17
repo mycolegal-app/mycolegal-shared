@@ -142,7 +142,7 @@
       "description": "Gestiona les teves dades, canvia la contrasenya i revisa les incidències relacionades amb aquesta aplicació.",
       "tabProfile": "Les meves dades",
       "tabPassword": "Contrasenya",
-      "tabIncidents": "Incidències",
+      "tabIncidents": "Incidències i millores",
       "lang": {
         "cast": "Castellà",
         "cat": "Català",
@@ -183,8 +183,8 @@
       "btnSaving": "Desant…",
       "btnSave": "Desar canvis",
       "btnChangePassword": "Canviar contrasenya",
-      "sectionMine": "Obertes per mi en aquesta aplicació",
-      "sectionOthers": "Obertes per altres en aquesta aplicació",
+      "sectionMine": "Obertes per mi en aquesta aplicació (incidències i propostes de millora)",
+      "sectionOthers": "Obertes per altres en aquesta aplicació (incidències i propostes de millora)",
       "emptyMine": "No has obert incidències en aquesta aplicació.",
       "emptyOthers": "No hi ha incidències d'altres usuaris en aquesta aplicació.",
       "linkAllIncidents": "Veure totes les meves incidències"

@@ -142,7 +142,7 @@
       "description": "Gestiona tus datos, cambia tu contraseña y revisa las incidencias relacionadas con esta aplicación.",
       "tabProfile": "Mis datos",
       "tabPassword": "Contraseña",
-      "tabIncidents": "Incidencias",
+      "tabIncidents": "Incidencias y mejoras",
       "lang": {
         "cast": "Castellano",
         "cat": "Català",
@@ -183,8 +183,8 @@
       "btnSaving": "Guardando…",
       "btnSave": "Guardar cambios",
       "btnChangePassword": "Cambiar contraseña",
-      "sectionMine": "Abiertas por mí en esta aplicación",
-      "sectionOthers": "Abiertas por otros en esta aplicación",
+      "sectionMine": "Abiertas por mí en esta aplicación (incidencias y propuestas de mejora)",
+      "sectionOthers": "Abiertas por otros en esta aplicación (incidencias y propuestas de mejora)",
       "emptyMine": "No has abierto incidencias en esta aplicación.",
       "emptyOthers": "No hay incidencias de otros usuarios en esta aplicación.",
       "linkAllIncidents": "Ver todas mis incidencias"

@@ -141,7 +141,7 @@
       "description": "Kudeatu zure datuak, aldatu pasahitza eta berrikusi aplikazio honi loturiko gertakariak.",
       "tabProfile": "Nire datuak",
       "tabPassword": "Pasahitza",
-      "tabIncidents": "Gertakariak",
+      "tabIncidents": "Gorabeherak eta hobekuntzak",
       "lang": {
         "cast": "Gaztelania",
         "cat": "Katalana",
@@ -182,8 +182,8 @@
       "btnSaving": "Gordetzen…",
       "btnSave": "Aldaketak gorde",
       "btnChangePassword": "Pasahitza aldatu",
-      "sectionMine": "Aplikazio honetan nik irekitakoak",
-      "sectionOthers": "Aplikazio honetan beste batzuek irekitakoak",
+      "sectionMine": "Nik irekitakoak aplikazio honetan (gorabeherak eta hobekuntza-proposamenak)",
+      "sectionOthers": "Besteek irekitakoak aplikazio honetan (gorabeherak eta hobekuntza-proposamenak)",
       "emptyMine": "Aplikazio honetan ez duzu gertakaririk ireki.",
       "emptyOthers": "Aplikazio honetan ez dago beste erabiltzaileen gertakaririk.",
       "linkAllIncidents": "Ikusi nire gertakari guztiak"

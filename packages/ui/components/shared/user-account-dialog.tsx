@@ -38,6 +38,8 @@ interface IncidentEntry {
   appSlug: string;
   description: string;
   status: string;
+  /** #814 — incidencia o propuesta de mejora; sin la etiqueta no se distinguían. */
+  kind?: "incident" | "improvement" | string;
   closedByRole: string | null;
   lastActivityAt: string;
   createdAt: string;
@@ -631,6 +633,13 @@ function Section({
                     <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-medium ${tone}`}>
                       {statusLabel}
                     </span>
+                    {/* #814 — las propuestas de mejora se listaban igual que las
+                        incidencias y "no se veían": etiqueta propia. */}
+                    {i.kind === "improvement" && (
+                      <span className="inline-block rounded bg-violet-100 px-2 py-0.5 text-[10px] font-medium text-violet-700">
+                        {t("ui.myIncidents.kindImprovement")}
+                      </span>
+                    )}
                     {showReporter && i.reporterDisplayName && (
                       <span className="text-xs text-gray-500">· {i.reporterDisplayName}</span>
                     )}

@@ -141,7 +141,7 @@
       "description": "Xestiona os teus datos, cambia a túa contrasinal e revisa as incidencias relacionadas con esta aplicación.",
       "tabProfile": "Os meus datos",
       "tabPassword": "Contrasinal",
-      "tabIncidents": "Incidencias",
+      "tabIncidents": "Incidencias e melloras",
       "lang": {
         "cast": "Castelán",
         "cat": "Catalán",
@@ -182,8 +182,8 @@
       "btnSaving": "Gardando…",
       "btnSave": "Gardar cambios",
       "btnChangePassword": "Cambiar contrasinal",
-      "sectionMine": "Abertas por min nesta aplicación",
-      "sectionOthers": "Abertas por outros nesta aplicación",
+      "sectionMine": "Abertas por min nesta aplicación (incidencias e propostas de mellora)",
+      "sectionOthers": "Abertas por outros nesta aplicación (incidencias e propostas de mellora)",
       "emptyMine": "Non abriches incidencias nesta aplicación.",
       "emptyOthers": "Non hai incidencias doutros usuarios nesta aplicación.",
       "linkAllIncidents": "Ver todas as miñas incidencias"
