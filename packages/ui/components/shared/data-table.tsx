@@ -212,9 +212,46 @@ function queryReducer(s: Query, a: QueryAction): Query {
   }
 }
 
-function compareRows<T>(a: T, b: T, sort: { id: string; desc: boolean }): number {
-  const av = (a as Record<string, unknown>)[sort.id];
-  const bv = (b as Record<string, unknown>)[sort.id];
+/** Valor por el que se ordena una fila en modo cliente, dado el id de columna. */
+type SortValueGetter<T> = (row: T, columnId: string) => unknown;
+
+/**
+ * #809 — Cómo leer el valor de orden de una fila en modo CLIENTE.
+ *
+ * Antes se leía `row[sort.id]` a pelo. Para una columna de relación (id
+ * `asiento`, valor en `row.libroFisico.numeroAsiento`, declarado con
+ * `accessorFn`) eso es `undefined` en todas las filas → comparador siempre 0 →
+ * la cabecera "ordena" sin mover nada, y solo en datasets pequeños (≤ umbral),
+ * porque con más filas ordena el servidor. El síntoma que reportan es justo
+ * ese: "a veces no ordena, a veces solo en un sentido" (el sentido que coincide
+ * con el orden en que llegó la lista).
+ *
+ * Con `source` la tabla va en `manualSorting`, así que el accessor de TanStack
+ * no ordena nada por sí mismo: se usa aquí, explícitamente. Prioridad:
+ * `accessorFn` → `accessorKey` (con puntos: `solicitante.razonSocial`) →
+ * `row[id]`.
+ */
+function sortValueGetterFromColumns<T>(columns: ColumnDef<T, unknown>[]): SortValueGetter<T> {
+  const porId = new Map<string, ColumnDef<T, unknown>>();
+  for (const c of columns) {
+    const key = (c as { accessorKey?: string }).accessorKey;
+    const id = c.id ?? key?.replace(/\./g, "_");
+    if (id) porId.set(id, c);
+    // TanStack también acepta el `accessorKey` literal como id de orden.
+    if (key && !porId.has(key)) porId.set(key, c);
+  }
+  return (row, columnId) => {
+    const col = porId.get(columnId);
+    const fn = (col as { accessorFn?: (r: T, i: number) => unknown } | undefined)?.accessorFn;
+    if (fn) return fn(row, 0);
+    const key = (col as { accessorKey?: string } | undefined)?.accessorKey ?? columnId;
+    return key.split(".").reduce<unknown>((acc, k) => (acc == null ? undefined : (acc as Record<string, unknown>)[k]), row);
+  };
+}
+
+function compareRows<T>(a: T, b: T, sort: { id: string; desc: boolean }, valueOf: SortValueGetter<T>): number {
+  const av = valueOf(a, sort.id);
+  const bv = valueOf(b, sort.id);
   let r: number;
   if (av == null && bv == null) r = 0;
   else if (av == null) r = -1;
@@ -227,7 +264,8 @@ function compareRows<T>(a: T, b: T, sort: { id: string; desc: boolean }): number
 function useRemoteSource<T>(
   source: RemoteDataSource | undefined,
   initialPageSize: number,
-  initialSort?: { id: string; desc?: boolean },
+  initialSort: { id: string; desc?: boolean } | undefined,
+  sortValueOf: SortValueGetter<T>,
 ): {
   enabled: boolean;
   state: SourceState<T>;
@@ -418,11 +456,11 @@ function useRemoteSource<T>(
   // memoria (instantáneo, sin fetch). En servidor: la página que trajo el fetch.
   const data = useMemo<T[]>(() => {
     if (strategy === "client" && cache) {
-      const sorted = sort ? [...cache].sort((a, b) => compareRows(a, b, sort)) : cache;
+      const sorted = sort ? [...cache].sort((a, b) => compareRows(a, b, sort, sortValueOf)) : cache;
       return sorted.slice(pageIndex * pageSize, pageIndex * pageSize + pageSize);
     }
     return serverRows;
-  }, [strategy, cache, sort, pageIndex, pageSize, serverRows]);
+  }, [strategy, cache, sort, pageIndex, pageSize, serverRows, sortValueOf]);
   const total = strategy === "client" && cache ? cache.length : serverTotal;
 
   // Clamp: si `total` encoge por debajo de la página actual (datos borrados,
@@ -473,8 +511,10 @@ export function DataTable<TData, TValue>({
   const { t } = useI18n();
   const resolvedSearchPlaceholder = searchPlaceholder ?? t("ui.dataTable.searchPlaceholder");
 
+  // #809 — el orden en memoria (estrategia cliente) lee el valor por la columna.
+  const sortValueOf = useMemo(() => sortValueGetterFromColumns<TData>(columns as ColumnDef<TData, unknown>[]), [columns]);
   // Remote source state (no-op when `source` is undefined).
-  const remote = useRemoteSource<TData>(source, initialPageSize, initialSort);
+  const remote = useRemoteSource<TData>(source, initialPageSize, initialSort, sortValueOf);
 
   // Resolve which data/pagination source the table actually uses.
   const usingSource = remote.enabled;

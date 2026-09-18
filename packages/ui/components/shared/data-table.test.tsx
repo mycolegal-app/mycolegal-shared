@@ -289,6 +289,57 @@ describe("DataTable · invariantes del refactor (fuente única)", () => {
   });
 });
 
+// #809 — En modo cliente el orden leía `row[id]` a pelo: una columna de relación
+// (valor anidado, declarada con `accessorFn`) no ordenaba nunca, y una con
+// `accessorKey` con puntos tampoco. Ahora el valor sale por la columna.
+describe("DataTable · orden en memoria por columnas de relación (#809)", () => {
+  type Traslado = Row & { libroFisico: { numeroAsiento: number } | null; solicitante: { razonSocial: string } };
+  const trasladosCols: ColumnDef<Traslado, unknown>[] = [
+    { accessorKey: "name", header: "Nombre" },
+    {
+      id: "asiento",
+      header: "Asiento",
+      accessorFn: (r) => r.libroFisico?.numeroAsiento ?? null,
+      cell: ({ row }) => String(row.original.libroFisico?.numeroAsiento ?? "—"),
+    },
+    { accessorKey: "solicitante.razonSocial", header: "Solicitante" },
+  ];
+  // Asientos desordenados respecto al orden de llegada (y uno sin asiento),
+  // para que ni "asc" ni "desc" coincidan con no ordenar.
+  const asientos = [97, 100, null, 96, 99];
+  const filas: Traslado[] = makeRows(5).map((r, i) => ({
+    ...r,
+    libroFisico: asientos[i] == null ? null : { numeroAsiento: asientos[i]! },
+    solicitante: { razonSocial: ["Zeta", "Alfa", "Mu", "Beta", "Kappa"][i] },
+  }));
+  const primeraFila = () => {
+    const first = screen.getAllByRole("row").find((r) => within(r).queryAllByRole("cell").length > 0);
+    return within(first!);
+  };
+
+  it("accessorFn (valor anidado): desc pone primero el mayor, asc el menor", async () => {
+    installServer(filas as unknown as Row[]);
+    render(<DataTable columns={trasladosCols} source={{ endpoint: "/api/x", sortableColumns: ["asiento"] }} pageSize={20} />);
+    await waitFor(() => expect(dataRowCount()).toBe(5));
+    // TanStack arranca en desc las columnas numéricas (primer clic).
+    fireEvent.click(screen.getByRole("button", { name: /Asiento/i })); // desc
+    await waitFor(() => expect(primeraFila().getByText("100")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: /Asiento/i })); // asc
+    // Sin asiento (null) va primero en asc, como cualquier nulo; luego 96, 97…
+    await waitFor(() => expect(primeraFila().getByText("—")).toBeTruthy());
+  });
+
+  it("accessorKey con puntos: ordena por el campo anidado", async () => {
+    installServer(filas as unknown as Row[]);
+    render(<DataTable columns={trasladosCols} source={{ endpoint: "/api/x", sortableColumns: [] }} pageSize={20} />);
+    await waitFor(() => expect(dataRowCount()).toBe(5));
+    fireEvent.click(screen.getByRole("button", { name: /Solicitante/i })); // asc
+    await waitFor(() => expect(primeraFila().getByText("Alfa")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: /Solicitante/i })); // desc
+    await waitFor(() => expect(primeraFila().getByText("Zeta")).toBeTruthy());
+  });
+});
+
 describe("DataTable · BUG total>0 con 0 filas (carrera de offset)", () => {
   it("un cambio de filtro estando en página posterior NUNCA deja total>0 con 0 filas", async () => {
     // 1000 filas ALL (servidor). Al filtrar clase=DOCTRINA quedan 36.
