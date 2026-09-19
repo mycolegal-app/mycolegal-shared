@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronRight, LayoutGrid, Loader2 } from "lucide-react";
-import type { AppInfo } from "./app-info";
+import { compareApps, type AppInfo } from "./app-info";
 import { SidebarFlyout } from "./sidebar-flyout";
 import { useI18n } from "../i18n/i18n-context";
 
@@ -115,7 +115,8 @@ export function MyAppsSection({ apps, currentSlug, label }: MyAppsSectionProps) 
   useEffect(() => setIsMac(detectMac()), []);
 
   const otherApps = useMemo(
-    () => apps.filter((a) => a.slug !== currentSlug),
+    // #835 — mismo orden que la barra de aplicaciones (sortOrder de Admin).
+    () => apps.filter((a) => a.slug !== currentSlug).sort(compareApps),
     [apps, currentSlug],
   );
   const accelApps = useMemo(() => assignAccels(otherApps), [otherApps]);

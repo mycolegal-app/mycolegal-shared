@@ -36,6 +36,13 @@ export interface AppSidebarNavItem {
   href: string;
   icon: ComponentType<{ className?: string }>;
   badge?: number;
+  /**
+   * #835 — nodo arbitrario EN LA POSICIÓN del ítem (un flyout, una cabecera de
+   * grupo). Permite intercalar «Docs. requeridos» entre Biblioteca y Descripciones
+   * sin sacar toda la navegación a `extraNav`. Con `node`, el resto de campos solo
+   * sirven de clave (`href`) y no se pinta enlace.
+   */
+  node?: ReactNode;
 }
 
 type BrandLogo =
@@ -369,17 +376,21 @@ export function AppSidebar({
             blockPadX,
           )}
         >
-          {navItems.map((item) => (
-            <SidebarLink
-              key={item.href}
-              href={item.href}
-              icon={item.icon}
-              label={item.label}
-              active={isActive(item.href)}
-              badge={item.badge}
-              collapsed={collapsed}
-            />
-          ))}
+          {navItems.map((item) =>
+            item.node !== undefined ? (
+              <div key={item.href}>{item.node}</div>
+            ) : (
+              <SidebarLink
+                key={item.href}
+                href={item.href}
+                icon={item.icon}
+                label={item.label}
+                active={isActive(item.href)}
+                badge={item.badge}
+                collapsed={collapsed}
+              />
+            ),
+          )}
 
           {extraNav}
         </nav>

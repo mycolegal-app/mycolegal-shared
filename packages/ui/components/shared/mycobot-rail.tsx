@@ -95,8 +95,12 @@ function renderMarkdown(text: string): string {
  * Se aplica DESPUÉS de `renderMarkdown` para inyectar `<a>` sin que se escapen.
  * Solo enlaza `[n]` con n dentro del rango de citas disponibles.
  */
-function linkifyCitas(html: string, n: number): string {
+function linkifyCitas(html: string, n: number, titulos: (string | null)[] = []): string {
   if (n <= 0) return html;
+  // #3 (Merino) — «las fuentes aparecen al final; sería más operativo verlas junto
+  // a cada afirmación». El número ya abre la fuente; el tooltip dice CUÁL es sin
+  // bajar a la lista. Va en `title` (escapado) porque el texto es HTML inyectado.
+  const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
   // Marca de cita: un número `[n]` O un grupo `[n, m, …]`. El modelo a veces
   // agrupa varias fuentes en un mismo corchete ("[2, 3]"); las separamos en
   // anclas individuales contiguas ("[2][3]") para que CADA fuente sea clicable.
@@ -106,7 +110,11 @@ function linkifyCitas(html: string, n: number): string {
     const nums = group.split(",").map((s) => Number(s.trim()));
     if (nums.some((k) => !(k >= 1 && k <= n))) return full;
     return nums
-      .map((k) => `<a class="cita-ref" data-cita="${k - 1}" role="button" tabindex="0">[${k}]</a>`)
+      .map((k) => {
+        const tt = titulos[k - 1];
+        const title = tt ? ` title="${esc(tt)}"` : "";
+        return `<a class="cita-ref" data-cita="${k - 1}" role="button" tabindex="0"${title}>[${k}]</a>`;
+      })
       .join("");
   });
 }
@@ -1711,6 +1719,10 @@ export function MycoBotRail({
                               (m.citas?.length ?? 0) > 0
                                 ? m.citas!.length
                                 : m.citasAyuda?.length ?? 0,
+                              // #3 — título de cada fuente para el tooltip del [n].
+                              (m.citas?.length ?? 0) > 0
+                                ? m.citas!.map((c) => c.titulo || c.referenciaBoe || null)
+                                : (m.citasAyuda ?? []).map((c) => c.title ?? null),
                             ),
                           }}
                         />

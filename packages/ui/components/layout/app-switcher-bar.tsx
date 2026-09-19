@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
-import type { AppInfo } from "./app-info";
+import { compareApps, type AppInfo } from "./app-info";
 import { SubscribeAppModal, type SubscribableApp } from "./subscribe-app-modal";
 import { useI18n } from "../i18n/i18n-context";
 import { cn } from "../../lib/utils";
@@ -123,9 +123,8 @@ export function AppSwitcherBar({ apps, currentSlug, unsubscribedApps = [], subsc
 
   const sortedApps = useMemo(
     () =>
-      [...apps].sort((a, b) =>
-        a.name.localeCompare(b.name, "es", { sensitivity: "base" }),
-      ),
+      // #835 — el orden lo fija Admin (sortOrder); antes era alfabético.
+      [...apps].sort(compareApps),
     [apps],
   );
 
@@ -133,9 +132,7 @@ export function AppSwitcherBar({ apps, currentSlug, unsubscribedApps = [], subsc
   const sortedUnsub = useMemo(
     () =>
       subscribeUrl
-        ? [...unsubscribedApps].sort((a, b) =>
-            a.name.localeCompare(b.name, "es", { sensitivity: "base" }),
-          )
+        ? [...unsubscribedApps].sort(compareApps)
         : [],
     [unsubscribedApps, subscribeUrl],
   );
