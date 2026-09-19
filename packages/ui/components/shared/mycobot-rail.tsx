@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import {
   Sparkles,
   ChevronRight,
@@ -882,6 +883,21 @@ export function MycoBotRail({
       return next;
     });
   }, [loadConversaciones]);
+
+  // #839 (Micó) — con el panel EXPANDIDO (ocupa toda la pantalla salvo el
+  // sidebar), pinchar una entrada del sidebar cargaba la página… debajo del
+  // panel: «sale la plantilla, pero enseguida queda ocultada por MycoBot». Al
+  // cambiar de ruta se vuelve al rail lateral (sigue abierto, con la
+  // conversación intacta), para que la página pedida se vea. La preferencia
+  // guardada (#768) se respeta: el usuario no ha pedido contraerlo, así que la
+  // próxima vez que lo abra vuelve expandido.
+  const pathname = usePathname();
+  const rutaPrevia = useRef(pathname);
+  useEffect(() => {
+    if (rutaPrevia.current === pathname) return;
+    rutaPrevia.current = pathname;
+    setExpanded(false);
+  }, [pathname]);
 
   // Carga una conversación pasada como hilo activo.
   const loadConversation = useCallback(

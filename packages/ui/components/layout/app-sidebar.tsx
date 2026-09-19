@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect, type ReactNode, type ComponentType } from "react";
+import { useState, useEffect, useRef, useCallback, type ReactNode, type ComponentType } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   BookOpen,
+  ChevronDown,
+  ChevronUp,
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
@@ -155,6 +157,7 @@ function SidebarLink({
       href={href}
       title={collapsed ? label : undefined}
       aria-label={collapsed ? label : undefined}
+      aria-current={active ? "page" : undefined}
       className={cn(
         ITEM_BASE,
         collapsed && "justify-center px-0",
@@ -207,6 +210,7 @@ export function AppSidebar({
   const { collapsed, toggle } = useSidebarCollapse();
 
   const [accountOpen, setAccountOpen] = useState(false);
+  const nav = useNavPager(pathname);
   // Local copy lets profile saves update the badge without forcing a layout
   // remount.
   const [displayName, setDisplayName] = useState(user.displayName);
@@ -354,10 +358,14 @@ export function AppSidebar({
           </div>
         )}
 
-        {/* Main nav */}
+        {/* Main nav. #837 — cuando no cabe, va por PÁGINAS (ver `useNavPager`):
+            la barra de scroll no se ve y nadie sospecha que hay más opciones
+            debajo; el pie con «1/2 ▾» sí se ve. */}
         <nav
+          ref={nav.ref}
+          onScroll={nav.onScroll}
           className={cn(
-            "mt-1 flex-1 space-y-0.5 overflow-y-auto overflow-x-hidden",
+            "mt-1 flex-1 space-y-0.5 overflow-y-auto overflow-x-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
             blockPadX,
           )}
         >
@@ -375,6 +383,39 @@ export function AppSidebar({
 
           {extraNav}
         </nav>
+        {nav.pages > 1 && (
+          <div
+            className={cn(
+              "flex shrink-0 items-center gap-1 pb-1 pt-1 text-[11px] text-slate-400",
+              collapsed ? "flex-col justify-center" : "justify-center",
+              blockPadX,
+            )}
+          >
+            <button
+              type="button"
+              onClick={() => nav.goTo(nav.page - 1)}
+              disabled={nav.page <= 0}
+              aria-label={t("ui.sidebar.pagePrev")}
+              title={t("ui.sidebar.pagePrev")}
+              className="rounded p-0.5 hover:bg-white/10 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent"
+            >
+              <ChevronUp className="h-4 w-4" />
+            </button>
+            <span className="tabular-nums" aria-live="polite">
+              {t("ui.sidebar.pageOf", { n: nav.page + 1, total: nav.pages })}
+            </span>
+            <button
+              type="button"
+              onClick={() => nav.goTo(nav.page + 1)}
+              disabled={nav.page >= nav.pages - 1}
+              aria-label={t("ui.sidebar.pageNext")}
+              title={t("ui.sidebar.pageNext")}
+              className="rounded p-0.5 hover:bg-white/10 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent"
+            >
+              <ChevronDown className="h-4 w-4" />
+            </button>
+          </div>
+        )}
 
         {/* System block: Admin + Configuración (only rendered if at least one
             entry is visible). Sits below the product nav, separated by a
@@ -545,4 +586,89 @@ export function AppSidebar({
       </aside>
     </>
   );
+}
+
+/**
+ * #837 — Paginación del bloque de navegación cuando no cabe en alto.
+ *
+ * Micó (Config, portátil): «Recomendar» e «Incidencias» quedaban tapadas por
+ * «Manual» y «nadie espera que existan esas opciones»: el <nav> hacía scroll,
+ * pero con la barra invisible sobre fondo oscuro nada decía que hubiera más.
+ * Encoger la letra no escala (cada app añade entradas). Solución general,
+ * válida para cualquier contenido del nav (ítems, `extraNav` con cabeceras,
+ * flyouts): se miden los hijos directos y se agrupan en PÁGINAS que quepan
+ * enteras en el alto disponible —ningún ítem cortado por la mitad— y un pie
+ * «n/N» con flechas conmuta entre ellas. La rueda del ratón sigue funcionando y
+ * el indicador la sigue. Al cambiar de ruta se muestra la página del ítem activo.
+ */
+function useNavPager(pathname: string | null) {
+  const ref = useRef<HTMLElement | null>(null);
+  const [starts, setStarts] = useState<number[]>([0]);
+  const [page, setPage] = useState(0);
+
+  const medir = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    const alto = el.clientHeight;
+    if (alto <= 0) return;
+    const hijos = Array.from(el.children) as HTMLElement[];
+    const base = el.getBoundingClientRect().top + el.scrollTop;
+    const nuevos: number[] = [0];
+    let inicio = 0;
+    for (const h of hijos) {
+      const top = h.getBoundingClientRect().top - base;
+      const fin = top + h.offsetHeight;
+      if (fin - inicio > alto && top > inicio) {
+        inicio = top;
+        nuevos.push(top);
+      }
+    }
+    // Si todo cabe, una sola página.
+    if (el.scrollHeight <= alto + 1) nuevos.length = 1;
+    setStarts((prev) => (prev.length === nuevos.length && prev.every((v, i) => Math.abs(v - nuevos[i]) < 1) ? prev : nuevos));
+  }, []);
+
+  // Re-medir cuando cambie el tamaño del nav o su contenido (flyouts, badges, colapso).
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    medir();
+    const ro = new ResizeObserver(() => medir());
+    ro.observe(el);
+    const mo = new MutationObserver(() => medir());
+    mo.observe(el, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "style"] });
+    return () => { ro.disconnect(); mo.disconnect(); };
+  }, [medir]);
+
+  const paginaDe = useCallback((scrollTop: number) => {
+    let p = 0;
+    for (let i = 0; i < starts.length; i++) if (starts[i] <= scrollTop + 1) p = i;
+    return p;
+  }, [starts]);
+
+  const goTo = useCallback((i: number) => {
+    const el = ref.current;
+    if (!el) return;
+    const k = Math.max(0, Math.min(starts.length - 1, i));
+    el.scrollTo({ top: starts[k], behavior: "smooth" });
+    setPage(k);
+  }, [starts]);
+
+  const onScroll = useCallback(() => {
+    const el = ref.current;
+    if (el) setPage(paginaDe(el.scrollTop));
+  }, [paginaDe]);
+
+  // Al navegar, que la página visible sea la del ítem activo.
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || starts.length <= 1) return;
+    const activo = el.querySelector<HTMLElement>('[aria-current="page"], [data-active="true"]');
+    if (!activo) return;
+    const top = activo.getBoundingClientRect().top - el.getBoundingClientRect().top + el.scrollTop;
+    goTo(paginaDe(top));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, starts]);
+
+  return { ref, page, pages: starts.length, goTo, onScroll };
 }

@@ -792,7 +792,10 @@
       "openAccount": "Abrir a miña conta",
       "collapse": "Contraer menú",
       "expand": "Expandir menú",
-      "unidad": "Unidade de rede"
+      "unidad": "Unidade de rede",
+      "pageOf": "{n}/{total}",
+      "pageNext": "Opcións seguintes do menú",
+      "pagePrev": "Opcións anteriores do menú"
     },
     "idleTimeout": {
       "title": "Sesión a piques de expirar",

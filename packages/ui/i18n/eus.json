@@ -792,7 +792,10 @@
       "openAccount": "Nire kontua ireki",
       "collapse": "Menua tolestu",
       "expand": "Menua zabaldu",
-      "unidad": "Sareko unitatea"
+      "unidad": "Sareko unitatea",
+      "pageOf": "{n}/{total}",
+      "pageNext": "Menuko hurrengo aukerak",
+      "pagePrev": "Menuko aurreko aukerak"
     },
     "idleTimeout": {
       "title": "Saioa iraungitzear",

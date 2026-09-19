@@ -793,7 +793,10 @@
       "openAccount": "Abrir mi cuenta",
       "collapse": "Contraer menú",
       "expand": "Expandir menú",
-      "unidad": "Unidad de red"
+      "unidad": "Unidad de red",
+      "pageOf": "{n}/{total}",
+      "pageNext": "Opciones siguientes del menú",
+      "pagePrev": "Opciones anteriores del menú"
     },
     "idleTimeout": {
       "title": "Sesión a punto de expirar",

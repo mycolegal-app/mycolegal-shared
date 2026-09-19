@@ -793,7 +793,10 @@
       "openAccount": "Obrir el meu compte",
       "collapse": "Replegar menú",
       "expand": "Desplegar menú",
-      "unidad": "Unitat de xarxa"
+      "unidad": "Unitat de xarxa",
+      "pageOf": "{n}/{total}",
+      "pageNext": "Opcions següents del menú",
+      "pagePrev": "Opcions anteriors del menú"
     },
     "idleTimeout": {
       "title": "Sessió a punt d'expirar",
