@@ -13,15 +13,17 @@ interface AppSwitcherBarProps {
   /** Slug of the current app — highlighted, not navigated to on click. */
   currentSlug: string;
   /**
-   * Apps que la org aún NO tiene concedidas. Se muestran en gris (solo al
-   * org_admin, que es quien recibe esta lista desde user-apps). Al hacer clic se
-   * abre un modal para contratarla en el sitio —o para registrar interés, si aún
-   * es "Próximamente"—. Vacío ⇒ no se muestra nada (una org con todo concedido no
-   * ve nada gris).
+   * Apps vendibles que la org aún NO tiene concedidas: bloque «Más apps» al final
+   * de la barra, para TODOS los usuarios de la org. Al pulsar se abre la ficha de
+   * la app (SubscribeAppModal): quien puede contratar (`canSubscribe`) va a
+   * Config → Suscripciones; el resto ve el aviso de pedírselo a su administrador;
+   * las «Próximamente» ofrecen registrar interés. Vacío ⇒ no se muestra nada.
    */
   unsubscribedApps?: SubscribableApp[];
-  /** Destino de suscripción (Config → /suscripcion). Fallback del modal. */
+  /** Destino de contratación (Config → /cuenta/suscripciones). Sin él no hay bloque. */
   subscribeUrl?: string | null;
+  /** true = org_admin: la ficha ofrece «Contratar». */
+  canSubscribe?: boolean;
 }
 
 const STORAGE_KEY = "mc:app-switcher:open";
@@ -92,7 +94,7 @@ function UnreadBadge({ count }: { count: number }) {
  *
  * El estado se persiste por usuario+dispositivo en localStorage.
  */
-export function AppSwitcherBar({ apps, currentSlug, unsubscribedApps = [], subscribeUrl }: AppSwitcherBarProps) {
+export function AppSwitcherBar({ apps, currentSlug, unsubscribedApps = [], subscribeUrl, canSubscribe = false }: AppSwitcherBarProps) {
   const { t } = useI18n();
   const [expanded, setExpanded] = useState(false);
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
@@ -254,30 +256,51 @@ export function AppSwitcherBar({ apps, currentSlug, unsubscribedApps = [], subsc
               );
             })}
 
-            {/* Apps vendibles no concedidas: en gris, con tooltip de suscripción. */}
+            {/* «Más apps»: vendibles no concedidas. La diferencia con una app
+                contratada es de FORMA (badge «+», rótulo), no de color: el logo
+                conserva su oro/plata —desaturarlo hacía que un logo oro pareciese
+                de la línea Plata y que Peticiones se confundiese con Tramitación—. */}
             {sortedUnsub.length > 0 && (
-              <span className="mx-1 w-px shrink-0 self-stretch bg-white/10" aria-hidden="true" />
-            )}
-            {sortedUnsub.map((app) => (
-              <button
-                key={`sell-${app.slug}`}
-                type="button"
-                onClick={() => setSubscribing(app)}
-                title={
-                  (app as SubscribableApp).sellable === false
-                    ? "Próximamente — pulsa para que te avisemos"
-                    : "Pulsa para suscribirte"
-                }
-                className="group flex w-[78px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-md px-1 py-0.5 opacity-40 transition-opacity hover:opacity-75"
-              >
-                <div className="relative grayscale">
-                  <AppLogo app={app} active={false} />
-                </div>
-                <span className="w-full text-center text-[10px] font-medium leading-tight text-white/70">
-                  {app.name}
+              <>
+                <span className="mx-1 w-px shrink-0 self-stretch bg-white/10" aria-hidden="true" />
+                <span
+                  aria-hidden="true"
+                  className="mr-0.5 self-center text-[8px] uppercase tracking-[0.14em] text-white/40 [writing-mode:vertical-rl] rotate-180"
+                >
+                  {t("ui.appSwitcher.moreApps")}
                 </span>
-              </button>
-            ))}
+              </>
+            )}
+            {sortedUnsub.map((app) => {
+              const soon = app.sellable === false;
+              return (
+                <button
+                  key={`sell-${app.slug}`}
+                  type="button"
+                  onClick={() => setSubscribing(app)}
+                  title={soon ? t("ui.appSwitcher.comingSoon") : t("ui.appSwitcher.subscribable")}
+                  className="group flex w-[78px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-md px-1 py-0.5 transition-colors hover:bg-white/10"
+                >
+                  <div className="relative">
+                    <div className={cn("transition-opacity group-hover:opacity-90", soon ? "opacity-40" : "opacity-55")}>
+                      <AppLogo app={app} active={false} />
+                    </div>
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        "absolute -bottom-0.5 -right-0.5 flex h-[13px] w-[13px] items-center justify-center rounded-full text-[10px] font-bold leading-none ring-2 ring-[#0f1b2d]",
+                        soon ? "bg-white/35 text-white text-[8px] tracking-tighter" : "bg-cyan-400 text-[#0f1b2d]",
+                      )}
+                    >
+                      {soon ? "…" : "+"}
+                    </span>
+                  </div>
+                  <span className="w-full text-center text-[10px] font-medium leading-tight text-white/70">
+                    {app.name}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
         <button
@@ -295,9 +318,8 @@ export function AppSwitcherBar({ apps, currentSlug, unsubscribedApps = [], subsc
         <SubscribeAppModal
           app={subscribing}
           onClose={() => setSubscribing(null)}
-          // Tras contratar, el OrgApp lo concede el webhook de Stripe (asíncrono):
-          // recargamos para que la toolbar la pinte ya como concedida.
-          onSubscribed={() => window.location.reload()}
+          subscribeUrl={subscribeUrl}
+          canSubscribe={canSubscribe}
         />
       )}
     </>

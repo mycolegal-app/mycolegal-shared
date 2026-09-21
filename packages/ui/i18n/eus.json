@@ -747,7 +747,25 @@
       "collapse": "Aplikazioak ezkutatu",
       "loadingApp": "Aplikazioa kargatzen…",
       "unread": "{count} irakurri gabe",
-      "barLabel": "Aplikazioak ({n})"
+      "barLabel": "Aplikazioak ({n})",
+      "moreApps": "App gehiago",
+      "comingSoon": "Laster — sakatu abisatzeko",
+      "subscribable": "Kontratatzeko eskuragarri — sakatu fitxa ikusteko"
+    },
+    "subscribeApp": {
+      "close": "Itxi",
+      "cancel": "Utzi",
+      "contract": "Kontratatu",
+      "comingSoon": "Laster",
+      "moreInfo": "Informazio gehiago",
+      "price": "Prezioa",
+      "perMonth": "/ hilean + BEZ",
+      "askAdmin": "Zure erakundeko administratzaileak bakarrik kontrata ditzake aplikazioak. Interesatzen bazaizu, eskatu iezaiozu.",
+      "notifyMe": "Abisatu eskuragarri dagoenean",
+      "notifyHint": "Ez duzu ezer kontratatzen ez ordaintzen: zure interesa baino ez dugu jasotzen.",
+      "interestRegistered": "✓ Interesa erregistratuta. {app} eskuragarri egon bezain laster abisatuko dizugu.",
+      "errorGeneric": "Ezin izan da eragiketa osatu. Saiatu berriro.",
+      "errorNetwork": "Konexio-errorea. Saiatu berriro."
     },
     "billingNotice": {
       "courtesyExpired": "{app} aplikaziorako kortesiazko sarbidea iraungi da.",

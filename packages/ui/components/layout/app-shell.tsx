@@ -339,9 +339,12 @@ export default function AppShell({
   const [user, setUser] = useState<UserInfo>({ displayName: "Cargando…", email: "", role: "" });
   const [org, setOrg] = useState<OrgInfo | undefined>(undefined);
   const [apps, setApps] = useState<AppInfo[]>([]);
-  // Apps vendibles no concedidas (grayed en la toolbar, solo org_admin) + destino.
+  // Apps vendibles no concedidas («Más apps» en la toolbar, para toda la org) +
+  // destino de contratación en Config. `canSubscribe`: solo el org_admin contrata;
+  // el resto ve la ficha con el aviso de pedírselo a su administrador.
   const [sellableExtras, setSellableExtras] = useState<AppInfo[]>([]);
   const [subscribeUrl, setSubscribeUrl] = useState<string | null>(null);
+  const [canSubscribe, setCanSubscribe] = useState(false);
   // Destino "Actualizar tarjeta" para el aviso de tarjeta por caducar.
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   // Avisos de cortesía/trial expirado por app concedida (banner descartable).
@@ -381,6 +384,7 @@ export default function AppShell({
       if (d.apps) setApps(d.apps);
       if (Array.isArray(d.sellableExtras)) setSellableExtras(d.sellableExtras);
       setSubscribeUrl(d.subscribeUrl ?? null);
+      setCanSubscribe(d.canSubscribe === true);
       setPaymentUrl(d.paymentUrl ?? null);
       setCreditsUrl(d.creditsUrl ?? null);
       if (d.inactivityTimeout) setInactivityTimeout(d.inactivityTimeout);
@@ -460,6 +464,7 @@ export default function AppShell({
                 currentSlug={appSlug}
                 unsubscribedApps={sellableExtras}
                 subscribeUrl={subscribeUrl}
+                canSubscribe={canSubscribe}
               />
             ) : undefined
           }

@@ -748,7 +748,25 @@
       "collapse": "Ocultar aplicaciones",
       "loadingApp": "Cargando aplicación…",
       "unread": "{count} sin leer",
-      "barLabel": "Aplicaciones ({n})"
+      "barLabel": "Aplicaciones ({n})",
+      "moreApps": "Más apps",
+      "comingSoon": "Próximamente — pulsa para que te avisemos",
+      "subscribable": "Disponible para contratar — pulsa para ver la ficha"
+    },
+    "subscribeApp": {
+      "close": "Cerrar",
+      "cancel": "Cancelar",
+      "contract": "Contratar",
+      "comingSoon": "Próximamente",
+      "moreInfo": "Más información",
+      "price": "Precio",
+      "perMonth": "/ mes + IVA",
+      "askAdmin": "Solo el administrador de tu organización puede contratar aplicaciones. Si te interesa, pídeselo.",
+      "notifyMe": "Avisadme cuando esté disponible",
+      "notifyHint": "No contratas ni pagas nada: solo anotamos tu interés.",
+      "interestRegistered": "✓ Interés registrado. Te avisaremos en cuanto {app} esté disponible.",
+      "errorGeneric": "No se ha podido completar la operación. Inténtalo de nuevo.",
+      "errorNetwork": "Error de conexión. Inténtalo de nuevo."
     },
     "billingNotice": {
       "courtesyExpired": "El acceso de cortesía a {app} ha caducado.",

@@ -748,7 +748,25 @@
       "collapse": "Amaga les aplicacions",
       "loadingApp": "Carregant aplicació…",
       "unread": "{count} sense llegir",
-      "barLabel": "Aplicacions ({n})"
+      "barLabel": "Aplicacions ({n})",
+      "moreApps": "Més apps",
+      "comingSoon": "Properament — prem perquè t'avisem",
+      "subscribable": "Disponible per contractar — prem per veure la fitxa"
+    },
+    "subscribeApp": {
+      "close": "Tanca",
+      "cancel": "Cancel·la",
+      "contract": "Contracta",
+      "comingSoon": "Properament",
+      "moreInfo": "Més informació",
+      "price": "Preu",
+      "perMonth": "/ mes + IVA",
+      "askAdmin": "Només l'administrador de la teva organització pot contractar aplicacions. Si t'interessa, demana-l'hi.",
+      "notifyMe": "Aviseu-me quan estigui disponible",
+      "notifyHint": "No contractes ni pagues res: només anotem el teu interès.",
+      "interestRegistered": "✓ Interès registrat. T'avisarem tan bon punt {app} estigui disponible.",
+      "errorGeneric": "No s'ha pogut completar l'operació. Torna-ho a provar.",
+      "errorNetwork": "Error de connexió. Torna-ho a provar."
     },
     "billingNotice": {
       "courtesyExpired": "L’accés de cortesia a {app} ha caducat.",

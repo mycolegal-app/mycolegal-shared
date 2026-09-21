@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Loader2, X } from "lucide-react";
+import { ExternalLink, Loader2, X } from "lucide-react";
 import type { AppInfo } from "./app-info";
+import { useI18n } from "../i18n/i18n-context";
 
 /**
  * App no concedida, tal como la sirve auth en `sellableExtras` de /api/auth/me:
- * el AppInfo de siempre + el copy de venta y el precio de su plan de billing.
+ * el AppInfo de siempre + el copy de venta, el precio de su plan y el enlace a
+ * su micrositio en la landing.
  */
 export interface SubscribableApp extends AppInfo {
   /** Copy de venta del plan (el mismo que ve en el selector del registro). */
@@ -16,13 +18,17 @@ export interface SubscribableApp extends AppInfo {
   sellable?: boolean;
   priceCents?: number | null;
   currency?: string;
+  /** Micrositio de la app en la landing (`/apps/<slug>`): «Más información». */
+  infoUrl?: string | null;
 }
 
 interface SubscribeAppModalProps {
   app: SubscribableApp;
   onClose: () => void;
-  /** Se llama tras suscribir con éxito, para refrescar la toolbar. */
-  onSubscribed?: () => void;
+  /** Destino de contratación (Config → /cuenta/suscripciones); se abre con `?app=<slug>`. */
+  subscribeUrl?: string | null;
+  /** true = org_admin: puede contratar. Los demás ven el aviso de pedírselo. */
+  canSubscribe?: boolean;
 }
 
 function money(cents: number, currency = "eur") {
@@ -33,16 +39,18 @@ function money(cents: number, currency = "eur") {
 }
 
 /**
- * Modal que se abre al pulsar una app gris de la toolbar. Si la app es vendible
- * muestra precio y permite contratarla en el sitio (la org ya tiene tarjeta y
- * suscripción viva desde el alta, así que basta con añadir el ítem: no hace falta
- * pasar por el checkout de Stripe). Si aún no es vendible, ofrece registrar el
- * interés para avisarle cuando se lance.
+ * Ficha de una app de «Más apps» (toolbar). NO contrata nada: el único camino de
+ * contratación es Config → Suscripciones (`subscribeUrl?app=<slug>`), que
+ * resalta la tarjeta, muestra precio/IVA/tarjeta y admite un código promocional.
+ * Así no hay dos implementaciones de la contratación que puedan divergir
+ * (PLAN_TECNICO_CUPONES.md §10). Lo único que sigue haciéndose aquí es registrar
+ * interés en una app «Próximamente», que no es una contratación.
  */
-export function SubscribeAppModal({ app, onClose, onSubscribed }: SubscribeAppModalProps) {
+export function SubscribeAppModal({ app, onClose, subscribeUrl, canSubscribe = false }: SubscribeAppModalProps) {
+  const { t } = useI18n();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<"subscribed" | "interested" | null>(null);
+  const [interested, setInterested] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
@@ -53,37 +61,36 @@ export function SubscribeAppModal({ app, onClose, onSubscribed }: SubscribeAppMo
   }, [onClose]);
 
   const sellable = app.sellable !== false;
+  const contractHref = subscribeUrl ? `${subscribeUrl}?app=${encodeURIComponent(app.slug)}` : null;
 
-  async function act(endpoint: string, ok: "subscribed" | "interested") {
+  async function registerInterest() {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(endpoint, {
+      // Proxy de billing de la app (factory createBillingRoutes): reenvía a
+      // platform forzando el orgId de la sesión.
+      const res = await fetch("/api/billing/interest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ app: app.slug }),
       });
-      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        // 409: la org no tiene suscripción viva (caso raro: alta antigua sin
-        // tarjeta). La mandamos a Config, que sí sabe abrir un checkout.
-        if (res.status === 409) {
-          setError("Tu notaría aún no tiene una suscripción activa. Ve a Configuración → Suscripción para contratarla.");
-          return;
-        }
-        setError(data?.message || "No se ha podido completar la operación. Inténtalo de nuevo.");
+        setError(t("ui.subscribeApp.errorGeneric"));
         return;
       }
-      setDone(ok);
-      if (ok === "subscribed") onSubscribed?.();
+      setInterested(true);
     } catch {
-      setError("Error de conexión. Inténtalo de nuevo.");
+      setError(t("ui.subscribeApp.errorNetwork"));
     } finally {
       setBusy(false);
     }
   }
 
   if (!mounted) return null;
+
+  const btnBase = "rounded-lg px-4 py-2.5 text-sm font-medium transition";
+  const btnGhost = `${btnBase} border border-slate-300 text-slate-700 hover:bg-slate-50`;
+  const btnPrimary = `${btnBase} flex flex-1 items-center justify-center gap-2 bg-cyan font-semibold text-white hover:bg-cyan-600 disabled:opacity-60`;
 
   return createPortal(
     <div
@@ -101,7 +108,7 @@ export function SubscribeAppModal({ app, onClose, onSubscribed }: SubscribeAppMo
         <button
           type="button"
           onClick={onClose}
-          aria-label="Cerrar"
+          aria-label={t("ui.subscribeApp.close")}
           className="absolute right-4 top-4 rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
         >
           <X className="h-4 w-4" />
@@ -121,76 +128,79 @@ export function SubscribeAppModal({ app, onClose, onSubscribed }: SubscribeAppMo
             </h2>
             {!sellable && (
               <span className="mt-1 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">
-                Próximamente
+                {t("ui.subscribeApp.comingSoon")}
               </span>
             )}
           </div>
         </div>
 
-        {app.description && (
-          <p className="mt-3 text-sm leading-relaxed text-slate-600">{app.description}</p>
+        {(app.description || app.infoUrl) && (
+          <p className="mt-3 text-sm leading-relaxed text-slate-600">
+            {app.description}
+            {app.infoUrl && (
+              <>
+                {" "}
+                <a
+                  href={app.infoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-0.5 whitespace-nowrap text-cyan-700 underline underline-offset-2 hover:text-cyan-800"
+                >
+                  {t("ui.subscribeApp.moreInfo")}
+                  <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                </a>
+              </>
+            )}
+          </p>
         )}
 
-        {done === "subscribed" ? (
-          <div className="mt-5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-800">
-            <strong>¡Listo!</strong> Ya tienes {app.name}. Recarga la página para verla en la barra de aplicaciones.
+        {sellable && typeof app.priceCents === "number" && (
+          <div className="mt-4 flex items-baseline justify-between rounded-lg bg-slate-50 px-3 py-2.5">
+            <span className="text-sm text-slate-600">{t("ui.subscribeApp.price")}</span>
+            <span className="text-right">
+              <span className="block text-lg font-bold text-slate-900">
+                {money(app.priceCents, app.currency)}
+              </span>
+              <span className="text-xs text-slate-500">{t("ui.subscribeApp.perMonth")}</span>
+            </span>
           </div>
-        ) : done === "interested" ? (
+        )}
+
+        {error && (
+          <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+        )}
+
+        {/* Acción según caso: contratar (org_admin, vendible) → Config; usuario sin
+            permiso → solo aviso; «Próximamente» → registrar interés. */}
+        {sellable && canSubscribe && contractHref ? (
+          <div className="mt-5 flex gap-3">
+            <button type="button" onClick={onClose} className={btnGhost}>
+              {t("ui.subscribeApp.cancel")}
+            </button>
+            <a href={contractHref} className={btnPrimary}>
+              {t("ui.subscribeApp.contract")}
+            </a>
+          </div>
+        ) : sellable ? (
+          <p className="mt-5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm leading-relaxed text-slate-700">
+            {t("ui.subscribeApp.askAdmin")}
+          </p>
+        ) : interested ? (
           <div className="mt-5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-800">
-            <strong>✓ Interés registrado.</strong> Te avisaremos en cuanto {app.name} esté disponible.
+            {t("ui.subscribeApp.interestRegistered", { app: app.name })}
           </div>
         ) : (
           <>
-            {sellable && typeof app.priceCents === "number" && (
-              <div className="mt-4 flex items-baseline justify-between rounded-lg bg-slate-50 px-3 py-2.5">
-                <span className="text-sm text-slate-600">Precio</span>
-                <span className="text-right">
-                  <span className="block text-lg font-bold text-slate-900">
-                    {money(app.priceCents, app.currency)}
-                  </span>
-                  <span className="text-xs text-slate-500">/ mes + IVA</span>
-                </span>
-              </div>
-            )}
-
-            {error && (
-              <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
-            )}
-
             <div className="mt-5 flex gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-              >
-                Cancelar
+              <button type="button" onClick={onClose} className={btnGhost}>
+                {t("ui.subscribeApp.cancel")}
               </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() =>
-                  // El mismo proxy de billing que ya usa Config (factory
-                  // createBillingRoutes): reenvía a platform forzando el orgId de
-                  // la sesión. No hay lógica de suscripción duplicada aquí.
-                  sellable
-                    ? act("/api/billing/add-app", "subscribed")
-                    : act("/api/billing/interest", "interested")
-                }
-                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-cyan px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-600 disabled:opacity-60"
-              >
+              <button type="button" disabled={busy} onClick={registerInterest} className={btnPrimary}>
                 {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-                {sellable ? "Suscribir" : "Estoy interesado"}
+                {t("ui.subscribeApp.notifyMe")}
               </button>
             </div>
-
-            {/* Sin promesas de prueba gratis: los 30 días son del alta. Una app
-                añadida después entra en la suscripción viva y se cobra prorrateada
-                desde hoy con la tarjeta ya registrada. */}
-            <p className="mt-3 text-center text-xs text-slate-400">
-              {sellable
-                ? "Se añade a tu suscripción actual, prorrateada desde hoy, con la tarjeta que ya tienes registrada."
-                : "No contratas ni pagas nada: solo anotamos tu interés."}
-            </p>
+            <p className="mt-3 text-center text-xs text-slate-400">{t("ui.subscribeApp.notifyHint")}</p>
           </>
         )}
       </div>
