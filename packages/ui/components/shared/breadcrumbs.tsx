@@ -10,6 +10,18 @@ interface BreadcrumbsProps {
   routeLabels?: Record<string, string>;
   homeLabel?: string;
   homePath?: string;
+  /**
+   * Paths de segmentos intermedios que NO tienen página propia (son "grupos" de
+   * navegación: `/catalogs`, `/mantenimientos`…). Se pintan como texto, sin enlace.
+   * #5 (Lamarca, 21-sep-2026): la miga enlazaba TODOS los segmentos intermedios, así
+   * que «Catálogos» llevaba a `/catalogs`, ruta inexistente, y el usuario veía el
+   * 404 de Next ("clico en catálogos y sale página error"). Cada app-shell declara
+   * los suyos; los conocidos hoy: consultor `/catalogs` `/foro` `/tutoriales` `/t`,
+   * notaria y polizas `/mantenimientos`, tributos `/mantenimiento`, archivo
+   * `/mercantil` `/signaturas`, peticiones `/mi-entidad` `/mi-gestoria`, tramitacion
+   * `/cancelaciones` `/moratorias` `/workspace` `/actas/admin`, legifirma `/actuaciones`.
+   */
+  unlinkedPaths?: string[];
 }
 
 const DYNAMIC_LABEL_EVENT = "mycolegal:breadcrumb-label";
@@ -49,6 +61,7 @@ export function Breadcrumbs({
   routeLabels = {},
   homeLabel,
   homePath = "/",
+  unlinkedPaths = [],
 }: BreadcrumbsProps) {
   const { t } = useI18n();
   const resolvedHomeLabel = homeLabel ?? t("ui.breadcrumbs.home");
@@ -108,12 +121,13 @@ export function Breadcrumbs({
     >
       {crumbs.map((crumb, idx) => {
         const isLast = idx === crumbs.length - 1;
+        const unlinked = isLast || unlinkedPaths.includes(crumb.href);
         return (
           <span key={crumb.href} className="flex items-center gap-1.5">
             {idx > 0 && <ChevronRight className="h-3 w-3 text-gray-400" />}
             {idx === 0 && <Home className="h-3 w-3" />}
-            {isLast ? (
-              <span className="font-medium text-gray-700">{crumb.label}</span>
+            {unlinked ? (
+              <span className={isLast ? "font-medium text-gray-700" : undefined}>{crumb.label}</span>
             ) : (
               <NavLink
                 href={crumb.href}
