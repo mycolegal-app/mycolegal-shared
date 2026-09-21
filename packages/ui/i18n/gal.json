@@ -799,7 +799,8 @@
       "privacyRgpd": "Cumprimento estrito do RGPD e da LOPD.",
       "privacyOwner": "A túa información é só túa: uso exclusivo do seu titular.",
       "privacyNotraining": "Non adestramos modelos de IA cos teus contidos.",
-      "privacyLink": "Ver Política de Privacidade e DPA"
+      "privacyLink": "Ver Política de Privacidade e DPA",
+      "helpMenuAi": "Uso da intelixencia artificial"
     },
     "sidebar": {
       "goHome": "Ir ao inicio",
@@ -1124,7 +1125,9 @@
       "skillDuplicate": "Duplicar",
       "skillFormNew": "Nova skill",
       "skillFormEdit": "Editar skill",
-      "creditosAvisaAdmin": "Avisa a quen administra a conta para recargalos."
+      "creditosAvisaAdmin": "Avisa a quen administra a conta para recargalos.",
+      "report": "Reportar esta resposta",
+      "reportPrefill": "Resposta de MycoBot incorrecta, incompleta ou nesgada. O que respondeu:"
     },
     "registradorPicker": {
       "placeholder": "Buscar rexistro por nome ou poboación…",
@@ -1165,6 +1168,47 @@
       "irreversible": "Esta acción non se pode desfacer.",
       "notice": "Aviso",
       "error": "Non se puido completar a acción"
+    },
+    "ai": {
+      "generatedWith": "Xerado con IA",
+      "instructions": "instrucións",
+      "whatIsThis": "Que significa?",
+      "eu": "UE",
+      "nonEu": "fóra da UE",
+      "euUnknown": "residencia non catalogada",
+      "oneSource": "1 fonte",
+      "sources": "{n} fontes",
+      "ctx": {
+        "corpus": "corpus doutrinal",
+        "ayuda": "manual de axuda",
+        "normativa": "normativa",
+        "datos": "datos do despacho",
+        "documento": "documento achegado",
+        "general": "coñecemento xeral do modelo"
+      },
+      "panel": {
+        "title": "Uso da intelixencia artificial nesta aplicación",
+        "close": "Pechar",
+        "auxiliar": "A IA é auxiliar e nunca decide: cada resultado é unha proposta que revisa unha persoa.",
+        "contrastable": "Sempre podes contrastar: as respostas de fondo citan a fonte orixinal e marcan o que non está avalado polo corpus.",
+        "ue": "Os modelos execútanse na Unión Europea e os teus textos non se usan para adestralos.",
+        "fichas": "Fichas de sistema (arts. 8 e 21 do Código Deontolóxico)",
+        "noFichas": "Non hai funcións de IA declaradas para esta aplicación.",
+        "interna": "interna",
+        "finalidad": "Finalidade",
+        "usoAdmisible": "Uso admisible",
+        "art3": "Artigo 3, apartados {letras}",
+        "datos": "Datos tratados",
+        "autonomia": "Autonomía",
+        "supervision": "Supervisión",
+        "modelo": "Modelo en vigor",
+        "modeloDefecto": "modelo por defecto da plataforma",
+        "version": "Instrucións",
+        "prompts": "{n} instrucións",
+        "actualizado": "Último cambio",
+        "declaracion": "Declaración completa de uso responsable da IA",
+        "plantilla": "Modelo de política interna para o despacho"
+      }
     }
   },
   "unidad": {

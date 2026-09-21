@@ -69,6 +69,12 @@ interface Strings {
   start: string;
   gatedNote: string;
   examplesLabel: string;
+  /** Capítulo «Uso responsable de la IA» (PLAN_TECNICO_IA_RESPONSABLE §5, arts.
+   *  13 y 29 del Código Deontológico del CGN). Se auto-indexa al corpus de ayuda. */
+  responsableTitle: string;
+  responsableIntro: string;
+  responsable: string[];
+  responsableLink: string;
 }
 
 const DATA_EXAMPLES: Record<Exclude<DataProfile, "none">, Record<ManualLang, string[]>> = {
@@ -186,6 +192,17 @@ const STRINGS: Record<ManualLang, Strings> = {
     gatedNote:
       "Disponible si tu organización lo tiene contratado.",
     examplesLabel: "Prueba a preguntar",
+    responsableTitle: "Uso responsable de la IA",
+    responsableIntro: "El Código Deontológico del Consejo General del Notariado sobre el uso de la inteligencia artificial pide al notario supervisar cada resultado, poder contrastarlo y no introducir información notarial en herramientas no autorizadas. Así se aplica en MycoLegal:",
+    responsable: [
+      "La IA es auxiliar y nunca decide: todo lo que genera (respuestas, dictámenes, descripciones, resúmenes) es una propuesta que revisas tú. La responsabilidad sigue siendo de quien firma.",
+      "Contrasta antes de usar: cada cita [n] enlaza al texto íntegro de la resolución o norma. Lo que MycoBot dice de conocimiento general, sin fuente del corpus, va marcado como tal; si no encuentra base, lo dice.",
+      "Cada respuesta lleva su identificación: pasa el ratón por el punto ámbar junto a la respuesta (o mira el pie de un informe) y verás el modelo, su residencia en la UE, la versión de las instrucciones y qué contexto se usó.",
+      "Consulta las fichas de sistema desde el botón (?) → «Uso de la inteligencia artificial»: finalidad, datos tratados, autonomía, supervisión y modelo en vigor de cada función.",
+      "No lleves información del protocolo ni datos de clientes a asistentes personales (ChatGPT, etc.): MycoLegal es la herramienta evaluada y contratada para ello, con los datos en la Unión Europea y sin usarlos para entrenar modelos.",
+      "Si una respuesta es errónea, incompleta o sesgada, repórtala con la bandera junto a la respuesta: llega al equipo con la conversación adjunta y se revisa por personas.",
+    ],
+    responsableLink: "Declaración completa de uso responsable de la IA y plantilla de política interna para el despacho",
   },
   CAT: {
     title: "Preguntar a MycoBot",
@@ -235,6 +252,17 @@ const STRINGS: Record<ManualLang, Strings> = {
       "Obre MycoBot amb el botó del lateral dret i escriu la teva pregunta en llenguatge natural. Escriu /help en qualsevol moment per tornar a veure aquesta ajuda dins del xat, o /sources per triar quines classes de la Biblioteca té en compte.",
     gatedNote: "Disponible si la teva organització ho té contractat.",
     examplesLabel: "Prova a preguntar",
+    responsableTitle: "Ús responsable de la IA",
+    responsableIntro: "El Codi Deontològic del Consell General del Notariat sobre l'ús de la intel·ligència artificial demana al notari supervisar cada resultat, poder contrastar-lo i no introduir informació notarial en eines no autoritzades. Així s'aplica a MycoLegal:",
+    responsable: [
+      "La IA és auxiliar i mai decideix: tot el que genera (respostes, dictàmens, descripcions, resums) és una proposta que revises tu. La responsabilitat continua sent de qui signa.",
+      "Contrasta abans d'usar: cada cita [n] enllaça al text íntegre de la resolució o norma. El que MycoBot diu de coneixement general, sense font del corpus, va marcat com a tal; si no troba base, ho diu.",
+      "Cada resposta porta la seva identificació: passa el ratolí pel punt ambre al costat de la resposta (o mira el peu d'un informe) i veuràs el model, la seva residència a la UE, la versió de les instruccions i quin context s'ha usat.",
+      "Consulta les fitxes de sistema des del botó (?) → «Ús de la intel·ligència artificial»: finalitat, dades tractades, autonomia, supervisió i model en vigor de cada funció.",
+      "No portis informació del protocol ni dades de clients a assistents personals (ChatGPT, etc.): MycoLegal és l'eina avaluada i contractada per a això, amb les dades a la Unió Europea i sense usar-les per entrenar models.",
+      "Si una resposta és errònia, incompleta o esbiaixada, reporta-la amb la bandera al costat de la resposta: arriba a l'equip amb la conversa adjunta i la revisen persones.",
+    ],
+    responsableLink: "Declaració completa d'ús responsable de la IA i plantilla de política interna per al despatx",
   },
   GAL: {
     title: "Preguntar a MycoBot",
@@ -284,6 +312,17 @@ const STRINGS: Record<ManualLang, Strings> = {
       "Abre MycoBot co botón do lateral dereito e escribe a túa pregunta en linguaxe natural. Escribe /help en calquera momento para volver ver esta axuda dentro do chat, ou /sources para elixir que clases da Biblioteca ten en conta.",
     gatedNote: "Dispoñible se a túa organización o ten contratado.",
     examplesLabel: "Proba a preguntar",
+    responsableTitle: "Uso responsable da IA",
+    responsableIntro: "O Código Deontolóxico do Consello Xeral do Notariado sobre o uso da intelixencia artificial pídelle ao notario supervisar cada resultado, poder contrastalo e non introducir información notarial en ferramentas non autorizadas. Así se aplica en MycoLegal:",
+    responsable: [
+      "A IA é auxiliar e nunca decide: todo o que xera (respostas, ditames, descricións, resumos) é unha proposta que revisas ti. A responsabilidade segue sendo de quen asina.",
+      "Contrasta antes de usar: cada cita [n] liga ao texto íntegro da resolución ou norma. O que MycoBot di de coñecemento xeral, sen fonte do corpus, vai marcado como tal; se non atopa base, dío.",
+      "Cada resposta leva a súa identificación: pasa o rato polo punto ámbar xunto á resposta (ou mira o pé dun informe) e verás o modelo, a súa residencia na UE, a versión das instrucións e que contexto se usou.",
+      "Consulta as fichas de sistema desde o botón (?) → «Uso da intelixencia artificial»: finalidade, datos tratados, autonomía, supervisión e modelo en vigor de cada función.",
+      "Non leves información do protocolo nin datos de clientes a asistentes persoais (ChatGPT, etc.): MycoLegal é a ferramenta avaliada e contratada para iso, cos datos na Unión Europea e sen usalos para adestrar modelos.",
+      "Se unha resposta é errónea, incompleta ou nesgada, repórtaa coa bandeira xunto á resposta: chega ao equipo coa conversa anexa e revísana persoas.",
+    ],
+    responsableLink: "Declaración completa de uso responsable da IA e modelo de política interna para o despacho",
   },
   EUS: {
     title: "MycoBot-i galdetu",
@@ -333,6 +372,17 @@ const STRINGS: Record<ManualLang, Strings> = {
       "Ireki MycoBot eskuineko aldeko botoiarekin eta idatzi zure galdera hizkuntza naturalean. Idatzi /help edonoiz laguntza hau txataren barruan berriz ikusteko, edo /sources Liburutegiko zein klase hartzen dituen aukeratzeko.",
     gatedNote: "Erabilgarri zure erakundeak kontratatuta badu.",
     examplesLabel: "Saiatu galdetzen",
+    responsableTitle: "AAren erabilera arduratsua",
+    responsableIntro: "Notariotzaren Kontseilu Nagusiaren adimen artifizialaren erabilerari buruzko Kode Deontologikoak notarioari eskatzen dio emaitza bakoitza gainbegiratzea, kontrastatu ahal izatea eta notario-informazioa baimendu gabeko tresnetan ez sartzea. Honela aplikatzen da MycoLegalen:",
+    responsable: [
+      "AA laguntzailea da eta inoiz ez du erabakitzen: sortzen duen guztia (erantzunak, irizpenak, deskribapenak, laburpenak) zuk berrikusten duzun proposamena da. Erantzukizuna sinatzen duenarena da oraindik.",
+      "Erabili aurretik kontrastatu: [n] aipamen bakoitzak ebazpenaren edo arauaren testu osora estekatzen du. MycoBotek ezagutza orokorretik esaten duena, corpuseko iturririk gabe, halakotzat markatuta doa; oinarririk aurkitzen ez badu, esan egiten du.",
+      "Erantzun bakoitzak bere identifikazioa darama: pasatu sagua erantzunaren ondoko puntu anbarretik (edo begiratu txosten baten oinari) eta eredua, EBko egoitza, jarraibideen bertsioa eta erabilitako testuingurua ikusiko dituzu.",
+      "Kontsultatu sistema-fitxak (?) botoitik → «Adimen artifizialaren erabilera»: funtzio bakoitzaren helburua, tratatutako datuak, autonomia, gainbegiratzea eta indarreko eredua.",
+      "Ez eraman protokoloko informaziorik edo bezeroen daturik laguntzaile pertsonaletara (ChatGPT, etab.): MycoLegal da horretarako ebaluatu eta kontratatutako tresna, datuak Europar Batasunean dituena eta ereduak entrenatzeko erabiltzen ez dituena.",
+      "Erantzun bat okerra, osatugabea edo alboratua bada, jakinarazi erantzunaren ondoko banderarekin: taldera iristen da elkarrizketa erantsita eta pertsonek berrikusten dute.",
+    ],
+    responsableLink: "AAren erabilera arduratsuaren adierazpen osoa eta bulegorako barne-politikaren txantiloia",
   },
 };
 
@@ -453,6 +503,26 @@ export function MycoBotManualSection({ lang, appSlug }: MycoBotManualSectionProp
             </li>
           ))}
         </ul>
+      </section>
+
+      <section className="rounded-xl border border-gray-200 bg-white p-5">
+        <h2 className="text-sm font-semibold text-gray-900">{t.responsableTitle}</h2>
+        <p className="mt-1 text-sm text-gray-600">{t.responsableIntro}</p>
+        <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-gray-700">
+          {t.responsable.map((b) => (
+            <li key={b} className="leading-relaxed">
+              {b}
+            </li>
+          ))}
+        </ul>
+        <a
+          href={`https://mycolegal.app/legal/ia-responsable?lang=${lang}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 inline-block text-sm font-medium text-cyan-700 hover:underline"
+        >
+          {t.responsableLink} →
+        </a>
       </section>
 
       <div className="flex items-start gap-4 rounded-xl border border-amber-200 bg-amber-50 p-5">

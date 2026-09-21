@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { useI18n } from "../i18n/i18n-context";
+import { AiBadge, type AiTrace } from "./ai-badge";
 import { Markdown } from "./markdown";
 
 /**
@@ -237,6 +238,8 @@ export function DocumentPreviewModal({
   }, [open, url, needsText]);
 
   const [summary, setSummary] = React.useState<string | null>(null);
+  // Identificación de la IA del resumen recién generado (los cacheados no la traen).
+  const [summaryTrace, setSummaryTrace] = React.useState<AiTrace | null>(null);
   const [summarizing, setSummarizing] = React.useState(false);
   const [summaryError, setSummaryError] = React.useState<string | null>(null);
   // #720 — El fallo por saldo agotado deja de ser un mensaje sin salida.
@@ -245,6 +248,7 @@ export function DocumentPreviewModal({
   // Reset del resumen al cambiar de documento o cerrar.
   React.useEffect(() => {
     setSummary(null);
+    setSummaryTrace(null);
     setSummaryError(null);
     setSummarizing(false);
   }, [nodeId, open]);
@@ -275,6 +279,7 @@ export function DocumentPreviewModal({
         return;
       }
       setSummary(json?.data?.resumen ?? "");
+      setSummaryTrace(json?.data?.trace ?? null);
     } catch {
       setSummaryError(t("ui.documentPreview.summaryError"));
     } finally {
@@ -527,7 +532,10 @@ export function DocumentPreviewModal({
                     <div className="text-red-600">{summaryError}</div>
                   )
                 ) : (
-                  <div className="whitespace-pre-wrap">{summary}</div>
+                  <>
+                    <div className="whitespace-pre-wrap">{summary}</div>
+                    <AiBadge trace={summaryTrace} mode="fixed" />
+                  </>
                 )}
               </div>
             </div>

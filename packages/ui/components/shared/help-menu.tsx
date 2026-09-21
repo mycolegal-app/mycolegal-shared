@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { HelpCircle, PlayCircle, BookOpen, Sparkles, Bug, ShieldCheck, X, Check } from "lucide-react";
+import { HelpCircle, PlayCircle, BookOpen, Sparkles, Bug, ShieldCheck, X, Check, BrainCircuit } from "lucide-react";
+import { AiUsagePanel } from "./ai-usage-panel";
 import { NavLink as Link } from "./nav-link";
 import { useI18n } from "../i18n/i18n-context";
 
@@ -26,15 +27,33 @@ interface HelpMenuProps {
   showPrivacy?: boolean;
   /** Destino de la Política de Privacidad / DPA (para el enlace del panel). */
   privacyHref?: string;
+  /** "Uso de la inteligencia artificial" — fichas de sistema de las funciones de IA
+   *  (PLAN_TECNICO_IA_RESPONSABLE §2). Por defecto sigue a `showAsk`: si la app
+   *  monta MycoBot tiene el proxy a Consultor que sirve las fichas. */
+  showAi?: boolean;
+  /** App actual: filtra las fichas a las funciones ofrecidas aquí. */
+  appSlug?: string;
+  /** Enlace a la Declaración de uso responsable de la IA (landing). */
+  aiHref?: string;
 }
 
 const ITEM =
   "flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-gray-700 hover:bg-gray-50";
 
-export function HelpMenu({ manualHref = "/manual", showIntro = true, showAsk = false, showReport = false, showPrivacy = false, privacyHref = "/legal/privacidad" }: HelpMenuProps) {
+export function HelpMenu({ manualHref = "/manual", showIntro = true, showAsk = false, showReport = false, showPrivacy = false, privacyHref = "/legal/privacidad", showAi, appSlug, aiHref = "https://mycolegal.app/legal/ia-responsable" }: HelpMenuProps) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
+  const aiEnabled = showAi ?? showAsk;
+
+  // Un <AiBadge> ("¿Qué significa?") pide abrir el panel de IA en su ficha.
+  useEffect(() => {
+    if (!aiEnabled) return;
+    const handler = () => { setAiOpen(true); setOpen(false); };
+    window.addEventListener("mycolegal:open-ai-panel", handler);
+    return () => window.removeEventListener("mycolegal:open-ai-panel", handler);
+  }, [aiEnabled]);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -104,7 +123,17 @@ export function HelpMenu({ manualHref = "/manual", showIntro = true, showAsk = f
               {t("ui.header.helpMenuPrivacy")}
             </button>
           )}
+          {aiEnabled && (
+            <button type="button" role="menuitem" onClick={() => { setAiOpen(true); setOpen(false); }} className={ITEM}>
+              <BrainCircuit className="h-4 w-4 shrink-0 text-amber-600" />
+              {t("ui.header.helpMenuAi")}
+            </button>
+          )}
         </div>
+      )}
+
+      {aiEnabled && (
+        <AiUsagePanel open={aiOpen} onClose={() => setAiOpen(false)} appSlug={appSlug} declaracionHref={aiHref} />
       )}
 
       {privacyOpen && (

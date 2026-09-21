@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { marked } from "marked";
 import { useI18n } from "../i18n/i18n-context";
+import { AiBadge, type AiTrace } from "./ai-badge";
 import { SinCreditos, esErrorDeCreditos } from "./sin-creditos";
 import { useSidebarCollapse } from "../layout/sidebar-collapse-context";
 import { cn } from "../../lib/utils";
@@ -152,6 +153,7 @@ interface DonePayload {
   citasAyuda?: AyudaCita[];
   skill?: Msg["skill"];
   sinResultado?: boolean;
+  trace?: AiTrace;
 }
 
 // Cita devuelta por el backend (AskResult.citas de consultor).
@@ -186,6 +188,9 @@ interface Msg {
   sinCreditos?: boolean;
   /** Pasos que siguió el bucle agéntico (para «Ver proceso»). */
   steps?: StepRecord[];
+  /** Identificación de la salida de IA (modelo, residencia, versión, contexto):
+   *  badge discreto al pie de la respuesta (PLAN_TECNICO_IA_RESPONSABLE §3). */
+  trace?: AiTrace | null;
 }
 
 // Resumen de conversación (GET …/conversaciones).
@@ -330,6 +335,30 @@ export function MycoBotRail({
       // Portapapeles no disponible (permiso/contexto no seguro): no rompemos nada.
     }
   }, []);
+  // «Reportar esta respuesta» (PLAN_TECNICO_IA_RESPONSABLE §5, art. 27 del Código):
+  // abre el IncidentReporter montado en el app-shell con la conversación como
+  // contexto y el texto pre-rellenado. El agente de incidencias puede leer el
+  // hilo completo por `conversacionId`.
+  const reportAnswer = useCallback(
+    (m: Msg) => {
+      const extracto = m.text.length > 400 ? `${m.text.slice(0, 400)}…` : m.text;
+      window.dispatchEvent(
+        new CustomEvent("mycolegal:open-incident-reporter", {
+          detail: {
+            kind: "incident",
+            prefill: `${t("ui.mycobot.reportPrefill")}\n\n> ${extracto.replace(/\n/g, "\n> ")}\n\n`,
+            extra: {
+              origen: "mycobot",
+              conversacionId,
+              funcion: m.trace?.funcion ?? "mycobot",
+              trace: m.trace ?? null,
+            },
+          },
+        }),
+      );
+    },
+    [conversacionId, t],
+  );
   const [conversaciones, setConversaciones] = useState<ConversacionResumen[] | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [viewer, setViewer] = useState<ViewerState | null>(null);
@@ -707,6 +736,7 @@ export function MycoBotRail({
               citasAyuda: data.citasAyuda ?? [],
               skill: data.skill,
               sinResultado: !!data.sinResultado,
+              trace: data.trace ?? null,
             },
           ]);
           return;
@@ -774,6 +804,7 @@ export function MycoBotRail({
             skill: final?.skill,
             sinResultado: !!final?.sinResultado,
             steps: steps.length ? steps.slice() : undefined,
+            trace: final?.trace ?? null,
           },
         ]);
       } catch {
@@ -917,10 +948,12 @@ export function MycoBotRail({
         const res = await fetch(`${baseUrl}/conversaciones/${id}`);
         const json = await res.json().catch(() => ({}));
         const turnos: {
+          id?: string;
           pregunta: string;
           respuesta: string | null;
           citas?: Cita[];
           sinResultado?: boolean;
+          trace?: AiTrace | null;
         }[] = res.ok ? json.data ?? [] : [];
         const msgs: Msg[] = [];
         for (const turno of turnos) {
@@ -931,6 +964,7 @@ export function MycoBotRail({
               text: turno.respuesta,
               citas: turno.citas ?? [],
               sinResultado: !!turno.sinResultado,
+              trace: turno.trace ?? null,
             });
           }
         }
@@ -1736,7 +1770,23 @@ export function MycoBotRail({
                           que avisen a quien administra la cuenta. */}
                       {m.sinCreditos && <SinCreditos message="" />}
                       {m.role === "bot" && !m.error && m.skill !== "fuera" && m.text && (
-                        <div className="mt-1.5 flex justify-end">
+                        <div className="mt-1.5 flex items-center justify-end gap-2">
+                          {/* Identificación de la salida (punto ámbar; píldora al pasar) y
+                              «reportar esta respuesta» (art. 27 del Código: comunicar
+                              resultados erróneos o sesgados). Ambos discretos a propósito. */}
+                          <AiBadge trace={m.trace} mode="hover" />
+                          <button
+                            type="button"
+                            onClick={() => reportAnswer(m)}
+                            className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-gray-600"
+                            title={t("ui.mycobot.report")}
+                            aria-label={t("ui.mycobot.report")}
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+                              <line x1="4" y1="22" x2="4" y2="15" />
+                            </svg>
+                          </button>
                           <button
                             type="button"
                             onClick={() => copyAnswer(i, m.text)}

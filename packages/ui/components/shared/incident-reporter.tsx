@@ -156,6 +156,10 @@ export function IncidentReporter({
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
   const [attachError, setAttachError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  // Contexto que llega con el evento de apertura (p.ej. «reportar esta respuesta»
+  // de MycoBot): texto pre-rellenado, naturaleza preseleccionada y datos extra que
+  // viajan en `metadata.context` para que el agente de incidencias los lea.
+  const externalContextRef = useRef<{ extra?: Record<string, unknown> } | null>(null);
 
   const consoleErrors = useConsoleErrorCapture();
 
@@ -245,7 +249,7 @@ export function IncidentReporter({
     }
   }, []);
 
-  const openReporter = useCallback(async () => {
+  const openReporter = useCallback(async (opts?: { prefill?: string; kind?: ReportKind; extra?: Record<string, unknown> }) => {
     setResult(null);
     setErrorMessage("");
     // Rehydrate any unsent draft (e.g. the previous attempt was interrupted by
@@ -257,12 +261,16 @@ export function IncidentReporter({
     } catch {
       // localStorage blocked — start empty.
     }
-    setDescription(draft);
+    // Un pre-relleno externo (p.ej. la respuesta de MycoBot que se reporta) manda
+    // sobre el borrador: es lo que el usuario acaba de pedir reportar.
+    setDescription(opts?.prefill ? opts.prefill : draft);
+    externalContextRef.current = opts?.extra ? { extra: opts.extra } : null;
     setScreenshot(null);
     setAttachments([]);
     setAttachError(null);
-    // Cada apertura arranca en el paso de elección incidencia vs mejora.
-    setKind(null);
+    // Cada apertura arranca en el paso de elección incidencia vs mejora, salvo que
+    // quien abre ya sepa la naturaleza (reporte de una respuesta de IA = incidencia).
+    setKind(opts?.kind ?? null);
     // Capture BEFORE opening the dialog so the overlay + modal don't end up
     // in the screenshot. captureScreenshot manages its own capturing state.
     await captureScreenshot();
@@ -316,7 +324,10 @@ export function IncidentReporter({
   // `window.dispatchEvent(new CustomEvent("mycolegal:open-incident-reporter"))`
   // to open the modal (e.g. CTA en empty state de /incidencias).
   useEffect(() => {
-    const handler = () => { void openReporter(); };
+    const handler = (e: Event) => {
+      const d = (e as CustomEvent<{ prefill?: string; kind?: ReportKind; extra?: Record<string, unknown> } | undefined>).detail;
+      void openReporter(d ?? undefined);
+    };
     window.addEventListener("mycolegal:open-incident-reporter", handler);
     return () => window.removeEventListener("mycolegal:open-incident-reporter", handler);
   }, [openReporter]);
@@ -349,6 +360,9 @@ export function IncidentReporter({
             consoleErrors: kind === "improvement" ? [] : consoleErrors,
             screenshotCaptureError: captureError,
             capturedAt: new Date().toISOString(),
+            // Contexto de quien abrió el reporter (conversación de MycoBot, traza de
+            // la respuesta reportada…). Ausente en los reportes manuales.
+            ...(externalContextRef.current?.extra ? { context: externalContextRef.current.extra } : {}),
           },
           // #162 — adjuntos del usuario (sin sizeBytes, que es solo de UI).
           attachments: attachments.length
@@ -420,7 +434,7 @@ export function IncidentReporter({
       {visible && (
         <button
           type="button"
-          onClick={openReporter}
+          onClick={() => void openReporter()}
           title={t("ui.incidentReporter.btnTooltip", { shortcut: shortcutLabel })}
           aria-label={t("ui.incidentReporter.btnAria", { shortcut: shortcutLabel })}
           className="fixed bottom-6 right-6 z-[130] inline-flex h-10 w-10 items-center justify-center rounded-full bg-navy text-white shadow-lg ring-1 ring-white/40 transition-transform hover:scale-105 hover:bg-navy-800 focus:outline-none focus:ring-2 focus:ring-cyan print:hidden"

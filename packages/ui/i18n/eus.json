@@ -799,7 +799,8 @@
       "privacyRgpd": "RGPD eta LOPD betetze zorrotza.",
       "privacyOwner": "Zure informazioa zurea da soilik: titularraren erabilera esklusiboa.",
       "privacyNotraining": "Ez dugu IA modelorik entrenatzen zure edukiekin.",
-      "privacyLink": "Ikusi Pribatutasun Politika eta DPA"
+      "privacyLink": "Ikusi Pribatutasun Politika eta DPA",
+      "helpMenuAi": "Adimen artifizialaren erabilera"
     },
     "sidebar": {
       "goHome": "Hasierara joan",
@@ -1124,7 +1125,9 @@
       "skillDuplicate": "Bikoiztu",
       "skillFormNew": "Skill berria",
       "skillFormEdit": "Editatu skill-a",
-      "creditosAvisaAdmin": "Abisatu kontua kudeatzen duenari kargatzeko."
+      "creditosAvisaAdmin": "Abisatu kontua kudeatzen duenari kargatzeko.",
+      "report": "Erantzun hau jakinarazi",
+      "reportPrefill": "MycoBoten erantzun okerra, osatugabea edo alboratua. Erantzun zuena:"
     },
     "registradorPicker": {
       "placeholder": "Bilatu erregistroa izenez edo herriz…",
@@ -1165,6 +1168,47 @@
       "irreversible": "Ekintza hau ezin da desegin.",
       "notice": "Oharra",
       "error": "Ezin izan da ekintza osatu"
+    },
+    "ai": {
+      "generatedWith": "AArekin sortua",
+      "instructions": "jarraibideak",
+      "whatIsThis": "Zer esan nahi du?",
+      "eu": "EB",
+      "nonEu": "EBtik kanpo",
+      "euUnknown": "egoitza katalogatu gabea",
+      "oneSource": "iturri 1",
+      "sources": "{n} iturri",
+      "ctx": {
+        "corpus": "doktrina-corpusa",
+        "ayuda": "laguntza-eskuliburua",
+        "normativa": "araudia",
+        "datos": "bulegoko datuak",
+        "documento": "ekarritako dokumentua",
+        "general": "ereduaren ezagutza orokorra"
+      },
+      "panel": {
+        "title": "Adimen artifizialaren erabilera aplikazio honetan",
+        "close": "Itxi",
+        "auxiliar": "AA laguntzailea da eta inoiz ez du erabakitzen: emaitza bakoitza pertsona batek berrikusten duen proposamena da.",
+        "contrastable": "Beti kontrasta dezakezu: funtsezko erantzunek jatorrizko iturria aipatzen dute eta corpusak babesten ez duena markatzen dute.",
+        "ue": "Ereduak Europar Batasunean exekutatzen dira eta zure testuak ez dira erabiltzen haiek entrenatzeko.",
+        "fichas": "Sistema-fitxak (Kode Deontologikoaren 8. eta 21. art.)",
+        "noFichas": "Ez dago AA funtziorik deklaratuta aplikazio honetarako.",
+        "interna": "barnekoa",
+        "finalidad": "Helburua",
+        "usoAdmisible": "Erabilera onargarria",
+        "art3": "3. artikulua, {letras} atalak",
+        "datos": "Tratatutako datuak",
+        "autonomia": "Autonomia",
+        "supervision": "Gainbegiratzea",
+        "modelo": "Indarreko eredua",
+        "modeloDefecto": "plataformaren eredu lehenetsia",
+        "version": "Jarraibideak",
+        "prompts": "{n} jarraibide",
+        "actualizado": "Azken aldaketa",
+        "declaracion": "AAren erabilera arduratsuaren adierazpen osoa",
+        "plantilla": "Bulegorako barne-politikaren txantiloia"
+      }
     }
   },
   "unidad": {

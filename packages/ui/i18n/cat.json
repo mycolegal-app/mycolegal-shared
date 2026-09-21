@@ -800,7 +800,8 @@
       "privacyRgpd": "Compliment estricte del RGPD i la LOPD.",
       "privacyOwner": "La teva informació és només teva: ús exclusiu del seu titular.",
       "privacyNotraining": "No entrenem models d'IA amb els teus continguts.",
-      "privacyLink": "Veure Política de Privacitat i DPA"
+      "privacyLink": "Veure Política de Privacitat i DPA",
+      "helpMenuAi": "Ús de la intel·ligència artificial"
     },
     "sidebar": {
       "goHome": "Anar a l'inici",
@@ -1125,7 +1126,9 @@
       "skillDuplicate": "Duplicar",
       "skillFormNew": "Nova skill",
       "skillFormEdit": "Editar skill",
-      "creditosAvisaAdmin": "Avisa qui administra el compte perquè els recarregui."
+      "creditosAvisaAdmin": "Avisa qui administra el compte perquè els recarregui.",
+      "report": "Reportar aquesta resposta",
+      "reportPrefill": "Resposta de MycoBot incorrecta, incompleta o esbiaixada. El que va respondre:"
     },
     "registradorPicker": {
       "placeholder": "Cercar registre per nom o població…",
@@ -1166,6 +1169,47 @@
       "irreversible": "Aquesta acció no es pot desfer.",
       "notice": "Avís",
       "error": "No s'ha pogut completar l'acció"
+    },
+    "ai": {
+      "generatedWith": "Generat amb IA",
+      "instructions": "instruccions",
+      "whatIsThis": "Què significa?",
+      "eu": "UE",
+      "nonEu": "fora de la UE",
+      "euUnknown": "residència no catalogada",
+      "oneSource": "1 font",
+      "sources": "{n} fonts",
+      "ctx": {
+        "corpus": "corpus doctrinal",
+        "ayuda": "manual d'ajuda",
+        "normativa": "normativa",
+        "datos": "dades del despatx",
+        "documento": "document aportat",
+        "general": "coneixement general del model"
+      },
+      "panel": {
+        "title": "Ús de la intel·ligència artificial en aquesta aplicació",
+        "close": "Tancar",
+        "auxiliar": "La IA és auxiliar i mai decideix: cada resultat és una proposta que revisa una persona.",
+        "contrastable": "Sempre pots contrastar: les respostes de fons citen la font original i marquen el que no està avalat pel corpus.",
+        "ue": "Els models s'executen a la Unió Europea i els teus textos no s'usen per entrenar-los.",
+        "fichas": "Fitxes de sistema (arts. 8 i 21 del Codi Deontològic)",
+        "noFichas": "No hi ha funcions d'IA declarades per a aquesta aplicació.",
+        "interna": "interna",
+        "finalidad": "Finalitat",
+        "usoAdmisible": "Ús admissible",
+        "art3": "Article 3, apartats {letras}",
+        "datos": "Dades tractades",
+        "autonomia": "Autonomia",
+        "supervision": "Supervisió",
+        "modelo": "Model en vigor",
+        "modeloDefecto": "model per defecte de la plataforma",
+        "version": "Instruccions",
+        "prompts": "{n} instruccions",
+        "actualizado": "Darrer canvi",
+        "declaracion": "Declaració completa d'ús responsable de la IA",
+        "plantilla": "Plantilla de política interna per al despatx"
+      }
     }
   },
   "unidad": {

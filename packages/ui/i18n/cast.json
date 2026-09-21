@@ -800,7 +800,8 @@
       "privacyRgpd": "Cumplimiento estricto del RGPD y la LOPD.",
       "privacyOwner": "Tu información es solo tuya: uso exclusivo de su titular.",
       "privacyNotraining": "No entrenamos modelos de IA con tus contenidos.",
-      "privacyLink": "Ver Política de Privacidad y DPA"
+      "privacyLink": "Ver Política de Privacidad y DPA",
+      "helpMenuAi": "Uso de la inteligencia artificial"
     },
     "sidebar": {
       "goHome": "Ir al inicio",
@@ -1125,7 +1126,9 @@
       "skillDuplicate": "Duplicar",
       "skillFormNew": "Nueva skill",
       "skillFormEdit": "Editar skill",
-      "creditosAvisaAdmin": "Avisa a quien administra la cuenta para recargarlos."
+      "creditosAvisaAdmin": "Avisa a quien administra la cuenta para recargarlos.",
+      "report": "Reportar esta respuesta",
+      "reportPrefill": "Respuesta de MycoBot incorrecta, incompleta o sesgada. Lo que respondió:"
     },
     "registradorPicker": {
       "placeholder": "Buscar registro por nombre o población…",
@@ -1166,6 +1169,47 @@
       "irreversible": "Esta acción no se puede deshacer.",
       "notice": "Aviso",
       "error": "No se ha podido completar la acción"
+    },
+    "ai": {
+      "generatedWith": "Generado con IA",
+      "instructions": "instrucciones",
+      "whatIsThis": "¿Qué significa?",
+      "eu": "UE",
+      "nonEu": "fuera de la UE",
+      "euUnknown": "residencia no catalogada",
+      "oneSource": "1 fuente",
+      "sources": "{n} fuentes",
+      "ctx": {
+        "corpus": "corpus doctrinal",
+        "ayuda": "manual de ayuda",
+        "normativa": "normativa",
+        "datos": "datos del despacho",
+        "documento": "documento aportado",
+        "general": "conocimiento general del modelo"
+      },
+      "panel": {
+        "title": "Uso de la inteligencia artificial en esta aplicación",
+        "close": "Cerrar",
+        "auxiliar": "La IA es auxiliar y nunca decide: cada resultado es una propuesta que revisa una persona.",
+        "contrastable": "Siempre puedes contrastar: las respuestas de fondo citan la fuente original y marcan lo que no está respaldado por el corpus.",
+        "ue": "Los modelos se ejecutan en la Unión Europea y tus textos no se usan para entrenarlos.",
+        "fichas": "Fichas de sistema (arts. 8 y 21 del Código Deontológico)",
+        "noFichas": "No hay funciones de IA declaradas para esta aplicación.",
+        "interna": "interna",
+        "finalidad": "Finalidad",
+        "usoAdmisible": "Uso admisible",
+        "art3": "Artículo 3, apartados {letras}",
+        "datos": "Datos tratados",
+        "autonomia": "Autonomía",
+        "supervision": "Supervisión",
+        "modelo": "Modelo en vigor",
+        "modeloDefecto": "modelo por defecto de la plataforma",
+        "version": "Instrucciones",
+        "prompts": "{n} instrucciones",
+        "actualizado": "Último cambio",
+        "declaracion": "Declaración completa de uso responsable de la IA",
+        "plantilla": "Plantilla de política interna para el despacho"
+      }
     }
   },
   "unidad": {
