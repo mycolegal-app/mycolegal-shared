@@ -34,6 +34,16 @@ export interface Usage {
   model?: string | null;
   tokensIn?: number | null;
   tokensOut?: number | null;
+  /** Multiplicador del precio FIJO (acciones `fixed`); p.ej. el suplemento del
+   *  Revisor cobra N veces la acción de 1 crédito. Ignorado en modo tokens. */
+  quantity?: number | null;
+}
+
+export interface Quote {
+  /** Créditos SIN redondear; `null` si el modelo no tiene tarifa activa. */
+  credits: number | null;
+  creditsPerInputToken: number | null;
+  creditsPerOutputToken: number | null;
 }
 
 export interface WithCreditsCtx {
@@ -75,6 +85,17 @@ export function createCreditsClient(config: CreditsClientConfig) {
     return call(`balance?orgId=${encodeURIComponent(orgId)}`, { method: 'GET' });
   }
 
+  /** Catálogo de acciones medidas (todas las apps) con su tarifa vigente. */
+  async function listActions(): Promise<{ app: string; key: string; label: string; meterMode: string; fixedCredits: number }[]> {
+    const r = await call<{ data?: { app: string; key: string; label: string; meterMode: string; fixedCredits: number }[] }>('metered-actions', { method: 'GET' });
+    return r.data ?? [];
+  }
+
+  /** Cotiza (sin cargo) un consumo de tokens con la tarifa vigente del modelo. */
+  async function quote(input: { model: string; tokensIn?: number | null; tokensOut?: number | null }): Promise<Quote> {
+    return call('quote', { method: 'POST', body: input });
+  }
+
   /**
    * Envuelve una llamada de IA cobrando créditos: bloquea ANTES si no hay saldo
    * (descubierto de cortesía incluido), ejecuta `fn`, y liquida DESPUÉS con los
@@ -104,7 +125,7 @@ export function createCreditsClient(config: CreditsClientConfig) {
     return value;
   }
 
-  return { precheck, consume, getBalance, withCredits };
+  return { precheck, consume, getBalance, quote, listActions, withCredits };
 }
 
 // --- Proxy de saldo para la UI (GET /api/credits/balance) -------------------
