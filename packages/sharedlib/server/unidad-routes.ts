@@ -125,7 +125,10 @@ export interface UnidadDeps {
    */
   summarize?: (
     texto: string,
-  ) => Promise<{ ok: boolean; resumen?: string; status?: number; error?: string }>;
+  ) => Promise<{ ok: boolean; resumen?: string; status?: number; error?: string;
+    /** Identificación de la salida de IA (AiTrace de Consultor) para el badge del
+     *  resumen (PLAN_TECNICO_IA_RESPONSABLE §3). Solo en resúmenes recién generados. */
+    trace?: unknown }>;
   /**
    * Incorpora un fichero de la "Biblioteca particular" al corpus PRIVADO de la org
    * (Consultor: enrich + embeddings, resolucion con orgId + clase APORTACION_ORG,
@@ -1236,7 +1239,7 @@ export function createUnidadRoutes(deps: UnidadDeps) {
       where: { driveNodeId: nodeId },
       data: { resumen: r.resumen, resumidoAt: new Date() },
     });
-    return successResponse({ resumen: r.resumen, cached: false });
+    return successResponse({ resumen: r.resumen, cached: false, trace: r.trace ?? null });
   };
 
   /**
