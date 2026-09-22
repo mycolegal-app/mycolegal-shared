@@ -17,6 +17,14 @@ export interface OcrViaPlatformArgs {
   bytes: Uint8Array;
   /** MIME, p.ej. 'application/pdf' o 'image/jpeg'. Default 'application/pdf'. */
   mimeType?: string;
+  /**
+   * Organización a la que imputar el COSTE de los tokens del OCR. No cobra nada
+   * —el OCR es gratuito para el cliente— pero sin esto el consumo se acumula
+   * como coste de plataforma y la rentabilidad de esa notaría sale mejor de lo
+   * que es. Pásalo siempre que el documento sea de un cliente; omítelo sólo
+   * cuando el trabajo sea realmente de plataforma (ingesta del corpus común).
+   */
+  orgId?: string | null;
 }
 
 /**
@@ -31,7 +39,11 @@ export async function ocrViaPlatform(args: OcrViaPlatformArgs): Promise<{ texto:
   const res = await fetch(`${base}/internal/ocr`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Service-Key': args.serviceKey },
-    body: JSON.stringify({ base64, mimeType: args.mimeType ?? 'application/pdf' }),
+    body: JSON.stringify({
+      base64,
+      mimeType: args.mimeType ?? 'application/pdf',
+      ...(args.orgId ? { orgId: args.orgId } : {}),
+    }),
   });
   if (res.status === 503) return null; // OCR no configurado en ese entorno → degrada
   if (!res.ok) {
