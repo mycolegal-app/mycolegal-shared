@@ -167,7 +167,41 @@ export function createCreditsClient(config: CreditsClientConfig) {
     return value;
   }
 
-  return { precheck, consume, getBalance, quote, listActions, withCredits };
+  /**
+   * Envuelve una función de IA **gratuita para el cliente**: anota lo que ha
+   * consumido y NO cobra nada.
+   *
+   * Medir y cobrar son cosas distintas. Que una función sea gratis no la hace
+   * gratuita para la plataforma: el proveedor nos cobra igual, y si ese consumo
+   * no queda anotado, la rentabilidad del cliente sale falseada al alza — un
+   * cliente que solo usa lo gratuito aparece como el más rentable de todos.
+   *
+   * Diferencias con `withCredits`: no hay `precheck` (bloquear por saldo una
+   * función gratuita no tiene sentido) y el apunte va con coste cero. Por lo
+   * demás es el mismo camino: el ámbito de contabilidad recoge los tokens solo.
+   *
+   * La acción debe estar catalogada con `meterMode = 'none'`; así el Superadmin
+   * puede convertirla en cobrada desde Admin sin tocar código.
+   */
+  async function withUsage<T>(
+    ctx: Omit<WithCreditsCtx, 'onCharged'>,
+    fn: () => Promise<{ value: T; usage?: Usage }>,
+  ): Promise<T> {
+    const { value, usage } = await runWithUsageScope(async () => {
+      const r = await fn();
+      return { ...r, recogido: collectedUsage() };
+    }).then((r) => ({ value: r.value, usage: fundirUso(r.usage, r.recogido) }));
+
+    try {
+      await consume({ ...ctx, ...usage });
+    } catch (err) {
+      // Medir nunca debe romper la operación del usuario.
+      console.error('[credits] no se pudo anotar el uso', { actionKey: ctx.actionKey, err });
+    }
+    return value;
+  }
+
+  return { precheck, consume, getBalance, quote, listActions, withCredits, withUsage };
 }
 
 // --- Proxy de saldo para la UI (GET /api/credits/balance) -------------------
