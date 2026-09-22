@@ -1,5 +1,25 @@
 # mycolegal-sharedlib — Changelog
 
+## 0.11.2 — document-templates: plantillas de documento por organización (2026-09-22)
+
+Type: **revision**
+
+- Nuevo `document-templates.ts`: `listarPlantillas`, `resolverCuerpo`,
+  `guardarPlantilla`, `buscarEntrada`, `macrosDesconocidas`, y los tipos
+  `DocumentTemplateEntry` / `DocumentTemplateMacro`. Unifica lo que LegiFirma,
+  Archivo y Pólizas tenían duplicado en sus rutas `document-templates` (cruzar
+  el catálogo en código con los overrides de `document_templates`, validar,
+  guardar y restaurar).
+- El módulo devuelve HECHOS, no respuestas HTTP: las tres apps no responden lo
+  mismo y las diferencias son deliberadas (LegiFirma y Archivo devuelven `body:
+  null` sin override; Pólizas devuelve el texto vigente para poder traducir
+  encima, #653). Lo que varía de verdad viaja como parámetro explícito
+  —`alRestaurar: 'borrar' | 'desactivar'`, `bodyFormat`, `idioma`—, así que
+  ninguna app cambia de comportamiento al migrar.
+- Estrena consumidor: Tramitación, para el oficio de solicitud de copia (#831),
+  que hasta ahora tenía la plantilla horneada en código y solo cubría 1 de las 6
+  combinaciones que usa la notaría.
+
 ## 0.10.13 — server/feature-usage: señal de uso por funcionalidad (2026-09-13)
 
 Type: **revision**

@@ -1,6 +1,6 @@
 {
   "name": "@mycolegal-app/sharedlib",
-  "version": "0.11.1",
+  "version": "0.11.2",
   "type": "module",
   "main": "./index.ts",
   "publishConfig": {
@@ -35,6 +35,8 @@
     "tsconfig.json",
     "VERSION.md",
     "pdf-client.ts",
+    "document-templates.ts",
+    "idiomas-documento.ts",
     "server"
   ],
   "peerDependencies": {
