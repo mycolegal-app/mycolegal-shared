@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { runWithUsageScope, collectedUsage, type UsoAcumulado } from './llm-usage';
 
 /**
  * Cliente y proxy del monedero de créditos de IA (owner: mycolegal-platform).
@@ -58,6 +59,22 @@ export interface WithCreditsCtx {
   onCharged?: (creditsCharged: number) => void;
 }
 
+/**
+ * Funde lo que declara el llamante con lo que anotó el transporte.
+ *
+ * El llamante manda campo a campo: si pasa tokens explícitos es porque sabe algo
+ * que el transporte no (un proveedor que no pasa por él, o un reparto propio del
+ * coste). Lo que no declare se rellena con lo acumulado, que es el caso normal.
+ */
+function fundirUso(declarado: Usage | undefined, recogido: UsoAcumulado | undefined): Usage {
+  return {
+    model: declarado?.model ?? recogido?.model ?? null,
+    tokensIn: declarado?.tokensIn ?? recogido?.tokensIn ?? null,
+    tokensOut: declarado?.tokensOut ?? recogido?.tokensOut ?? null,
+    ...(declarado?.quantity != null ? { quantity: declarado.quantity } : {}),
+  };
+}
+
 export function createCreditsClient(config: CreditsClientConfig) {
   const base = config.platformUrl.replace(/\/$/, '');
 
@@ -99,11 +116,19 @@ export function createCreditsClient(config: CreditsClientConfig) {
   /**
    * Envuelve una llamada de IA cobrando créditos: bloquea ANTES si no hay saldo
    * (descubierto de cortesía incluido), ejecuta `fn`, y liquida DESPUÉS con los
-   * tokens reales que `fn` reporte. El cargo es best-effort: si la liquidación
-   * falla, la operación NO se rompe (la llamada de IA ya se hizo); se registra.
+   * tokens reales. El cargo es best-effort: si la liquidación falla, la operación
+   * NO se rompe (la llamada de IA ya se hizo); se registra.
    *
-   * `fn` devuelve `{ value, usage? }`; `usage` solo hace falta para acciones
-   * medidas por tokens (meterMode=tokens). Las de precio fijo lo ignoran.
+   * **Los tokens ya NO hay que pasarlos a mano.** `fn` se ejecuta dentro de un
+   * ámbito de contabilidad: el transporte compartido de Vertex anota cada llamada
+   * al modelo, y aquí se recoge el total. `usage` sigue aceptándose y tiene
+   * PRIORIDAD campo a campo, para los casos en que el llamante sabe algo que el
+   * transporte no (p.ej. `quantity`, o un proveedor que no pase por ese
+   * transporte). Lo que desaparece es la obligación de acordarse.
+   *
+   * Registrar tokens NO cambia lo que se cobra: el modo de cobro lo decide
+   * `meterMode` en el catálogo de acciones (fixed vs tokens). En las acciones de
+   * precio fijo los tokens se guardan solo como medida del coste real.
    */
   async function withCredits<T>(
     ctx: WithCreditsCtx,
@@ -112,11 +137,28 @@ export function createCreditsClient(config: CreditsClientConfig) {
     const pre = await precheck(ctx.orgId);
     if (pre.blocked) throw new InsufficientCreditsError(pre.balance);
 
-    const { value, usage } = await fn();
+    const { value, usage } = await runWithUsageScope(async () => {
+      const r = await fn();
+      // Se recoge DENTRO del ámbito: fuera ya se ha cerrado.
+      return { ...r, recogido: collectedUsage() };
+    }).then((r) => ({
+      value: r.value,
+      usage: fundirUso(r.usage, r.recogido),
+    }));
+
+    // Una acción de IA que se liquida sin un solo token es, casi siempre, una
+    // función nueva que nadie instrumentó: el coste real se pierde y no vuelve.
+    // Que deje rastro es la única forma de enterarse sin auditar el libro entero.
+    if (!usage.tokensIn && !usage.tokensOut) {
+      console.warn('[credits] acción de IA liquidada SIN tokens: el coste real no queda medido', {
+        app: config.app,
+        actionKey: ctx.actionKey,
+      });
+    }
 
     const { onCharged, ...meterCtx } = ctx;
     try {
-      const res = await consume({ ...meterCtx, ...(usage ?? {}) });
+      const res = await consume({ ...meterCtx, ...usage });
       onCharged?.(res.creditsCharged);
     } catch (err) {
       // Contabilidad best-effort: no romper la operación del usuario.

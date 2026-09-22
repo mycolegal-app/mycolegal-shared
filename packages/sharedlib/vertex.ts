@@ -8,6 +8,7 @@
 
 import { Agent } from 'node:https';
 import { GoogleAuth } from 'google-auth-library';
+import { recordLlmCall } from './server/llm-usage';
 
 const auth = new GoogleAuth({ scopes: ['https://www.googleapis.com/auth/cloud-platform'] });
 let cachedClient: Awaited<ReturnType<GoogleAuth['getClient']>> | null = null;
@@ -45,9 +46,45 @@ export function vertexModelUrl(model: string, verb: string, cfg: VertexModelConf
 }
 
 /**
+ * Tokens consumidos por una respuesta, según el proveedor.
+ *
+ * Gemini (`:generateContent`) los devuelve en `usageMetadata`; Claude en formato
+ * Messages (`:rawPredict`) en `usage`. Los embeddings (`:predict`) no reportan
+ * ninguno. Devuelve ceros si la respuesta no trae contabilidad.
+ */
+export function vertexUsage(data: unknown): { tokensIn: number; tokensOut: number } {
+  const d = data as {
+    usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
+    usage?: { input_tokens?: number; output_tokens?: number };
+  } | null;
+  if (d?.usageMetadata) {
+    return {
+      tokensIn: d.usageMetadata.promptTokenCount ?? 0,
+      tokensOut: d.usageMetadata.candidatesTokenCount ?? 0,
+    };
+  }
+  if (d?.usage) {
+    return { tokensIn: d.usage.input_tokens ?? 0, tokensOut: d.usage.output_tokens ?? 0 };
+  }
+  return { tokensIn: 0, tokensOut: 0 };
+}
+
+/** Id del modelo a partir de la URL REST (`…/models/<id>:<verbo>`). */
+function modelDeUrl(url: string | undefined): string | null {
+  if (!url) return null;
+  const m = /\/models\/([^/:?]+)(?::|$)/.exec(url);
+  return m ? m[1] : null;
+}
+
+/**
  * `client.request` con conexión nueva (sin keep-alive) + reintentos/backoff.
  * Reintenta ante 5xx/429 Y errores de red SIN `response` (`ERR_STREAM_PREMATURE_CLOSE`/
  * `ECONNRESET`). Un 4xx "real" (≠429) no se reintenta: no se arregla repitiendo.
+ *
+ * Además ANOTA el consumo de cada respuesta en la contabilidad ambiental
+ * (`server/llm-usage`), de modo que `withCredits` liquide con los tokens reales
+ * sin que el punto de llamada tenga que pasarlos a mano. Fuera de un ámbito de
+ * contabilidad abierto, anotar no hace nada.
  */
 export async function vertexRequest<T>(
   config: Parameters<Awaited<ReturnType<GoogleAuth['getClient']>>['request']>[0],
@@ -59,7 +96,10 @@ export async function vertexRequest<T>(
   let lastErr: unknown;
   for (let attempt = 1; attempt <= attempts; attempt++) {
     try {
-      return await client.request<T>({ ...config, agent: noKeepAliveAgent });
+      const res = await client.request<T>({ ...config, agent: noKeepAliveAgent });
+      const model = modelDeUrl(typeof config.url === 'string' ? config.url : undefined);
+      if (model) recordLlmCall({ model, ...vertexUsage(res.data) });
+      return res;
     } catch (err) {
       lastErr = err;
       const status = (err as { response?: { status?: number } })?.response?.status;
