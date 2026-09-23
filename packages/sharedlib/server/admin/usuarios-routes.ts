@@ -178,6 +178,39 @@ export function createUsuariosRoutes(deps: UsuariosRoutesDeps) {
           });
         }
       }
+
+      // Reconciliación de identidades muertas.
+      //
+      // Este bucle recorre los usuarios que devuelve auth, así que una fila local
+      // cuya cuenta ya NO existe allí no se visitaba nunca: ni se listaba aquí ni
+      // se desactivaba, y se quedaba `active: true` para siempre. Y el catálogo de
+      // empleados —el que alimenta los filtros y los selectores de responsable de
+      // Notaría, Pólizas, LegiFirma y Archivo— lista `UserRole` activos sin
+      // preguntarle nada a auth. Resultado: gente que ya no está ensuciando todos
+      // los desplegables, sin que el org_admin pudiera ni verla para quitarla.
+      //
+      // La regla que se impone aquí es en un solo sentido, y por eso es segura:
+      // una fila local PUEDE estar inactiva con la cuenta activa (desactivada sólo
+      // para esta app, que es legítimo); lo que nunca es legítimo es lo contrario,
+      // estar activa en la app con la cuenta suspendida o inexistente.
+      //
+      // `invited` NO entra: es una cuenta creada y pendiente de activar, que es un
+      // estado sano y transitorio. Barrerla dejaría fuera a quien todavía no ha
+      // entrado por primera vez.
+      //
+      // Sólo se ejecuta si el sync respondió bien (el camino de fallo sale antes,
+      // arriba): auth devuelve TODOS los usuarios de la org, sin paginar, así que
+      // "no está en la lista" significa de verdad que no existe.
+      if (prisma) {
+        const vivos = new Set(authUsers.filter((u) => u.status !== 'suspended').map((u) => u.id));
+        const muertas = localUsers.filter((u: any) => u.active && !vivos.has(u.authUserId));
+        if (muertas.length > 0) {
+          await prisma.userRole
+            .updateMany({ where: { id: { in: muertas.map((u: any) => u.id) } }, data: { active: false } })
+            .catch(() => {});
+        }
+      }
+
       return successResponse(result);
     } catch (error) {
       console.error('[admin/usuarios] GET error:', error);

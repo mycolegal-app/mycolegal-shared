@@ -1,5 +1,27 @@
 # mycolegal-sharedlib — Changelog
 
+## 0.11.3 — usuarios: reconciliar identidades muertas (2026-09-23)
+
+Type: **patch**
+
+- `server/admin/usuarios-routes.ts` desactiva ahora las filas `UserRole` locales
+  cuya cuenta en auth ya no existe o está suspendida.
+- El bucle de sincronización recorre los usuarios que devuelve auth, de modo que
+  una fila local sin cuenta detrás no se visitaba nunca: ni se listaba en el
+  panel ni se podía desactivar, y quedaba `active: true` indefinidamente. El
+  catálogo de empleados (`server/catalogs/empleados-route.ts`) lista los
+  `UserRole` activos sin consultar auth, así que esas identidades seguían
+  saliendo en los filtros y selectores de responsable de Notaría, Pólizas,
+  LegiFirma y Archivo (#716) — invisibles para el org_admin, que no tenía forma
+  de quitarlas. En la notaría de Micó eran 24 de 54 (incidencia #862).
+- La regla va en un solo sentido: una fila local puede estar inactiva con la
+  cuenta activa (desactivada sólo para esa app, legítimo); lo contrario —activa
+  en la app con la cuenta suspendida o inexistente— no lo es nunca.
+- `invited` queda EXCLUIDO a propósito: es un estado sano y transitorio. En las
+  notarías de Lorca, Fuertes Vidal, Barcelona y Madrid todas las filas que no
+  estaban activas eran invitaciones pendientes; una regla más amplia las habría
+  barrido.
+
 ## 0.11.2 — document-templates: plantillas de documento por organización (2026-09-22)
 
 Type: **revision**
