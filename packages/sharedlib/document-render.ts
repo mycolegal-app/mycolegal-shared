@@ -38,15 +38,29 @@ export function escapeHtml(s: string): string {
 }
 
 /**
- * Escapa los caracteres con significado en Markdown, incluidos los que abren
- * HTML embebido (`marked` lo deja pasar por defecto).
+ * Neutraliza los caracteres con significado en Markdown y el HTML embebido.
  *
  * Es el gemelo de `escapeHtml` para las plantillas que la notaría edita en
  * markdown: un nombre con `*` o `_` alteraría el formato, y uno con `<` podría
  * colar etiquetas igual que en el caso HTML.
+ *
+ * ⚠️ NO "simplificar" esto metiendo todos los signos de puntuación en la clase de
+ * caracteres. Es la implementación que Pólizas lleva en producción y está así por
+ * dos razones que se pierden a la primera:
+ *
+ *  · `<` y `>` van a ENTIDADES, no a `\<`. Es más robusto entre parsers.
+ *  · `|` SÍ se escapa (rompe una tabla GFM), y en cambio `.`, `&`, `"` y `'` NO.
+ *    Una contrabarra delante de `&` no es un escape de markdown: se imprime tal
+ *    cual, así que "A & B" saldría como "A \& B" en el documento. Lo mismo con
+ *    las comillas, y escapar el punto convertiría "S.L." en "S\.L\.".
+ *
+ * Es decir: escapar de más no es "más seguro", es corromper el nombre de un
+ * cliente en un documento notarial.
  */
 export function escapeMarkdown(s: string): string {
-  return s.replace(/[\\`*_{}[\]()#+\-.!<>&"']/g, (c) => `\\${c}`);
+  return s
+    .replace(/[<>]/g, (c) => (c === '<' ? '&lt;' : '&gt;'))
+    .replace(/([\\`*_{}[\]()#+\-!|])/g, '\\$1');
 }
 
 /**
