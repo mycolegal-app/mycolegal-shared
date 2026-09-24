@@ -208,7 +208,14 @@ function AppShellInner({
           </div>
         </header>
       {breadcrumbs}
-      <main className="flex-1 overflow-y-auto overflow-x-hidden p-6">{children}</main>
+      {/* #875 — `pb-20`: colchón al pie. El botón flotante de avisos es `fixed`
+          (40px, a 24px del borde), así que sin este hueco la ÚLTIMA fila de
+          cualquier lista a pantalla completa queda debajo de él y, al ser el
+          final del scroll, no hay forma de desplazarla. Le pasó a la papelera
+          del último trámite de un protocolo: imposible de pulsar.
+          El selector de esquina del reporter cubre los casos que esto no
+          alcance; el colchón es para que no haga falta usarlo. */}
+      <main className="flex-1 overflow-y-auto overflow-x-hidden p-6 pb-20">{children}</main>
     </div>
   );
 }

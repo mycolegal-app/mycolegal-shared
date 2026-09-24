@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bug, Camera, Send, Loader2, X, Paperclip, Upload, Minus, Maximize2, Lightbulb, ChevronLeft } from "lucide-react";
+import { Bug, Camera, Send, Loader2, X, Paperclip, Upload, Minus, Maximize2, Lightbulb, ChevronLeft, GripHorizontal } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,16 @@ import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 import { useI18n } from "../i18n/i18n-context";
 import { apiErrorMessage } from "../../lib/api-error";
+// #875 — esquina configurable del botón flotante.
+import { useFloatingCorner, CORNER_CLASSES, type FloatingCorner } from "./use-floating-corner";
+
+/** Clave i18n de cada esquina (`ui.incidentReporter.*`). */
+const ETIQUETA_ESQUINA: Record<FloatingCorner, string> = {
+  "bottom-right": "esquinaAbajoDerecha",
+  "bottom-left": "esquinaAbajoIzquierda",
+  "top-right": "esquinaArribaDerecha",
+  "top-left": "esquinaArribaIzquierda",
+};
 
 interface IncidentReporterProps {
   /** App slug sent with the report (e.g. "notaria", "legifirma"). */
@@ -152,6 +162,12 @@ export function IncidentReporter({
   // The button is visible by default; the shortcut flips it, and the
   // preference is persisted to localStorage so it survives reloads.
   const [visible, setVisible] = useState(true);
+  // #875 — Esquina del botón flotante (persistida) + selector abierto/cerrado.
+  // Nótese que el atajo de teclado ya permitía OCULTARLO; lo que faltaba era
+  // poder APARTARLO, que es lo que se necesita cuando tapa un control y aun así
+  // quieres seguir pudiendo avisar.
+  const { corner, setCorner, corners } = useFloatingCorner();
+  const [moverAbierto, setMoverAbierto] = useState(false);
   // #162 — user-provided attachments for the new incident.
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
   const [attachError, setAttachError] = useState<string | null>(null);
@@ -431,16 +447,81 @@ export function IncidentReporter({
 
   return (
     <>
+      {/* #875 — El botón es `fixed`, así que ocupa su esquina pase lo que pase
+          debajo. En la cola de trámites de un protocolo tapaba la papelera del
+          ÚLTIMO trámite, y al ser el final de la lista no había forma de
+          desplazarla: el trámite quedaba imposible de borrar.
+          El colchón inferior del shell evita la colisión en el caso normal; esto
+          le da al usuario la salida para cualquier pantalla que no previmos.
+          Cuatro esquinas y no arrastre libre: con posiciones discretas es
+          IMPOSIBLE dejar el botón fuera de pantalla al cambiar de monitor. */}
       {visible && (
-        <button
-          type="button"
-          onClick={() => void openReporter()}
-          title={t("ui.incidentReporter.btnTooltip", { shortcut: shortcutLabel })}
-          aria-label={t("ui.incidentReporter.btnAria", { shortcut: shortcutLabel })}
-          className="fixed bottom-6 right-6 z-[130] inline-flex h-10 w-10 items-center justify-center rounded-full bg-navy text-white shadow-lg ring-1 ring-white/40 transition-transform hover:scale-105 hover:bg-navy-800 focus:outline-none focus:ring-2 focus:ring-cyan print:hidden"
-        >
-          <Bug className="h-5 w-5" />
-        </button>
+        <div className={`fixed ${CORNER_CLASSES[corner]} z-[130] print:hidden`}>
+          <div className="group relative">
+            <button
+              type="button"
+              onClick={() => void openReporter()}
+              onContextMenu={(e) => {
+                // Atajo para quien lo intuya. La agarradera visible de abajo es
+                // la vía descubrible; el clic derecho, un acelerador.
+                e.preventDefault();
+                setMoverAbierto((v) => !v);
+              }}
+              title={t("ui.incidentReporter.btnTooltip", { shortcut: shortcutLabel })}
+              aria-label={t("ui.incidentReporter.btnAria", { shortcut: shortcutLabel })}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-navy text-white shadow-lg ring-1 ring-white/40 transition-transform hover:scale-105 hover:bg-navy-800 focus:outline-none focus:ring-2 focus:ring-cyan"
+            >
+              <Bug className="h-5 w-5" />
+            </button>
+
+            {/* Agarradera: aparece al pasar el ratón (o con el foco en el
+                teclado, que es lo que la hace accesible sin ratón). Sin ella el
+                selector solo lo encontraría quien pruebe el clic derecho. */}
+            <button
+              type="button"
+              onClick={() => setMoverAbierto((v) => !v)}
+              title={t("ui.incidentReporter.moverTitulo")}
+              aria-label={t("ui.incidentReporter.moverAria")}
+              aria-expanded={moverAbierto}
+              className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full border border-gray-200 bg-white p-0.5 text-gray-500 opacity-0 shadow transition-opacity hover:text-navy focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-cyan group-hover:opacity-100"
+            >
+              <GripHorizontal className="h-3 w-3" />
+            </button>
+
+            {moverAbierto && (
+              <div
+                className={`absolute ${corner.startsWith("bottom") ? "bottom-12" : "top-12"} ${
+                  corner.endsWith("right") ? "right-0" : "left-0"
+                } w-44 rounded-lg border border-gray-200 bg-white p-2 shadow-xl`}
+                role="group"
+                aria-label={t("ui.incidentReporter.moverAria")}
+              >
+                <p className="mb-1.5 px-1 text-xs font-medium text-gray-500">
+                  {t("ui.incidentReporter.moverTitulo")}
+                </p>
+                <div className="grid grid-cols-2 gap-1">
+                  {corners.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => {
+                        setCorner(c);
+                        setMoverAbierto(false);
+                      }}
+                      className={`rounded-md px-2 py-1.5 text-xs transition-colors ${
+                        c === corner
+                          ? "bg-navy text-white"
+                          : "bg-gray-50 text-gray-700 hover:bg-gray-100"
+                      }`}
+                    >
+                      {t(`ui.incidentReporter.${ETIQUETA_ESQUINA[c]}`)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* #306 — barra minimizada: deja ver la pantalla sin perder el borrador. */}

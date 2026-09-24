@@ -538,7 +538,13 @@
       "btnSendImprovement": "Proposamena bidali",
       "sentOkImprovement": "Proposamena bidalita. Eskerrik asko.",
       "minimizedLabelImprovement": "Hobekuntza bat proposatu",
-      "btnBack": "Atzera"
+      "btnBack": "Atzera",
+      "moverTitulo": "Abisua lekuz aldatu",
+      "moverAria": "Eraman abisu-botoia beste izkina batera",
+      "esquinaAbajoDerecha": "Behean eskuinean",
+      "esquinaAbajoIzquierda": "Behean ezkerrean",
+      "esquinaArribaDerecha": "Goian eskuinean",
+      "esquinaArribaIzquierda": "Goian ezkerrean"
     },
     "appInfo": {
       "btnAria": "Aplikazioari buruz",

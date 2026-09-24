@@ -539,7 +539,13 @@
       "btnSendImprovement": "Enviar proposta",
       "sentOkImprovement": "Proposta enviada. Gràcies.",
       "minimizedLabelImprovement": "Proposar una millora",
-      "btnBack": "Enrere"
+      "btnBack": "Enrere",
+      "moverTitulo": "Moure l'avís",
+      "moverAria": "Moure el botó d'avisos a una altra cantonada",
+      "esquinaAbajoDerecha": "Avall dreta",
+      "esquinaAbajoIzquierda": "Avall esquerra",
+      "esquinaArribaDerecha": "Amunt dreta",
+      "esquinaArribaIzquierda": "Amunt esquerra"
     },
     "appInfo": {
       "btnAria": "Quant a l'aplicació",

@@ -539,7 +539,13 @@
       "btnSendImprovement": "Enviar propuesta",
       "sentOkImprovement": "Propuesta enviada. Gracias.",
       "minimizedLabelImprovement": "Proponer una mejora",
-      "btnBack": "Atrás"
+      "btnBack": "Atrás",
+      "moverTitulo": "Mover el aviso",
+      "moverAria": "Mover el botón de avisos a otra esquina",
+      "esquinaAbajoDerecha": "Abajo derecha",
+      "esquinaAbajoIzquierda": "Abajo izquierda",
+      "esquinaArribaDerecha": "Arriba derecha",
+      "esquinaArribaIzquierda": "Arriba izquierda"
     },
     "appInfo": {
       "btnAria": "Acerca de la aplicación",
