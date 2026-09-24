@@ -135,7 +135,7 @@
     "cmdk": "^1.1.1",
     "html2canvas": "^1.4.1",
     "lucide-react": "^0.468.0",
-    "marked": "^12.0.2",
+    "marked": "^15.0.0",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "turndown": "^7.2.4",
