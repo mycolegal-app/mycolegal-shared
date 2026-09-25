@@ -45,6 +45,32 @@ function esValida(v: unknown): v is FloatingCorner {
   return typeof v === "string" && (CORNERS as string[]).includes(v);
 }
 
+/**
+ * #889 — Esquina del cuadrante donde se suelta el puntero.
+ *
+ * El asa se dibuja con un icono de agarre, que promete arrastre. En #875 sólo
+ * abría un menú al hacer clic, así que quien la arrastraba —lo natural viendo
+ * ese icono— veía que el botón no se movía y daba por roto el arreglo.
+ *
+ * Se arrastra de verdad, pero al soltar ANCLA a la esquina del cuadrante: se
+ * mantiene la garantía de #875 (con posiciones discretas el botón no puede
+ * quedar fuera de pantalla al cambiar de monitor) sin desmentir el icono.
+ *
+ * El punto medio exacto cae a abajo/derecha (el `<` es estricto), lo que da
+ * igual: cualquiera de los dos cuadrantes es una esquina válida y el usuario
+ * está justo en la frontera.
+ */
+export function esquinaMasCercana(
+  x: number,
+  y: number,
+  ancho: number,
+  alto: number,
+): FloatingCorner {
+  const vertical = y < alto / 2 ? "top" : "bottom";
+  const horizontal = x < ancho / 2 ? "left" : "right";
+  return `${vertical}-${horizontal}` as FloatingCorner;
+}
+
 export function useFloatingCorner(): {
   corner: FloatingCorner;
   setCorner: (c: FloatingCorner) => void;

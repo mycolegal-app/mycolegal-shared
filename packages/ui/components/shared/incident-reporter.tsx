@@ -14,8 +14,16 @@ import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 import { useI18n } from "../i18n/i18n-context";
 import { apiErrorMessage } from "../../lib/api-error";
-// #875 — esquina configurable del botón flotante.
-import { useFloatingCorner, CORNER_CLASSES, type FloatingCorner } from "./use-floating-corner";
+// #875 — esquina configurable del botón flotante. #889 — anclaje al soltar.
+import {
+  useFloatingCorner,
+  CORNER_CLASSES,
+  esquinaMasCercana,
+  type FloatingCorner,
+} from "./use-floating-corner";
+
+/** Píxeles a partir de los cuales un gesto deja de ser clic y es arrastre. */
+const UMBRAL_ARRASTRE = 4;
 
 /** Clave i18n de cada esquina (`ui.incidentReporter.*`). */
 const ETIQUETA_ESQUINA: Record<FloatingCorner, string> = {
@@ -168,6 +176,12 @@ export function IncidentReporter({
   // quieres seguir pudiendo avisar.
   const { corner, setCorner, corners } = useFloatingCorner();
   const [moverAbierto, setMoverAbierto] = useState(false);
+  // #889 — arrastre del asa. `arrastre` es la posición del puntero mientras se
+  // arrastra (null = no se está arrastrando); sirve para pintar el botón bajo
+  // el dedo y para saber, al soltar, a qué esquina anclar.
+  const [arrastre, setArrastre] = useState<{ x: number; y: number } | null>(null);
+  // Un arrastre corto es en realidad un clic: abre el menú en vez de anclar.
+  const arrastreInicio = useRef<{ x: number; y: number } | null>(null);
   // #162 — user-provided attachments for the new incident.
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
   const [attachError, setAttachError] = useState<string | null>(null);
@@ -455,8 +469,38 @@ export function IncidentReporter({
           le da al usuario la salida para cualquier pantalla que no previmos.
           Cuatro esquinas y no arrastre libre: con posiciones discretas es
           IMPOSIBLE dejar el botón fuera de pantalla al cambiar de monitor. */}
+      {/* #889 — Mientras se arrastra: el botón sigue al puntero y la esquina de
+          destino se marca, para que se vea ADÓNDE va a anclar antes de soltar.
+          Sin esto el arrastre se siente igual de muerto que antes. */}
+      {visible && arrastre && (
+        <>
+          <div
+            className="pointer-events-none fixed z-[131] h-10 w-10 -translate-x-1/2 -translate-y-1/2 rounded-full bg-navy opacity-70 shadow-lg ring-1 ring-white/40 print:hidden"
+            style={{ left: arrastre.x, top: arrastre.y }}
+            aria-hidden
+          />
+          <div
+            className={`pointer-events-none fixed ${
+              CORNER_CLASSES[
+                esquinaMasCercana(
+                  arrastre.x,
+                  arrastre.y,
+                  typeof window === "undefined" ? 0 : window.innerWidth,
+                  typeof window === "undefined" ? 0 : window.innerHeight,
+                )
+              ]
+            } z-[129] h-10 w-10 rounded-full border-2 border-dashed border-navy/50 print:hidden`}
+            aria-hidden
+          />
+        </>
+      )}
+
       {visible && (
-        <div className={`fixed ${CORNER_CLASSES[corner]} z-[130] print:hidden`}>
+        <div
+          className={`fixed ${CORNER_CLASSES[corner]} z-[130] print:hidden ${
+            arrastre ? "opacity-30" : ""
+          }`}
+        >
           <div className="group relative">
             <button
               type="button"
@@ -476,14 +520,69 @@ export function IncidentReporter({
 
             {/* Agarradera: aparece al pasar el ratón (o con el foco en el
                 teclado, que es lo que la hace accesible sin ratón). Sin ella el
-                selector solo lo encontraría quien pruebe el clic derecho. */}
+                selector solo lo encontraría quien pruebe el clic derecho.
+
+                #889 — y SE ARRASTRA. El icono es un agarre, así que quien la ve
+                tira de ella; en #875 sólo abría el menú al soltar sin mover, y
+                el botón se quedaba donde estaba. Ahora el arrastre mueve el
+                botón de verdad y al soltar lo ancla a la esquina del cuadrante,
+                que conserva la garantía de no poder dejarlo fuera de pantalla.
+                Un gesto corto (sin superar el umbral) sigue siendo un clic y
+                abre el menú, que es la vía accesible y la de teclado. */}
             <button
               type="button"
-              onClick={() => setMoverAbierto((v) => !v)}
+              onPointerDown={(e) => {
+                if (e.button !== 0) return;
+                e.preventDefault();
+                e.currentTarget.setPointerCapture(e.pointerId);
+                arrastreInicio.current = { x: e.clientX, y: e.clientY };
+              }}
+              onPointerMove={(e) => {
+                const ini = arrastreInicio.current;
+                if (!ini) return;
+                const lejos =
+                  Math.abs(e.clientX - ini.x) > UMBRAL_ARRASTRE ||
+                  Math.abs(e.clientY - ini.y) > UMBRAL_ARRASTRE;
+                if (lejos) {
+                  setMoverAbierto(false);
+                  setArrastre({ x: e.clientX, y: e.clientY });
+                }
+              }}
+              onPointerUp={(e) => {
+                const ini = arrastreInicio.current;
+                arrastreInicio.current = null;
+                if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+                  e.currentTarget.releasePointerCapture(e.pointerId);
+                }
+                if (!ini) return;
+                const movido =
+                  Math.abs(e.clientX - ini.x) > UMBRAL_ARRASTRE ||
+                  Math.abs(e.clientY - ini.y) > UMBRAL_ARRASTRE;
+                setArrastre(null);
+                if (movido) {
+                  setCorner(
+                    esquinaMasCercana(e.clientX, e.clientY, window.innerWidth, window.innerHeight),
+                  );
+                } else {
+                  setMoverAbierto((v) => !v);
+                }
+              }}
+              onPointerCancel={() => {
+                arrastreInicio.current = null;
+                setArrastre(null);
+              }}
+              onContextMenu={(e) => {
+                // Mismo acelerador que sobre el botón: quien prueba el clic
+                // derecho sobre el asa esperaba el menú, no el del navegador.
+                e.preventDefault();
+                setMoverAbierto((v) => !v);
+              }}
               title={t("ui.incidentReporter.moverTitulo")}
               aria-label={t("ui.incidentReporter.moverAria")}
               aria-expanded={moverAbierto}
-              className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full border border-gray-200 bg-white p-0.5 text-gray-500 opacity-0 shadow transition-opacity hover:text-navy focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-cyan group-hover:opacity-100"
+              className={`absolute -top-2 left-1/2 -translate-x-1/2 cursor-grab touch-none rounded-full border border-gray-200 bg-white p-0.5 text-gray-500 shadow transition-opacity hover:text-navy focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-cyan group-hover:opacity-100 active:cursor-grabbing ${
+                arrastre ? "opacity-100" : "opacity-0"
+              }`}
             >
               <GripHorizontal className="h-3 w-3" />
             </button>
