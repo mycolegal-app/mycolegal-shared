@@ -109,6 +109,15 @@ function formatDate(iso: string): string {
  * the message will fire automatically on the next prod deploy. No edit
  * affordance is offered in `armed` to avoid drift between what was
  * approved and what eventually ships.
+ *
+ * RETIRAR SÍ se ofrece en `armed`, y es distinto de editar: una propuesta
+ * armada no ha salido todavía —espera al deploy—, así que hasta ese momento
+ * tiene que poder pararse. Sin esto, aprobar por error dejaba la propuesta
+ * esperando a dispararse sin más salida que tocar la base de datos, que es
+ * justo lo que pasó con #886/#887: el arreglo resultó estar mal, la propuesta
+ * ya estaba aprobada y describía algo que se había deshecho. El backend ya lo
+ * permitía (`rejectProposal` sólo rechaza si está `sent` o `rejected`); era la
+ * UI la que no lo ofrecía.
  */
 export function IncidentProposalCard({
   proposal,
@@ -128,6 +137,9 @@ export function IncidentProposalCard({
 
   const incident = proposal.incident;
   const editable = proposal.status === "pending";
+  // Retirar vale mientras no haya salido: `pending` (aún sin aprobar) y
+  // `armed` (aprobada pero esperando al deploy). `sent` y `rejected` ya no.
+  const retirable = editable || proposal.status === "armed";
 
   const approve = async () => {
     setBusy("approve");
@@ -325,32 +337,33 @@ export function IncidentProposalCard({
         </div>
       )}
 
-      {editable && (
+      {retirable && (
         <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-gray-100 pt-3">
-          {editing ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setEditing(false);
-                setEditedBody(proposal.body);
-              }}
-              disabled={busy !== null}
-            >
-              {t("ui.incidentProposals.btnCancelEdit")}
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setEditing(true)}
-              disabled={busy !== null}
-            >
-              {t("ui.incidentProposals.btnEdit")}
-            </Button>
-          )}
+          {editable &&
+            (editing ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setEditing(false);
+                  setEditedBody(proposal.body);
+                }}
+                disabled={busy !== null}
+              >
+                {t("ui.incidentProposals.btnCancelEdit")}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setEditing(true)}
+                disabled={busy !== null}
+              >
+                {t("ui.incidentProposals.btnEdit")}
+              </Button>
+            ))}
           {!confirmingReject ? (
             <>
               <Button
@@ -360,18 +373,24 @@ export function IncidentProposalCard({
                 onClick={() => setConfirmingReject(true)}
                 disabled={busy !== null}
               >
-                {t("ui.incidentProposals.btnReject")}
+                {/* En `armed` no es "rechazar" una propuesta que nadie ha
+                    revisado: es retirar una ya aprobada antes de que salga. */}
+                {proposal.status === "armed"
+                  ? t("ui.incidentProposals.btnRetract")
+                  : t("ui.incidentProposals.btnReject")}
               </Button>
-              <Button type="button" size="sm" onClick={approve} disabled={busy !== null}>
-                {busy === "approve" ? (
-                  <>
-                    <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                    {t("ui.incidentProposals.approving")}
-                  </>
-                ) : (
-                  t("ui.incidentProposals.btnApprove")
-                )}
-              </Button>
+              {editable && (
+                <Button type="button" size="sm" onClick={approve} disabled={busy !== null}>
+                  {busy === "approve" ? (
+                    <>
+                      <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                      {t("ui.incidentProposals.approving")}
+                    </>
+                  ) : (
+                    t("ui.incidentProposals.btnApprove")
+                  )}
+                </Button>
+              )}
             </>
           ) : (
             <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-end">
