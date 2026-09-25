@@ -1080,8 +1080,13 @@ export function createUsuariosByIdResendInvitationRoute(deps: UsuariosRoutesDeps
           { method: 'POST' },
         );
         if (res.status >= 400) {
+          // auth mezcla dos formas de error: `{ error: { message } }` en las
+          // rutas y `{ error: '<texto>' }` en los guards globales (p.ej. el
+          // 403 del metaadmin). Sin la rama de string, un motivo concreto se
+          // perdía y el usuario veía siempre el fallback genérico.
           const msg =
             res.data?.error?.message ||
+            (typeof res.data?.error === 'string' ? res.data.error : undefined) ||
             res.data?.message ||
             'Error al reenviar invitación';
           return errorResponse('AUTH_ERROR', msg, res.status);
