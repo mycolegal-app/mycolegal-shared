@@ -1,6 +1,13 @@
 # PLAN TÉCNICO — Línea Oro / Línea Plata: acento de acción por familia de apps
 
-**Estado:** 🔧 IMPLEMENTADO EN LOCAL (15/16-sep-2026) — F0–F4 hechas en working tree de shared/peticiones/tramitacion/notaria; tipan y `next build` verde en las 3 apps contra `ui` sincronizada a mano en node_modules. **Pendiente:** publicar `ui@3.1.0` (`tools/publish-package.sh ui`, desde main) → bump de consumidoras en el mismo commit que el código → deploy local (Carles) → pase visual → resto de apps oro a `mc-action-*` (mecánico, sin cambio visible).
+**Estado:** **CERRADO (26-sep-2026) · F0–F4 HECHAS Y PUBLICADAS.** `ui@3.1.0` salió el 16-sep (`24ad348`) y la librería va ya por 3.2.5; las consumidoras están bumpeadas y las apps oro migradas a `mc-action-*` (Notaría, 794 ocurrencias, sin cambio visible). La cola que figuraba aquí —publicar, bumpear, desplegar, pase visual— está consumida.
+
+**El único `[ ]` que quedaba, el whitelabel de F2, se DESCARTA en esa forma** (decisión de Carles, 26-sep-2026): «el dashboard inyecta `--mc-action-*` desde `portalColorAccent`». Tres motivos, en orden de peso:
+1. **Ya está resuelto de otra manera, y mejor.** `peticiones/src/components/layout/app-shell.tsx` pinta una **franja de marca** con el color de la notaría y explica por qué no toca los tokens: *«identifica de quién es el portal sin reescribir el tema de la app (tocar los tokens de color afectaría al contraste de todas las pantallas)»*. Es literalmente el riesgo que este plan lista en «Riesgos y mitigaciones». El lado **público** del portal (`[slug]/page.tsx`, `solicitar-acceso`) sí usa `colorPrimary`/`colorAccent`, y ahí funciona.
+2. **No tiene usuarios.** En PROD, de 92 organizaciones (90 notarías), **ninguna tiene `portal_color_primary` ni `portal_color_accent`**: están todas a null. No hay todavía orgs GESTORIA ni BANCO.
+3. **El caso que lo justificaba no depende de esto.** `cancelaciones-bs` (plata + azul Sabadell) ni siquiera monta `data-brand="silver"`: va por su propio `globals.css`.
+
+Si algún día una notaría quiere su acento dentro del dashboard, entra como ítem nuevo **con auditoría de contraste propia** —no como deuda de este plan—, porque cambiar el color de acción por organización obliga a revalidar el AA de botones, enlaces, chips y focos con un color que elige el cliente.
 **Repo:** `mycolegal-shared` (`packages/ui`) para F0; luego `mycolegal-peticiones`, `mycolegal-tramitacion`, resto de apps
 **Fecha:** 2026-09-15
 **Origen:** informe de revisión UI Peticiones/Tramitación vs Notaría + propuesta Línea Plata (artefactos de sesión: `claude.ai/artifact/MrCqMcTnBrDnEbtBXGrR1H` y `claude.ai/artifact/59sDKVVKjUYSkt6XSrEKAc`)
@@ -83,7 +90,7 @@ Nota: hoy `cyan-*` está definido en el preset (no como CSS vars). Para que `--m
 - [x] Detalle `peticiones/[id]`: cabecera Notaría (badges + info-bar + acciones `text-xs`), `EstadoTimeline`, `UnderlineTabs` (Datos / Mensajes / Documentos), sección "Sección 1ª" de indigo a paleta, modales a `Dialog`.
 - [x] Home banco: `KpiCard`; home gestoría: consola sin hero.
 - [x] Neutros fríos (vía tokens `--mc-surface-soft`/`--mc-border` en `[data-brand=silver]`): revisar fondos `bg-gray-50` → `bg-mc-slate-50` donde sean superficie.
-- [ ] (pendiente, requiere endpoint de branding por orgId en auth) Whitelabel: el dashboard inyecta `--mc-action-*` desde `portalColorAccent`.
+- [~] **DESCARTADO (26-sep-2026)** — Whitelabel: el dashboard inyecta `--mc-action-*` desde `portalColorAccent`. Lo cubre la franja de marca de `app-shell.tsx` sin tocar el contraste; 0 orgs con color en PROD. Ver la cabecera.
 
 ### F3 — Tramitación → plata (por lotes independientes)
 - [x] Lote 1: `data-brand="silver"`; `mc-primary-*` en rol de acción → `mc-action-*` (~220: 70 botones, 72 enlaces, 69 chips, 5 rings); `cyan-*` restantes → `mc-action-*`; `DomainTabs` sobre `UnderlineTabs` (fuera los hex `#f3efe6/#8a774f`); tabs de `actas/[id]` (`blue-600`) idem.
