@@ -1150,6 +1150,7 @@
       "descripcion": "S'intentarà obtenir el número de factura de Wordplex; si no hi ha integració, introdueix-lo manualment.",
       "consultando": "Consultant integració…",
       "autoListo": "Integració a punt: s'executarà al teu equip en facturar.",
+      "servidorListo": "Integració a punt: MycoLegal l'executarà per connexió segura en facturar. No cal instal·lar res.",
       "sinConfig": "Sense integració configurada: introdueix sèrie i número manualment.",
       "fallo": "La integració no s'ha pogut completar.",
       "serie": "Sèrie",

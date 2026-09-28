@@ -1149,6 +1149,7 @@
       "descripcion": "Wordplex-etik faktura-zenbakia lortzen saiatuko da; integraziorik ez badago, sartu eskuz.",
       "consultando": "Integrazioa kontsultatzen…",
       "autoListo": "Integrazioa prest: zure ekipoan exekutatuko da fakturatzean.",
+      "servidorListo": "Integrazioa prest: MycoLegalek konexio seguru bidez exekutatuko du fakturatzean. Ez da ezer instalatu behar.",
       "sinConfig": "Integraziorik konfiguratu gabe: sartu seriea eta zenbakia eskuz.",
       "fallo": "Integrazioa ezin izan da osatu.",
       "serie": "Seriea",

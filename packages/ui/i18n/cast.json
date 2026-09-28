@@ -1150,6 +1150,7 @@
       "descripcion": "Se intentará obtener el número de factura de Wordplex; si no hay integración, introdúcelo manualmente.",
       "consultando": "Consultando integración…",
       "autoListo": "Integración lista: se ejecutará en tu equipo al facturar.",
+      "servidorListo": "Integración lista: MycoLegal la ejecutará por conexión segura al facturar. No hay que instalar nada.",
       "sinConfig": "Sin integración configurada: introduce serie y número manualmente.",
       "fallo": "La integración no pudo completarse.",
       "serie": "Serie",

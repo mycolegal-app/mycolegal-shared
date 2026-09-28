@@ -23,8 +23,14 @@ export interface FacturaResuelta {
 
 interface FacturarDialogProps {
   open: boolean;
-  /** POST → { mode: 'AUTO', receta, inputs } | { mode: 'MANUAL', reason }. */
+  /** POST → { mode: 'AUTO' | 'SERVIDOR' | 'MANUAL', … }. Es una LECTURA: se llama al abrir. */
   recetaUrl: string;
+  /**
+   * POST que EMITE la factura en el sistema de la notaría (modo `SERVIDOR`, por túnel).
+   * **Escribe**: se llama sólo al confirmar, nunca al abrir. Sin esta prop, un modo
+   * `SERVIDOR` degrada a entrada manual en vez de quedarse a medias.
+   */
+  emitirUrl?: string;
   /** POST de auditoría del resultado de ejecución (opcional). */
   resultadoUrl?: string;
   /**
@@ -35,7 +41,7 @@ interface FacturarDialogProps {
   onClose: () => void;
 }
 
-type IntgEstado = "consultando" | "auto" | "sinConfig" | "fallo";
+type IntgEstado = "consultando" | "auto" | "servidor" | "sinConfig" | "fallo";
 
 const RAZONES_SIN_CONFIG = new Set([
   "facturae-no-configurado",
@@ -53,6 +59,7 @@ const RAZONES_SIN_CONFIG = new Set([
 export function FacturarDialog({
   open,
   recetaUrl,
+  emitirUrl,
   resultadoUrl,
   onSubmit,
   onClose,
@@ -61,6 +68,8 @@ export function FacturarDialog({
 
   const [intgEstado, setIntgEstado] = useState<IntgEstado>("consultando");
   const [intgReason, setIntgReason] = useState<string | null>(null);
+  /** Modo SERVIDOR: lo que anuncia `/receta` sobre quién emitirá y con qué serie. */
+  const [servidor, setServidor] = useState<{ codigo: string; serie: string | null } | null>(null);
   const [receta, setReceta] = useState<{
     receta: RecetaIntegracion & { codigo: string };
     inputs: Record<string, unknown>;
@@ -83,6 +92,7 @@ export function FacturarDialog({
     setIntgEstado("consultando");
     setIntgReason(null);
     setReceta(null);
+    setServidor(null);
     let cancelado = false;
     (async () => {
       try {
@@ -93,12 +103,24 @@ export function FacturarDialog({
         const json = await res.json().catch(() => null);
         const data = json?.data as
           | { mode: "AUTO"; receta: RecetaIntegracion & { codigo: string }; inputs: Record<string, unknown> }
+          | { mode: "SERVIDOR"; codigo: string; transporte: string; serie: string | null }
           | { mode: "MANUAL"; reason: string }
           | undefined;
         if (cancelado) return;
         if (data?.mode === "AUTO") {
           setReceta({ receta: data.receta, inputs: data.inputs ?? {} });
           setIntgEstado("auto");
+        } else if (data?.mode === "SERVIDOR") {
+          // Aquí NO se emite nada: sólo se anota quién lo hará. La emisión ocurre en
+          // `resolver()`, al confirmar. Sin `emitirUrl` el consumidor no ha cableado
+          // la ruta de emisión, así que se cae a manual en vez de prometer algo que
+          // no se puede cumplir.
+          if (emitirUrl) {
+            setServidor({ codigo: data.codigo, serie: data.serie });
+            setIntgEstado("servidor");
+          } else {
+            setIntgEstado("sinConfig");
+          }
         } else if (data?.mode === "MANUAL") {
           setIntgReason(data.reason);
           setIntgEstado(RAZONES_SIN_CONFIG.has(data.reason) ? "sinConfig" : "fallo");
@@ -112,7 +134,7 @@ export function FacturarDialog({
     return () => {
       cancelado = true;
     };
-  }, [open, recetaUrl]);
+  }, [open, recetaUrl, emitirUrl]);
 
   function reportar(codigo: string, transporte: string, ok: boolean, reason?: string, detail?: string) {
     if (!resultadoUrl) return;
@@ -139,6 +161,37 @@ export function FacturarDialog({
         pdfBase64: null,
       };
     }
+    // Modo servidor: la emisión la hace MycoLegal por el túnel, al confirmar.
+    if (intgEstado === "servidor" && emitirUrl) {
+      const res = await fetch(emitirUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      }).catch(() => null);
+      const cuerpo = res ? ((await res.json().catch(() => null)) as { data?: Record<string, unknown> } | null) : null;
+      const d = cuerpo?.data;
+      reportar(servidor?.codigo ?? "", "SERVER_RELAY", Boolean(d?.ok), d?.ok ? undefined : String(d?.reason ?? "sin-respuesta"));
+      if (!d?.ok) {
+        setIntgEstado("fallo");
+        setIntgReason(String(d?.detail ?? d?.reason ?? "sin-respuesta"));
+        return null;
+      }
+      const n = d.numero == null ? null : String(d.numero);
+      if (!n) {
+        setIntgEstado("fallo");
+        setIntgReason("respuesta-sin-numero");
+        return null;
+      }
+      return {
+        serie: (d.serie as string | null) ?? servidor?.serie ?? null,
+        numero: n,
+        total: typeof d.total === "number" ? d.total : totalM,
+        fechaEmision: typeof d.fecha === "string" ? d.fecha : fecha || null,
+        integracionCodigo: servidor?.codigo ?? null,
+        pdfBase64: typeof d.pdf === "string" ? d.pdf : null,
+      };
+    }
+
     if (intgEstado === "auto" && receta) {
       const out = await ejecutarIntegracionLocal(receta.receta, receta.inputs);
       reportar(
@@ -237,6 +290,12 @@ export function FacturarDialog({
             {t("ui.facturar.autoListo")}
           </p>
         )}
+        {intgEstado === "servidor" && (
+          <p className="mb-3 flex items-center gap-2 text-xs text-emerald-600">
+            <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+            {t("ui.facturar.servidorListo")}
+          </p>
+        )}
         {intgEstado === "sinConfig" && (
           <p className="mb-3 text-xs text-gray-500">{t("ui.facturar.sinConfig")}</p>
         )}
@@ -266,7 +325,7 @@ export function FacturarDialog({
               value={numero}
               onChange={(e) => setNumero(e.target.value)}
               maxLength={40}
-              placeholder={intgEstado === "auto" ? t("ui.facturar.numeroAuto") : ""}
+              placeholder={intgEstado === "auto" || intgEstado === "servidor" ? t("ui.facturar.numeroAuto") : ""}
               className="w-full rounded-md border px-3 py-2 text-sm"
             />
           </div>
