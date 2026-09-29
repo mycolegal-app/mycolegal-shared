@@ -23,6 +23,8 @@ export { FirstRunWelcome } from './components/shared/first-run-welcome';
 export type { WelcomeStep } from './components/shared/first-run-welcome';
 export { HelpMenu } from './components/shared/help-menu';
 export { AiUsagePanel } from './components/shared/ai-usage-panel';
+export { TutorialesPanel, ytVideoId, ytThumbnail } from './components/shared/tutoriales-panel';
+export type { TutorialItem } from './components/shared/tutoriales-panel';
 export type { FichaIA, AiUsagePanelProps } from './components/shared/ai-usage-panel';
 export { AiBadge, describeTrace } from './components/shared/ai-badge';
 export type { AiTrace, AiBadgeProps } from './components/shared/ai-badge';

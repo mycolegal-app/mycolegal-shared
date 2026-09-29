@@ -797,6 +797,7 @@
       "helpTitle": "Eskuliburua ireki",
       "helpMenuIntro": "Ikusi sarrera",
       "helpMenuManual": "Eskuliburua",
+      "helpMenuTutoriales": "Bideoak eta tutorialak",
       "helpMenuAsk": "Galdetu IAri",
       "helpMenuReport": "Jakinarazi gorabehera bat",
       "searchAria": "Bilatu",
@@ -1219,6 +1220,13 @@
         "declaracion": "AAren erabilera arduratsuaren adierazpen osoa",
         "plantilla": "Bulegorako barne-politikaren txantiloia"
       }
+    },
+    "tutoriales": {
+      "titulo": "Bideoak eta tutorialak",
+      "subtitulo": "MycoLegali buruzko pieza laburrak. Bideoak YouTuben irekitzen dira.",
+      "vacio": "Oraindik ez dago tutorialik argitaratuta aplikazio honetarako.",
+      "cerrar": "Itxi",
+      "nSlides": "{n} diapositiba"
     }
   },
   "unidad": {

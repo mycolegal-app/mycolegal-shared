@@ -798,6 +798,7 @@
       "helpTitle": "Obrir manual",
       "helpMenuIntro": "Veure la introducció",
       "helpMenuManual": "Manual",
+      "helpMenuTutoriales": "Vídeos i tutorials",
       "helpMenuAsk": "Preguntar a la IA",
       "helpMenuReport": "Reportar una incidència",
       "searchAria": "Cercar",
@@ -1220,6 +1221,13 @@
         "declaracion": "Declaració completa d'ús responsable de la IA",
         "plantilla": "Plantilla de política interna per al despatx"
       }
+    },
+    "tutoriales": {
+      "titulo": "Vídeos i tutorials",
+      "subtitulo": "Peces curtes sobre MycoLegal. Els vídeos s'obren a YouTube.",
+      "vacio": "Encara no hi ha tutorials publicats per a aquesta aplicació.",
+      "cerrar": "Tancar",
+      "nSlides": "{n} diapositives"
     }
   },
   "unidad": {

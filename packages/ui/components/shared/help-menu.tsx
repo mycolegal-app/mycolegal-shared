@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { HelpCircle, PlayCircle, BookOpen, Sparkles, Bug, ShieldCheck, X, Check, BrainCircuit } from "lucide-react";
+import { HelpCircle, PlayCircle, BookOpen, Sparkles, Bug, ShieldCheck, X, Check, BrainCircuit, Clapperboard } from "lucide-react";
 import { AiUsagePanel } from "./ai-usage-panel";
+import { TutorialesPanel, type TutorialItem } from "./tutoriales-panel";
 import { NavLink as Link } from "./nav-link";
 import { useI18n } from "../i18n/i18n-context";
 
@@ -46,6 +47,28 @@ export function HelpMenu({ manualHref = "/manual", showIntro = true, showAsk = f
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const aiEnabled = showAi ?? showAsk;
+
+  // #904 — Vídeos y tutoriales. No hay interruptor por app A PROPÓSITO: la
+  // entrada aparece si esta app puede servir tutoriales y hay alguno. Así una
+  // app que todavía no monte el reenviador `/api/tutoriales` no enseña un menú
+  // que no lleva a ninguna parte, y una que lo monte no necesita tocar nada.
+  const [tutoriales, setTutoriales] = useState<TutorialItem[] | null>(null);
+  const [tutorialesOpen, setTutorialesOpen] = useState(false);
+  useEffect(() => {
+    if (!open || tutoriales !== null) return;
+    let vivo = true;
+    fetch(`/api/tutoriales`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (vivo) setTutoriales(Array.isArray(j?.data) ? (j.data as TutorialItem[]) : []);
+      })
+      .catch(() => {
+        if (vivo) setTutoriales([]);
+      });
+    return () => {
+      vivo = false;
+    };
+  }, [open, tutoriales]);
 
   // Un <AiBadge> ("¿Qué significa?") pide abrir el panel de IA en su ficha.
   useEffect(() => {
@@ -105,6 +128,20 @@ export function HelpMenu({ manualHref = "/manual", showIntro = true, showAsk = f
             <BookOpen className="h-4 w-4 shrink-0 text-gray-500" />
             {t("ui.header.helpMenuManual")}
           </Link>
+          {tutoriales !== null && tutoriales.length > 0 && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setTutorialesOpen(true);
+                setOpen(false);
+              }}
+              className={ITEM}
+            >
+              <Clapperboard className="h-4 w-4 shrink-0 text-cyan-600" />
+              {t("ui.header.helpMenuTutoriales")}
+            </button>
+          )}
           {showAsk && (
             <button type="button" role="menuitem" onClick={() => fire("mycolegal:open-mycobot")} className={ITEM}>
               <Sparkles className="h-4 w-4 shrink-0 text-cyan-600" />
@@ -135,6 +172,12 @@ export function HelpMenu({ manualHref = "/manual", showIntro = true, showAsk = f
       {aiEnabled && (
         <AiUsagePanel open={aiOpen} onClose={() => setAiOpen(false)} appSlug={appSlug} declaracionHref={aiHref} />
       )}
+
+      <TutorialesPanel
+        open={tutorialesOpen}
+        onClose={() => setTutorialesOpen(false)}
+        items={tutoriales ?? []}
+      />
 
       {privacyOpen && (
         <div

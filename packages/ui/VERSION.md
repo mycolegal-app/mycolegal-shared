@@ -5,6 +5,27 @@
 
 ---
 
+## 3.2.9 — Panel de vídeos y tutoriales en el «?» (2026-09-29)
+
+Type: **revision**
+
+- `tutoriales-panel.tsx` (nuevo, #904): rejilla estilo canal —miniatura 16:9,
+  título y descripción recortada— que abre el vídeo en YouTube. Los de tipo
+  presentación van al visor de diapositivas, que es donde viven. Exporta también
+  `ytVideoId`/`ytThumbnail`, que entienden `?v=`, `youtu.be/`, `/embed/` **y
+  Shorts** (el extractor anterior no, y por eso la «Invitación de Javier Micó»
+  —cargada como Short— no daba ni vídeo ni miniatura).
+- `help-menu.tsx`: entrada «Vídeos y tutoriales». Sin interruptor por app a
+  propósito: al abrir el menú se pide `/api/tutoriales` y la entrada aparece solo
+  si esa app puede servirlos y hay alguno. Una app que no monte el reenviador no
+  enseña un menú que no lleva a ninguna parte.
+- i18n ×4: `ui.header.helpMenuTutoriales` y el bloque `ui.tutoriales.*`.
+
+Requiere que la app monte `/api/tutoriales/[[...path]]` con
+`createTutorialesRoutes` (sharedlib ≥ 0.12.6).
+
+---
+
 ## 3.2.8 — MycoBot en modo ampliado y el menú del botón de incidencias (2026-09-29)
 
 Type: **revision**
