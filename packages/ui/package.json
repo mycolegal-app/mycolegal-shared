@@ -1,6 +1,6 @@
 {
   "name": "@mycolegal-app/ui",
-  "version": "3.2.8",
+  "version": "3.2.9",
   "type": "module",
   "sideEffects": [
     "**/*.css"
@@ -153,5 +153,5 @@
     "typescript": "^6.0.2",
     "vitest": "^2.1.9"
   },
-  "description": "e2e fixtures publicadas como JS compilado (Playwright no transforma .ts dentro de node_modules) \u2014 desbloquea imports de @mycolegal-app/ui/e2e/shared-lock-fixture desde specs."
+  "description": "e2e fixtures publicadas como JS compilado (Playwright no transforma .ts dentro de node_modules) — desbloquea imports de @mycolegal-app/ui/e2e/shared-lock-fixture desde specs."
 }
