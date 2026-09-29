@@ -32,7 +32,12 @@ import {
   FileQuestion,
   type LucideIcon,
 } from "lucide-react";
-import { marked } from "marked";
+// El rail tenía su propio `renderMarkdown`, gemelo del compartido salvo en un
+// detalle: no desmontaba el LaTeX. Cuando `markdown.tsx` aprendió a hacerlo, esta
+// copia se quedó atrás, y por eso el informe del Revisor salía en texto plano
+// mientras el chat enseñaba `$$\text{22.068,00 €} \times 1,1000$$` (#31, Lara,
+// 28-sep-2026). Un solo renderizador para los dos.
+import { renderMarkdown } from "./markdown";
 import { useI18n } from "../i18n/i18n-context";
 import { AiBadge, type AiTrace } from "./ai-badge";
 import { SinCreditos, esErrorDeCreditos } from "./sin-creditos";
@@ -77,18 +82,6 @@ const CLASE_ICON: Record<string, LucideIcon> = {
   BIENES_MUEBLES: Car,
   OTROS: FileQuestion,
 };
-
-marked.setOptions({ breaks: true, gfm: true });
-
-/**
- * Renderiza el Markdown de la respuesta del bot a HTML. El texto viene del LLM:
- * escapamos `<` para neutralizar cualquier etiqueta HTML cruda (no puede haber
- * tag sin `<`), conservando `>` (citas markdown) y toda la sintaxis markdown
- * (negritas, listas, encabezados…), que no usa ángulos de apertura.
- */
-function renderMarkdown(text: string): string {
-  return marked.parse(text.replace(/</g, "&lt;"), { async: false }) as string;
-}
 
 /**
  * Convierte las marcas de cita `[n]` del HTML ya renderizado en anclas clicables

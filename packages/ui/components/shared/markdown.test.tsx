@@ -30,3 +30,12 @@ describe("normalizarLatex", () => {
     expect(renderMarkdown("**Cuadra:** $500,00\\ \\text{€}$")).toContain("<strong>Cuadra:</strong> 500,00 €");
   });
 });
+
+describe("el rail y el informe comparten renderizador", () => {
+  // #31 (Lara, 28-sep-2026): la cadena exacta que el chat enseñaba en crudo.
+  it("desmonta el LaTeX del coeficiente multiplicador del ISD", () => {
+    expect(
+      renderMarkdown("$$\\text{22.068,00 €} \\times 1,1000 = \\mathbf{24.274,80\\ €}$$ [1]."),
+    ).toContain("22.068,00 € × 1,1000 = 24.274,80 € [1].");
+  });
+});
