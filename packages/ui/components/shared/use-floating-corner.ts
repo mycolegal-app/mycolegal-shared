@@ -33,6 +33,26 @@ const DEFAULT_CORNER: FloatingCorner = "bottom-right";
 
 const CORNERS: FloatingCorner[] = ["bottom-right", "bottom-left", "top-right", "top-left"];
 
+/**
+ * #900 — Las cuatro esquinas COLOCADAS COMO EN LA PANTALLA, para pintarlas en
+ * una rejilla de 2×2.
+ *
+ * El menú usaba `CORNERS` tal cual, y en una rejilla de dos columnas eso deja
+ * "abajo derecha" en la celda de arriba a la izquierda: el menú se lee como un
+ * mapa —es lo natural viendo cuatro cuadrados— y estaba girado 180°, así que
+ * cada celda prometía lo contrario de donde estaba. Esther: "sería deseable que
+ * el cuadro esté en la misma posición que dice el texto".
+ *
+ * `CORNERS` mantiene su orden porque es el del ciclo lógico; esta lista es SOLO
+ * para pintar.
+ */
+export const CORNERS_MAPA: FloatingCorner[] = [
+  "top-left",
+  "top-right",
+  "bottom-left",
+  "bottom-right",
+];
+
 /** Clases de posición por esquina. `top-*` deja hueco para la cabecera (h-14). */
 export const CORNER_CLASSES: Record<FloatingCorner, string> = {
   "bottom-right": "bottom-6 right-6",

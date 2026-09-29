@@ -236,10 +236,18 @@ interface MycoBotRailProps {
 
 const OPEN_STORAGE_KEY = "mycolegal:mycobot:open";
 // #768 — tamaño del panel (expandido a pantalla completa o rail lateral). Se
-// pidió "grande por defecto, al menos en Biblioteca"; se decidió en cambio
-// RECORDAR lo que cada usuario eligió la última vez, que sirve a quien lo quiere
-// grande sin imponérselo a quien lo prefiere pequeño. Mismo mecanismo que
-// abierto/cerrado.
+// pidió "grande por defecto, al menos en Biblioteca" y se optó por RECORDAR lo
+// que cada usuario eligió la última vez.
+//
+// #903 REVIERTE ese recuerdo, y sólo se conserva la clave para limpiarla. Esther:
+// "nadie espera que al cambiar de pantalla MycoBot se quede ocupando toda la
+// pantalla si lo ampliaste antes". En Consultor la navegación es full-page, así
+// que el rail se vuelve a montar en cada pantalla y rehidrataba el modo ampliado
+// tapando la página que acababas de pedir — el mismo estorbo que #839 arregló
+// para la navegación de cliente, pero por la puerta de atrás.
+//
+// Ampliar es ahora un gesto del momento. Lo que sí se sigue recordando es si el
+// panel estaba abierto (`OPEN_STORAGE_KEY`), que no molesta a nadie.
 const EXPANDED_STORAGE_KEY = "mycolegal:mycobot:expanded";
 // #1 (consultor) — el usuario que entra por primera vez no sabe que puede
 // preguntar a MycoBot. Mostramos un globo descartable junto al lanzador hasta
@@ -311,6 +319,10 @@ export function MycoBotRail({
     [],
   );
   const [conversacionId, setConversacionId] = useState<string | null>(null);
+  // #901 — pregunta que se quedó sin respuesta porque se cambió de pantalla
+  // mientras MycoBot pensaba. Ver `recuperarPendiente` más abajo.
+  const [pendiente, setPendiente] = useState<{ cid: string | null; pregunta: string } | null>(null);
+  const [interrumpida, setInterrumpida] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   // Paso en curso del bucle agéntico que se muestra en vivo (línea que se sustituye).
@@ -541,9 +553,10 @@ export function MycoBotRail({
     try {
       const isOpen = window.localStorage.getItem(OPEN_STORAGE_KEY) === "true";
       if (isOpen) setOpen(true);
-      // #768 — el tamaño se recuerda con independencia de si estaba abierto:
-      // quien lo cerró expandido lo reencuentra expandido al abrirlo.
-      if (window.localStorage.getItem(EXPANDED_STORAGE_KEY) === "true") setExpanded(true);
+      // #903 — el tamaño YA NO se rehidrata: se abre siempre como rail lateral.
+      // Se borra la clave de quien la tenga guardada de antes, para que no
+      // quede un ajuste fantasma que ya nadie lee.
+      window.localStorage.removeItem(EXPANDED_STORAGE_KEY);
       // #1 — globo de onboarding solo si nunca lo ha visto Y el rail está
       // colapsado (si ya está abierto, no aporta nada).
       if (!isOpen && window.localStorage.getItem(ONBOARD_STORAGE_KEY) !== "true") {
@@ -587,6 +600,15 @@ export function MycoBotRail({
       if (Array.isArray(saved.messages) && saved.messages.length) {
         setMessages(saved.messages);
         setConversacionId(saved.conversacionId ?? null);
+        // #901 — Esther: "si cambio de pantalla se queda la pregunta y no
+        // busca". La pregunta se guarda aquí en cuanto se envía, pero el estado
+        // "pensando" no: al volver, el hilo aparecía con la pregunta, sin
+        // respuesta y sin una palabra que lo explicara. Si el último mensaje es
+        // tuyo, hay que averiguar qué pasó con ella.
+        const ultimo = saved.messages[saved.messages.length - 1];
+        if (ultimo?.role === "user") {
+          setPendiente({ cid: saved.conversacionId ?? null, pregunta: ultimo.text });
+        }
         // Si venimos de abrir una cita y hemos vuelto a la Biblioteca, reabrimos el
         // rail sobre la conversación. En la ficha `/resoluciones/[id]` dejamos el
         // flag intacto (rail colapsado) hasta que se pise la Biblioteca al volver.
@@ -674,6 +696,8 @@ export function MycoBotRail({
       }
 
       setInput("");
+      // #901 — si había un aviso de pregunta interrumpida, esta toma el relevo.
+      setInterrumpida(null);
       setMessages((m) => [...m, { role: "user", text: q }]);
       setLoading(true);
       setStepLive(null);
@@ -904,14 +928,7 @@ export function MycoBotRail({
         setView((v) => (v === "history" ? "chat" : v));
         void loadConversaciones();
       }
-      // #768 — se recuerda la elección. Fuera del setState funcional sería lo
-      // ortodoxo, pero aquí `next` solo existe dentro; escribir una clave es
-      // inocuo y evita duplicar la lógica de alternancia.
-      try {
-        window.localStorage.setItem(EXPANDED_STORAGE_KEY, String(next));
-      } catch {
-        /* ignore */
-      }
+      // #903 — ya no se persiste (ver EXPANDED_STORAGE_KEY).
       return next;
     });
   }, [loadConversaciones]);
@@ -920,9 +937,9 @@ export function MycoBotRail({
   // sidebar), pinchar una entrada del sidebar cargaba la página… debajo del
   // panel: «sale la plantilla, pero enseguida queda ocultada por MycoBot». Al
   // cambiar de ruta se vuelve al rail lateral (sigue abierto, con la
-  // conversación intacta), para que la página pedida se vea. La preferencia
-  // guardada (#768) se respeta: el usuario no ha pedido contraerlo, así que la
-  // próxima vez que lo abra vuelve expandido.
+  // conversación intacta), para que la página pedida se vea. #903 — y al no
+  // persistirse ya el tamaño, lo mismo vale para la navegación full-page de
+  // Consultor, que antes se escapaba por aquí.
   const pathname = usePathname();
   const rutaPrevia = useRef(pathname);
   useEffect(() => {
@@ -936,6 +953,7 @@ export function MycoBotRail({
     async (id: string) => {
       setView("chat");
       setLoading(true);
+      setInterrumpida(null);
       setMessages([]);
       try {
         const res = await fetch(`${baseUrl}/conversaciones/${id}`);
@@ -971,6 +989,43 @@ export function MycoBotRail({
     },
     [baseUrl, t],
   );
+
+  // #901 — Qué fue de la pregunta que quedó en el aire.
+  //
+  // La generación NO muere por irse de la pantalla (el `send` del SSE ya no
+  // puede tumbarla, ver `api/resoluciones/ask`), así que lo más probable es que
+  // la respuesta esté guardada en el servidor: se recarga la conversación y
+  // aparece. Si de verdad no llegó, se dice y se ofrece reintentar — a mano, no
+  // solo: un reintento automático gasta créditos sin que nadie lo haya pedido.
+  useEffect(() => {
+    if (!pendiente) return;
+    const { cid, pregunta } = pendiente;
+    setPendiente(null);
+    if (!cid) {
+      setInterrumpida(pregunta);
+      return;
+    }
+    let cancelado = false;
+    (async () => {
+      try {
+        const res = await fetch(`${baseUrl}/conversaciones/${cid}`);
+        const json = await res.json().catch(() => ({}));
+        const turnos: { respuesta: string | null }[] = res.ok ? json.data ?? [] : [];
+        const ultimo = turnos[turnos.length - 1];
+        if (cancelado) return;
+        if (ultimo && ultimo.respuesta != null) {
+          await loadConversation(cid);
+        } else {
+          setInterrumpida(pregunta);
+        }
+      } catch {
+        if (!cancelado) setInterrumpida(pregunta);
+      }
+    })();
+    return () => {
+      cancelado = true;
+    };
+  }, [pendiente, baseUrl, loadConversation]);
 
   // Abre el visor in-rail de una cita (sin cerrar ni resetear la conversación).
   const openCita = useCallback(
@@ -1312,30 +1367,50 @@ export function MycoBotRail({
             >
               {expanded ? <Minimize2 className="h-[18px] w-[18px]" /> : <Maximize2 className="h-[18px] w-[18px]" />}
             </button>
-            {/* En modo expandido la lista de conversaciones vive a la izquierda: el
-                botón de historial de la cabecera sería redundante. */}
-            {!expanded && (
-              <button
-                type="button"
-                onClick={() => (view === "history" ? setView("chat") : void openHistory())}
-                aria-label={t("ui.mycobot.history")}
-                title={t("ui.mycobot.history")}
-                className={`rounded p-1 hover:bg-white/10 ${view === "history" ? "bg-white/15" : ""}`}
-              >
-                <History className="h-[18px] w-[18px]" />
-              </button>
-            )}
-            {!expanded && (
-              <button
-                type="button"
-                onClick={() => setView((v) => (v === "skills" ? "chat" : "skills"))}
-                aria-label={t("ui.mycobot.skills")}
-                title={t("ui.mycobot.skills")}
-                className={`rounded p-1 hover:bg-white/10 ${view === "skills" ? "bg-white/15" : ""}`}
-              >
-                <ScrollText className="h-[18px] w-[18px]" />
-              </button>
-            )}
+            {/* #902 — estos dos iconos estaban ocultos en modo ampliado porque
+                la columna izquierda ya lista las conversaciones. Redundante es
+                mejor que ausente: quedarse sin ninguna vía a mitad de una demo
+                es lo que reportó Esther. En ampliado gobiernan la pestaña de esa
+                columna; en el rail, la vista del panel. */}
+            <button
+              type="button"
+              onClick={() => {
+                if (expanded) {
+                  setLeftTab("conversaciones");
+                  setView("chat");
+                  void loadConversaciones();
+                } else if (view === "history") {
+                  setView("chat");
+                } else {
+                  void openHistory();
+                }
+              }}
+              aria-label={t("ui.mycobot.history")}
+              title={t("ui.mycobot.history")}
+              className={`rounded p-1 hover:bg-white/10 ${
+                (expanded ? leftTab === "conversaciones" : view === "history") ? "bg-white/15" : ""
+              }`}
+            >
+              <History className="h-[18px] w-[18px]" />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (expanded) {
+                  setLeftTab((v) => (v === "skills" ? "conversaciones" : "skills"));
+                  setView("chat");
+                } else {
+                  setView((v) => (v === "skills" ? "chat" : "skills"));
+                }
+              }}
+              aria-label={t("ui.mycobot.skills")}
+              title={t("ui.mycobot.skills")}
+              className={`rounded p-1 hover:bg-white/10 ${
+                (expanded ? leftTab === "skills" : view === "skills") ? "bg-white/15" : ""
+              }`}
+            >
+              <ScrollText className="h-[18px] w-[18px]" />
+            </button>
             <button
               type="button"
               onClick={newConversation}
@@ -1360,7 +1435,16 @@ export function MycoBotRail({
               normal solo existe la columna derecha, a todo el ancho del rail. */}
           <div className="flex min-h-0 flex-1 overflow-hidden">
             {expanded && (
-              <div className="hidden w-64 shrink-0 flex-col border-r bg-gray-50/70 md:flex">
+              /* #902 — Esther: "no hay icono en el grande para ver las
+                 conversaciones anteriores. Y si no se ven, no puedo enseñar nada
+                 si se queda pillado". Esta columna era `hidden md:flex`, o sea
+                 que desaparecía por debajo de 768 px de ancho CSS — y en una
+                 exposición se hace zoom al navegador para que el público lea,
+                 que reduce el ancho CSS igual que una ventana pequeña. Con el
+                 icono de historial oculto en modo ampliado (era "redundante"),
+                 se quedaba sin ninguna vía. Si el panel ocupa la pantalla, hay
+                 sitio para la columna: se estrecha, no se va. */
+              <div className="flex w-52 shrink-0 flex-col border-r bg-gray-50/70 md:w-64">
                 <div className="flex shrink-0 items-center gap-1 border-b px-2 py-1.5">
                   <button
                     type="button"
@@ -1962,6 +2046,25 @@ export function MycoBotRail({
                     </div>
                   </div>
                 ))}
+                {/* #901 — la pregunta que se quedó sin respuesta al cambiar de
+                    pantalla. Se dice lo que pasó y se deja reintentar; callarlo
+                    es lo que la hacía parecer "pillada". */}
+                {interrumpida && !loading && (
+                  <div className="mx-1 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
+                    <p>{t("ui.mycobot.interrumpida")}</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const q = interrumpida;
+                        setInterrumpida(null);
+                        void ask(q);
+                      }}
+                      className="mt-1.5 rounded bg-amber-600 px-2 py-1 font-medium text-white hover:bg-amber-700"
+                    >
+                      {t("ui.mycobot.interrumpidaReintentar")}
+                    </button>
+                  </div>
+                )}
                 {loading && (
                   <div className="flex items-start gap-2 px-1 text-sm text-gray-500">
                     <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin" />

@@ -1134,7 +1134,9 @@
       "skillFormEdit": "Editatu skill-a",
       "creditosAvisaAdmin": "Abisatu kontua kudeatzen duenari kargatzeko.",
       "report": "Erantzun hau jakinarazi",
-      "reportPrefill": "MycoBoten erantzun okerra, osatugabea edo alboratua. Erantzun zuena:"
+      "reportPrefill": "MycoBoten erantzun okerra, osatugabea edo alboratua. Erantzun zuena:",
+      "interrumpida": "Galdera hau erantzunik gabe geratu da pantailaz aldatzean. Erantzuna sortu bazen, elkarrizketaren historian agertuko da; bestela, galdetu berriro.",
+      "interrumpidaReintentar": "Galdetu berriro"
     },
     "registradorPicker": {
       "placeholder": "Bilatu erregistroa izenez edo herriz…",

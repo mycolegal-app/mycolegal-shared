@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { esquinaMasCercana, CORNER_CLASSES } from "./use-floating-corner";
+import { esquinaMasCercana, CORNER_CLASSES, CORNERS_MAPA } from "./use-floating-corner";
 
 // #889 — Javier, sobre el arreglo de #875: "el asa aparece pero ni con ella ni
 // con el botón derecho se mueve". El icono es un agarre y prometía arrastre,
@@ -54,5 +54,26 @@ describe("esquinaMasCercana", () => {
     for (const clases of Object.values(CORNER_CLASSES)) {
       expect(clases).toMatch(/^(top|bottom)-\d+ (left|right)-\d+$/);
     }
+  });
+});
+
+// #900 — Esther, sobre el menú de #875/#889: "sería deseable que el cuadro esté
+// en la misma posición que dice el texto". El menú pinta las cuatro esquinas en
+// una rejilla de 2×2, que se lee como un mapa de la pantalla; con el orden de
+// `CORNERS` la celda de arriba a la izquierda decía "abajo derecha".
+describe("CORNERS_MAPA (orden para la rejilla de 2×2)", () => {
+  it("cada celda está donde dice su texto", () => {
+    // Rejilla de dos columnas: índices 0,1 = fila de arriba; 2,3 = la de abajo.
+    // Pares = columna izquierda; impares = columna derecha.
+    CORNERS_MAPA.forEach((esquina, i) => {
+      const filaEsperada = i < 2 ? "top" : "bottom";
+      const columnaEsperada = i % 2 === 0 ? "left" : "right";
+      expect(esquina).toBe(`${filaEsperada}-${columnaEsperada}`);
+    });
+  });
+
+  it("son las cuatro esquinas, sin repetir ni inventar", () => {
+    expect(new Set(CORNERS_MAPA).size).toBe(4);
+    for (const c of CORNERS_MAPA) expect(CORNER_CLASSES[c]).toBeTruthy();
   });
 });

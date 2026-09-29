@@ -18,6 +18,7 @@ import { apiErrorMessage } from "../../lib/api-error";
 import {
   useFloatingCorner,
   CORNER_CLASSES,
+  CORNERS_MAPA,
   esquinaMasCercana,
   type FloatingCorner,
 } from "./use-floating-corner";
@@ -174,7 +175,7 @@ export function IncidentReporter({
   // Nótese que el atajo de teclado ya permitía OCULTARLO; lo que faltaba era
   // poder APARTARLO, que es lo que se necesita cuando tapa un control y aun así
   // quieres seguir pudiendo avisar.
-  const { corner, setCorner, corners } = useFloatingCorner();
+  const { corner, setCorner } = useFloatingCorner();
   const [moverAbierto, setMoverAbierto] = useState(false);
   // #889 — arrastre del asa. `arrastre` es la posición del puntero mientras se
   // arrastra (null = no se está arrastrando); sirve para pintar el botón bajo
@@ -598,8 +599,11 @@ export function IncidentReporter({
                 <p className="mb-1.5 px-1 text-xs font-medium text-gray-500">
                   {t("ui.incidentReporter.moverTitulo")}
                 </p>
+                {/* #900 — en rejilla de 2×2 el orden es el del MAPA de la
+                    pantalla, no el de `corners`: cada celda tiene que estar
+                    donde dice su texto. */}
                 <div className="grid grid-cols-2 gap-1">
-                  {corners.map((c) => (
+                  {CORNERS_MAPA.map((c) => (
                     <button
                       key={c}
                       type="button"

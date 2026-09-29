@@ -1134,7 +1134,9 @@
       "skillFormEdit": "Editar skill",
       "creditosAvisaAdmin": "Avisa a quen administra a conta para recargalos.",
       "report": "Reportar esta resposta",
-      "reportPrefill": "Resposta de MycoBot incorrecta, incompleta ou nesgada. O que respondeu:"
+      "reportPrefill": "Resposta de MycoBot incorrecta, incompleta ou nesgada. O que respondeu:",
+      "interrumpida": "Esta pregunta quedou sen resposta ao cambiar de pantalla. Se a resposta chegou a xerarse, aparecerá no historial da conversa; se non, volve preguntala.",
+      "interrumpidaReintentar": "Preguntar de novo"
     },
     "registradorPicker": {
       "placeholder": "Buscar rexistro por nome ou poboación…",

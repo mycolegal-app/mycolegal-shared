@@ -5,6 +5,31 @@
 
 ---
 
+## 3.2.8 — MycoBot en modo ampliado y el menú del botón de incidencias (2026-09-29)
+
+Type: **revision**
+
+- `incident-reporter.tsx` + `use-floating-corner.ts` (#900): el menú "Mover"
+  pinta las esquinas en el orden del MAPA de la pantalla (`CORNERS_MAPA`). En una
+  rejilla de 2×2 el orden lógico de `CORNERS` dejaba "abajo derecha" en la celda
+  de arriba a la izquierda: cada celda prometía lo contrario de donde estaba.
+- `mycobot-rail.tsx` (#903): el modo ampliado YA NO se persiste en
+  `localStorage`. En Consultor la navegación es full-page y el rail rehidrataba
+  el modo ampliado en cada pantalla, tapando la página recién pedida.
+- `mycobot-rail.tsx` (#902): la columna de conversaciones se ve siempre que el
+  panel está ampliado (era `hidden md:flex`, y el zoom del navegador en una
+  exposición la hacía desaparecer), y los iconos de historial y skills vuelven a
+  la cabecera también en ampliado, gobernando la pestaña de esa columna.
+- `mycobot-rail.tsx` (#901): si se cambia de pantalla mientras MycoBot piensa, al
+  volver se recarga la conversación del servidor —la respuesta suele estar
+  guardada— y si no llegó se avisa con un botón de reintentar. Dos claves i18n
+  nuevas: `ui.mycobot.interrumpida` y `ui.mycobot.interrumpidaReintentar`.
+
+Consumidores: cualquiera que monte `IncidentReporter` o `MycoBotRail`. Sin
+cambios de API.
+
+---
+
 ## 1.99.22 — unidad-routes: extractText desde @mycolegal-app/text-extract (2026-08-21)
 
 Type: **revision**
