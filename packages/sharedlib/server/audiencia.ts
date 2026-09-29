@@ -29,6 +29,8 @@
  * dejaría fuera de la única app que usa.
  */
 
+import { exigirAppContratada } from './contratacion';
+
 export type Audiencia = 'internal' | 'external';
 
 /**
@@ -100,7 +102,7 @@ export class AudienciaNoAdmitidaError extends Error {
  *   exigirAudiencia(payload, ['internal'], 'notaria');
  */
 export function exigirAudiencia(
-  claims: ClaimsAudiencia,
+  claims: ClaimsAudiencia & { apps?: unknown },
   admitidas: readonly Audiencia[],
   appSlug: string,
 ): Audiencia {
@@ -108,6 +110,14 @@ export function exigirAudiencia(
   if (!admitidas.includes(audiencia)) {
     throw new AudienciaNoAdmitidaError(appSlug, audiencia);
   }
+  // La OTRA frontera, y va aquí a propósito (#898): quién eres y qué tiene
+  // contratado tu organización son la misma pregunta hecha en el mismo
+  // instante —«¿pinta algo este token en esta app?»— y las dos se saltaban por
+  // la misma puerta, la de entrar con una sesión abierta en otra app. Al
+  // colgarla de esta llamada, que ya recibe el slug y ya está cableada en las
+  // catorce apps, la frontera llega a todas sin tocar ninguna: basta con que
+  // suban de versión de sharedlib. Ver `contratacion.ts`.
+  exigirAppContratada(claims, appSlug);
   return audiencia;
 }
 

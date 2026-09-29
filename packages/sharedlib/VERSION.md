@@ -1,5 +1,28 @@
 # mycolegal-sharedlib — Changelog
 
+## 0.12.4 — la app contratada se comprueba al verificar el token (2026-09-29)
+
+Type: **minor**
+
+- `server/contratacion.ts` (nuevo): `exigirAppContratada(claims, appSlug)` rechaza
+  el token cuando la organización no tiene contratada esa app. La lista viaja en
+  el claim `apps`, que estampa `signAccessToken` de auth.
+- `server/audiencia.ts` lo llama desde `exigirAudiencia`, que ya recibe el slug y
+  ya está cableado en las catorce apps: la frontera llega a todas con sólo subir
+  de versión, sin tocar el `auth.ts` de cada una.
+- Es la otra mitad del problema que resolvió la audiencia. `JWT_SECRET` es el
+  mismo en todo el ecosistema y lo único que impedía usar una app no contratada
+  era el gate `OrgApp` del **login**: quien tenía sesión en una app entraba en
+  cualquier otra cambiando la URL, porque ese gate no se volvía a mirar.
+  Reportado el 28-sep-2026 (#898) por una usuaria que entró así en Tramitación
+  durante horas, con la app sin contratar.
+- Un token SIN el claim **pasa**, a propósito: mientras conviven tokens viejos
+  (hasta 17 minutos, `inactividad + 2`) y nuevos, tratar la ausencia como
+  denegación dejaría fuera a todo el mundo y haría del orden de despliegue un
+  corte. Una lista VACÍA sí deniega — eso es una respuesta, no una ausencia.
+- `superadmin` pasa siempre y `config`/`admin` están exentas, igual que en el
+  gate del login: son consolas de plataforma y no se conceden como `OrgApp`.
+
 ## 0.11.3 — usuarios: reconciliar identidades muertas (2026-09-23)
 
 Type: **patch**
