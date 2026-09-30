@@ -5,6 +5,17 @@
 
 ---
 
+## 3.2.10 — Clase Sistema Registral en el catálogo del rail (2026-09-29)
+
+Type: **revision**
+
+- i18n ×4: `ui.mycobot.clases.SISTEMA_REGISTRAL` y su forma corta (#905). La
+  clase nueva separa la doctrina del sistema registral que NO pasa por el BOE
+  —honorarios y consultas de la memoria DGSJFP— de las resoluciones contra
+  calificación, con las que no debe mezclarse.
+
+---
+
 ## 3.2.9 — Panel de vídeos y tutoriales en el «?» (2026-09-29)
 
 Type: **revision**
