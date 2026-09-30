@@ -828,7 +828,13 @@ export function DataTable<TData, TValue>({
               </tr>
             ))}
           </thead>
-          <tbody className="[&_tr:last-child]:border-0">
+          {/* #4 (Peticiones, TEST) — `border-0` aqui ponia a CERO todos los bordes de
+              la ultima fila, no solo el inferior que se queria quitar. Las tablas que
+              codifican el estado con una franja `border-l-4` en la fila perdian la
+              franja SIEMPRE en la ultima, sin importar su estado ni el orden: la
+              regla del tbody gana en especificidad a la clase de la fila. Quitando
+              solo el borde inferior, la franja izquierda sobrevive. */}
+          <tbody className="[&_tr:last-child]:border-b-0">
             {table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => (
                 <tr
