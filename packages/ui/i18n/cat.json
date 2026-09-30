@@ -1140,7 +1140,8 @@
       "report": "Reportar aquesta resposta",
       "reportPrefill": "Resposta de MycoBot incorrecta, incompleta o esbiaixada. El que va respondre:",
       "interrumpida": "Aquesta pregunta va quedar sense resposta al canviar de pantalla. Si la resposta es va arribar a generar, apareixerà a l'historial de la conversa; si no, torna a preguntar-la.",
-      "interrumpidaReintentar": "Preguntar de nou"
+      "interrumpidaReintentar": "Preguntar de nou",
+      "print": "Imprimir aquesta resposta"
     },
     "registradorPicker": {
       "placeholder": "Cercar registre per nom o població…",
@@ -1230,6 +1231,10 @@
       "vacio": "Encara no hi ha tutorials publicats per a aquesta aplicació.",
       "cerrar": "Tancar",
       "nSlides": "{n} diapositives"
+    },
+    "password": {
+      "show": "Mostrar la contrasenya",
+      "hide": "Amagar la contrasenya"
     }
   },
   "unidad": {

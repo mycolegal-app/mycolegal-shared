@@ -1140,7 +1140,8 @@
       "report": "Reportar esta respuesta",
       "reportPrefill": "Respuesta de MycoBot incorrecta, incompleta o sesgada. Lo que respondió:",
       "interrumpida": "Esta pregunta se quedó sin respuesta al cambiar de pantalla. Si la respuesta llegó a generarse, aparecerá en el historial de la conversación; si no, vuelve a preguntarla.",
-      "interrumpidaReintentar": "Preguntar de nuevo"
+      "interrumpidaReintentar": "Preguntar de nuevo",
+      "print": "Imprimir esta respuesta"
     },
     "registradorPicker": {
       "placeholder": "Buscar registro por nombre o población…",
@@ -1230,6 +1231,10 @@
       "vacio": "Todavía no hay tutoriales publicados para esta aplicación.",
       "cerrar": "Cerrar",
       "nSlides": "{n} diapositivas"
+    },
+    "password": {
+      "show": "Mostrar la contraseña",
+      "hide": "Ocultar la contraseña"
     }
   },
   "unidad": {

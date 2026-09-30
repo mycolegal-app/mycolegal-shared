@@ -31,6 +31,7 @@ import {
   Car,
   FileQuestion,
   type LucideIcon,
+  Printer,
 } from "lucide-react";
 // El rail tenía su propio `renderMarkdown`, gemelo del compartido salvo en un
 // detalle: no desmontaba el LaTeX. Cuando `markdown.tsx` aprendió a hacerlo, esta
@@ -340,6 +341,83 @@ export function MycoBotRail({
       // Portapapeles no disponible (permiso/contexto no seguro): no rompemos nada.
     }
   }, []);
+  /**
+   * #24 — «Sería deseable poder imprimir las respuestas del consultor
+   * directamente, sin copiar y pegar en un Word. No deja imprimir selección de
+   * texto».
+   *
+   * Lo segundo tiene explicación: el panel entero lleva `print:hidden`, así que
+   * al imprimir desaparece — y con él la selección que hubiera dentro. El
+   * navegador está respetando nuestro CSS.
+   *
+   * Se imprime en un IFRAME oculto y no en una ventana nueva: una ventana la
+   * bloquea el navegador según cómo tenga la configuración el notario, y esto
+   * tiene que funcionar a la primera. Va la pregunta, la respuesta, las fuentes
+   * citadas y el aviso de que la respuesta es de IA — lo mismo que se ve en
+   * pantalla, porque lo que acaba en papel se archiva.
+   */
+  const printAnswer = useCallback(
+    (idx: number, m: Msg) => {
+      const pregunta = idx > 0 && messages[idx - 1]?.role === "user" ? messages[idx - 1].text : "";
+      const esc = (x: string) =>
+        x.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const citas = (m.citas ?? [])
+        .map((c, n) => `<li><span class="n">[${n + 1}]</span> ${esc(c.titulo || c.referenciaBoe || "")}</li>`)
+        .join("");
+      const ayuda = (m.citasAyuda ?? [])
+        .map((c) => `<li>${esc(c.title || c.section || "")}</li>`)
+        .join("");
+      const html = `<!doctype html><html lang="es"><head><meta charset="utf-8">
+<title>${esc(pregunta ? pregunta.slice(0, 80) : "MycoBot")}</title>
+<style>
+  @page{size:A4;margin:18mm 16mm}
+  body{margin:0;font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;color:#1e293b;font-size:11pt;line-height:1.55}
+  .brand{font-weight:800;letter-spacing:-.02em;font-size:13pt;color:#0e7490;margin-bottom:14px}
+  .preg{background:#f1f5f9;border-left:3px solid #0e7490;padding:8px 12px;margin:0 0 16px;font-weight:600}
+  h1,h2,h3{font-size:12pt;margin:14px 0 4px}
+  p{margin:0 0 8px}
+  ul,ol{margin:4px 0 10px;padding-left:20px}
+  li{margin:0 0 3px}
+  table{border-collapse:collapse;margin:8px 0;font-size:10pt}
+  td,th{border:1px solid #e2e8f0;padding:4px 7px;text-align:left}
+  .fuentes{margin-top:18px;border-top:1px solid #e2e8f0;padding-top:10px;font-size:9.5pt}
+  .fuentes .tit{font-weight:700;margin-bottom:4px}
+  .fuentes .n{color:#0e7490;font-weight:700}
+  .disc{color:#94a3b8;font-size:8.5pt;font-style:italic;margin-top:16px}
+</style></head><body>
+  <div class="brand">MycoBot</div>
+  ${pregunta ? `<div class="preg">${esc(pregunta)}</div>` : ""}
+  ${renderMarkdown(m.text)}
+  ${citas ? `<div class="fuentes"><div class="tit">${esc(t("ui.mycobot.sources"))}</div><ul>${citas}</ul></div>` : ""}
+  ${ayuda ? `<div class="fuentes"><ul>${ayuda}</ul></div>` : ""}
+  <p class="disc">${esc(t("ui.mycobot.disclaimer"))}</p>
+</body></html>`;
+
+      const marco = document.createElement("iframe");
+      marco.setAttribute("aria-hidden", "true");
+      marco.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0";
+      marco.onload = () => {
+        const v = marco.contentWindow;
+        if (!v) return;
+        v.focus();
+        v.print();
+        // El diálogo de impresión es modal: para cuando vuelve aquí ya se ha
+        // cerrado. Un margen y fuera, que si no el iframe se queda en el DOM.
+        window.setTimeout(() => marco.remove(), 1000);
+      };
+      document.body.appendChild(marco);
+      const doc = marco.contentWindow?.document;
+      if (!doc) {
+        marco.remove();
+        return;
+      }
+      doc.open();
+      doc.write(html);
+      doc.close();
+    },
+    [messages, t],
+  );
+
   // «Reportar esta respuesta» (PLAN_TECNICO_IA_RESPONSABLE §5, art. 27 del Código):
   // abre el IncidentReporter montado en el app-shell con la conversación como
   // contexto y el texto pre-rellenado. El agente de incidencias puede leer el
@@ -1863,6 +1941,15 @@ export function MycoBotRail({
                               <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
                               <line x1="4" y1="22" x2="4" y2="15" />
                             </svg>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => printAnswer(i, m)}
+                            className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-gray-600"
+                            title={t("ui.mycobot.print")}
+                            aria-label={t("ui.mycobot.print")}
+                          >
+                            <Printer className="h-3 w-3" aria-hidden />
                           </button>
                           <button
                             type="button"

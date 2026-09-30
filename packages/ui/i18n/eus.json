@@ -1139,7 +1139,8 @@
       "report": "Erantzun hau jakinarazi",
       "reportPrefill": "MycoBoten erantzun okerra, osatugabea edo alboratua. Erantzun zuena:",
       "interrumpida": "Galdera hau erantzunik gabe geratu da pantailaz aldatzean. Erantzuna sortu bazen, elkarrizketaren historian agertuko da; bestela, galdetu berriro.",
-      "interrumpidaReintentar": "Galdetu berriro"
+      "interrumpidaReintentar": "Galdetu berriro",
+      "print": "Inprimatu erantzun hau"
     },
     "registradorPicker": {
       "placeholder": "Bilatu erregistroa izenez edo herriz…",
@@ -1229,6 +1230,10 @@
       "vacio": "Oraindik ez dago tutorialik argitaratuta aplikazio honetarako.",
       "cerrar": "Itxi",
       "nSlides": "{n} diapositiba"
+    },
+    "password": {
+      "show": "Erakutsi pasahitza",
+      "hide": "Ezkutatu pasahitza"
     }
   },
   "unidad": {

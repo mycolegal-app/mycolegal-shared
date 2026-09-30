@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { PasswordInput } from "./password-input";
 import { useI18n } from "../i18n/i18n-context";
 import { apiErrorMessage } from "../../lib/api-error";
 
@@ -83,9 +84,8 @@ export function ChangePasswordForm({
           <label htmlFor="new-password" className="mb-1 block text-sm text-gray-700">
             {t("ui.userAccount.fieldNew")}
           </label>
-          <input
+          <PasswordInput
             id="new-password"
-            type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
@@ -98,9 +98,8 @@ export function ChangePasswordForm({
           <label htmlFor="new-password-confirm" className="mb-1 block text-sm text-gray-700">
             {t("ui.changePassword.repeat")}
           </label>
-          <input
+          <PasswordInput
             id="new-password-confirm"
-            type="password"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
             required

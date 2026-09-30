@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { NavLink as Link } from "./nav-link";
 import { Loader2, Save, KeyRound, User as UserIcon, Inbox, ExternalLink } from "lucide-react";
+import { PasswordInput } from "./password-input";
 import { useI18n } from "../i18n/i18n-context";
 import { apiErrorMessage } from "../../lib/api-error";
 import {
@@ -433,9 +434,8 @@ function PasswordTab({ endpoint }: { endpoint: string }) {
     <form onSubmit={onSubmit} className="space-y-4">
       <div>
         <Label htmlFor="ua-current">{t("ui.userAccount.fieldCurrent")}</Label>
-        <Input
+        <PasswordInput
           id="ua-current"
-          type="password"
           autoComplete="current-password"
           value={current}
           onChange={(e) => setCurrent(e.target.value)}
@@ -444,9 +444,8 @@ function PasswordTab({ endpoint }: { endpoint: string }) {
       </div>
       <div>
         <Label htmlFor="ua-new">{t("ui.userAccount.fieldNew")}</Label>
-        <Input
+        <PasswordInput
           id="ua-new"
-          type="password"
           autoComplete="new-password"
           value={next}
           onChange={(e) => setNext(e.target.value)}
@@ -457,9 +456,8 @@ function PasswordTab({ endpoint }: { endpoint: string }) {
       </div>
       <div>
         <Label htmlFor="ua-confirm">{t("ui.userAccount.fieldConfirm")}</Label>
-        <Input
+        <PasswordInput
           id="ua-confirm"
-          type="password"
           autoComplete="new-password"
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}

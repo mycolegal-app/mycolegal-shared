@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { cn } from "../../lib/utils";
+import { PasswordInput } from "./password-input";
 import { useI18n } from "../i18n/i18n-context";
 
 interface Organization {
@@ -489,9 +490,8 @@ export function LoginForm({
                   <label htmlFor="expired-current" className="block text-sm font-medium text-mc-slate-700">
                     {t("ui.login.expiredCurrent")}
                   </label>
-                  <input
+                  <PasswordInput
                     id="expired-current"
-                    type="password"
                     value={expiredCurrent}
                     onChange={(e) => setExpiredCurrent(e.target.value)}
                     required
@@ -504,9 +504,8 @@ export function LoginForm({
                   <label htmlFor="expired-new" className="block text-sm font-medium text-mc-slate-700">
                     {t("ui.login.expiredNew")}
                   </label>
-                  <input
+                  <PasswordInput
                     id="expired-new"
-                    type="password"
                     value={expiredNew}
                     onChange={(e) => setExpiredNew(e.target.value)}
                     required
@@ -524,9 +523,8 @@ export function LoginForm({
                   <label htmlFor="expired-confirm" className="block text-sm font-medium text-mc-slate-700">
                     {t("ui.login.expiredConfirm")}
                   </label>
-                  <input
+                  <PasswordInput
                     id="expired-confirm"
-                    type="password"
                     value={expiredConfirm}
                     onChange={(e) => setExpiredConfirm(e.target.value)}
                     required
@@ -594,9 +592,8 @@ export function LoginForm({
                       {t("ui.login.forgotPassword")}
                     </a>
                   </div>
-                  <input
+                  <PasswordInput
                     id="password"
-                    type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
