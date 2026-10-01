@@ -77,9 +77,34 @@ function modelDeUrl(url: string | undefined): string | null {
 }
 
 /**
+ * Techo por INTENTO cuando el llamante no pone el suyo. No es un número fino: es la
+ * red que impide que una llamada se quede colgada para siempre (ver `vertexRequest`).
+ * Los caminos con forma conocida —el chat, que debe caber en el timeout de Cloud
+ * Run— pasan presupuestos mucho más cortos.
+ */
+const TIMEOUT_POR_INTENTO_MS = 120_000;
+
+/** A partir de aquí una llamada que SÍ terminó bien se registra igualmente: es la
+ *  cola de latencia del serving, y sin esta línea no se distingue de un cuelgue. */
+const LENTA_MS = 30_000;
+
+/**
  * `client.request` con conexión nueva (sin keep-alive) + reintentos/backoff.
  * Reintenta ante 5xx/429 Y errores de red SIN `response` (`ERR_STREAM_PREMATURE_CLOSE`/
  * `ECONNRESET`). Un 4xx "real" (≠429) no se reintenta: no se arregla repitiendo.
+ *
+ * ⚠️ TIMEOUT: hasta el 1-oct-2026 no había ninguno, y eso convertía la cola de
+ * latencia del serving compartido de Vertex en cuelgues de minutos. Medido ese día
+ * con la métrica del propio Vertex (`publisher/online_serving/model_invocation_latencies`,
+ * `request_type: shared`): 44 de 438 invocaciones de `gemini-3.7-flash` por encima de
+ * 30 s y dos por encima de 240 s —408 s para devolver 25-50 tokens—, mientras
+ * `flash-lite` y los embeddings seguían en medio segundo. No es red nuestra ni CPU: es
+ * capacidad compartida. Lo único que está en nuestra mano es no esperar indefinidamente
+ * y reintentar, porque una petición NUEVA suele caer en capacidad sana.
+ *
+ * `deadlineMs` acota el TOTAL de la llamada (todos los intentos): sin él, 3 intentos de
+ * `timeoutMs` pueden sumar más que el timeout de la request de Cloud Run (300 s) y el
+ * usuario se come un 504 igual.
  *
  * Además ANOTA el consumo de cada respuesta en la contabilidad ambiental
  * (`server/llm-usage`), de modo que `withCredits` liquide con los tokens reales
@@ -88,24 +113,59 @@ function modelDeUrl(url: string | undefined): string | null {
  */
 export async function vertexRequest<T>(
   config: Parameters<Awaited<ReturnType<GoogleAuth['getClient']>>['request']>[0],
-  opts: { attempts?: number; baseDelayMs?: number } = {},
+  opts: {
+    attempts?: number;
+    baseDelayMs?: number;
+    /** Techo de CADA intento (ms). Por defecto `TIMEOUT_POR_INTENTO_MS`. */
+    timeoutMs?: number;
+    /** Techo del conjunto intentos+esperas (ms). Sin él, solo manda `timeoutMs`. */
+    deadlineMs?: number;
+  } = {},
 ): Promise<{ data: T }> {
   const attempts = opts.attempts ?? 3;
   const baseDelayMs = opts.baseDelayMs ?? 400;
+  const timeoutMs = opts.timeoutMs ?? TIMEOUT_POR_INTENTO_MS;
   const client = await getClient();
+  const model = modelDeUrl(typeof config.url === 'string' ? config.url : undefined);
+  const t0 = Date.now();
+  const restante = () => (opts.deadlineMs ? opts.deadlineMs - (Date.now() - t0) : Infinity);
   let lastErr: unknown;
   for (let attempt = 1; attempt <= attempts; attempt++) {
+    const tIntento = Date.now();
+    // El último intento aprovecha lo que quede de deadline aunque sea menos que
+    // `timeoutMs`: mejor un intento corto que ninguno.
+    const techo = Math.min(timeoutMs, Math.max(1, restante()));
     try {
-      const res = await client.request<T>({ ...config, agent: noKeepAliveAgent });
-      const model = modelDeUrl(typeof config.url === 'string' ? config.url : undefined);
+      const res = await client.request<T>({ ...config, agent: noKeepAliveAgent, timeout: techo });
       if (model) recordLlmCall({ model, ...vertexUsage(res.data) });
+      const ms = Date.now() - t0;
+      if (attempt > 1 || ms > LENTA_MS) {
+        console.warn('[vertex] llamada lenta', JSON.stringify({ model, intentos: attempt, ms, techo }));
+      }
       return res;
     } catch (err) {
       lastErr = err;
       const status = (err as { response?: { status?: number } })?.response?.status;
+      const code = (err as { code?: string })?.code;
       const retriable = status === undefined || status >= 500 || status === 429;
-      if (attempt === attempts || !retriable) throw err;
-      await new Promise((r) => setTimeout(r, baseDelayMs * attempt));
+      const espera = baseDelayMs * attempt;
+      const sinTiempo = restante() - espera <= 0;
+      // El fallo de un intento ya NO es mudo: sin esta línea, dos reintentos de 120 s
+      // y una generación lenta de 240 s se leen exactamente igual en los logs.
+      console.warn(
+        '[vertex] intento fallido',
+        JSON.stringify({
+          model,
+          intento: attempt,
+          de: attempts,
+          ms: Date.now() - tIntento,
+          status: status ?? null,
+          code: code ?? null,
+          reintenta: retriable && attempt < attempts && !sinTiempo,
+        }),
+      );
+      if (attempt === attempts || !retriable || sinTiempo) throw err;
+      await new Promise((r) => setTimeout(r, espera));
     }
   }
   throw lastErr;
