@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { NavLink as Link } from "./nav-link";
 import { Loader2, Save, KeyRound, User as UserIcon, Inbox, ExternalLink } from "lucide-react";
@@ -550,6 +550,10 @@ function IncidentsTab({
         <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
       )}
 
+      {/* #926 — El enlace a la lista completa estaba al FINAL de la pestaña,
+          detrás de las dos listas (hasta 50 propias + 20 de la organización):
+          «para llegar tienes que recorrer todas». Sube al título de la sección a
+          la que se refiere, que es lo primero que se ve al abrir la pestaña. */}
       <Section
         title={t("ui.userAccount.sectionMine")}
         items={mine}
@@ -557,6 +561,15 @@ function IncidentsTab({
         showReporter={false}
         clickable
         onClose={onClose}
+        action={
+          <Link
+            href="/incidencias"
+            onClick={onClose}
+            className="inline-flex items-center gap-1 text-xs font-normal normal-case text-mc-primary-600 hover:underline"
+          >
+            {t("ui.userAccount.linkAllIncidents")} <ExternalLink className="h-3.5 w-3.5" />
+          </Link>
+        }
       />
 
       <Section
@@ -568,14 +581,6 @@ function IncidentsTab({
         onClose={onClose}
       />
 
-      <div className="flex justify-end">
-        <Link
-          href="/incidencias"
-          className="inline-flex items-center gap-1 text-sm text-mc-primary-600 hover:underline"
-        >
-          {t("ui.userAccount.linkAllIncidents")} <ExternalLink className="h-3.5 w-3.5" />
-        </Link>
-      </div>
     </div>
   );
 }
@@ -587,6 +592,7 @@ function Section({
   showReporter,
   clickable,
   onClose,
+  action,
 }: {
   title: string;
   items: IncidentEntry[] | null;
@@ -596,11 +602,16 @@ function Section({
   clickable: boolean;
   /** Closes the parent dialog when a row navigates away. */
   onClose: () => void;
+  /** #926 — Shown at the right of the heading (the "see all" link). */
+  action?: ReactNode;
 }) {
   const { t } = useI18n();
   return (
     <div>
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">{title}</h3>
+      <div className="mb-2 flex items-baseline justify-between gap-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">{title}</h3>
+        {action}
+      </div>
       {items === null ? (
         <div className="flex items-center gap-2 text-sm text-gray-500">
           <Loader2 className="h-4 w-4 animate-spin" /> {t("ui.userAccount.loadingShort")}
