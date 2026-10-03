@@ -1098,7 +1098,11 @@
         "LEGISLACION_AUTONOMICA": "Legislación autonómica",
         "LEGISLACION_UE": "Legislación UE",
         "GUIAS": "Guías y recomendaciones",
-        "OTROS": "Otros"
+        "OTROS": "Otros",
+        "FUNDACIONES": "Fundaciones",
+        "BIENES_MUEBLES": "Bienes muebles",
+        "INSTRUCCIONES_DGSJFP": "Instrucciones DGSJFP",
+        "APORTACION_ORG": "Biblioteca particular"
       },
       "clasesCorto": {
         "RESOLUCIONES_DGRN": "DGSJFP",
@@ -1113,7 +1117,9 @@
         "LEGISLACION_AUTONOMICA": "Legisl. auton.",
         "LEGISLACION_UE": "Legisl. UE",
         "GUIAS": "Guías",
-        "OTROS": "Otros"
+        "OTROS": "Otros",
+        "INSTRUCCIONES_DGSJFP": "Instrucc. DGSJFP",
+        "APORTACION_ORG": "Biblioteca"
       },
       "attach": "Adjuntar documento a la conversación",
       "attachRemove": "Quitar documento",

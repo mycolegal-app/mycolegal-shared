@@ -21,16 +21,7 @@ import {
   SlidersHorizontal,
   X,
   Check,
-  Gavel,
   ScrollText,
-  Landmark,
-  Globe,
-  ShieldCheck,
-  Stamp,
-  Building2,
-  Car,
-  FileQuestion,
-  type LucideIcon,
   Printer,
 } from "lucide-react";
 // El rail tenía su propio `renderMarkdown`, gemelo del compartido salvo en un
@@ -48,41 +39,11 @@ import { apiErrorMessage } from "../../lib/api-error";
 import { readClasesSel, writeClasesSel, CLASES_CHANGED_EVENT } from "../../lib/biblioteca-clases";
 import { readFuentesSel } from "../../lib/biblioteca-fuentes";
 import { FuentesModal } from "./fuentes-modal";
-
-// Estilo de las pastillas de clase en el modal /sources (mismo criterio de color
-// que la leyenda de la Biblioteca del Consultor). El label sale de i18n
-// (`ui.mycobot.clases.<CLASE>`), con fallback al propio código.
-const CLASE_COLOR: Record<string, string> = {
-  RESOLUCIONES_DGRN: "bg-cyan-100 text-cyan-800 border-cyan-300",
-  RESOLUCIONES_DGDEJ: "bg-red-100 text-red-800 border-red-300",
-  SISTEMA_NOTARIAL: "bg-indigo-100 text-indigo-800 border-indigo-300",
-  DOCTRINA: "bg-violet-100 text-violet-800 border-violet-300",
-  JURISPRUDENCIA: "bg-amber-100 text-amber-800 border-amber-300",
-  LEGISLACION: "bg-emerald-100 text-emerald-800 border-emerald-300",
-  LEGISLACION_AUTONOMICA: "bg-emerald-100 text-emerald-800 border-emerald-300",
-  LEGISLACION_UE: "bg-blue-100 text-blue-800 border-blue-300",
-  GUIAS: "bg-amber-100 text-amber-800 border-amber-300",
-  FUNDACIONES: "bg-orange-100 text-orange-800 border-orange-300",
-  BIENES_MUEBLES: "bg-lime-100 text-lime-800 border-lime-300",
-  OTROS: "bg-gray-100 text-gray-700 border-gray-300",
-};
-
-// Icono + color del icono por clase (para el badge de tipo en las citas de MycoBot,
-// #548). Mismo criterio que la Biblioteca del Consultor.
-const CLASE_ICON: Record<string, LucideIcon> = {
-  RESOLUCIONES_DGRN: Gavel,
-  RESOLUCIONES_DGDEJ: Gavel,
-  SISTEMA_NOTARIAL: Stamp,
-  DOCTRINA: BookOpen,
-  JURISPRUDENCIA: Scale,
-  LEGISLACION: ScrollText,
-  LEGISLACION_AUTONOMICA: Landmark,
-  LEGISLACION_UE: Globe,
-  GUIAS: ShieldCheck,
-  FUNDACIONES: Building2,
-  BIENES_MUEBLES: Car,
-  OTROS: FileQuestion,
-};
+// Color + icono por CLASE (badge de tipo de las citas, #548): espejo de la leyenda
+// de la Biblioteca del Consultor, compartido con el modal de Fuentes. El rail
+// llevaba su propia copia, que se quedó sin las clases nuevas (ver #946). El label
+// sale de i18n (`ui.mycobot.clasesCorto.<CLASE>`), con fallback al propio código.
+import { claseEstilo } from "../../lib/clase-estilo";
 
 /**
  * Convierte las marcas de cita `[n]` del HTML ya renderizado en anclas clicables
@@ -2059,7 +2020,8 @@ export function MycoBotRail({
                               const label = c.referenciaBoe || `#${c.ordinal}`;
                               const cls = "block w-full rounded px-1 py-0.5 text-left hover:bg-gray-200";
                               // #548 — badge de la CLASE citada (icono + color + etiqueta corta).
-                              const ClaseIcon = (c.clase && CLASE_ICON[c.clase]) || Scale;
+                              const claseEst = claseEstilo(c.clase);
+                              const ClaseIcon = claseEst.Icon;
                               const claseCorto = c.clase ? t(`ui.mycobot.clasesCorto.${c.clase}`) || c.clase : "";
                               const inner = (
                                 <span className="flex items-start gap-1.5">
@@ -2067,9 +2029,7 @@ export function MycoBotRail({
                                     <span className="flex flex-wrap items-center gap-1">
                                       {c.clase ? (
                                         <span
-                                          className={`inline-flex items-center gap-0.5 rounded px-1 py-0.5 text-[9px] leading-none ${
-                                            CLASE_COLOR[c.clase] ?? "bg-gray-100 text-gray-600"
-                                          }`}
+                                          className={`inline-flex items-center gap-0.5 rounded px-1 py-0.5 text-[9px] leading-none ${claseEst.pastilla}`}
                                         >
                                           <ClaseIcon className="h-2.5 w-2.5 shrink-0" />
                                           {claseCorto}

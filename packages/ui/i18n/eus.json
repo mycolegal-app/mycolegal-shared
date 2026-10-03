@@ -1097,7 +1097,11 @@
         "LEGISLACION_AUTONOMICA": "Legeria autonomikoa",
         "LEGISLACION_UE": "EBko legeria",
         "GUIAS": "Gidak eta gomendioak",
-        "OTROS": "Bestelakoak"
+        "OTROS": "Bestelakoak",
+        "FUNDACIONES": "Fundazioak",
+        "BIENES_MUEBLES": "Ondasun higigarriak",
+        "INSTRUCCIONES_DGSJFP": "DGSJFP jarraibideak",
+        "APORTACION_ORG": "Liburutegi partikularra"
       },
       "clasesCorto": {
         "RESOLUCIONES_DGRN": "DGSJFP",
@@ -1112,7 +1116,9 @@
         "LEGISLACION_AUTONOMICA": "Legeria auton.",
         "LEGISLACION_UE": "EB legeria",
         "GUIAS": "Gidak",
-        "OTROS": "Bestel."
+        "OTROS": "Bestel.",
+        "INSTRUCCIONES_DGSJFP": "DGSJFP jarraib.",
+        "APORTACION_ORG": "Liburutegia"
       },
       "attach": "Erantsi dokumentua elkarrizketari",
       "attachRemove": "Kendu dokumentua",

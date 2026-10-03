@@ -14,22 +14,10 @@ import {
   writeClasesSel,
   CLASES_CHANGED_EVENT,
 } from "../../lib/biblioteca-clases";
-
-// Color por CLASE (mismo criterio que la Biblioteca del Consultor y el rail).
-const CLASE_COLOR: Record<string, string> = {
-  RESOLUCIONES_DGRN: "bg-cyan-100 text-cyan-800 border-cyan-300",
-  RESOLUCIONES_DGDEJ: "bg-red-100 text-red-800 border-red-300",
-  SISTEMA_NOTARIAL: "bg-indigo-100 text-indigo-800 border-indigo-300",
-  DOCTRINA: "bg-violet-100 text-violet-800 border-violet-300",
-  JURISPRUDENCIA: "bg-amber-100 text-amber-800 border-amber-300",
-  LEGISLACION: "bg-emerald-100 text-emerald-800 border-emerald-300",
-  LEGISLACION_AUTONOMICA: "bg-emerald-100 text-emerald-800 border-emerald-300",
-  LEGISLACION_UE: "bg-blue-100 text-blue-800 border-blue-300",
-  GUIAS: "bg-amber-100 text-amber-800 border-amber-300",
-  FUNDACIONES: "bg-orange-100 text-orange-800 border-orange-300",
-  BIENES_MUEBLES: "bg-lime-100 text-lime-800 border-lime-300",
-  OTROS: "bg-gray-100 text-gray-700 border-gray-300",
-};
+// Color por CLASE: espejo de la leyenda de la Biblioteca del Consultor, compartido
+// con el rail de MycoBot. Tenía su propia copia, que se quedó sin las clases
+// nuevas y con el color viejo de LEGISLACION_AUTONOMICA y GUIAS (ver #946).
+import { claseEstilo } from "../../lib/clase-estilo";
 
 /** Una fuente del catálogo (payload de /api/resoluciones/fuentes). */
 export interface FuenteCatalogoDTO {
@@ -298,6 +286,7 @@ export function FuentesModal({ open, onClose, fuentesUrl }: FuentesModalProps) {
                             <div className="mt-1.5 flex flex-wrap gap-1">
                               {f.clases.map((c) => {
                                 const cSel = isClaseSel(c.clase);
+                                const est = claseEstilo(c.clase);
                                 return (
                                   <button
                                     key={c.clase}
@@ -307,7 +296,7 @@ export function FuentesModal({ open, onClose, fuentesUrl }: FuentesModalProps) {
                                     disabled={!fSel}
                                     className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] transition-colors disabled:cursor-not-allowed ${
                                       cSel
-                                        ? `${CLASE_COLOR[c.clase] ?? "border-gray-300 bg-gray-100 text-gray-700"} ring-1 ring-inset ring-current`
+                                        ? `${est.pastilla} ${est.borde} ring-1 ring-inset ring-current`
                                         : "border-gray-200 text-gray-400 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700"
                                     }`}
                                   >
