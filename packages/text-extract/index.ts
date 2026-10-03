@@ -44,14 +44,67 @@ export interface ExtraerTextoOpts {
 
 const noEspacios = (s: string) => s.replace(/\s/g, '').length;
 
+/** MIME que no dice NADA del formato: hay que mirar los bytes. */
+const MIME_GENERICO = /^(?:application|binary)\/octet-stream$/i;
+
+/**
+ * MIME real por número mágico, para cuando el declarado no sirve.
+ *
+ * Importa por dos motivos, los dos vistos en producción (oct-2026):
+ * (1) el navegador manda a veces `application/octet-stream`, y Vertex RECHAZA
+ *     ese valor de `mimeType` — el OCR devolvía 502 y subía como 500 al usuario;
+ * (2) mejora el ENRUTADO: un PDF declarado octet-stream pasa por su capa de
+ *     texto (gratis) en vez de irse directo al OCR.
+ *
+ * Devuelve `null` si no reconoce la firma (incluido el `PK` de los contenedores
+ * ZIP —docx/xlsx—, que resuelven `esWord`/`esXlsx` por extensión).
+ */
+function sniffMime(bytes: Uint8Array): string | null {
+  const empieza = (...sig: number[]) => sig.every((v, i) => bytes[i] === v);
+  if (empieza(0x25, 0x50, 0x44, 0x46)) return 'application/pdf'; // %PDF
+  if (empieza(0x89, 0x50, 0x4e, 0x47)) return 'image/png'; // \x89PNG
+  if (empieza(0xff, 0xd8, 0xff)) return 'image/jpeg';
+  if (empieza(0x47, 0x49, 0x46, 0x38)) return 'image/gif'; // GIF8
+  if (empieza(0x49, 0x49, 0x2a, 0x00) || empieza(0x4d, 0x4d, 0x00, 0x2a)) return 'image/tiff';
+  // RIFF????WEBP: los bytes 4-7 son el tamaño, se saltan.
+  const enPos = (pos: number, ...sig: number[]) => sig.every((v, i) => bytes[pos + i] === v);
+  if (empieza(0x52, 0x49, 0x46, 0x46) && enPos(8, 0x57, 0x45, 0x42, 0x50)) return 'image/webp';
+  return null;
+}
+
+/**
+ * OCR que NO lanza. `/internal/ocr` de platform traduce CUALQUIER fallo del OCR
+ * a un 502 genérico —incluido un 400 de Vertex por entrada inválida: PDF de cero
+ * páginas, `mimeType` no soportado…— y `ocrViaPlatform` lo lanza. Si eso escapa
+ * de aquí, rompe el contrato de `extraerTexto` ("nunca lanza") y el llamante
+ * responde un 500 en vez del 422 legible que ya tiene previsto para "no se pudo
+ * extraer texto". Pasó en producción con `/api/revisor` y
+ * `/api/resoluciones/doc-context` (sep-2026).
+ */
+async function ocrTolerante(args: Parameters<typeof ocrViaPlatform>[0]): Promise<string | null> {
+  try {
+    const o = await ocrViaPlatform(args);
+    const t = o?.texto?.trim();
+    return t ? t : null;
+  } catch (e) {
+    console.warn('[text-extract] OCR descartado:', e instanceof Error ? e.message : e);
+    return null;
+  }
+}
+
 /**
  * Extrae el texto de un documento eligiendo el procedimiento según su formato.
- * Nunca lanza por formato no soportado: devuelve `{ metodo: 'empty', texto: '' }`.
+ * Nunca lanza por formato no soportado ni por un fallo del OCR: devuelve
+ * `{ metodo: 'empty', texto: '' }` y el llamante decide qué contestar.
  */
 export async function extraerTexto(bytes: Uint8Array, opts: ExtraerTextoOpts = {}): Promise<ExtraerTextoResult> {
-  const mime = opts.mime ?? null;
   const fileName = opts.fileName ?? '';
   const ocr = opts.ocr;
+
+  // MIME de confianza: el declarado solo si dice algo; si no, el de los bytes.
+  // Puede quedar en `null` (→ se trata como PDF, el caso dominante).
+  const declarado = opts.mime?.trim() || null;
+  const mime = declarado && !MIME_GENERICO.test(declarado) ? declarado : sniffMime(bytes);
 
   // 0) XLSX → texto etiquetado por columna (sin OCR).
   if (esXlsx(mime, fileName)) {
@@ -71,17 +124,17 @@ export async function extraerTexto(bytes: Uint8Array, opts: ExtraerTextoOpts = {
     const r = await extractPdfLayer(bytes, mime);
     if (!r.needsOcr) return { texto: r.texto, chars: r.chars, metodo: 'pdf-text-layer' };
     if (ocr) {
-      const o = await ocrViaPlatform({ platformUrl: ocr.platformUrl, serviceKey: ocr.serviceKey, bytes, mimeType: mime ?? 'application/pdf' });
-      const t = o?.texto?.trim();
+      const t = await ocrTolerante({ platformUrl: ocr.platformUrl, serviceKey: ocr.serviceKey, bytes, mimeType: mime ?? 'application/pdf' });
       if (t) return { texto: t, chars: noEspacios(t), metodo: 'ocr' };
     }
     return { texto: r.texto, chars: r.chars, metodo: r.texto ? 'pdf-text-layer' : 'empty' };
   }
 
-  // 3) Imagen / otros formatos → OCR (si se provee config).
-  if (ocr) {
-    const o = await ocrViaPlatform({ platformUrl: ocr.platformUrl, serviceKey: ocr.serviceKey, bytes, mimeType: mime ?? 'application/octet-stream' });
-    const t = o?.texto?.trim();
+  // 3) Imagen / otros formatos → OCR (si se provee config). Aquí `mime` siempre
+  //    tiene valor (sin MIME se habría tratado como PDF arriba) y nunca es
+  //    octet-stream: se manda tal cual, sin inventar un valor que Vertex rechace.
+  if (ocr && mime) {
+    const t = await ocrTolerante({ platformUrl: ocr.platformUrl, serviceKey: ocr.serviceKey, bytes, mimeType: mime });
     if (t) return { texto: t, chars: noEspacios(t), metodo: 'ocr' };
   }
   return { texto: '', chars: 0, metodo: 'empty' };
