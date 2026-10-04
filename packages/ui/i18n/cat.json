@@ -1279,7 +1279,13 @@
       "camposPendientes": "{n} dades per omplir",
       "sinCampos": "Aquest document no necessita cap dada més: es pot generar.",
       "condicionesAviso": "{n} condicions del document no s'han determinat. S'assumeix que no s'apliquen, així que el document surt per la seva versió més curta.",
-      "concordanciaPendiente": "No s'ha generat: queden {n} concordances per resoldre (singular o plural, com «pertany/pertanyen»). No és una dada que falti: és una decisió de llengua que resol l'assistent, i aquesta peça encara no hi és."
+      "concordanciaPendiente": "No s'ha generat: queden {n} concordances per resoldre (singular o plural, com «pertany/pertanyen»). No és una dada que falti: és una decisió de llengua que resol l'assistent, i aquesta peça encara no hi és.",
+      "datosIncompletos": "No s'ha generat: falten {n} dades del document ({c}). Sense elles l'escriptura sortiria amb «[NO DISPONIBLE]» imprès.",
+      "quienFirma": "Qui signa l'escriptura",
+      "variosNotarios": "La notaria té {n} notaris: tria qui signa aquest document.",
+      "firmaSaleDe": "({f})",
+      "sinNotario": "No hi ha cap notari que pugui signar. Configura NOMBRE_NOTARIO a Configuració o entra amb el notari titular perquè aparegui aquí.",
+      "firmaPendiente": "No s'ha generat: el document anomena el notari i no s'ha triat qui signa."
     }
   },
   "unidad": {

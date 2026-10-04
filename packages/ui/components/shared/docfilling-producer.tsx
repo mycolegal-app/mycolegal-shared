@@ -75,6 +75,30 @@ export interface ProducerAportado { aportado: boolean; documentoCodigo?: string;
  * el esquema de compraventa, que declara 1.699 y pinta 38—, y por eso se pueden
  * teclear. La extracción con IA (F5) los PRECARGA; no los habilita.
  */
+/** Un notario de la organización, para el selector de firma. */
+export interface ProducerNotario { authUserId: string; nombre: string }
+
+/**
+ * Quién firma la escritura.
+ *
+ * Es una propiedad de la ESCRITURA, no de la organización: en un despacho con
+ * varios titulares cada documento lo firma uno, así que se elige aquí y se
+ * guarda en la tarea. Con un solo notario viene derivado, y aun así **se
+ * enseña** — porque el rol NOTARIO se usa también para administrar, y un
+ * «Ante mí, SuperAdmin» tiene que verse mirando la pantalla y no leyendo la
+ * escritura ya firmada.
+ *
+ * `usa: false` cuando el documento no nombra al notario, y entonces no se
+ * pregunta: de los 1.720 ficheros de la biblioteca sólo 13 lo nombran.
+ */
+export interface ProducerFirma {
+  usa: boolean;
+  valor: string | null;
+  origen: "configurado" | "derivado" | "falta" | "elegir" | "elegido";
+  opciones: ProducerNotario[];
+  fuente?: string;
+}
+
 export interface ProducerCampo {
   nombre: string; etiqueta: string; tipo: string; opciones: string[];
   instruccion: string | null; quien: string; valor: string | null;
@@ -97,6 +121,7 @@ export interface ProducerEstado {
   /** Condiciones del documento que nadie ha determinado: no se piden, pero
    *  cambian el documento (27.074 caracteres frente a 44.153, medido). */
   condicionesSinDeterminar: number;
+  firma: ProducerFirma;
 }
 
 export interface DocFillingProducerProps {
@@ -214,6 +239,12 @@ export function DocFillingProducer({
           // Distinto de lo anterior aunque se parezca: aquí los campos ESTÁN
           // completos y lo que falta es la etapa de concordancia. Decir
           // «faltan valores» mandaría al oficial a buscar un dato que no falta.
+          : code === "DATOS_INCOMPLETOS"
+            ? t("ui.docfillingProducer.datosIncompletos", {
+                n: cuerpo.error.pendientes ?? 0, c: (cuerpo.error.campos ?? []).join(", "),
+              })
+          : code === "FIRMA_SIN_ELEGIR"
+            ? t("ui.docfillingProducer.firmaPendiente")
           : code === "CONCORDANCIA_PENDIENTE"
             ? t("ui.docfillingProducer.concordanciaPendiente", { n: cuerpo.error.concordancias ?? 0 })
           : (code ?? "ERROR"),
@@ -401,6 +432,46 @@ export function DocFillingProducer({
           <p className="text-sm text-gray-600">
             {t("ui.docfillingProducer.camposPendientes", { n: estado.camposPendientes })}
           </p>
+
+          {/* Quién firma. Primero de todo, porque es lo que menos se puede
+              equivocar y lo que más se da por supuesto. */}
+          {estado.firma.usa && (
+            <div className="rounded-lg border border-gray-200 bg-white p-3">
+              <label className="block text-sm font-medium text-gray-900" htmlFor="firma-notario">
+                {t("ui.docfillingProducer.quienFirma")}
+              </label>
+              {estado.firma.opciones.length > 1 ? (
+                <>
+                  <select
+                    id="firma-notario"
+                    className="mt-2 w-full rounded-md border border-gray-300 px-3 py-2 text-sm disabled:opacity-50"
+                    value={estado.firma.valor ?? ""}
+                    disabled={guardando === "NOMBRE_NOTARIO"}
+                    onChange={(e) => void patch({ campo: "NOMBRE_NOTARIO", valor: e.target.value }, "NOMBRE_NOTARIO")}
+                  >
+                    <option value="">—</option>
+                    {estado.firma.opciones.map((n) => (
+                      <option key={n.authUserId} value={n.nombre}>{n.nombre}</option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {t("ui.docfillingProducer.variosNotarios", { n: estado.firma.opciones.length })}
+                  </p>
+                </>
+              ) : estado.firma.valor ? (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span className="text-sm text-gray-900">{estado.firma.valor}</span>
+                  {estado.firma.origen === "derivado" && estado.firma.fuente && (
+                    <span className="text-xs text-gray-500">
+                      {t("ui.docfillingProducer.firmaSaleDe", { f: estado.firma.fuente })}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <AlertBanner type="warning" message={t("ui.docfillingProducer.sinNotario")} />
+              )}
+            </div>
+          )}
 
           {/* Las condiciones que nadie ha determinado NO se piden —sólo
               gobiernan un IF— pero cambian el documento: con ellas vacías se

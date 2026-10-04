@@ -1278,7 +1278,13 @@
       "camposPendientes": "{n} datos por encher",
       "sinCampos": "Este documento non necesita ningún dato máis: pódese xerar.",
       "condicionesAviso": "{n} condicións do documento non se determinaron. Asúmese que non se aplican, así que o documento sae pola súa versión máis curta.",
-      "concordanciaPendiente": "Non se xerou: quedan {n} concordancias por resolver (singular ou plural, como «pertence/pertencen»). Non é un dato que falte: é unha decisión de lingua que resolve o asistente, e esa peza aínda non está."
+      "concordanciaPendiente": "Non se xerou: quedan {n} concordancias por resolver (singular ou plural, como «pertence/pertencen»). Non é un dato que falte: é unha decisión de lingua que resolve o asistente, e esa peza aínda non está.",
+      "datosIncompletos": "Non se xerou: faltan {n} datos do documento ({c}). Sen eles a escritura sairía con «[NO DISPONIBLE]» impreso.",
+      "quienFirma": "Quen asina a escritura",
+      "variosNotarios": "A notaría ten {n} notarios: escolle quen asina este documento.",
+      "firmaSaleDe": "({f})",
+      "sinNotario": "Non hai ningún notario que poida asinar. Configura NOMBRE_NOTARIO en Configuración ou entra co notario titular para que apareza aquí.",
+      "firmaPendiente": "Non se xerou: o documento nomea o notario e non se escolleu quen asina."
     }
   },
   "unidad": {

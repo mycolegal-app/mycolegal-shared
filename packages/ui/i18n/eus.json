@@ -1278,7 +1278,13 @@
       "camposPendientes": "{n} datu betetzeke",
       "sinCampos": "Dokumentu honek ez du datu gehiagoren beharrik: sor daiteke.",
       "condicionesAviso": "Dokumentuaren {n} baldintza ez dira zehaztu. Ez direla aplikatzen suposatzen da, beraz dokumentua bertsio laburrenean ateratzen da.",
-      "concordanciaPendiente": "Ez da sortu: {n} komunztadura ebazteke daude (singularra edo plurala). Ez da falta den daturik: hizkuntza-erabaki bat da, laguntzaileak ebazten duena, eta pieza hori oraindik ez dago."
+      "concordanciaPendiente": "Ez da sortu: {n} komunztadura ebazteke daude (singularra edo plurala). Ez da falta den daturik: hizkuntza-erabaki bat da, laguntzaileak ebazten duena, eta pieza hori oraindik ez dago.",
+      "datosIncompletos": "Ez da sortu: dokumentuaren {n} datu falta dira ({c}). Horiek gabe eskriturak «[NO DISPONIBLE]» inprimatuta aterako litzateke.",
+      "quienFirma": "Nork sinatzen du eskritura",
+      "variosNotarios": "Notariotzak {n} notario ditu: aukeratu nork sinatzen duen dokumentu hau.",
+      "firmaSaleDe": "({f})",
+      "sinNotario": "Ez dago sinatu dezakeen notariorik. Konfiguratu NOMBRE_NOTARIO Konfigurazioan edo sartu notario titularrarekin hemen ager dadin.",
+      "firmaPendiente": "Ez da sortu: dokumentuak notarioa izendatzen du eta ez da aukeratu nork sinatzen duen."
     }
   },
   "unidad": {

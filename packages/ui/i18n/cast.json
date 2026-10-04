@@ -1279,7 +1279,13 @@
       "camposPendientes": "{n} datos por rellenar",
       "sinCampos": "Este documento no necesita ningún dato más: se puede generar.",
       "condicionesAviso": "{n} condiciones del documento no se han determinado. Se asume que no aplican, así que el documento sale por su versión más corta.",
-      "concordanciaPendiente": "No se ha generado: quedan {n} concordancias por resolver (singular o plural, como «pertenece/pertenecen»). No es un dato que falte: es una decisión de lengua que resuelve el asistente, y esa pieza todavía no está."
+      "concordanciaPendiente": "No se ha generado: quedan {n} concordancias por resolver (singular o plural, como «pertenece/pertenecen»). No es un dato que falte: es una decisión de lengua que resuelve el asistente, y esa pieza todavía no está.",
+      "datosIncompletos": "No se ha generado: faltan {n} datos del documento ({c}). Sin ellos la escritura saldría con «[NO DISPONIBLE]» impreso.",
+      "quienFirma": "Quién firma la escritura",
+      "variosNotarios": "La notaría tiene {n} notarios: elige quién firma este documento.",
+      "firmaSaleDe": "({f})",
+      "sinNotario": "No hay ningún notario que pueda firmar. Configura NOMBRE_NOTARIO en Configuración o entra con el notario titular para que aparezca aquí.",
+      "firmaPendiente": "No se ha generado: el documento nombra al notario y no se ha elegido quién firma."
     }
   },
   "unidad": {
