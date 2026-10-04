@@ -70,6 +70,7 @@ export { MycoBotRail } from './components/shared/mycobot-rail';
 export { DocFillingProducer, NO_LO_SE } from './components/shared/docfilling-producer';
 export type {
   DocFillingProducerProps, ProducerEstado, ProducerPregunta, ProducerRequisito, ProducerAportado,
+  ProducerCampo,
 } from './components/shared/docfilling-producer';
 export { FuentesModal } from './components/shared/fuentes-modal';
 export type { FuentesModalProps, FuenteCatalogoDTO } from './components/shared/fuentes-modal';

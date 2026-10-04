@@ -1274,7 +1274,12 @@
       "sinCreditos": "L'organització no té prou crèdits.",
       "siguiente": "Següent",
       "atras": "Enrere",
-      "parrafosCompuestos": "{n} paràgrafs compostos"
+      "parrafosCompuestos": "{n} paràgrafs compostos",
+      "pasoCampos": "Dades",
+      "camposPendientes": "{n} dades per omplir",
+      "sinCampos": "Aquest document no necessita cap dada més: es pot generar.",
+      "condicionesAviso": "{n} condicions del document no s'han determinat. S'assumeix que no s'apliquen, així que el document surt per la seva versió més curta.",
+      "concordanciaPendiente": "No s'ha generat: queden {n} concordances per resoldre (singular o plural, com «pertany/pertanyen»). No és una dada que falti: és una decisió de llengua que resol l'assistent, i aquesta peça encara no hi és."
     }
   },
   "unidad": {

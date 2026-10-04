@@ -67,6 +67,19 @@ export interface ProducerRequisito {
 }
 export interface ProducerAportado { aportado: boolean; documentoCodigo?: string; nota?: string }
 
+/**
+ * Un dato que se escribe EN el documento.
+ *
+ * No es un «hecho»: un hecho ternario decide QUÉ requisitos aplican, un campo
+ * sale impreso en la escritura. Son 7–10 por documento —medido el 4-oct sobre
+ * el esquema de compraventa, que declara 1.699 y pinta 38—, y por eso se pueden
+ * teclear. La extracción con IA (F5) los PRECARGA; no los habilita.
+ */
+export interface ProducerCampo {
+  nombre: string; etiqueta: string; tipo: string; opciones: string[];
+  instruccion: string | null; quien: string; valor: string | null;
+}
+
 /** Lo que devuelve `GET {apiBase}/tareas/{id}`. */
 export interface ProducerEstado {
   tarea: {
@@ -79,6 +92,11 @@ export interface ProducerEstado {
   requisitos: ProducerRequisito[];
   documentos: ProducerRequisito[];
   pendientes: number; noSabidas: number; sinRevision: number;
+  campos: ProducerCampo[];
+  camposPendientes: number;
+  /** Condiciones del documento que nadie ha determinado: no se piden, pero
+   *  cambian el documento (27.074 caracteres frente a 44.153, medido). */
+  condicionesSinDeterminar: number;
 }
 
 export interface DocFillingProducerProps {
@@ -108,7 +126,7 @@ export interface DocFillingProducerProps {
   compacto?: boolean;
 }
 
-type Paso = 2 | 3 | 4;
+type Paso = 2 | 3 | 4 | 5;
 
 export function DocFillingProducer({
   apiBase = "/api/generacion", tareaId, esquemaClave, nombre,
@@ -132,7 +150,13 @@ export function DocFillingProducer({
     setEstado(data as ProducerEstado);
     // El paso no se recuerda en el cliente: lo manda la fila, que es lo que
     // permite retomar el trabajo desde otro navegador.
-    setPaso(data.tarea.generadoAt ? 4 : data.tarea.estado === "DOCUMENTOS" ? 3 : data.tarea.estado === "LISTA" ? 4 : 2);
+    setPaso(
+      data.tarea.generadoAt ? 5
+      : data.tarea.estado === "DOCUMENTOS" ? 3
+      : data.tarea.estado === "CAMPOS" ? 4
+      : data.tarea.estado === "LISTA" ? 5
+      : 2,
+    );
   }, [apiBase, t]);
 
   // Crear (o retomar) una sola vez.
@@ -187,6 +211,11 @@ export function DocFillingProducer({
           : code === "PLANTILLA_INCOMPLETA" ? t("ui.docfillingProducer.faltaClausula")
           : code === "CAMPOS_SIN_RELLENAR"
             ? t("ui.docfillingProducer.camposSinRellenar", { d: (cuerpo.error.directivas ?? []).join(", ") })
+          // Distinto de lo anterior aunque se parezca: aquí los campos ESTÁN
+          // completos y lo que falta es la etapa de concordancia. Decir
+          // «faltan valores» mandaría al oficial a buscar un dato que no falta.
+          : code === "CONCORDANCIA_PENDIENTE"
+            ? t("ui.docfillingProducer.concordanciaPendiente", { n: cuerpo.error.concordancias ?? 0 })
           : (code ?? "ERROR"),
         );
         return;
@@ -218,7 +247,8 @@ export function DocFillingProducer({
           {([
             [2 as Paso, t("ui.docfillingProducer.pasoPreguntas"), "PREGUNTAS"],
             [3 as Paso, t("ui.docfillingProducer.pasoDocumentos"), "DOCUMENTOS"],
-            [4 as Paso, t("ui.docfillingProducer.pasoGenerar"), "LISTA"],
+            [4 as Paso, t("ui.docfillingProducer.pasoCampos"), "CAMPOS"],
+            [5 as Paso, t("ui.docfillingProducer.pasoGenerar"), "LISTA"],
           ] as [Paso, string, string][]).map(([n, label, est]) => (
             <li key={n}>
               <button
@@ -351,20 +381,79 @@ export function DocFillingProducer({
             <Button variant="outline" onClick={() => { setPaso(2); void patch({ estado: "PREGUNTAS" }, "paso-2"); }}>
               {t("ui.docfillingProducer.atras")}
             </Button>
-            <Button onClick={() => { setPaso(4); void patch({ estado: "LISTA" }, "paso-4"); }}>
+            <Button onClick={() => { setPaso(4); void patch({ estado: "CAMPOS" }, "paso-4"); }}>
               {t("ui.docfillingProducer.siguiente")}
             </Button>
           </div>
         </div>
       )}
 
+      {/* ── PASO 4: los campos del documento ──────────────────────────────
+          Es lo que D33 asignó a esta superficie: «deja sin sentido
+          `FaltantesForm`». Pedir los datos que faltan y generar, en el mismo
+          sitio, en vez de dos formularios que se desincronizan.
+
+          Y es viable porque son POCOS: 7–10 por documento. El esquema declara
+          1.699 campos, pero el motor resuelve unos, otros sólo gobiernan un
+          `{{IF}}` y la mayoría viven en ramas que este documento no toma. */}
       {paso === 4 && (
+        <div className="space-y-3">
+          <p className="text-sm text-gray-600">
+            {t("ui.docfillingProducer.camposPendientes", { n: estado.camposPendientes })}
+          </p>
+
+          {/* Las condiciones que nadie ha determinado NO se piden —sólo
+              gobiernan un IF— pero cambian el documento: con ellas vacías se
+              toma la rama mínima. Un documento más corto de lo que debería no
+              se nota leyéndolo, así que se dice. */}
+          {estado.condicionesSinDeterminar > 0 && (
+            <AlertBanner
+              type="info"
+              message={t("ui.docfillingProducer.condicionesAviso", { n: estado.condicionesSinDeterminar })}
+            />
+          )}
+
+          {estado.campos.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-gray-300 p-4 text-sm text-gray-600">
+              {t("ui.docfillingProducer.sinCampos")}
+            </p>
+          ) : estado.campos.map((c) => (
+            <div key={c.nombre} className="rounded-lg border border-gray-200 bg-white p-3">
+              <label className="block text-sm font-medium text-gray-900" htmlFor={`campo-${c.nombre}`}>
+                {c.etiqueta}
+              </label>
+              {c.instruccion && <p className="mt-0.5 text-xs text-gray-500">{c.instruccion}</p>}
+              <CampoEntrada
+                campo={c}
+                guardando={guardando === c.nombre}
+                onGuardar={(v) => void patch({ campo: c.nombre, valor: v }, c.nombre)}
+              />
+            </div>
+          ))}
+
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => { setPaso(3); void patch({ estado: "DOCUMENTOS" }, "paso-3"); }}>
+              {t("ui.docfillingProducer.atras")}
+            </Button>
+            <Button onClick={() => { setPaso(5); void patch({ estado: "LISTA" }, "paso-5"); }}>
+              {t("ui.docfillingProducer.siguiente")}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {paso === 5 && (
         <div className="space-y-3">
           <div className="rounded-lg border border-gray-200 bg-white p-4">
             <p className="text-sm text-gray-700">
               <strong className="tabular-nums">{firmes.length}</strong> {t("ui.docfillingProducer.situacion_firme")} ·{" "}
               <strong className="tabular-nums">{enDuda.length}</strong> {t("ui.docfillingProducer.situacion_enDuda")}
             </p>
+            {estado.camposPendientes > 0 && !tarea.generadoAt && (
+              <p className="mt-2 text-sm text-amber-700">
+                {t("ui.docfillingProducer.camposPendientes", { n: estado.camposPendientes })}
+              </p>
+            )}
             {tarea.generadoAt ? (
               <p className="mt-2 text-sm text-gray-600">
                 {t("ui.docfillingProducer.generada", {
@@ -420,4 +509,54 @@ function Pastilla({ situacion, texto }: { situacion: ProducerRequisito["situacio
     : situacion === "enDuda" ? "bg-amber-100 text-amber-800"
     : "bg-gray-100 text-gray-600";
   return <span className={`rounded-full px-2 py-0.5 text-xs ${color}`}>{texto}</span>;
+}
+
+/**
+ * La entrada de un campo, según su tipo canónico.
+ *
+ * Se guarda al salir del foco (`onBlur`) y no en cada tecla: cada guardado
+ * recalcula en el servidor QUÉ campos hacen falta —los condicionales abren y
+ * cierran ramas— y hacerlo por pulsación sería una consulta por letra.
+ */
+function CampoEntrada({ campo, guardando, onGuardar }: {
+  campo: ProducerCampo; guardando: boolean; onGuardar: (v: string) => void;
+}) {
+  const [v, setV] = useState(campo.valor ?? "");
+  // Si el servidor trae otro valor —otra pestaña, una precarga— gana el servidor.
+  useEffect(() => { setV(campo.valor ?? ""); }, [campo.valor]);
+
+  const comun = "mt-2 w-full rounded-md border border-gray-300 px-3 py-2 text-sm disabled:opacity-50";
+  const guardar = () => { if (v !== (campo.valor ?? "")) onGuardar(v); };
+
+  if (campo.opciones.length > 0) {
+    return (
+      <select id={`campo-${campo.nombre}`} className={comun} value={v} disabled={guardando}
+        onChange={(e) => { setV(e.target.value); onGuardar(e.target.value); }}>
+        <option value="">—</option>
+        {campo.opciones.map((o) => <option key={o} value={o}>{o}</option>)}
+      </select>
+    );
+  }
+  if (campo.tipo === "BOOL") {
+    return (
+      <select id={`campo-${campo.nombre}`} className={comun} value={v} disabled={guardando}
+        onChange={(e) => { setV(e.target.value); onGuardar(e.target.value); }}>
+        <option value="">—</option>
+        <option value="SI">SI</option>
+        <option value="NO">NO</option>
+      </select>
+    );
+  }
+  return (
+    <input
+      id={`campo-${campo.nombre}`}
+      className={comun}
+      type={campo.tipo === "DATE" ? "date" : campo.tipo === "NUM" ? "number" : "text"}
+      value={v}
+      disabled={guardando}
+      onChange={(e) => setV(e.target.value)}
+      onBlur={guardar}
+      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); guardar(); } }}
+    />
+  );
 }

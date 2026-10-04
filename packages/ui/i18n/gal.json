@@ -1273,7 +1273,12 @@
       "sinCreditos": "A organización non ten créditos suficientes.",
       "siguiente": "Seguinte",
       "atras": "Atrás",
-      "parrafosCompuestos": "{n} parágrafos compostos"
+      "parrafosCompuestos": "{n} parágrafos compostos",
+      "pasoCampos": "Datos",
+      "camposPendientes": "{n} datos por encher",
+      "sinCampos": "Este documento non necesita ningún dato máis: pódese xerar.",
+      "condicionesAviso": "{n} condicións do documento non se determinaron. Asúmese que non se aplican, así que o documento sae pola súa versión máis curta.",
+      "concordanciaPendiente": "Non se xerou: quedan {n} concordancias por resolver (singular ou plural, como «pertence/pertencen»). Non é un dato que falte: é unha decisión de lingua que resolve o asistente, e esa peza aínda non está."
     }
   },
   "unidad": {

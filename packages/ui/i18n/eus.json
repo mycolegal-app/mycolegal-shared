@@ -1273,7 +1273,12 @@
       "sinCreditos": "Erakundeak ez du nahikoa krediturik.",
       "siguiente": "Hurrengoa",
       "atras": "Atzera",
-      "parrafosCompuestos": "{n} paragrafo konposatuta"
+      "parrafosCompuestos": "{n} paragrafo konposatuta",
+      "pasoCampos": "Datuak",
+      "camposPendientes": "{n} datu betetzeke",
+      "sinCampos": "Dokumentu honek ez du datu gehiagoren beharrik: sor daiteke.",
+      "condicionesAviso": "Dokumentuaren {n} baldintza ez dira zehaztu. Ez direla aplikatzen suposatzen da, beraz dokumentua bertsio laburrenean ateratzen da.",
+      "concordanciaPendiente": "Ez da sortu: {n} komunztadura ebazteke daude (singularra edo plurala). Ez da falta den daturik: hizkuntza-erabaki bat da, laguntzaileak ebazten duena, eta pieza hori oraindik ez dago."
     }
   },
   "unidad": {
