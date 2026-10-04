@@ -68,6 +68,11 @@ export { MycoBotRail } from './components/shared/mycobot-rail';
 // el productor genérico de `document_templates` que usa Tramitación. Ver la
 // cabecera de `docfilling-producer.tsx`.
 export { DocFillingProducer, NO_LO_SE } from './components/shared/docfilling-producer';
+// El modal de la escritura: markdown, navegador de huecos y descarga del .docx.
+export { EscrituraModal } from './components/shared/escritura-modal';
+export type {
+  EscrituraModalProps, PrevisualizacionEscritura, HuecoEscritura, CampoEscritura,
+} from './components/shared/escritura-modal';
 export type {
   DocFillingProducerProps, ProducerEstado, ProducerPregunta, ProducerRequisito, ProducerAportado,
   ProducerCampo, ProducerFirma, ProducerNotario,

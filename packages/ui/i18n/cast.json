@@ -1286,6 +1286,24 @@
       "firmaSaleDe": "({f})",
       "sinNotario": "No hay ningún notario que pueda firmar. Configura NOMBRE_NOTARIO en Configuración o entra con el notario titular para que aparezca aquí.",
       "firmaPendiente": "No se ha generado: el documento nombra al notario y no se ha elegido quién firma."
+    },
+    "escrituraModal": {
+      "titulo": "La escritura",
+      "cerrar": "Cerrar",
+      "cargando": "Componiendo la escritura…",
+      "noDisponible": "No se ha podido componer la escritura.",
+      "resumen": "{h} huecos · {g} condicionan el documento · {d} datos",
+      "gobierna": "Decide el contenido",
+      "condicion": "Condición: {c}",
+      "anterior": "Hueco anterior",
+      "siguiente": "Hueco siguiente",
+      "guardar": "Guardar",
+      "si": "Sí",
+      "no": "No",
+      "descargar": "Descargar .docx",
+      "descargarBorrador": "Descargar borrador .docx",
+      "sinHuecos": "No falta ningún dato: la escritura está completa y se puede generar.",
+      "faltanParrafos": "Faltan {n} párrafos de la biblioteca. Su cláusula sale VACÍA sin dar error."
     }
   },
   "unidad": {

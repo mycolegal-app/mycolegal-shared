@@ -1285,6 +1285,24 @@
       "firmaSaleDe": "({f})",
       "sinNotario": "Ez dago sinatu dezakeen notariorik. Konfiguratu NOMBRE_NOTARIO Konfigurazioan edo sartu notario titularrarekin hemen ager dadin.",
       "firmaPendiente": "Ez da sortu: dokumentuak notarioa izendatzen du eta ez da aukeratu nork sinatzen duen."
+    },
+    "escrituraModal": {
+      "titulo": "Eskritura",
+      "cerrar": "Itxi",
+      "cargando": "Eskritura osatzen…",
+      "noDisponible": "Ezin izan da eskritura osatu.",
+      "resumen": "{h} hutsune · {g} dokumentua baldintzatzen dute · {d} datu",
+      "gobierna": "Edukia erabakitzen du",
+      "condicion": "Baldintza: {c}",
+      "anterior": "Aurreko hutsunea",
+      "siguiente": "Hurrengo hutsunea",
+      "guardar": "Gorde",
+      "si": "Bai",
+      "no": "Ez",
+      "descargar": ".docx deskargatu",
+      "descargarBorrador": "Zirriborroa deskargatu (.docx)",
+      "sinHuecos": "Ez da daturik falta: eskritura osatuta dago eta sor daiteke.",
+      "faltanParrafos": "Liburutegiko {n} paragrafo falta dira. Haien klausula HUTSIK ateratzen da errorerik eman gabe."
     }
   },
   "unidad": {

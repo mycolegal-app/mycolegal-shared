@@ -1285,6 +1285,24 @@
       "firmaSaleDe": "({f})",
       "sinNotario": "Non hai ningún notario que poida asinar. Configura NOMBRE_NOTARIO en Configuración ou entra co notario titular para que apareza aquí.",
       "firmaPendiente": "Non se xerou: o documento nomea o notario e non se escolleu quen asina."
+    },
+    "escrituraModal": {
+      "titulo": "A escritura",
+      "cerrar": "Pechar",
+      "cargando": "Compoñendo a escritura…",
+      "noDisponible": "Non se puido compoñer a escritura.",
+      "resumen": "{h} ocos · {g} condicionan o documento · {d} datos",
+      "gobierna": "Decide o contido",
+      "condicion": "Condición: {c}",
+      "anterior": "Oco anterior",
+      "siguiente": "Oco seguinte",
+      "guardar": "Gardar",
+      "si": "Si",
+      "no": "Non",
+      "descargar": "Descargar .docx",
+      "descargarBorrador": "Descargar borrador .docx",
+      "sinHuecos": "Non falta ningún dato: a escritura está completa e pódese xerar.",
+      "faltanParrafos": "Faltan {n} parágrafos da biblioteca. A súa cláusula sae BALEIRA sen dar erro."
     }
   },
   "unidad": {

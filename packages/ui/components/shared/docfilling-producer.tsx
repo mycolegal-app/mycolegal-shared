@@ -102,6 +102,10 @@ export interface ProducerFirma {
 export interface ProducerCampo {
   nombre: string; etiqueta: string; tipo: string; opciones: string[];
   instruccion: string | null; quien: string; valor: string | null;
+  /** Participa en un `{{IF}}`: contestarlo reescribe el documento. Van primero. */
+  gobierna: boolean;
+  nivel: number;
+  porque?: string;
 }
 
 /** Lo que devuelve `GET {apiBase}/tareas/{id}`. */
@@ -121,6 +125,7 @@ export interface ProducerEstado {
   /** Condiciones del documento que nadie ha determinado: no se piden, pero
    *  cambian el documento (27.074 caracteres frente a 44.153, medido). */
   condicionesSinDeterminar: number;
+  gobernantesPendientes: number;
   firma: ProducerFirma;
 }
 
