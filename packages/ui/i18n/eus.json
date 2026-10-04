@@ -1302,7 +1302,8 @@
       "descargar": ".docx deskargatu",
       "descargarBorrador": "Zirriborroa deskargatu (.docx)",
       "sinHuecos": "Ez da daturik falta: eskritura osatuta dago eta sor daiteke.",
-      "faltanParrafos": "Liburutegiko {n} paragrafo falta dira. Haien klausula HUTSIK ateratzen da errorerik eman gabe."
+      "faltanParrafos": "Liburutegiko {n} paragrafo falta dira. Haien klausula HUTSIK ateratzen da errorerik eman gabe.",
+      "dependen": "{n} hauen menpe daude"
     }
   },
   "unidad": {

@@ -1303,7 +1303,8 @@
       "descargar": "Baixar .docx",
       "descargarBorrador": "Baixar esborrany .docx",
       "sinHuecos": "No falta cap dada: l'escriptura està completa i es pot generar.",
-      "faltanParrafos": "Falten {n} paràgrafs de la biblioteca. La seva clàusula surt BUIDA sense donar error."
+      "faltanParrafos": "Falten {n} paràgrafs de la biblioteca. La seva clàusula surt BUIDA sense donar error.",
+      "dependen": "{n} depenen d'aquestes"
     }
   },
   "unidad": {

@@ -20,13 +20,22 @@
 // anidamiento) y aquí se recorre el array tal cual. Si el orden lo decidiera la
 // pantalla, la de Notaría podría ordenar distinto y los dos flujos derivarían.
 //
-// ⚠️ LO QUE ESTA PANTALLA NO PUEDE ARREGLAR, Y HAY QUE SABER
+// SÓLO SE OFRECE LA FRONTERA, Y ESO LO CORRIGIÓ CARLES
 //
-// Medido sobre `0501_..._VIVIENDA_PH`: la plantilla deja **87 campos que
-// gobiernan condiciones** frente a 7 datos, y contestar diez lleva a 106. Una
-// persona no puede conducir eso. El recuento se enseña **en la cabecera** a
-// propósito, sin maquillarlo: lo que hace usable este modal es que la
-// extracción con IA resuelva el grueso (F5) y el oficial vea lo que quede.
+// Mi primera versión enseñaba **todos** los gobernantes pendientes. Él preguntó
+// si de verdad eran todos de primer nivel, y la medición le dio la razón: de los
+// 87 de una compraventa, **58 son de nivel 0** y los otros 29 viven dentro de
+// condiciones que aún no se han decidido. Ofrecerlos es pedirle a alguien que
+// decida por una cláusula que puede no llegar a existir.
+//
+// Así que el servidor manda sólo la frontera —el nivel más superficial sin
+// decidir— y los de debajo se **cuentan** en la cabecera. El número explica por
+// qué la lista cambia al avanzar, en vez de que parezca que crece sin motivo.
+//
+// ⚠️ Lo que esta pantalla sigue sin poder arreglar: contestar los 58 de nivel 0
+// destapa 81 de nivel 1. Una persona no puede conducir eso, y el recuento se
+// enseña sin maquillar porque lo que hace usable esto es que la IA resuelva el
+// grueso (F5).
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Download, FileText, Loader2, X } from "lucide-react";
@@ -51,6 +60,12 @@ export interface PrevisualizacionEscritura {
   campos: CampoEscritura[];
   pendientes: number;
   gobernantesPendientes: number;
+  /** El nivel más superficial sin decidir. `null` = no queda ninguno. */
+  frontera: number | null;
+  /** Lo contestable AHORA. */
+  enFrontera: number;
+  /** Lo que depende de contestar la frontera: se cuenta, no se ofrece. */
+  despuesDeFrontera: number;
   condicionesSinDeterminar: number;
   faltantes: string[];
   concordancias: number;
@@ -146,8 +161,11 @@ export function EscrituraModal({
               <p className="mt-0.5 text-xs text-gray-500">
                 {/* El recuento, sin maquillar: es la verdad del documento. */}
                 {t("ui.escrituraModal.resumen", {
-                  h: huecos.length, g: prev.gobernantesPendientes, d: prev.pendientes,
+                  h: huecos.length, g: prev.enFrontera, d: prev.pendientes,
                 })}
+                {prev.despuesDeFrontera > 0 && (
+                  <> · {t("ui.escrituraModal.dependen", { n: prev.despuesDeFrontera })}</>
+                )}
                 {" · "}
                 <span title={prev.plantilla.porque}>{prev.plantilla.nombre}</span>
               </p>

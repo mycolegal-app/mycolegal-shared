@@ -1303,7 +1303,8 @@
       "descargar": "Descargar .docx",
       "descargarBorrador": "Descargar borrador .docx",
       "sinHuecos": "No falta ningún dato: la escritura está completa y se puede generar.",
-      "faltanParrafos": "Faltan {n} párrafos de la biblioteca. Su cláusula sale VACÍA sin dar error."
+      "faltanParrafos": "Faltan {n} párrafos de la biblioteca. Su cláusula sale VACÍA sin dar error.",
+      "dependen": "{n} dependen de éstas"
     }
   },
   "unidad": {
