@@ -66,6 +66,16 @@ jobs:
           registry-url: https://npm.pkg.github.com
           scope: '@mycolegal-app'
 
+      # ⚠️ `npm ci` EXIGE QUE EL LOCKFILE DE LA RAÍZ CONOZCA TODOS LOS WORKSPACES.
+      #
+      # Al añadir `packages/ai-core` sin correr `npm install` en la raíz, este
+      # paso murió con «Missing: @mycolegal-app/ai-core@0.1.0 from lock file»…
+      # y al ser el PRIMER paso, tumbó **los cinco jobs**, no sólo el del
+      # paquete nuevo (3-oct-2026). Un paquete sin lockear no retrasa su propia
+      # publicación: impide la de todos.
+      #
+      # Al crear un paquete: `npm install --package-lock-only` en la raíz del
+      # monorepo y commitear el `package-lock.json` con él.
       - name: Install workspace (deps para el build de prepublishOnly)
         run: npm ci
         env:
