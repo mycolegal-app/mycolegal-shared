@@ -1,0 +1,524 @@
+[
+  {
+    "name": "simple field substitution",
+    "template": "Hola {{NOMBRE}}, bienvenido.",
+    "fields": {"NOMBRE": "Juan"},
+    "expected": "Hola Juan, bienvenido."
+  },
+  {
+    "name": "field with colon instruction replaced by value",
+    "template": "Importe: {{IMPORTE:[en letras]}}",
+    "fields": {"IMPORTE": "quinientos"},
+    "expected": "Importe: quinientos"
+  },
+  {
+    "name": "multiple fields substitution",
+    "template": "{{NOMBRE}} {{APELLIDO}} ({{DNI}})",
+    "fields": {"NOMBRE": "Ana", "APELLIDO": "García", "DNI": "12345678A"},
+    "expected": "Ana García (12345678A)"
+  },
+  {
+    "name": "unknown field becomes NO DISPONIBLE",
+    "template": "Valor: {{CAMPO_DESCONOCIDO}}",
+    "fields": {},
+    "expected": "Valor: [NO DISPONIBLE]"
+  },
+  {
+    "name": "IF truthy field",
+    "template": "{{IF CASADO}}Está casado.{{ENDIF}}",
+    "fields": {"CASADO": "sí"},
+    "expected": "Está casado."
+  },
+  {
+    "name": "IF falsy — empty string",
+    "template": "{{IF CASADO}}Está casado.{{ENDIF}}",
+    "fields": {"CASADO": ""},
+    "expected": ""
+  },
+  {
+    "name": "IF falsy — NO DISPONIBLE value",
+    "template": "{{IF CAMPO}}visible{{ENDIF}}",
+    "fields": {"CAMPO": "NO DISPONIBLE"},
+    "expected": ""
+  },
+  {
+    "name": "IF falsy — FALSE literal",
+    "template": "{{IF CAMPO}}visible{{ENDIF}}",
+    "fields": {"CAMPO": "FALSE"},
+    "expected": ""
+  },
+  {
+    "name": "IF ELSE truthy branch",
+    "template": "{{IF CASADO}}casado{{ELSE}}soltero{{ENDIF}}",
+    "fields": {"CASADO": "sí"},
+    "expected": "casado"
+  },
+  {
+    "name": "IF ELSE falsy branch",
+    "template": "{{IF CASADO}}casado{{ELSE}}soltero{{ENDIF}}",
+    "fields": {"CASADO": ""},
+    "expected": "soltero"
+  },
+  {
+    "name": "IF equality ==",
+    "template": "{{IF TIPO == 'compra'}}Contrato de compra{{ENDIF}}",
+    "fields": {"TIPO": "compra"},
+    "expected": "Contrato de compra"
+  },
+  {
+    "name": "IF equality == not matching",
+    "template": "{{IF TIPO == 'compra'}}Contrato de compra{{ENDIF}}",
+    "fields": {"TIPO": "venta"},
+    "expected": ""
+  },
+  {
+    "name": "IF inequality != matching (different value)",
+    "template": "{{IF STATUS != 'inactivo'}}Activo{{ENDIF}}",
+    "fields": {"STATUS": "activo"},
+    "expected": "Activo"
+  },
+  {
+    "name": "IF inequality != not matching (same value)",
+    "template": "{{IF STATUS != 'inactivo'}}Activo{{ENDIF}}",
+    "fields": {"STATUS": "inactivo"},
+    "expected": ""
+  },
+  {
+    "name": "IF IN condition — matching",
+    "template": "{{IF TIPO IN ('venta', 'permuta')}}Transmisión{{ENDIF}}",
+    "fields": {"TIPO": "permuta"},
+    "expected": "Transmisión"
+  },
+  {
+    "name": "IF IN condition — not matching",
+    "template": "{{IF TIPO IN ('venta', 'permuta')}}Transmisión{{ENDIF}}",
+    "fields": {"TIPO": "compra"},
+    "expected": ""
+  },
+  {
+    "name": "IF NOT IN condition — matching",
+    "template": "{{IF TIPO NOT IN ('venta', 'compra')}}Otro{{ENDIF}}",
+    "fields": {"TIPO": "cesión"},
+    "expected": "Otro"
+  },
+  {
+    "name": "IF_FIELD / ENDIF_FIELD",
+    "template": "{{IF_NOMBRE}}Hola {{NOMBRE}}{{ENDIF_NOMBRE}}",
+    "fields": {"NOMBRE": "Pedro"},
+    "expected": "Hola Pedro"
+  },
+  {
+    "name": "IF_FIELD / ELSE_FIELD / ENDIF_FIELD",
+    "template": "{{IF_NOMBRE}}{{NOMBRE}}{{ELSE_NOMBRE}}Desconocido{{ENDIF_NOMBRE}}",
+    "fields": {"NOMBRE": ""},
+    "expected": "Desconocido"
+  },
+  {
+    "name": "FOR EACH simple array",
+    "template": "{{FOR EACH ITEM IN ITEMS}}{{ITEM}}, {{END FOR}}",
+    "fields": {"ITEMS": ["uno", "dos", "tres"]},
+    "expected": "uno, dos, tres, "
+  },
+  {
+    "name": "FOR EACH empty array produces nothing",
+    "template": "Inicio.{{FOR EACH X IN LISTA}}{{X}}{{END FOR}}Fin.",
+    "fields": {"LISTA": []},
+    "expected": "Inicio.Fin."
+  },
+  {
+    "name": "FOR EACH object array with sub-key access",
+    "template": "{{FOR EACH P IN PROPIETARIOS}}{{P.NOMBRE}} ({{P.DNI}}){{END FOR}}",
+    "fields": {
+      "PROPIETARIOS": [
+        {"NOMBRE": "Ana García", "DNI": "12345678A"},
+        {"NOMBRE": "Luis Pérez", "DNI": "87654321B"}
+      ]
+    },
+    "expected": "Ana García (12345678A)Luis Pérez (87654321B)"
+  },
+  {
+    "name": "COUNT of array",
+    "template": "Total propietarios: {{COUNT(PROPIETARIOS)}}",
+    "fields": {"PROPIETARIOS": ["A", "B", "C"]},
+    "expected": "Total propietarios: 3"
+  },
+  {
+    "name": "COUNT of empty array",
+    "template": "Total: {{COUNT(LISTA)}}",
+    "fields": {"LISTA": []},
+    "expected": "Total: 0"
+  },
+  {
+    "name": "strip DECLARE and inject fixed value",
+    "template": "{{DECLARE TITULO AS TEXT = \"Sr.\"}}Estimado {{TITULO}}",
+    "fields": {},
+    "expected": "Estimado Sr."
+  },
+  {
+    "name": "strip COMMENT directive",
+    "template": "{{COMMENT: esto es un comentario}}Texto visible",
+    "fields": {},
+    "expected": "Texto visible"
+  },
+  {
+    "name": "strip TAGS directive",
+    "template": "{{TAGS: compraventa, notaría}}Contenido",
+    "fields": {},
+    "expected": "Contenido"
+  },
+  {
+    "name": "strip HUMAN_ACTION block",
+    "template": "Antes.{{HUMAN_ACTION_INIT: firma}}Hacer algo manualmente.{{END_HUMAN_ACTION}}Después.",
+    "fields": {},
+    "expected": "Antes.Después."
+  },
+  {
+    "name": "system field override",
+    "template": "Fecha: {{DIA}} de {{MES}} de {{AÑO}}",
+    "fields": {"DIA": "uno", "MES": "enero", "AÑO": "2024"},
+    "expected": "Fecha: uno de enero de 2024"
+  },
+  {
+    "name": "compose end-to-end — DECLARE + TAGS + IF/ELSE + field substitution",
+    "template": "{{DECLARE TITULO AS TEXT = \"Sr.\"}}{{TAGS: test}}Estimado {{TITULO}} {{APELLIDO}}:{{IF TIPO == 'compra'}} Contrato de compraventa.{{ELSE}} Otro contrato.{{ENDIF}}",
+    "fields": {"APELLIDO": "García", "TIPO": "compra"},
+    "expected": "Estimado Sr. García: Contrato de compraventa."
+  },
+  {
+    "name": "compose end-to-end — FOR EACH + COUNT + field substitution",
+    "template": "Hay {{COUNT(ITEMS)}} elementos: {{FOR EACH I IN ITEMS}}[{{I}}]{{END FOR}}. Firmado: {{FIRMANTE}}.",
+    "fields": {
+      "ITEMS": ["alfa", "beta", "gamma"],
+      "FIRMANTE": "Notario"
+    },
+    "expected": "Hay 3 elementos: [alfa][beta][gamma]. Firmado: Notario."
+  },
+  {
+    "name": "IF AND — both truthy",
+    "template": "{{IF X==\"a\" AND Y==\"b\"}}OK{{ENDIF}}",
+    "fields": {"X": "a", "Y": "b"},
+    "expected": "OK"
+  },
+  {
+    "name": "IF AND — second false",
+    "template": "{{IF X==\"a\" AND Y==\"b\"}}OK{{ENDIF}}",
+    "fields": {"X": "a", "Y": "c"},
+    "expected": ""
+  },
+  {
+    "name": "IF OR — second truthy",
+    "template": "{{IF X==\"a\" OR Y==\"b\"}}OK{{ENDIF}}",
+    "fields": {"X": "z", "Y": "b"},
+    "expected": "OK"
+  },
+  {
+    "name": "IF NOT — empty field",
+    "template": "{{IF NOT X}}none{{ENDIF}}",
+    "fields": {},
+    "expected": "none"
+  },
+  {
+    "name": "IF NOT AND NOT — both empty",
+    "template": "{{IF NOT EXISTEN_CARGAS AND NOT EXISTEN_AFECCIONES}}libre{{ENDIF}}",
+    "fields": {},
+    "expected": "libre"
+  },
+  {
+    "name": "IF precedence — A OR B AND C is A OR (B AND C)",
+    "template": "{{IF X==\"a\" OR Y==\"b\" AND Z==\"c\"}}OK{{ENDIF}}",
+    "fields": {"X": "x", "Y": "b", "Z": "x"},
+    "expected": ""
+  },
+  {
+    "name": "IF IN — multiline list with parens inside quoted values",
+    "template": "{{IF V IN (\n\"4. Ha promovido/costeado la urbanización para vender PARCELAS resultantes.\",\n\"5. Vende a través de Comunidad de Bienes o Sociedad Civil con actividad PROMOTORA.\",\n\"6. Varios particulares que sin entidad formal actúan de facto como PROMOTORES (Comunidad de Hecho).\")}}OK{{ENDIF}}",
+    "fields": {"V": "6. Varios particulares que sin entidad formal actúan de facto como PROMOTORES (Comunidad de Hecho)."},
+    "expected": "OK"
+  },
+  {
+    "name": "IF IN — list value containing a comma (quote-aware split)",
+    "template": "{{IF X IN (\"alfa, beta\", \"gamma\")}}OK{{ENDIF}}",
+    "fields": {"X": "alfa, beta"},
+    "expected": "OK"
+  },
+  {
+    "name": "IF — field name with Ñ (Latin-1 letter)",
+    "template": "{{IF CONOCIMIENTO_IDIOMA_ESPAÑOL == \"Los extranjeros dicen conocer el idioma español\"}}OK{{ENDIF}}",
+    "fields": {"CONOCIMIENTO_IDIOMA_ESPAÑOL": "Los extranjeros dicen conocer el idioma español"},
+    "expected": "OK"
+  },
+  {
+    "kind": "applyFieldSuffix",
+    "name": "applyFieldSuffix — bare placeholder",
+    "input": "{{NAME}}",
+    "suffix": "_COMP",
+    "expected": "{{NAME_COMP}}"
+  },
+  {
+    "kind": "applyFieldSuffix",
+    "name": "applyFieldSuffix — DECLARE typed",
+    "input": "{{DECLARE NAME AS BOOL}}",
+    "suffix": "_COMP",
+    "expected": "{{DECLARE NAME_COMP AS BOOL}}"
+  },
+  {
+    "kind": "applyFieldSuffix",
+    "name": "applyFieldSuffix — DECLARE with fixed value",
+    "input": "{{DECLARE NAME=valor}}",
+    "suffix": "_COMP",
+    "expected": "{{DECLARE NAME_COMP=valor}}"
+  },
+  {
+    "kind": "applyFieldSuffix",
+    "name": "applyFieldSuffix — INPUT field",
+    "input": "{{NAME:INPUT(prompt|a,b)}}",
+    "suffix": "_COMP",
+    "expected": "{{NAME_COMP:INPUT(prompt|a,b)}}"
+  },
+  {
+    "kind": "applyFieldSuffix",
+    "name": "applyFieldSuffix — IF == comparison",
+    "input": "{{IF NAME == \"X\"}}",
+    "suffix": "_COMP",
+    "expected": "{{IF NAME_COMP == \"X\"}}"
+  },
+  {
+    "kind": "applyFieldSuffix",
+    "name": "applyFieldSuffix — IF AND combination",
+    "input": "{{IF FOO AND BAR}}",
+    "suffix": "_X",
+    "expected": "{{IF FOO_X AND BAR_X}}"
+  },
+  {
+    "kind": "applyFieldSuffix",
+    "name": "applyFieldSuffix — IF NOT",
+    "input": "{{IF NOT FOO}}",
+    "suffix": "_X",
+    "expected": "{{IF NOT FOO_X}}"
+  },
+  {
+    "kind": "applyFieldSuffix",
+    "name": "applyFieldSuffix — IF IN list",
+    "input": "{{IF FOO IN (\"a\", \"b\")}}",
+    "suffix": "_X",
+    "expected": "{{IF FOO_X IN (\"a\", \"b\")}}"
+  },
+  {
+    "kind": "applyFieldSuffix",
+    "name": "applyFieldSuffix — IF SYSTEM stays global",
+    "input": "{{IF SYSTEM:DIA == \"1\"}}",
+    "suffix": "_X",
+    "expected": "{{IF SYSTEM:DIA == \"1\"}}"
+  },
+  {
+    "kind": "applyFieldSuffix",
+    "name": "applyFieldSuffix — SYSTEM placeholder unchanged",
+    "input": "{{SYSTEM:FECHA}}",
+    "suffix": "_X",
+    "expected": "{{SYSTEM:FECHA}}"
+  },
+  {
+    "kind": "applyFieldSuffix",
+    "name": "applyFieldSuffix — DIA system field unchanged",
+    "input": "{{DIA}}",
+    "suffix": "_X",
+    "expected": "{{DIA}}"
+  },
+  {
+    "kind": "applyFieldSuffix",
+    "name": "applyFieldSuffix — ENDIF without name",
+    "input": "{{ENDIF}}",
+    "suffix": "_C",
+    "expected": "{{ENDIF}}"
+  },
+  {
+    "kind": "applyFieldSuffix",
+    "name": "applyFieldSuffix — ENDIF_NAME",
+    "input": "{{ENDIF_NAME}}",
+    "suffix": "_C",
+    "expected": "{{ENDIF_NAME_C}}"
+  },
+  {
+    "kind": "applyFieldSuffix",
+    "name": "applyFieldSuffix — IF_NAME (legacy named form)",
+    "input": "{{IF_NAME}}",
+    "suffix": "_C",
+    "expected": "{{IF_NAME_C}}"
+  },
+  {
+    "kind": "applyFieldSuffix",
+    "name": "applyFieldSuffix — COUNT(ARRAY)",
+    "input": "{{COUNT(BIENES)}}",
+    "suffix": "_C",
+    "expected": "{{COUNT(BIENES_C)}}"
+  },
+  {
+    "kind": "applyFieldSuffix",
+    "name": "applyFieldSuffix — FOR EACH renames the array, not the iterator",
+    "input": "{{FOR EACH ITEM IN BIENES}}",
+    "suffix": "_C",
+    "expected": "{{FOR EACH ITEM IN BIENES_C}}"
+  },
+  {
+    "kind": "applyFieldSuffix",
+    "name": "applyFieldSuffix — nested INCLUDE without inner suffix gets parent suffix",
+    "input": "{{INCLUDE foo}}",
+    "suffix": "_C",
+    "expected": "{{INCLUDE foo FIELDS:_C}}"
+  },
+  {
+    "kind": "applyFieldSuffix",
+    "name": "applyFieldSuffix — nested INCLUDE with inner suffix → composed",
+    "input": "{{INCLUDE foo FIELDS:_INNER}}",
+    "suffix": "_OUT",
+    "expected": "{{INCLUDE foo FIELDS:_INNER_OUT}}"
+  },
+  {
+    "kind": "applyFieldSuffix",
+    "name": "applyFieldSuffix — COMMENT directive untouched",
+    "input": "{{COMMENT:nota interna}}",
+    "suffix": "_X",
+    "expected": "{{COMMENT:nota interna}}"
+  },
+  {
+    "kind": "applyFieldSuffix",
+    "name": "applyFieldSuffix — multiple directives in one block",
+    "input": "{{DECLARE NAME AS TEXT}}\n{{NAME}} mayor de edad{{IF NAME == \"\"}}vacío{{ENDIF}}",
+    "suffix": "_COMP",
+    "expected": "{{DECLARE NAME_COMP AS TEXT}}\n{{NAME_COMP}} mayor de edad{{IF NAME_COMP == \"\"}}vacío{{ENDIF}}"
+  },
+  {
+    "kind": "applyFieldSuffix",
+    "name": "applyFieldSuffix — DECLARE with :OPTIONS preserved",
+    "input": "{{DECLARE FOO:[hint]:OPTIONS(a, b, c)=b}}",
+    "suffix": "_COMP",
+    "expected": "{{DECLARE FOO_COMP:[hint]:OPTIONS(a, b, c)=b}}"
+  },
+  {
+    "kind": "applyFieldSuffix",
+    "name": "applyFieldSuffix — DECLARE with AS TYPE + :OPTIONS + :DEFAULT",
+    "input": "{{DECLARE FOO AS TEXT:[hint]:OPTIONS(uno, dos):DEFAULT(uno)}}",
+    "suffix": "_VEND",
+    "expected": "{{DECLARE FOO_VEND AS TEXT:[hint]:OPTIONS(uno, dos):DEFAULT(uno)}}"
+  },
+  {
+    "name": "SET — basic literal assignment",
+    "template": "{{SET FOO=valor}}{{FOO}}",
+    "fields": {},
+    "expected": "valor"
+  },
+  {
+    "name": "SET — quoted value with spaces",
+    "template": "{{SET FOO=\"con espacios y comas, varias\"}}{{FOO}}",
+    "fields": {},
+    "expected": "con espacios y comas, varias"
+  },
+  {
+    "name": "SET — overrides DECLARE fixed value",
+    "template": "{{DECLARE FOO=inicial}}{{SET FOO=actualizado}}{{FOO}}",
+    "fields": {},
+    "expected": "actualizado"
+  },
+  {
+    "name": "SET — conditional assignment IF branch",
+    "template": "{{IF X==\"a\"}}{{SET FOO=Sí}}{{ELSE}}{{SET FOO=No}}{{ENDIF}}{{FOO}}",
+    "fields": {"X": "a"},
+    "expected": "Sí"
+  },
+  {
+    "name": "SET — conditional assignment ELSE branch",
+    "template": "{{IF X==\"a\"}}{{SET FOO=Sí}}{{ELSE}}{{SET FOO=No}}{{ENDIF}}{{FOO}}",
+    "fields": {"X": "b"},
+    "expected": "No"
+  },
+  {
+    "name": "SET — last write wins on multiple assignments",
+    "template": "{{SET FOO=a}}{{SET FOO=b}}{{SET FOO=c}}{{FOO}}",
+    "fields": {},
+    "expected": "c"
+  },
+  {
+    "name": "SET — dead-branch SET does not leak",
+    "template": "{{IF X==\"yes\"}}{{SET FOO=alive}}{{ENDIF}}{{IF FOO}}vivo{{ELSE}}vacío{{ENDIF}}",
+    "fields": {"X": "no"},
+    "expected": "vacío"
+  },
+  {
+    "name": "SET — chained: SET BAR derived from existing value",
+    "template": "{{SET FIRST=hola}}{{FIRST}} y {{SET SECOND=mundo}}{{SECOND}}",
+    "fields": {},
+    "expected": "hola y mundo"
+  },
+  {
+    "name": "@autonumber — Spanish ordinal sequence",
+    "template": "{{@autonumber:c:ordinal}}.- A {{@autonumber:c:ordinal}}.- B {{@autonumber:c:ordinal}}.- C",
+    "fields": {},
+    "expected": "PRIMERA.- A SEGUNDA.- B TERCERA.- C"
+  },
+  {
+    "name": "@autonumber — alpha sequence",
+    "template": "{{@autonumber:s:alpha}} {{@autonumber:s:alpha}} {{@autonumber:s:alpha}}",
+    "fields": {},
+    "expected": "A B C"
+  },
+  {
+    "name": "@autonumber — Roman sequence",
+    "template": "{{@autonumber:s:roman}} {{@autonumber:s:roman}} {{@autonumber:s:roman}} {{@autonumber:s:roman}}",
+    "fields": {},
+    "expected": "I II III IV"
+  },
+  {
+    "name": "@autonumber — plain numeric sequence",
+    "template": "{{@autonumber:n}} {{@autonumber:n}} {{@autonumber:n}}",
+    "fields": {},
+    "expected": "1 2 3"
+  },
+  {
+    "name": "@autonumber — reset clears the counter",
+    "template": "{{@autonumber:c}} {{@autonumber:c}}{{@autonumber:c:reset}} {{@autonumber:c}}",
+    "fields": {},
+    "expected": "1 2 1"
+  },
+  {
+    "name": "@autonumber — hierarchical parent/child",
+    "template": "{{@autonumber:s}} {{@autonumber:s:sub}} {{@autonumber:s:sub}} {{@autonumber:s}} {{@autonumber:s:sub}}",
+    "fields": {},
+    "expected": "1 1.1 1.2 2 2.1"
+  },
+  {
+    "name": "@autonumber — independent counters per type",
+    "template": "{{@autonumber:a:roman}} {{@autonumber:b:alpha}} {{@autonumber:a:roman}} {{@autonumber:b:alpha}}",
+    "fields": {},
+    "expected": "I A II B"
+  },
+  {
+    "name": "@autonumber — only surviving IF branch counts",
+    "template": "{{IF SHOW}}{{@autonumber:c}}{{ENDIF}} {{@autonumber:c}}",
+    "fields": {"SHOW": "yes"},
+    "expected": "1 2"
+  },
+  {
+    "name": "@autonumber — pruned IF branch does not advance counter",
+    "template": "{{IF SHOW}}{{@autonumber:c}}{{ENDIF}} {{@autonumber:c}}",
+    "fields": {"SHOW": ""},
+    "expected": " 1"
+  },
+  {
+    "name": "DECLARE with :IUI is stripped from output",
+    "template": "{{DECLARE PRECIO AS NUM:[Precio total]:IUI(DOCS_NOT/DOC_NOT/OPES/OPE[1]/IMP)}}\nPrecio: {{PRECIO}}",
+    "fields": {"PRECIO": "100"},
+    "expected": "Precio: 100"
+  },
+  {
+    "name": "DECLARE ARRAY with :IUI (array + subfield) is stripped from output",
+    "template": "{{DECLARE ARRAY COMPRADORES(NOMBRE:IUI(PER/NOM), DNI):[Compradores]:IUI(DOCS_NOT/DOC_NOT/SUJS/SUJ)}}\n{{FOR EACH ITEM IN COMPRADORES}}{{ITEM.NOMBRE}};{{ENDFOR}}Fin.",
+    "fields": {"COMPRADORES": [{"NOMBRE": "Ana"}, {"NOMBRE": "Luis"}]},
+    "expected": "Ana;Luis;Fin."
+  },
+  {
+    "name": "DECLARE fixed value with trailing :IUI keeps the value",
+    "template": "{{DECLARE TIPO=\"Compraventa\":IUI(DOCS_NOT/DOC_NOT/TIP_DOC)}}Tipo: {{TIPO}}",
+    "fields": {},
+    "expected": "Tipo: Compraventa"
+  }
+]

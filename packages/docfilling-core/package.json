@@ -1,0 +1,61 @@
+{
+  "name": "@mycolegal-app/docfilling-core",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "exports": {
+    ".": {
+      "types": "./index.ts",
+      "import": "./index.ts"
+    },
+    "./syntax": {
+      "types": "./src/syntax/index.ts",
+      "import": "./src/syntax/index.ts"
+    },
+    "./compose": {
+      "types": "./src/compose/index.ts",
+      "import": "./src/compose/index.ts"
+    },
+    "./fields": {
+      "types": "./src/fields/index.ts",
+      "import": "./src/fields/index.ts"
+    },
+    "./biblioteca": {
+      "types": "./src/biblioteca/index.ts",
+      "import": "./src/biblioteca/index.ts"
+    },
+    "./ports": {
+      "types": "./src/ports/index.ts",
+      "import": "./src/ports/index.ts"
+    },
+    "./iui": {
+      "types": "./src/iui/index.ts",
+      "import": "./src/iui/index.ts"
+    }
+  },
+  "description": "Motor DocFilling texto→texto: sintaxis, composición, INCLUDE, condicionales, autonumeración, esquema de campos e IUI. Markdown entra, markdown sale; el .docx lo produce la fusión con la plantilla de la notaría (platform /internal/docx).",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mycolegal-app/mycolegal-shared.git"
+  },
+  "files": [
+    "index.ts",
+    "src",
+    "tsconfig.json",
+    "VERSION.md"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.8"
+  }
+}

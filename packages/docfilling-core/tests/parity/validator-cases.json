@@ -1,0 +1,333 @@
+[
+  {
+    "name": "valid simple field",
+    "template": "{{DECLARE NOMBRE}}Hola {{NOMBRE}}, bienvenido.",
+    "diagnostics": []
+  },
+  {
+    "name": "valid IF/ELSE/ENDIF with == comparison",
+    "template": "{{DECLARE EDAD AS NUM}}{{IF EDAD == 18}}A{{ELSE}}B{{ENDIF}}",
+    "diagnostics": []
+  },
+  {
+    "name": "valid AUTO with two options and known hint",
+    "template": "{{DECLARE NOMBRE_REF}}{{NOMBRE_REF}}{{AUTO(NOMBRE_REF):rojo|azul}}",
+    "diagnostics": []
+  },
+  {
+    "name": "E001 — unclosed {{",
+    "template": "Esto es un fallo {{CAMPO",
+    "diagnostics": [[1, 18, "E001", "error"]]
+  },
+  {
+    "name": "W001 — single brace placeholder",
+    "template": "Texto {nombre} aqui.",
+    "diagnostics": [[1, 7, "W001", "warning"]]
+  },
+  {
+    "name": "W002 — directive typo (INCUDE)",
+    "template": "{{INCUDE parrafo}}",
+    "diagnostics": [
+      [1, 1, "W002", "warning"],
+      [1, 1, "W056", "warning"]
+    ]
+  },
+  {
+    "name": "E010 — IF_X without ENDIF_X",
+    "template": "{{DECLARE NOMBRE}}{{IF_NOMBRE}}Hola",
+    "diagnostics": [
+      [1, 19, "E010", "error"],
+      [1, 19, "W080", "warning"]
+    ]
+  },
+  {
+    "name": "E011 — ENDIF_X without IF_X",
+    "template": "{{DECLARE NOMBRE}}Hola{{ENDIF_NOMBRE}}",
+    "diagnostics": [
+      [1, 23, "E011", "error"],
+      [1, 23, "W080", "warning"]
+    ]
+  },
+  {
+    "name": "E012 — ELSE_X without IF_X",
+    "template": "{{DECLARE NOMBRE}}Hola{{ELSE_NOMBRE}}fin",
+    "diagnostics": [
+      [1, 23, "E012", "error"],
+      [1, 23, "W080", "warning"]
+    ]
+  },
+  {
+    "name": "W080 — legacy IF_X form (canonical-only, balanced)",
+    "template": "{{DECLARE FAMILIA}}{{IF_FAMILIA}}sí{{ENDIF_FAMILIA}}",
+    "diagnostics": [
+      [1, 20, "W080", "warning"],
+      [1, 36, "W080", "warning"]
+    ]
+  },
+  {
+    "name": "E016 — crossed nesting ENDIF_Y closes IF_X",
+    "template": "{{DECLARE X}}{{DECLARE Y}}{{IF_X}}{{IF_Y}}{{ENDIF_X}}{{ENDIF_Y}}",
+    "diagnostics": [
+      [1, 27, "W080", "warning"],
+      [1, 35, "W080", "warning"],
+      [1, 43, "E016", "error"],
+      [1, 43, "W080", "warning"],
+      [1, 54, "E016", "error"],
+      [1, 54, "W080", "warning"]
+    ]
+  },
+  {
+    "name": "E013 — IF with quoted literal in IN expression",
+    "template": "{{DECLARE CAMPO}}{{IF \"texto\" IN CAMPO}}A{{ENDIF}}",
+    "diagnostics": [[1, 18, "E013", "error"]]
+  },
+  {
+    "name": "E013 — IF IN with brackets instead of parens",
+    "template": "{{DECLARE X}}{{IF X IN [a, b]}}A{{ENDIF}}",
+    "diagnostics": [[1, 14, "E013", "error"]]
+  },
+  {
+    "name": "E014 — IF == value with unquoted spaces",
+    "template": "{{DECLARE X}}{{IF X == Sr Lopez}}A{{ENDIF}}",
+    "diagnostics": [[1, 14, "E014", "error"]]
+  },
+  {
+    "name": "W020 — INPUT without description",
+    "template": "{{CAMPO:INPUT()}}",
+    "diagnostics": [[1, 1, "W020", "warning"]]
+  },
+  {
+    "name": "W021 — INPUT with pipe but no valid options",
+    "template": "{{CAMPO:INPUT(desc|)}}",
+    "diagnostics": [[1, 1, "W021", "warning"]]
+  },
+  {
+    "name": "W030 — DEPENDENCY without law name",
+    "template": "{{DEPENDENCY::http://x.com}}",
+    "diagnostics": [[1, 1, "W030", "warning"]]
+  },
+  {
+    "name": "W031 — DEPENDENCY without URL",
+    "template": "{{DEPENDENCY:LeyX:}}",
+    "diagnostics": [[1, 1, "W031", "warning"]]
+  },
+  {
+    "name": "W032 — DEPENDENCY with malformed URL",
+    "template": "{{DEPENDENCY:LeyX:no-es-url}}",
+    "diagnostics": [[1, 1, "W032", "warning"]]
+  },
+  {
+    "name": "E040 — AUTO with a single option",
+    "template": "{{AUTO:solo_una}}",
+    "diagnostics": [[1, 1, "E040", "error"]]
+  },
+  {
+    "name": "W040 — AUTO with an empty option",
+    "template": "{{AUTO:uno||dos}}",
+    "diagnostics": [[1, 1, "W040", "warning"]]
+  },
+  {
+    "name": "W041 — AUTO with unknown hint field",
+    "template": "{{AUTO(NO_EXISTE):uno|dos}}",
+    "diagnostics": [[1, 1, "W041", "warning"]]
+  },
+  {
+    "name": "E050 — duplicate DECLARE",
+    "template": "{{DECLARE X = \"a\"}}\n{{DECLARE X = \"b\"}}",
+    "diagnostics": [[2, 1, "E050", "error"]]
+  },
+  {
+    "name": "E051 — DECLARE AS unknown type",
+    "template": "{{DECLARE X AS INVALIDO}}",
+    "diagnostics": [[1, 1, "E051", "error"]]
+  },
+  {
+    "name": "W051 — DECLARE AS BOOL with non-boolean value",
+    "template": "{{DECLARE X AS BOOL = \"maybe\"}}",
+    "diagnostics": [[1, 1, "W051", "warning"]]
+  },
+  {
+    "name": "W052 — DECLARE AS NUM with non-numeric value",
+    "template": "{{DECLARE X AS NUM = \"abc\"}}",
+    "diagnostics": [[1, 1, "W052", "warning"]]
+  },
+  {
+    "name": "W060 — TAGS without content",
+    "template": "{{TAGS:}}",
+    "diagnostics": [[1, 1, "W060", "warning"]]
+  },
+  {
+    "name": "W061 — SUMMARY without content",
+    "template": "{{SUMMARY:}}",
+    "diagnostics": [[1, 1, "W061", "warning"]]
+  },
+  {
+    "name": "E050 — duplicate DECLARE ARRAY",
+    "template": "{{DECLARE ARRAY P(NOMBRE):[lista]}}\n{{DECLARE ARRAY P(DNI):[lista]}}",
+    "diagnostics": [[2, 1, "E050", "error"]]
+  },
+  {
+    "name": "E050 — DECLARE ARRAY then plain DECLARE same name",
+    "template": "{{DECLARE ARRAY P(NOMBRE):[lista]}}\n{{DECLARE P AS TEXT}}",
+    "diagnostics": [[2, 1, "E050", "error"]]
+  },
+  {
+    "name": "E090 — FOR EACH subfield not declared",
+    "template": "{{DECLARE ARRAY P(NOMBRE, DNI):[lista]}}\n{{FOR EACH I IN P}}{{I.EDAD}}{{ENDFOR}}",
+    "diagnostics": [[2, 20, "E090", "error"]]
+  },
+  {
+    "name": "E091 — IF NUM == quoted string",
+    "template": "{{DECLARE EDAD AS NUM = 0}}\n{{IF EDAD == \"mayor\"}}A{{ENDIF}}",
+    "diagnostics": [[2, 1, "E091", "error"]]
+  },
+  {
+    "name": "E091 — IF NUM IN with quoted strings",
+    "template": "{{DECLARE EDAD AS NUM = 0}}\n{{IF EDAD IN (\"uno\", \"dos\")}}A{{ENDIF}}",
+    "diagnostics": [
+      [2, 1, "E091", "error"],
+      [2, 1, "E091", "error"]
+    ]
+  },
+  {
+    "name": "W091 — IF BOOL == non-boolean value",
+    "template": "{{DECLARE ACTIVO AS BOOL = TRUE}}\n{{IF ACTIVO == \"yes\"}}A{{ENDIF}}",
+    "diagnostics": [[2, 1, "W091", "warning"]]
+  },
+  {
+    "name": "W081 — INCLUDE with parens",
+    "template": "{{INCLUDE(clausula_rgpd)}}",
+    "diagnostics": [[1, 1, "W081", "warning"]]
+  },
+  {
+    "name": "W081 — INCLUDE with underscore",
+    "template": "{{INCLUDE_clausula_rgpd}}",
+    "diagnostics": [[1, 1, "W081", "warning"]]
+  },
+  {
+    "name": "W081 — INCLUDE with colon",
+    "template": "{{INCLUDE:clausula_rgpd}}",
+    "diagnostics": [[1, 1, "W081", "warning"]]
+  },
+  {
+    "name": "valid INCLUDE with space (canonical, no diagnostic)",
+    "template": "{{INCLUDE clausula_rgpd}}",
+    "diagnostics": []
+  },
+  {
+    "name": "W083 — COMMENT_BEGIN/COMMENT_END deprecated",
+    "template": "{{COMMENT_BEGIN}}\nnota interna\n{{COMMENT_END}}",
+    "diagnostics": [
+      [1, 1, "W083", "warning"],
+      [3, 1, "W083", "warning"]
+    ]
+  },
+  {
+    "name": "valid COMMENT inline (canonical, no diagnostic)",
+    "template": "{{COMMENT: nota inline}}",
+    "diagnostics": []
+  },
+  {
+    "name": "IUI — valid :IUI on scalar DECLARE",
+    "template": "{{DECLARE PRECIO AS NUM:[Precio total de la compraventa]:IUI(DOCS_NOT/DOC_NOT/OPES/OPE[1]/IMP)}}Precio: {{PRECIO}}",
+    "diagnostics": []
+  },
+  {
+    "name": "IUI — dotted path from the operator dictionary is accepted",
+    "template": "{{DECLARE COD_MUN:[Código del municipio]:IUI(DOCS_NOT.DOC_NOT.IDE_DOC.COD_MUN)}}{{COD_MUN}}",
+    "diagnostics": []
+  },
+  {
+    "name": "W058 — IUI path with a single segment",
+    "template": "{{DECLARE NOMBRE:[Nombre del comprador]:IUI(NOM)}}{{NOMBRE}}",
+    "diagnostics": [
+      [1, 1, "W058", "warning"]
+    ]
+  },
+  {
+    "name": "W058 — empty :IUI()",
+    "template": "{{DECLARE NOMBRE:[Nombre del comprador]:IUI()}}{{NOMBRE}}",
+    "diagnostics": [
+      [1, 1, "W058", "warning"]
+    ]
+  },
+  {
+    "name": "W059 — same IUI path on two variables (slashes/dots normalised)",
+    "template": "{{DECLARE NOMBRE_A:[Nombre]:IUI(DOCS_NOT/DOC_NOT/SUJS/SUJ[1]/NOM)}}\n{{DECLARE NOMBRE_B:[Nombre]:IUI(/DOCS_NOT.DOC_NOT.SUJS.SUJ[1].NOM/)}}\n{{NOMBRE_A}} {{NOMBRE_B}}",
+    "diagnostics": [
+      [2, 1, "W059", "warning"]
+    ]
+  },
+  {
+    "name": "IUI — DECLARE ARRAY with element path and subfield relative paths",
+    "template": "{{DECLARE ARRAY COMPRADORES(NOMBRE:IUI(PER/NOM), DNI:IUI(PER.DOC_IDE.NUM_DOC_IDE), PORCENTAJE AS NUM):[Compradores de la finca]:IUI(DOCS_NOT/DOC_NOT/SUJS/SUJ)}}",
+    "diagnostics": []
+  },
+  {
+    "name": "IUI — DECLARE ARRAY bracket form with dotted element path",
+    "template": "{{DECLARE ARRAY COMPRADORES:IUI(DOCS_NOT.DOC_NOT.SUJS.SUJ):[NOMBRE, DNI]}}",
+    "diagnostics": []
+  },
+  {
+    "name": "W057 — subfield :IUI without array element path",
+    "template": "{{DECLARE ARRAY COMPRADORES(NOMBRE:IUI(PER/NOM), DNI):[Compradores de la finca]}}",
+    "diagnostics": [
+      [1, 1, "W057", "warning"]
+    ]
+  },
+  {
+    "name": "W057 — :IUI inside the :[…] bracket list",
+    "template": "{{DECLARE ARRAY COMPRADORES:[NOMBRE:IUI(PER/NOM), DNI]:IUI(DOCS_NOT/DOC_NOT/SUJS/SUJ)}}",
+    "diagnostics": [
+      [1, 1, "W057", "warning"]
+    ]
+  },
+  {
+    "name": "W058 — DECLARE ARRAY element path with one segment",
+    "template": "{{DECLARE ARRAY COMPRADORES(NOMBRE, DNI):[Compradores]:IUI(SUJ)}}",
+    "diagnostics": [
+      [1, 1, "W058", "warning"]
+    ]
+  },
+  {
+    "name": "W059 — two arrays with the same element path",
+    "template": "{{DECLARE ARRAY COMPRADORES(NOMBRE):[Compradores]:IUI(DOCS_NOT/DOC_NOT/SUJS/SUJ)}}\n{{DECLARE ARRAY VENDEDORES(NOMBRE):[Vendedores]:IUI(DOCS_NOT.DOC_NOT.SUJS.SUJ)}}",
+    "diagnostics": [
+      [2, 1, "W059", "warning"]
+    ]
+  },
+  {
+    "name": "W059 — two subfields resolve to the same relative path",
+    "template": "{{DECLARE ARRAY COMPRADORES(NOMBRE:IUI(PER/NOM), NOMBRE_COMPLETO:IUI(PER.NOM)):[Compradores]:IUI(DOCS_NOT/DOC_NOT/SUJS/SUJ)}}",
+    "diagnostics": [
+      [1, 1, "W059", "warning"]
+    ]
+  },
+  {
+    "name": "W059 — subfield by name collides with an explicit relative path",
+    "template": "{{DECLARE ARRAY COMPRADORES(NOM, NOMBRE:IUI(NOM)):[Compradores]:IUI(DOCS_NOT/DOC_NOT/SUJS/SUJ)}}",
+    "diagnostics": [
+      [1, 1, "W059", "warning"]
+    ]
+  },
+  {
+    "name": "IUI — combined with :OPTIONS and :[instr], IUI first",
+    "template": "{{DECLARE ESTADO:IUI(DOCS_NOT/DOC_NOT/INMS/INM[1]/EST):OPTIONS(Libre, Ocupado):[Estado de ocupación]=Libre}}{{ESTADO}}",
+    "diagnostics": []
+  },
+  {
+    "name": "IUI — combined with :OPTIONS and :[instr], IUI in the middle",
+    "template": "{{DECLARE ESTADO:OPTIONS(Libre, Ocupado):IUI(DOCS_NOT/DOC_NOT/INMS/INM[1]/EST):[Estado de ocupación]:DEFAULT(Libre)}}{{ESTADO}}",
+    "diagnostics": []
+  },
+  {
+    "name": "IUI — combined with :[instr] and :OPTIONS, IUI last",
+    "template": "{{DECLARE ESTADO AS TEXT:[Estado de ocupación]:OPTIONS(Libre, Ocupado):IUI(DOCS_NOT/DOC_NOT/INMS/INM[1]/EST)}}{{ESTADO}}",
+    "diagnostics": []
+  },
+  {
+    "name": "IUI — on INPUT-form DECLARE",
+    "template": "{{DECLARE CONFIRMA AS BOOL:INPUT(¿Confirma la operación?|Sí,No):IUI(DOCS_NOT/DOC_NOT/OPES/OPE[1]/CNF)}}{{IF CONFIRMA}}ok{{ENDIF}}",
+    "diagnostics": []
+  }
+]

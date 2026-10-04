@@ -1,0 +1,36 @@
+# @mycolegal-app/docfilling-core
+
+## 0.1.0 — 2-oct-2026
+
+Arranque del paquete (F1 del plan `mycolegal-docfilling/PLAN_TECNICO_DOCFILLING_CORE.md`).
+
+- Capa de **sintaxis** (`src/syntax/`: `constants`, `parser`, `validator`) y **composición**
+  (`src/compose/engine.ts`) traídas de `DocFilling/docfilling-editor`, donde `scripts/gen-ts.py` las genera
+  desde el paquete Python `docfilling-syntax`. 3.601 líneas.
+- `includesDe()` — los INCLUDE de primer nivel de una plantilla, para la caché del catálogo.
+- **139 casos de paridad** (82 de composición + 57 de validación) traídos del Python y verdes.
+- Verificado además contra el **biblioteca real**: 1.727 markdown de producción del Drive `_PROD`.
+
+- **Tres comprobaciones del validador que el generador no emite**, portadas a mano en
+  `src/syntax/checks-pendientes.ts` y enchufadas por la envoltura `src/syntax/validate.ts` (para que
+  regenerar no se las lleve): `checkDeclareArraySyntax` (E070/E071/W070/W071), `checkForEachBalance`
+  (E060/E061/W082) y `checkSetDirectives` (E110/W110). Con ellas, el validador TS coincide con el Python
+  en **1.722 de 1.727** ficheros reales; las 5 restantes son un error de posiciones del Python que no se
+  replica a propósito.
+- **`expandirIncludes`** — expansión recursiva sobre el puerto `ParrafoRepository`, con tope de
+  profundidad, **detección de ciclos**, propagación de `FIELDS:_sfx`, reporte de `faltantes`/`usados` y
+  **centinelas de EXIT_INCLUDE** (que en el Python sólo pone el editor, de modo que la directiva
+  funcionaba al previsualizar y no al generar).
+- **Dos arreglos de codificación** que la biblioteca real destapó: `\w` de JavaScript es ASCII y truncaba los
+  nombres con tilde o Ñ (`PARR_LEY_CATALUÑA` → `PARR_LEY_CATALU`), y los ficheros del Drive llegan en
+  **NFD** mientras las plantillas escriben en NFC, así que no se encontraban. Normalización a NFC en la
+  frontera y clase Unicode en `INCLUDE_PATTERN`.
+
+- **`esquemaDeCampos`** (F1.5) — port de `field_schema._parse` del SaaS: por campo, `quien` lo rellena
+  (`ia`/`persona`/`solo`), tipo, etiqueta legible, opciones, instrucción, valor por defecto, arrays con
+  subcampos, `soloCondicional` y ruta IUI; más los `includes` y las acciones humanas. Con él,
+  `camposSoloCondicionales` e `instruccionesDeCampo`, portados de `filler.py` y **verificados contra el Python
+  sobre los 1.727 ficheros reales con cero divergencias**.
+
+Pendiente en el paquete (ver el plan): el mapa IUI con `MAP_IUI` (F1.6), el humanizador de etiquetas (F1.7),
+`extractTemplateLang` y los ajustes de campo del `SettingsProvider`.

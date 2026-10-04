@@ -1,0 +1,15 @@
+// Capa de LENGUAJE: reconocer, clasificar y validar.
+export { parseFields, classifyField, offsetToLineCol, FieldType } from './parser';
+export type { ParsedField } from './parser';
+export { validateText } from './validate';
+export { collectAllDeclares } from './validator';
+export type { Diagnostic, DiagnosticFix, ValidationResult, IncludeResolver } from './validator';
+export { TIPOS_CANONICOS, SINONIMOS_DE_TIPO, tipoAceptado, tipoCanonico } from './declare-types';
+export type { TipoCanonico } from './declare-types';
+export {
+  PAGEBREAK, PAGEBREAK_HEREDADO, PAGEBREAK_DIRECTIVA, PAGEBREAK_PATTERN_G,
+  esPageBreak, esPageBreakHeredado,
+} from './page-break';
+export { idiomaDePlantilla, IDIOMA_POR_DEFECTO } from './template-lang';
+export { checkInputConOptions, checkIncludeConRuta } from './checks-pendientes';
+export * from './constants';
