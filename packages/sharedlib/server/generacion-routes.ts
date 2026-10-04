@@ -41,7 +41,7 @@ const CONSERVAR = [
   'x-borrador',
 ];
 
-export async function forwardGeneracion(p: ForwardGeneracionParams): Promise<Response> {
+export async function forwardGeneracion(p: ForwardGeneracionParams): Promise<NextResponse> {
   const segs = p.path ?? [];
   const sub = segs.length ? `/${segs.join('/')}` : '';
   const url = `${p.docfillingUrl.replace(/\/$/, '')}/api/generacion${sub}${p.request.nextUrl.search}`;
@@ -96,6 +96,9 @@ export async function forwardGeneracion(p: ForwardGeneracionParams): Promise<Res
     const v = res.headers.get(h);
     if (v) salida.set(h, v);
   }
-  // El cuerpo se reenvía TAL CUAL: vale para JSON y para el `.docx`.
-  return new Response(res.body, { status: res.status, headers: salida });
+  // El cuerpo se reenvía TAL CUAL: vale para JSON y para el `.docx`. Se
+  // construye un `NextResponse` —que extiende `Response`— porque es lo que tipa
+  // el `withAuth` de las apps; devolver un `Response` pelado compila aquí y
+  // falla en la consumidora, que es el peor sitio donde enterarse.
+  return new NextResponse(res.body, { status: res.status, headers: salida });
 }
