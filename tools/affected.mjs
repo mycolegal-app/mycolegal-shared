@@ -19,10 +19,10 @@ import { execSync } from 'child_process';
 
 const MONO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const APPS_ROOT = resolve(MONO, '..');
-const PKG_DIRS = { ui: join(MONO, 'packages/ui'), sharedlib: join(MONO, 'packages/sharedlib'), 'text-extract': join(MONO, 'packages/text-extract'), 'docfilling-core': join(MONO, 'packages/docfilling-core') };
-const PKG_NAME = { ui: '@mycolegal-app/ui', sharedlib: '@mycolegal-app/sharedlib', 'text-extract': '@mycolegal-app/text-extract', 'docfilling-core': '@mycolegal-app/docfilling-core' };
-const NAME_TO_PKG = { '@mycolegal-app/ui': 'ui', '@mycolegal-app/sharedlib': 'sharedlib', '@mycolegal-app/text-extract': 'text-extract', '@mycolegal-app/docfilling-core': 'docfilling-core' };
-const PKG_KEYS = ['ui', 'sharedlib', 'text-extract', 'docfilling-core'];
+const PKG_DIRS = { ui: join(MONO, 'packages/ui'), sharedlib: join(MONO, 'packages/sharedlib'), 'text-extract': join(MONO, 'packages/text-extract'), 'docfilling-core': join(MONO, 'packages/docfilling-core'), 'ai-core': join(MONO, 'packages/ai-core'), 'requisitos-core': join(MONO, 'packages/requisitos-core') };
+const PKG_NAME = { ui: '@mycolegal-app/ui', sharedlib: '@mycolegal-app/sharedlib', 'text-extract': '@mycolegal-app/text-extract', 'docfilling-core': '@mycolegal-app/docfilling-core', 'ai-core': '@mycolegal-app/ai-core', 'requisitos-core': '@mycolegal-app/requisitos-core' };
+const NAME_TO_PKG = { '@mycolegal-app/ui': 'ui', '@mycolegal-app/sharedlib': 'sharedlib', '@mycolegal-app/text-extract': 'text-extract', '@mycolegal-app/docfilling-core': 'docfilling-core', '@mycolegal-app/ai-core': 'ai-core', '@mycolegal-app/requisitos-core': 'requisitos-core' };
+const PKG_KEYS = ['ui', 'sharedlib', 'text-extract', 'docfilling-core', 'ai-core', 'requisitos-core'];
 const SKIP_DIRS = new Set(['node_modules', '.git', '.next', 'dist', '.turbo']);
 const CODE_EXT = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']);
 
@@ -117,7 +117,7 @@ function addEdge(from, to) {
   if (!rev.has(to)) rev.set(to, new Set());
   fwd.get(from).add(to); rev.get(to).add(from);
 }
-const pkgFiles = { ui: [], sharedlib: [], 'text-extract': [], 'docfilling-core': [] };
+const pkgFiles = { ui: [], sharedlib: [], 'text-extract': [], 'docfilling-core': [], 'ai-core': [], 'requisitos-core': [] };
 for (const pkg of PKG_KEYS) {
   for (const f of walk(PKG_DIRS[pkg])) {
     if (!CODE_EXT.has(extname(f)) && extname(f) !== '.css') continue;
