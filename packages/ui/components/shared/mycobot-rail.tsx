@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
+  Library,
   Sparkles,
   ChevronRight,
   ChevronLeft,
@@ -106,6 +107,7 @@ interface DonePayload {
   respuesta?: string;
   citas?: Cita[];
   citasAyuda?: AyudaCita[];
+  citasCatalogo?: CatalogoCita[];
   skill?: Msg["skill"];
   sinResultado?: boolean;
   trace?: AiTrace;
@@ -119,6 +121,31 @@ interface Cita {
   fecha: string | null;
   titulo: string | null;
   clase?: string; // clase de la resolución citada (badge de tipo)
+}
+
+// Cita a un ELEMENTO DE CATÁLOGO de la app que monta el rail: un esquema o un
+// párrafo de la Biblioteca de Esquemas de DocFilling, hoy; cualquier catálogo
+// con ficha propia, mañana.
+//
+// POR QUÉ UN TERCER TIPO Y NO REUTILIZAR LOS DOS QUE HABÍA
+//
+// `Cita` está casada con las resoluciones de Consultor —`resolucionId`,
+// `referenciaBoe`, `clase`— y su visor in-rail abre una resolución; meter un
+// esquema ahí obligaría a inventarle un `resolucionId` y un BOE que no tiene.
+// Y `AyudaCita` es el Manual: su `source` dice MANUAL|KB y se pinta con el icono
+// de libro. Un esquema de escritura no es ninguna de las dos cosas.
+//
+// Lo que sí comparte con `AyudaCita` es la mecánica: un `href` relativo dentro
+// de la app. Eso es lo único que el rail necesita saber para enlazarla.
+interface CatalogoCita {
+  /** Qué clase de elemento es. Lo pinta la pastilla, y es libre a propósito:
+   *  cada catálogo nombra sus cosas (esquema, párrafo, árbol, acto…). */
+  tipo: string;
+  /** Clave estable del elemento, para la `key` de React y como respaldo visual. */
+  clave: string;
+  titulo: string;
+  /** Ruta relativa dentro de la app. Sin ella la cita se enseña sin enlazar. */
+  href?: string | null;
 }
 
 // Cita al Manual / fichas de ayuda (AskResult.citasAyuda del carril de ayuda).
@@ -135,6 +162,7 @@ interface Msg {
   text: string;
   citas?: Cita[];
   citasAyuda?: AyudaCita[];
+  citasCatalogo?: CatalogoCita[];
   /** Skill que produjo la respuesta (badge): doctrina | ayuda | agente. */
   skill?: "doctrina" | "ayuda" | "agente" | "fuera";
   sinResultado?: boolean;
@@ -790,6 +818,7 @@ export function MycoBotRail({
               text: data.respuesta ?? "",
               citas: data.citas ?? [],
               citasAyuda: data.citasAyuda ?? [],
+              citasCatalogo: data.citasCatalogo ?? [],
               skill: data.skill,
               sinResultado: !!data.sinResultado,
               trace: data.trace ?? null,
@@ -857,6 +886,7 @@ export function MycoBotRail({
             text: final?.respuesta ?? answerText,
             citas: final?.citas ?? [],
             citasAyuda: final?.citasAyuda ?? [],
+            citasCatalogo: final?.citasCatalogo ?? [],
             skill: final?.skill,
             sinResultado: !!final?.sinResultado,
             steps: steps.length ? steps.slice() : undefined,
@@ -1969,6 +1999,46 @@ export function MycoBotRail({
                           )}
                         </div>
                       )}
+                      {/* Citas a elementos de catálogo de la app (esquemas y
+                          párrafos de la Biblioteca, hoy). Mismo sitio y mismo
+                          peso visual que las del Manual: son referencias, no
+                          resultados. */}
+                      {m.role === "bot" && m.citasCatalogo && m.citasCatalogo.length > 0 && (
+                        <div className="mt-2 border-t border-gray-200 pt-2">
+                          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                            {t("ui.mycobot.sourcesCatalogo")}
+                          </p>
+                          <ul className="space-y-1">
+                            {m.citasCatalogo.map((c, j) => {
+                              const inner = (
+                                <span className="flex items-start gap-1.5">
+                                  <Library className="mt-0.5 h-3 w-3 shrink-0 text-cyan-600" />
+                                  <span className="min-w-0">
+                                    <span className="block truncate text-[11px] text-gray-700">{c.titulo}</span>
+                                    <span className="block text-[10px] uppercase tracking-wide text-gray-400">
+                                      {c.tipo}
+                                    </span>
+                                  </span>
+                                  {c.href && (
+                                    <ChevronRight className="ml-auto mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
+                                  )}
+                                </span>
+                              );
+                              const base = "block w-full rounded px-1 py-0.5 text-left";
+                              return (
+                                <li key={c.clave + j}>
+                                  {c.href ? (
+                                    <a href={c.href} className={`${base} hover:bg-gray-200`}>{inner}</a>
+                                  ) : (
+                                    <span className={`${base} text-gray-500`}>{inner}</span>
+                                  )}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
+                      )}
+
                       {m.role === "bot" && m.citasAyuda && m.citasAyuda.length > 0 && (
                         <div className="mt-2 border-t border-gray-200 pt-2">
                           <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
