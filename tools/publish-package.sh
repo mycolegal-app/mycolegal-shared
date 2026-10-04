@@ -26,7 +26,7 @@ while [ $# -gt 0 ]; do
     --since) SINCE_OVERRIDE="${2:-}"; shift ;;
   esac; shift
 done
-case "$PKG" in ui|sharedlib|text-extract) ;; *) echo "uso: publish-package.sh <ui|sharedlib|text-extract> [--dry-run] [--since <ref>]"; exit 2 ;; esac
+case "$PKG" in ui|sharedlib|text-extract|docfilling-core) ;; *) echo "uso: publish-package.sh <ui|sharedlib|text-extract|docfilling-core> [--dry-run] [--since <ref>]"; exit 2 ;; esac
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SHARED_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"        # mycolegal-shared (repo raíz)
@@ -57,9 +57,34 @@ case "$PKG" in
   text-extract)
     # Consumidores declaran la dep explícitamente → no forzar adopción (como sharedlib).
     CONSUMERS="$TEXTEXTRACT_CONSUMER_APPS"; MARKER="$PUBLISHED_TEXTEXTRACT_MARKER"; PUB_PATHS="$TEXTEXTRACT_PUBLISHED_PATHS"; FORCE_ADOPT=false ;;
+  docfilling-core)
+    # Igual que text-extract: lo declara quien lo use. Hoy la lista puede estar
+    # VACÍA —ninguna app lo declara todavía— y eso es correcto, no un fallo.
+    CONSUMERS="$DOCFILLING_CORE_CONSUMER_APPS"; MARKER="$PUBLISHED_DOCFILLING_CORE_MARKER"; PUB_PATHS="$DOCFILLING_CORE_PUBLISHED_PATHS"; FORCE_ADOPT=false ;;
+  *)
+    # ⚠️ ESTE BRAZO NO EXISTÍA, y es el fallo que costó un deploy el 3-oct-2026.
+    # El `case` de validación de arriba ya aceptaba `docfilling-core`, pero éste
+    # no tenía su rama: el script seguía, hacía **commit y push del bump**, y
+    # moría cien líneas más abajo con «CONSUMERS: unbound variable». Media
+    # publicación, y el `set -u` avisando demasiado tarde.
+    #
+    # Ahora falla ANTES de tocar git, y dice qué hay que añadir.
+    die "sin configuración para el paquete '$PKG': añade su rama a este case y sus variables a platform/scripts/common.sh (CONSUMER_APPS, MARKER, PUBLISHED_PATHS, PKG_DIR)" ;;
 esac
 
 $DRY_RUN && yellow "  «DRY-RUN» — no se publica, pushea ni bumpea nada."
+# ── 0. El workflow que publica, sin cambios pendientes ───────────────────
+#
+# Este script sólo hace `git add packages/<pkg>`, así que un cambio en
+# `.github/workflows/publish.yml` **no viaja con el publish**. Si está sucio, el
+# push dispara el workflow VIEJO: sale verde y no publica lo que debía. Es el
+# fallo del 3-oct-2026, y costaba diez minutos de espera descubrirlo.
+#
+# Mejor pararlo aquí, antes de tocar git, que después de haber pusheado.
+if [ -n "$(git -C "$SHARED_DIR" status --porcelain -- .github/workflows/publish.yml)" ]; then
+  die "'.github/workflows/publish.yml' tiene cambios sin commitear. Este script no los sube, así que el push dispararía el workflow viejo: commitéalo y pushéalo antes."
+fi
+
 cyan "── publish-package: $PKG (monorepo mycolegal-shared) ──"
 
 # ── 1. Versión objetivo ──────────────────────────────────────────────
@@ -132,7 +157,29 @@ else
       npm view "$PKG_SCOPED@$VERSION" version --registry=https://npm.pkg.github.com >/dev/null 2>&1 && { verified=true; break; }
       yellow "  ⏳ propagando en registry… ($a/10)"; sleep 5
     done
-    $verified || die "no pude verificar $PKG_SCOPED@$VERSION en el registry. Revisa el workflow."
+    if ! $verified; then
+      # «Revisa el workflow» a secas no ayudaba. El modo de fallo real medido el
+      # 3-oct-2026: el workflow sale **en VERDE** y el paquete no se publica,
+      # porque su job no existe — la matriz no lo incluía. Así que si el run fue
+      # verde, se mira si hubo job para ESTE paquete y se dice.
+      if [ -n "$run_id" ]; then
+        jobs=$(gh run view "$run_id" --repo mycolegal-app/mycolegal-shared \
+                 --json jobs --jq '.jobs[].name' 2>/dev/null || true)
+        case "$jobs" in
+          *"($PKG)"*) yellow "  · el workflow SÍ tuvo job para $PKG — mira su log: gh run view $run_id --log" ;;
+          "") yellow "  · no pude leer los jobs del run $run_id." ;;
+          *) red "  · el workflow NO tuvo job para '$PKG'. Jobs que corrieron:"
+             # Con `$jobs` sin comillas, «publish (ui)» salía partido en dos
+             # líneas: `gh` los devuelve uno por línea y el word-splitting los
+             # troceaba por el espacio. Se recorre por líneas.
+             printf '%s\n' "$jobs" | sed 's/^/      /' 
+             red "    Su matriz no incluye el paquete. OJO: este script sólo hace"
+             red "    'git add packages/$PKG', así que un arreglo de"
+             red "    .github/workflows/publish.yml NO viaja con el publish: hay que pushearlo aparte." ;;
+        esac
+      fi
+      die "no pude verificar $PKG_SCOPED@$VERSION en el registry."
+    fi
     green "  ✓ Verified: $PKG_SCOPED@$VERSION"
   fi
 fi

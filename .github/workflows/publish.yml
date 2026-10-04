@@ -1,11 +1,23 @@
 name: publish
 
-# Monorepo mycolegal-shared: publica @mycolegal-app/ui, @mycolegal-app/sharedlib
-# y @mycolegal-app/text-extract a GitHub Packages. Cada paquete se publica desde
-# su subdirectorio SOLO si su
-# versión aún no existe en el registry → un push a main publica únicamente el
-# paquete cuya versión se ha bumpeado. Sustituye a los dos publish.yml separados
-# de los repos mycolegal-ui / mycolegal-sharedlib.
+# Monorepo mycolegal-shared: publica a GitHub Packages TODOS los paquetes de
+# `packages/`. Cada uno se publica SOLO si su versión aún no existe en el
+# registry → un push a main publica únicamente el paquete cuya versión se ha
+# bumpeado. Sustituye a los dos publish.yml separados de los repos
+# mycolegal-ui / mycolegal-sharedlib.
+#
+# ⚠️ LA MATRIZ SE DESCUBRE, NO SE ESCRIBE A MANO, Y ES POR UN FALLO CONCRETO
+# (3-oct-2026). Estaba escrita como `pkg: [ui, sharedlib, text-extract]`, y al
+# añadir `docfilling-core` al monorepo nadie la tocó. Resultado: el push subió
+# el paquete, Actions corrió **tres** jobs, el workflow salió en VERDE —porque
+# no falló nada: simplemente no existía el cuarto job— y `publish-package.sh` se
+# quedó esperando diez veces un paquete que nunca se iba a publicar.
+#
+# Y el detalle que lo hacía indetectable: `publish-package.sh` sólo hace `git
+# add packages/<pkg>`, así que un arreglo de ESTE fichero no viaja con el
+# publish — hay que pushearlo aparte. Descubriéndola, no hay nada que recordar.
+#
+# Ver [[feedback_paquete_shared_nuevo_cableado_en_5_sitios]].
 
 on:
   push:
@@ -19,12 +31,32 @@ permissions:
   packages: write
 
 jobs:
+  # Descubre los paquetes publicables: todo `packages/*` con package.json y sin
+  # `"private": true`. Un paquete nuevo entra en la matriz por existir.
+  descubrir:
+    runs-on: ubuntu-latest
+    outputs:
+      pkgs: ${{ steps.listar.outputs.pkgs }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: listar
+        run: |
+          set -euo pipefail
+          PKGS=$(for d in packages/*/; do
+            [ -f "$d/package.json" ] || continue
+            node -e "process.exit(require('./$d/package.json').private === true ? 1 : 0)" || continue
+            basename "$d"
+          done | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          echo "pkgs=$PKGS" >> "$GITHUB_OUTPUT"
+          echo "paquetes publicables: $PKGS"
+
   publish:
+    needs: descubrir
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        pkg: [ui, sharedlib, text-extract]
+        pkg: ${{ fromJSON(needs.descubrir.outputs.pkgs) }}
     steps:
       - uses: actions/checkout@v4
 
