@@ -26,7 +26,7 @@ while [ $# -gt 0 ]; do
     --since) SINCE_OVERRIDE="${2:-}"; shift ;;
   esac; shift
 done
-case "$PKG" in ui|sharedlib|text-extract|docfilling-core) ;; *) echo "uso: publish-package.sh <ui|sharedlib|text-extract|docfilling-core> [--dry-run] [--since <ref>]"; exit 2 ;; esac
+case "$PKG" in ui|sharedlib|text-extract|docfilling-core|ai-core) ;; *) echo "uso: publish-package.sh <ui|sharedlib|text-extract|docfilling-core|ai-core> [--dry-run] [--since <ref>]"; exit 2 ;; esac
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SHARED_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"        # mycolegal-shared (repo raíz)
@@ -61,6 +61,8 @@ case "$PKG" in
     # Igual que text-extract: lo declara quien lo use. Hoy la lista puede estar
     # VACÍA —ninguna app lo declara todavía— y eso es correcto, no un fallo.
     CONSUMERS="$DOCFILLING_CORE_CONSUMER_APPS"; MARKER="$PUBLISHED_DOCFILLING_CORE_MARKER"; PUB_PATHS="$DOCFILLING_CORE_PUBLISHED_PATHS"; FORCE_ADOPT=false ;;
+  ai-core)
+    CONSUMERS="$AI_CORE_CONSUMER_APPS"; MARKER="$PUBLISHED_AI_CORE_MARKER"; PUB_PATHS="$AI_CORE_PUBLISHED_PATHS"; FORCE_ADOPT=false ;;
   *)
     # ⚠️ ESTE BRAZO NO EXISTÍA, y es el fallo que costó un deploy el 3-oct-2026.
     # El `case` de validación de arriba ya aceptaba `docfilling-core`, pero éste
