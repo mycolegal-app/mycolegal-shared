@@ -1,10 +1,15 @@
 /**
- * ⚠️  AUTO-GENERATED — DO NOT EDIT MANUALLY.
+ * EL MOTOR DE COMPOSICIÓN. Código nuestro: se edita como cualquier otro.
  *
- * Source: docfilling-syntax/docfilling_syntax/composer.py
- * Generator: scripts/gen-ts.py
+ * Nació generado desde `docfilling-syntax/composer.py` con `scripts/gen-ts.py`,
+ * y su cabecera decía «AUTO-GENERATED — DO NOT EDIT MANUALLY». **Ya no.** El
+ * SaaS en Python se retira (D1/D4) y el vínculo con él no existe: este fichero
+ * es la fuente, no una copia.
  *
- * Re-generate with:  python scripts/gen-ts.py
+ * Se deja dicho porque la cabecera vieja tenía un coste real: invitaba a no
+ * tocar el motor, o a tocarlo con rodeos marcando «parche a mano». El tope de
+ * iteraciones de los condicionales estuvo en 10 mientras la biblioteca anidaba
+ * 12 niveles, y el aviso `W100` salía en cada composición.
  */
 
 import { METADATA_PREFIXES } from "../syntax/constants";
@@ -642,7 +647,21 @@ export function processConditionals(
     return evalExpr(condition.trim()) ? trueContent : fc;
   };
 
-  const maxIterations = 10;
+  // Era 10, y **la biblioteca real anida más que eso**: medido el 4-oct-2026
+  // sobre `0501_ESQUEMA_MAESTRO_VIVIENDA_PH`, sus condiciones llegan a **12
+  // niveles** de anidamiento. Con el tope en 10, las ramas más profundas no se
+  // resolvían nunca: el aviso `W100` que salía en cada composición no era
+  // incidental, era estructural.
+  //
+  // Carles pidió «al menos 20», y **la medición dijo que 20 no llega**: con el
+  // tope en 20, de los 105 esquemas 87 componen limpios y **18 siguen pasándose**
+  // —anidan más de veinte niveles—. Así que 50.
+  //
+  // Un tope alto NO cuesta pasadas: el bucle sale por el `content === prev` en
+  // cuanto no hay nada más que sustituir, así que sólo itera lo que la plantilla
+  // de verdad necesita. El número es una red contra un bucle infinito, no un
+  // presupuesto, y ponerlo justo convertía la red en un techo.
+  const maxIterations = 50;
   let iteration = 0;
 
   while (content.includes("{{IF") && iteration < maxIterations) {
@@ -661,7 +680,7 @@ export function processConditionals(
     warnings.push({
       code: "W100",
       message:
-        "processConditionals reached max_iterations=10; unresolved {{IF ...}} / {{ENDIF}} blocks remain — likely a malformed or deeply nested conditional.",
+        "processConditionals reached max_iterations=50; unresolved {{IF ...}} / {{ENDIF}} blocks remain — likely a malformed or deeply nested conditional.",
       iteration,
     });
   }

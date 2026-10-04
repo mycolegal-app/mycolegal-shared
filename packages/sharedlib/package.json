@@ -38,6 +38,7 @@
     "document-render.ts",
     "docx-client.ts",
     "document-templates.ts",
+    "requisitos-repo.ts",
     "idiomas-documento.ts",
     "server"
   ],
@@ -46,7 +47,8 @@
     "@prisma/client": ">=5",
     "jose": ">=5",
     "next": ">=14",
-    "zod": ">=3"
+    "zod": ">=3",
+    "@mycolegal-app/requisitos-core": ">=0.1.0"
   },
   "peerDependenciesMeta": {
     "@google-cloud/storage": {
