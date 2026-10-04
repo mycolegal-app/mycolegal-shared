@@ -55,3 +55,46 @@ describe('createTaskModelResolver', () => {
     expect(espia).toHaveBeenCalledWith({ where: { app_taskKey: { app: 'docfilling', taskKey: 'mycobot' } } });
   });
 });
+
+// El catálogo de prompts: la resolución y la caída, que es donde estaba el fallo
+// del nombre de columna.
+describe('createPromptCatalog', () => {
+  const CATALOGO = [{ key: 'k', grupo: 'g', titulo: 't', descripcion: 'd', texto: 'EL DEL CÓDIGO' }];
+
+  it('el override de Admin gana', async () => {
+    const { createPromptCatalog } = await import('../src/prompts');
+    const c = createPromptCatalog({
+      prisma: { aiPrompt: { findMany: async () => [{ promptKey: 'k', prompt: 'EL DE ADMIN', defaultPrompt: 'x' }] } },
+      app: 'docfilling', catalogo: CATALOGO,
+    });
+    expect(await c.promptDe('k')).toBe('EL DE ADMIN');
+  });
+
+  it('sin override cae al defaultPrompt de la BASE, no al del código', async () => {
+    // Importa: si Admin revirtió un prompt, la fila guarda el default con el que
+    // se publicó, que puede ser anterior al del despliegue actual.
+    const { createPromptCatalog } = await import('../src/prompts');
+    const c = createPromptCatalog({
+      prisma: { aiPrompt: { findMany: async () => [{ promptKey: 'k', prompt: null, defaultPrompt: 'EL DE LA BASE' }] } },
+      app: 'docfilling', catalogo: CATALOGO,
+    });
+    expect(await c.promptDe('k')).toBe('EL DE LA BASE');
+  });
+
+  it('si la BD falla, el texto del código: una llamada no se queda sin prompt', async () => {
+    const { createPromptCatalog } = await import('../src/prompts');
+    const c = createPromptCatalog({
+      prisma: { aiPrompt: { findMany: async () => { throw new Error('sin BD'); } } },
+      app: 'docfilling', catalogo: CATALOGO,
+    });
+    expect(await c.promptDe('k')).toBe('EL DEL CÓDIGO');
+  });
+
+  it('una clave que no está en ninguna parte devuelve cadena vacía, no `undefined`', async () => {
+    const { createPromptCatalog } = await import('../src/prompts');
+    const c = createPromptCatalog({
+      prisma: { aiPrompt: { findMany: async () => [] } }, app: 'docfilling', catalogo: CATALOGO,
+    });
+    expect(await c.promptDe('no-existe')).toBe('');
+  });
+});

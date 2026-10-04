@@ -1,17 +1,36 @@
 {
   "name": "@mycolegal-app/ai-core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "main": "./index.ts",
   "types": "./index.ts",
   "exports": {
-    ".": { "types": "./index.ts", "import": "./index.ts" },
-    "./modelo": { "types": "./src/modelo.ts", "import": "./src/modelo.ts" },
-    "./prompts": { "types": "./src/prompts.ts", "import": "./src/prompts.ts" },
-    "./agente": { "types": "./src/agente.ts", "import": "./src/agente.ts" }
+    ".": {
+      "types": "./index.ts",
+      "import": "./index.ts"
+    },
+    "./modelo": {
+      "types": "./src/modelo.ts",
+      "import": "./src/modelo.ts"
+    },
+    "./prompts": {
+      "types": "./src/prompts.ts",
+      "import": "./src/prompts.ts"
+    },
+    "./agente": {
+      "types": "./src/agente.ts",
+      "import": "./src/agente.ts"
+    }
   },
-  "files": ["index.ts", "src", "tsconfig.json", "VERSION.md"],
-  "publishConfig": { "registry": "https://npm.pkg.github.com" },
+  "files": [
+    "index.ts",
+    "src",
+    "tsconfig.json",
+    "VERSION.md"
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit"

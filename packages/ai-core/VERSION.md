@@ -1,5 +1,20 @@
 # @mycolegal-app/ai-core
 
+## 0.1.1 — 3-oct-2026
+
+El puerto de prompts pedía `overridePrompt` y la columna se llama **`prompt`**.
+Lo cazó el tipado al cablear la primera app —`tsc` falló con «Property
+'aiPrompt' is missing» y luego con la forma del `findMany`— en vez de romper en
+caliente: es exactamente lo que un puerto estructural compra frente a pedir
+`PrismaClient`.
+
+Y de paso una diferencia que la copia original sí tenía y yo había perdido: sin
+override se cae al `defaultPrompt` **de la base**, no al del código. Importa
+porque si Admin ha revertido un prompt, la fila guarda el default con el que se
+publicó, que puede ser anterior al del despliegue actual.
+
+4 tests nuevos (16 en total).
+
 ## 0.1.0 — 3-oct-2026
 
 Primera versión. Sube a paquete la fontanería de IA que estaba mal repartida por

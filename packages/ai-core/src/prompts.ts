@@ -25,10 +25,21 @@ export interface PromptDef {
   texto: string;
 }
 
-/** Lo mínimo del Prisma de la app: leer los overrides vigentes. */
+/** Lo mínimo del Prisma de la app: leer los overrides vigentes.
+ *
+ *  ⚠️ El campo del override se llama **`prompt`**, no `overridePrompt`. Lo
+ *  escribí mal al crear el paquete y lo cazó el tipado al cablear la primera
+ *  app: la columna es `ai_prompts.prompt` y `defaultPrompt` es la del código.
+ *  Se piden las dos porque la copia que este módulo sustituye cae al
+ *  `defaultPrompt` **de la base** —no sólo al del código—, y esa diferencia
+ *  importa: si Admin ha revertido un prompt, la fila guarda el default con el
+ *  que se publicó, que puede ser anterior al del despliegue actual. */
 export interface CatalogoPrompts {
   aiPrompt: {
-    findMany(args: { where: { app: string } }): Promise<{ promptKey: string; overridePrompt: string | null }[]>;
+    findMany(args: {
+      where: { app: string };
+      select: { promptKey: true; prompt: true; defaultPrompt: true };
+    }): Promise<{ promptKey: string; prompt: string | null; defaultPrompt: string }[]>;
   };
 }
 
@@ -59,8 +70,12 @@ export function createPromptCatalog(cfg: CatalogoPromptsConfig): ResolutorDeProm
     if (cache && cache.expira > Date.now()) return cache.valores;
     const valores = new Map<string, string>();
     try {
-      for (const row of await cfg.prisma.aiPrompt.findMany({ where: { app: cfg.app } })) {
-        if (row.overridePrompt?.trim()) valores.set(row.promptKey, row.overridePrompt);
+      const filas = await cfg.prisma.aiPrompt.findMany({
+        where: { app: cfg.app },
+        select: { promptKey: true, prompt: true, defaultPrompt: true },
+      });
+      for (const f of filas) {
+        valores.set(f.promptKey, f.prompt?.trim() ? f.prompt : f.defaultPrompt);
       }
     } catch {
       // Sin BD: el mapa queda vacío y todo cae al texto del código, que es
