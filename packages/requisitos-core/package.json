@@ -1,0 +1,51 @@
+{
+  "name": "@mycolegal-app/requisitos-core",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "exports": {
+    ".": {
+      "types": "./index.ts",
+      "import": "./index.ts",
+      "default": "./index.ts"
+    },
+    "./motor": {
+      "types": "./src/motor.ts",
+      "import": "./src/motor.ts",
+      "default": "./src/motor.ts"
+    },
+    "./puerto": {
+      "types": "./src/puerto.ts",
+      "import": "./src/puerto.ts",
+      "default": "./src/puerto.ts"
+    },
+    "./capa": {
+      "types": "./src/capa.ts",
+      "import": "./src/capa.ts",
+      "default": "./src/capa.ts"
+    },
+    "./menciones": {
+      "types": "./src/menciones.ts",
+      "import": "./src/menciones.ts",
+      "default": "./src/menciones.ts"
+    }
+  },
+  "files": [
+    "index.ts",
+    "src",
+    "tsconfig.json",
+    "VERSION.md"
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "vitest": "^3.0.0"
+  }
+}
