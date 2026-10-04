@@ -1,25 +1,29 @@
 {
   "name": "@mycolegal-app/ai-core",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "type": "module",
   "main": "./index.ts",
   "types": "./index.ts",
   "exports": {
     ".": {
       "types": "./index.ts",
-      "import": "./index.ts"
+      "import": "./index.ts",
+      "default": "./index.ts"
     },
     "./modelo": {
       "types": "./src/modelo.ts",
-      "import": "./src/modelo.ts"
+      "import": "./src/modelo.ts",
+      "default": "./src/modelo.ts"
     },
     "./prompts": {
       "types": "./src/prompts.ts",
-      "import": "./src/prompts.ts"
+      "import": "./src/prompts.ts",
+      "default": "./src/prompts.ts"
     },
     "./agente": {
       "types": "./src/agente.ts",
-      "import": "./src/agente.ts"
+      "import": "./src/agente.ts",
+      "default": "./src/agente.ts"
     }
   },
   "files": [

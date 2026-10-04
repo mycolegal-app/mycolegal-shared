@@ -1,5 +1,9 @@
 # @mycolegal-app/ai-core
 
+## 0.1.2 — 3-oct-2026
+
+El `exports` sólo declaraba la condición `import`, así que cualquier consumidor que no resolviera por ella —`tsx` tratando un `.ts` de la app como CJS, por ejemplo— moría con «No "exports" main defined», un mensaje que no dice nada de lo que pasa. Añadida la condición `default`, que cubre `require` y cualquier otra que venga.
+
 ## 0.1.1 — 3-oct-2026
 
 El puerto de prompts pedía `overridePrompt` y la columna se llama **`prompt`**.
