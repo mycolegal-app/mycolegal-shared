@@ -60,6 +60,17 @@ export type { BillingPanelProps } from './components/shared/billing-panel';
 export { CreditBalanceBadge } from './components/shared/credit-balance-badge';
 export { CreditsPurchaseModal } from './components/shared/credits-purchase-modal';
 export { MycoBotRail } from './components/shared/mycobot-rail';
+// La conversación de generación de DocFilling, embebida (F7.8, D33). Sustituye
+// al `DocFillingModal`, que sigue exportado porque tres consumidores vivos lo
+// montan todavía y su migración depende de F4.
+//
+// ⚠️ NO se llama `DocumentProducer`, como dice el plan: ese nombre ya lo ocupa
+// el productor genérico de `document_templates` que usa Tramitación. Ver la
+// cabecera de `docfilling-producer.tsx`.
+export { DocFillingProducer, NO_LO_SE } from './components/shared/docfilling-producer';
+export type {
+  DocFillingProducerProps, ProducerEstado, ProducerPregunta, ProducerRequisito, ProducerAportado,
+} from './components/shared/docfilling-producer';
 export { FuentesModal } from './components/shared/fuentes-modal';
 export type { FuentesModalProps, FuenteCatalogoDTO } from './components/shared/fuentes-modal';
 export { readFuentesSel, writeFuentesSel, FUENTES_CHANGED_EVENT } from './lib/biblioteca-fuentes';
