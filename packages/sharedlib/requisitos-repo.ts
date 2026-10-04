@@ -22,13 +22,27 @@
 import type { RepositorioRequisitos, ReglaGolden, NodoTipo } from '@mycolegal-app/requisitos-core';
 import { ORIGEN_GOLDEN } from '@mycolegal-app/requisitos-core';
 
-/** Lo que el adaptador necesita del cliente: tres modelos, sólo lectura. */
+/**
+ * Lo que el adaptador necesita del cliente: tres modelos, sólo lectura.
+ *
+ * ⚠️ `args: any`, y no es pereza: el `findMany` que Prisma GENERA es genérico
+ * (`<T extends …FindManyArgs>(args?: SelectSubset<T, …>)`), y por la
+ * contravarianza del parámetro **ningún tipo estructural concreto le encaja** —
+ * un `Record<string, unknown>` exige aceptar cualquier clave y el de Prisma
+ * sólo acepta las suyas, así que el compilador lo rechaza. Lo comprobé
+ * pasándole el cliente de verdad.
+ *
+ * Lo que sí queda tipado es lo que importa: el RETORNO se afirma contra
+ * `ReglaGolden` y `NodoTipo`, que es el contrato que el motor consume. Si el
+ * espejo de una app no tiene estos tres modelos, falla al construir el objeto,
+ * no al leer una fila.
+ */
 export interface ClienteGolden {
-  legalActDocumentGlobal: {
-    findMany(args: Record<string, unknown>): Promise<unknown[]>;
-  };
-  objetoTipoGlobal: { findMany(args: Record<string, unknown>): Promise<unknown[]> };
-  sujetoTipoGlobal: { findMany(args: Record<string, unknown>): Promise<unknown[]> };
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  legalActDocumentGlobal: { findMany(args: any): Promise<any[]> };
+  objetoTipoGlobal: { findMany(args: any): Promise<any[]> };
+  sujetoTipoGlobal: { findMany(args: any): Promise<any[]> };
+  /* eslint-enable @typescript-eslint/no-explicit-any */
 }
 
 /**
