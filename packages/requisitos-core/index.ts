@@ -7,7 +7,7 @@
 //                     (Prisma, una caché, un fichero, un `fake` de test).
 //   · `motor.ts`    — la resolución: jurisdicción → deltas → condiciones ternarias →
 //                     tipos is-a → instancias. Tres bloques de salida y las preguntas.
-//   · `capa.ts`     — golden o lista básica, y el `auto` que elige.
+//   · `capa.ts`     — las tres capas (golden, libro, heredada) y el `auto` que elige.
 //   · `menciones.ts`— qué reglas tiene que comprobar el Revisor EN EL TEXTO (D2).
 //
 // NO hay `whereCapa`/`whereCapaActo`: devuelven `Prisma.…WhereInput` y por tanto son del
@@ -32,6 +32,6 @@ export {
   type NodoTipo,
 } from './src/puerto';
 
-export { decidirCapa, enCapaQueManda, ORIGEN_GOLDEN, type Capa } from './src/capa';
+export { decidirCapa, enCapaQueManda, capaDeFila, ORIGEN_GOLDEN, ORIGEN_LIBRO, type Capa, type CapaResuelta } from './src/capa';
 
 export { esMencion, MODOS_MENCION, type ReglaMencionable } from './src/menciones';
