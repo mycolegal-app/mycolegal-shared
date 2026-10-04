@@ -1,37 +1,44 @@
 {
   "name": "@mycolegal-app/docfilling-core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "main": "./index.ts",
   "types": "./index.ts",
   "exports": {
     ".": {
       "types": "./index.ts",
-      "import": "./index.ts"
+      "import": "./index.ts",
+      "default": "./index.ts"
     },
     "./syntax": {
       "types": "./src/syntax/index.ts",
-      "import": "./src/syntax/index.ts"
+      "import": "./src/syntax/index.ts",
+      "default": "./src/syntax/index.ts"
     },
     "./compose": {
       "types": "./src/compose/index.ts",
-      "import": "./src/compose/index.ts"
+      "import": "./src/compose/index.ts",
+      "default": "./src/compose/index.ts"
     },
     "./fields": {
       "types": "./src/fields/index.ts",
-      "import": "./src/fields/index.ts"
+      "import": "./src/fields/index.ts",
+      "default": "./src/fields/index.ts"
     },
     "./biblioteca": {
       "types": "./src/biblioteca/index.ts",
-      "import": "./src/biblioteca/index.ts"
+      "import": "./src/biblioteca/index.ts",
+      "default": "./src/biblioteca/index.ts"
     },
     "./ports": {
       "types": "./src/ports/index.ts",
-      "import": "./src/ports/index.ts"
+      "import": "./src/ports/index.ts",
+      "default": "./src/ports/index.ts"
     },
     "./iui": {
       "types": "./src/iui/index.ts",
-      "import": "./src/iui/index.ts"
+      "import": "./src/iui/index.ts",
+      "default": "./src/iui/index.ts"
     }
   },
   "description": "Motor DocFilling texto→texto: sintaxis, composición, INCLUDE, condicionales, autonumeración, esquema de campos e IUI. Markdown entra, markdown sale; el .docx lo produce la fusión con la plantilla de la notaría (platform /internal/docx).",

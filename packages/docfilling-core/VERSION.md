@@ -1,5 +1,9 @@
 # @mycolegal-app/docfilling-core
 
+## 0.1.1 — 3-oct-2026
+
+Misma corrección que `ai-core@0.1.2`: el `exports` de los 7 subpaths sólo declaraba `import`, y un consumidor que resolviera por `require` fallaba con «No "exports" main defined». Añadida la condición `default`. No cambia nada del motor.
+
 ## 0.1.0 — 2-oct-2026
 
 Arranque del paquete (F1 del plan `mycolegal-docfilling/PLAN_TECNICO_DOCFILLING_CORE.md`).
