@@ -19,6 +19,12 @@
 // generado de UNA app, y cada app genera el suyo desde su propio espejo. Se
 // piden los tres modelos que el motor lee y nada más, así que vale cualquier
 // cliente que los tenga —y un `fake` en un test—.
+// `@mycolegal-app/requisitos-core` es peerDependency **OPCIONAL**, igual que
+// `@prisma/client`: sólo la necesita quien importe este módulo. Marcarla sin el
+// `optional` fue un error mío —npm la instaló en las **14** apps que usan
+// sharedlib cuando sólo DocFilling la declara y la usa—, y el coste no es el
+// disco: un cambio incompatible en el motor podría romper el `npm install` de
+// trece apps que no lo tocan.
 import type { RepositorioRequisitos, ReglaGolden, NodoTipo } from '@mycolegal-app/requisitos-core';
 import { ORIGEN_GOLDEN } from '@mycolegal-app/requisitos-core';
 

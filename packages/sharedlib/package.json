@@ -65,6 +65,9 @@
     },
     "zod": {
       "optional": true
+    },
+    "@mycolegal-app/requisitos-core": {
+      "optional": true
     }
   },
   "dependencies": {
