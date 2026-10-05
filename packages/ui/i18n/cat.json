@@ -1576,6 +1576,7 @@
     "referenciaRequerida": "Indica una referència (pròpia o SEDAS)",
     "titularRequerido": "Sense protocol, indica el titular original",
     "adjuntoRequerido": "Cal adjuntar nota simple.",
+    "titularNifInvalido": "El NIF/NIE del titular no és vàlid (reviseu la lletra o el dígit de control)",
     "parteParcialRequerida": "Indiqui el contingut de la còpia parcial."
   }
 }

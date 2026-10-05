@@ -38,6 +38,14 @@ describe('#872 — reglas del alta de copia (mismas que el Portal)', () => {
   });
 });
 
+describe('#873 — NIF/NIE del titular', () => {
+  it('vacío no se exige; mal formado bloquea', () => {
+    expect(primerErrorCopiaAlta({ ...valida(), titularOriginalNif: '' }, ctx)).toBeNull();
+    expect(primerErrorCopiaAlta({ ...valida(), titularOriginalNif: '12345678Z' }, ctx)).toBeNull();
+    expect(primerErrorCopiaAlta({ ...valida(), titularOriginalNif: '12345678A' }, ctx)).toBe('copiaCustodio.titularNifInvalido');
+  });
+});
+
 describe('#872 — forma del envío (idéntica a la del Portal)', () => {
   it('referencias de la entidad ocultas = nulas aunque se tecleara algo', () => {
     const v = { ...valida(), sedasOficina: '0081', gcr: 'G1' };

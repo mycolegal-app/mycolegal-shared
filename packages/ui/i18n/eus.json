@@ -1575,6 +1575,7 @@
     "referenciaRequerida": "Adierazi erreferentzia bat (propioa edo SEDAS)",
     "titularRequerido": "Protokolorik gabe, adierazi jatorrizko titularra",
     "adjuntoRequerido": "Nota sinplea erantsi behar da.",
+    "titularNifInvalido": "Titularraren IFZ/AIZ ez da baliozkoa (berrikusi letra edo kontrol-digitua)",
     "parteParcialRequerida": "Adierazi kopia partzialaren edukia."
   }
 }

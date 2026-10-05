@@ -13,6 +13,7 @@
  * `CopiaCustodioFields` los pinta; las dos pantallas lo usan. Sin React a
  * propósito: el servidor puede importar las reglas.
  */
+import { esNifValido } from './nif';
 
 /** #340 — Modo de solicitud: capa de UI sobre el par (tipoDocumento, tipoCopia). */
 export const COPIA_MODOS = ['COPIA_ESCRITURA', 'TESTIMONIO_POLIZA', 'CEE'] as const;
@@ -124,6 +125,8 @@ export function primerErrorCopiaAlta(v: CopiaAltaValues, ctx: CopiaAltaContexto)
   if (!v.referenciaPropia.trim() && !ctx.refsEntidadVisibles) return 'copiaCustodio.referenciaPropiaRequerida';
   if (!v.referenciaPropia.trim() && !v.sedasExpediente.trim()) return 'copiaCustodio.referenciaRequerida';
   if (!v.protocoloAsiento.trim() && !v.titularOriginal.trim()) return 'copiaCustodio.titularRequerido';
+  // #873 — vacío no se exige; si se escribe, tiene que cuadrar su letra de control.
+  if (v.titularOriginalNif.trim() && !esNifValido(v.titularOriginalNif)) return 'copiaCustodio.titularNifInvalido';
   if (ctx.numAdjuntos !== null && adjuntoObligatorioCopia(v) && ctx.numAdjuntos === 0) {
     return 'copiaCustodio.adjuntoRequerido';
   }

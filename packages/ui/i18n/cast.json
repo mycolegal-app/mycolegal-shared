@@ -1576,6 +1576,7 @@
     "referenciaRequerida": "Indica una referencia (propia o SEDAS)",
     "titularRequerido": "Sin protocolo, indica el titular original",
     "adjuntoRequerido": "Es necesario adjuntar nota simple.",
+    "titularNifInvalido": "El NIF/NIE del titular no es válido (revise la letra o el dígito de control)",
     "parteParcialRequerida": "Indique el contenido de la copia parcial."
   }
 }
