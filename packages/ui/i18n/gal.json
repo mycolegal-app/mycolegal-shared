@@ -1467,6 +1467,8 @@
       "otros": "Outros",
       "bloqueo": "Bloqueos e festivos"
     },
+    "bloqueado": "Bloqueado",
+    "bloqueoTodoElDia": "Todo o día",
     "cambiarColores": "Cambiar cores",
     "coloresTitulo": "Cores da axenda",
     "coloresRestablecer": "Restablecer as de fábrica",

@@ -1468,6 +1468,8 @@
       "otros": "Otros",
       "bloqueo": "Bloqueos y festivos"
     },
+    "bloqueado": "Bloqueado",
+    "bloqueoTodoElDia": "Todo el día",
     "cambiarColores": "Cambiar colores",
     "coloresTitulo": "Colores de la agenda",
     "coloresRestablecer": "Restablecer los de fábrica",

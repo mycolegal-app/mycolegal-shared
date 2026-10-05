@@ -1467,6 +1467,8 @@
       "otros": "Bestelakoak",
       "bloqueo": "Blokeoak eta jaiegunak"
     },
+    "bloqueado": "Blokeatuta",
+    "bloqueoTodoElDia": "Egun osoa",
     "cambiarColores": "Koloreak aldatu",
     "coloresTitulo": "Agendaren koloreak",
     "coloresRestablecer": "Jatorrizkoak berrezarri",

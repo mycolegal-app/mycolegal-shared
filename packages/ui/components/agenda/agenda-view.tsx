@@ -53,7 +53,11 @@ import {
 // bloqueo de una reunión si alguien escoge el mismo rojo para los dos.
 const RAYADO_BLOQUEO =
   "repeating-linear-gradient(135deg, rgba(0,0,0,0.10) 0 5px, transparent 5px 12px)";
-const CSS_BLOQUEO = `.fc .agenda-bloqueo.fc-bg-event{opacity:1;background-image:${RAYADO_BLOQUEO}}`;
+// #950 — En Mes y Lista el bloqueo va como evento normal (ver `display` abajo):
+// mismo rayado, para que se lea como bloqueo y no como una cita más.
+const CSS_BLOQUEO =
+  `.fc .agenda-bloqueo.fc-bg-event{opacity:1;background-image:${RAYADO_BLOQUEO}}` +
+  `.fc .agenda-bloqueo.fc-daygrid-event,.fc .agenda-bloqueo.fc-list-event td{background-image:${RAYADO_BLOQUEO}}`;
 
 // F31 (Phase 10) — Agenda derivada.
 // Pinta expedientes con fechaPrevistaFirma + protocolos con fechaFirma
@@ -794,10 +798,21 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
     // libre. Sin motivo, se pone la palabra de la leyenda para que el bloque
     // diga al menos qué es.
     if (kind === "bloqueo") {
+      // #950 — Fuera de la rejilla horaria (Mes, Lista) el bloqueo no ocupa sus
+      // horas en pantalla: se dice cuáles son, o el día se lee como libre.
+      const enRejilla = arg.view.type.startsWith("timeGrid");
+      const hhmm = (d: Date | null) =>
+        d ? d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) : "";
+      const horario = enRejilla
+        ? null
+        : arg.event.allDay
+          ? t("agendaPage.bloqueoTodoElDia")
+          : `${hhmm(arg.event.start)}–${hhmm(arg.event.end)}`;
+      const motivo = arg.event.title || (enRejilla ? t("agendaPage.leyenda.bloqueo") : t("agendaPage.bloqueado"));
       return (
         <div className="truncate px-1 py-0.5 text-[11px] font-semibold leading-tight text-gray-900">
           <span aria-hidden="true">⛔ </span>
-          {arg.event.title || t("agendaPage.leyenda.bloqueo")}
+          {horario ? `${horario} · ${motivo}` : motivo}
         </div>
       );
     }
@@ -1355,7 +1370,10 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
                 borderColor: color,
                 classNames: esBloqueo ? ["agenda-bloqueo"] : undefined,
                 // #281 Fase 2 — los bloqueos se pintan como franja de fondo.
-                display: esBloqueo ? "background" : undefined,
+                // #950 — pero solo en Día/Semana: FullCalendar NO dibuja un evento
+                // de fondo con horas en Mes ni en Lista, y el bloqueo desaparecía.
+                // Ahí va como evento normal (rayado, con su horario).
+                display: esBloqueo ? (vista.startsWith("timeGrid") ? "background" : "block") : undefined,
                 // #629 — el tipo del hito llega hasta el render para distinguir
                 // una FIRMA de una consulta o una reunión.
                 extendedProps: { kind: ev.kind, tipo: ev.tipo, meta: ev.meta },

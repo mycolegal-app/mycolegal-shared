@@ -1468,6 +1468,8 @@
       "otros": "Altres",
       "bloqueo": "Bloqueigs i festius"
     },
+    "bloqueado": "Bloquejat",
+    "bloqueoTodoElDia": "Tot el dia",
     "cambiarColores": "Canviar colors",
     "coloresTitulo": "Colors de l'agenda",
     "coloresRestablecer": "Restablir els de fàbrica",
