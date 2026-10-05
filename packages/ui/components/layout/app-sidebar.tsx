@@ -622,16 +622,32 @@ function useNavPager(pathname: string | null) {
     if (!el) return;
     const alto = el.clientHeight;
     if (alto <= 0) return;
-    const hijos = Array.from(el.children) as HTMLElement[];
+    // #952 — Se mide por ENTRADAS, no por hijos directos: Config mete todo el
+    // menú en dos bloques (`extraNav`) y la página 2 empezaba en el segundo
+    // entero. Un bloque que no cabe en una página se abre y se miden sus hijos,
+    // hasta llegar a piezas que quepan (o a hojas).
+    const piezas: HTMLElement[] = [];
+    const recoger = (nodo: HTMLElement) => {
+      for (const h of Array.from(nodo.children) as HTMLElement[]) {
+        if (h.offsetHeight > alto && h.children.length > 0) recoger(h);
+        else piezas.push(h);
+      }
+    };
+    recoger(el);
     const base = el.getBoundingClientRect().top + el.scrollTop;
+    // #952 — Ninguna página puede empezar más abajo de lo que el nav puede
+    // desplazarse: si no, la flecha movía el contenido sin cambiar el número
+    // («1/2» otra vez) y luego cambiaba el número sin mover nada («2/2»).
+    const maxScroll = Math.max(0, el.scrollHeight - alto);
     const nuevos: number[] = [0];
     let inicio = 0;
-    for (const h of hijos) {
+    for (const h of piezas) {
       const top = h.getBoundingClientRect().top - base;
       const fin = top + h.offsetHeight;
       if (fin - inicio > alto && top > inicio) {
-        inicio = top;
-        nuevos.push(top);
+        inicio = Math.min(top, maxScroll);
+        if (inicio > nuevos[nuevos.length - 1] + 1) nuevos.push(inicio);
+        if (inicio >= maxScroll) break;
       }
     }
     // Si todo cabe, una sola página.
@@ -652,6 +668,9 @@ function useNavPager(pathname: string | null) {
   }, [medir]);
 
   const paginaDe = useCallback((scrollTop: number) => {
+    // #952 — Abajo del todo es la última página, se haya llegado como se haya llegado.
+    const el = ref.current;
+    if (el && scrollTop >= el.scrollHeight - el.clientHeight - 1) return starts.length - 1;
     let p = 0;
     for (let i = 0; i < starts.length; i++) if (starts[i] <= scrollTop + 1) p = i;
     return p;
