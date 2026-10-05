@@ -41,6 +41,9 @@ export {
   getSystemFields,
   DEFAULT_LOCALE,
   INC_BEGIN_MARK,
+  BIND_END_MARK,
+  bindBeginMark,
+  stripBindMarks,
   INC_END_MARK,
 } from './src/compose/engine';
 export type { FieldValues, ComposeWarning } from './src/compose/engine';

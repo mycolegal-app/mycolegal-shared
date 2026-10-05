@@ -34,7 +34,7 @@
 
 import { MAX_INCLUDE_DEPTH } from '../syntax/constants';
 import { parseFields, FieldType } from '../syntax/parser';
-import { applyFieldSuffix, INC_BEGIN_MARK, INC_END_MARK } from './engine';
+import { applyFieldSuffix, INC_BEGIN_MARK, INC_END_MARK, BIND_END_MARK, bindBeginMark } from './engine';
 
 /** De dónde salen los párrafos. Lo implementa la app contra su catálogo
  *  efectivo —override de la organización > global— y **filtrando por derecho de
@@ -139,6 +139,10 @@ export async function expandirIncludes(
           if (d.includeSuffix) cuerpo = applyFieldSuffix(cuerpo, d.includeSuffix);
           cuerpo = await expandir(cuerpo, profundidad + 1, [...enCurso, nombre]);
           reemplazo = centinelas ? `${INC_BEGIN_MARK}\n${cuerpo}${INC_END_MARK}` : cuerpo;
+          // `INCLUDE X(ITEM)` / `INCLUDE X FIELDS:(ITEM)`: vinculado al elemento
+          // de la vuelta (ver `vincularAlElemento` en engine.ts).
+          const vinc = d.raw.match(/\(\s*([A-Za-z_][\w\u00C0-\u024F]*)\s*\)\s*\}\}\s*$/);
+          if (vinc) reemplazo = `${bindBeginMark(vinc[1])}${reemplazo}${BIND_END_MARK}`;
         }
       }
 

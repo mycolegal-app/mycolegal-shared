@@ -792,19 +792,23 @@ export function expandForEach(
       const iterScope: FieldValues = { ...scope };
       for (const key of Object.keys(iterScope)) if (key.startsWith(itUpper + ".")) delete iterScope[key];
       const upperEl: Record<string, unknown> = {};
-      if (element !== null && typeof element === "object") {
-        for (const [kk, v] of Object.entries(element as Record<string, unknown>)) upperEl[kk.toUpperCase()] = v;
+      if (element !== null && typeof element === "object" && !Array.isArray(element)) {
+        // Aplanado: `{{ITEM.LINDEROS.FRENTE}}` también se resuelve.
+        Object.assign(upperEl, aplanar(element as Record<string, unknown>));
         iterScope[itUpper] = String(element);
         for (const [subKey, subValue] of Object.entries(upperEl)) iterScope[`${itUpper}.${subKey}`] = subValue as never;
       } else {
         iterScope[itUpper] = String(element);
       }
+      // 0) párrafos vinculados a este iterador: sus campos son los del elemento;
+      const nombresElemento = new Set(Object.keys(upperEl).filter((k) => !k.includes(".")));
       // 1) bucles interiores, con el ámbito de este elemento;
-      let elementContent = expandir(body, iterScope, prof + 1);
+      let elementContent = expandir(vincularAlElemento(body, itUpper, nombresElemento), iterScope, prof + 1);
       // 2) condicionales (Phase 3.2: ven el valor de este elemento);
       elementContent = processConditionals(elementContent, iterScope, warnings);
       // 3) sustitución de {{ITEM.SUB}} y {{ITEM}}.
-      for (const [subKey, subValue] of Object.entries(upperEl)) {
+      for (const [subKey, subValue] of Object.entries(upperEl).sort((x, y) => y[0].length - x[0].length)) {
+        if (subValue !== null && typeof subValue === "object") continue;
         const subPat = new RegExp("\\{\\{\\s*" + escapeRe(itUpper) + "\\." + escapeRe(subKey) + "\\s*\\}\\}", "gi");
         elementContent = elementContent.replace(subPat, () => String(subValue));
       }
@@ -831,6 +835,50 @@ export function expandForEach(
 // control bytes — never in user-authored text, survive every
 // other transform (parser only matches `{{…}}`).
 export const INC_BEGIN_MARK = "\x00INC_BEGIN\x00";
+// ⚠️ PARCHE A MANO (5-oct-2026): vinculación de un párrafo a un elemento de
+// lista. `{{INCLUDE X(ITEM)}}` y `{{INCLUDE X FIELDS:(ITEM)}}` —las dos formas
+// que usa la biblioteca— querían decir «los campos de X son los del elemento de
+// esta vuelta». El expansor envuelve el cuerpo con estas marcas y
+// `expandForEach` reescribe, dentro, `{{CAMPO}}` → `{{ITEM.CAMPO}}` para los
+// campos que el elemento trae; los demás siguen siendo globales.
+export const BIND_END_MARK = "\x00/BIND\x00";
+export const bindBeginMark = (iterador: string): string => `\x00BIND:${iterador.toUpperCase()}\x00`;
+const RE_BIND = /\x00BIND:([\w\u00C0-\u024F]+)\x00([\s\S]*?)\x00\/BIND\x00/g;
+
+/** Quita las marcas de vinculación que hayan quedado fuera de un bucle. */
+export function stripBindMarks(content: string): string {
+  return content.replace(/\x00BIND:[\w\u00C0-\u024F]+\x00/g, "").split(BIND_END_MARK).join("");
+}
+
+const DIRECTIVAS_NO_CAMPO = /^\s*(?:DECLARE|COMMENT|INCLUDE|TAGS|SUMMARY|DEPENDENCY|MAP_IUI|HUMAN_ACTION|END_HUMAN_ACTION|LANG|WORD_STYLE|@autonumber|AUTO[:(]|SYSTEM:|FOR\s+EACH|ENDFOR|END[\s_]+FOR|EXIT_INCLUDE)/i;
+
+/** Dentro de las regiones vinculadas a `iterador`, `NOMBRE` → `ITERADOR.NOMBRE`
+ *  para los nombres que trae el elemento. Respeta comillas. */
+function vincularAlElemento(texto: string, iterador: string, nombres: Set<string>): string {
+  const it = iterador.toUpperCase();
+  if (nombres.size === 0) return texto.replace(RE_BIND, (m, n: string, cuerpo: string) => (n.toUpperCase() === it ? cuerpo : m));
+  return texto.replace(RE_BIND, (m, n: string, cuerpo: string) => {
+    if (n.toUpperCase() !== it) return m;
+    return cuerpo.replace(/\{\{([^{}]*)\}\}/g, (tok, dentro: string) => {
+      if (DIRECTIVAS_NO_CAMPO.test(dentro)) return tok;
+      // separar literales entre comillas para no tocarlos
+      const trozos = dentro.split(/("[^"]*"|'[^']*'|\u201c[^\u201d]*\u201d|\u00ab[^\u00bb]*\u00bb)/);
+      const nuevo = trozos.map((t, i) => (i % 2 === 1 ? t : t.replace(/(^|[^\w.@])([A-Za-z_][\w\u00C0-\u024F]*)(?![\w.(])/g,
+        (x, pre: string, nom: string) => (nombres.has(nom.toUpperCase()) ? `${pre}${it}.${nom}` : x)))).join("");
+      return `{{${nuevo}}}`;
+    });
+  });
+}
+
+/** Aplana un objeto anidado: {LINDEROS:{FRENTE:'x'}} → {'LINDEROS.FRENTE':'x', LINDEROS: …}. */
+function aplanar(obj: Record<string, unknown>, prefijo = "", out: Record<string, unknown> = {}): Record<string, unknown> {
+  for (const [k, v] of Object.entries(obj)) {
+    const clave = prefijo + k.toUpperCase();
+    out[clave] = v;
+    if (v !== null && typeof v === "object" && !Array.isArray(v)) aplanar(v as Record<string, unknown>, clave + ".", out);
+  }
+  return out;
+}
 export const INC_END_MARK = "\x00INC_END\x00";
 
 /**
@@ -1086,7 +1134,7 @@ export function composeWithDiagnostics(
 
   // Step 5: Expand FOR EACH first. Each iteration re-runs
   // processConditionals on its own body with item subkeys in scope.
-  content = expandForEach(content, merged, warnings);
+  content = stripBindMarks(expandForEach(content, merged, warnings));
 
   // Step 6: Resolve remaining (top-level) IF blocks
   content = processConditionals(content, merged, warnings);
@@ -1166,7 +1214,7 @@ export function composeForPreview(
   content = stripDirectives(content);
   const merged: FieldValues = { ...getSystemFields(locale), ...allFields };
 
-  content = expandForEach(content, merged);
+  content = stripBindMarks(expandForEach(content, merged));
   content = processConditionals(content, merged);
   // Honour {{EXIT_INCLUDE}} per inlined include scope, after IFs
   // have run (so a conditional EXIT_INCLUDE only fires when its

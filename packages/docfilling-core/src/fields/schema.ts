@@ -14,6 +14,7 @@ import { getSystemFields } from '../compose/engine';
 import { tipoCanonico } from '../syntax/declare-types';
 import { camposSoloCondicionales, type ContextoCampos } from './conditional-only';
 import { instruccionesDeCampo } from './instructions';
+import { listasDeLaPlantilla } from './listas';
 
 /** Quién aporta el valor de un campo. */
 export const QUIEN = {
@@ -152,6 +153,38 @@ export function esquemaDeCampos(
       soloCondicional: soloCondicionales.has(nombre),
       iuiPath: f.iuiPath || null,
     });
+  }
+
+  // Listas: las que recorre un FOR EACH, con los subcampos que usan sus bucles
+  // y sus párrafos vinculados (ver `listas.ts`). Lo que sólo es dato de un
+  // elemento deja de pedirse como campo suelto.
+  const { listas, soloDeElemento } = listasDeLaPlantilla(texto);
+  for (let i = campos.length - 1; i >= 0; i--) {
+    if (soloDeElemento.has(campos[i].nombre.toUpperCase())) campos.splice(i, 1);
+  }
+  for (const l of listas.values()) {
+    if (l.nombre.includes('.')) continue; // anidada: va como subcampo LIST del padre
+    let c = campos.find((x) => x.nombre.toUpperCase() === l.nombre);
+    if (!c) {
+      c = {
+        nombre: l.nombre, quien: QUIEN.IA, categoria: FieldType.DECLARE_ARRAY, tipo: 'TEXT',
+        etiqueta: etiquetar(l.nombre), opciones: [], instruccion: instrucciones[l.nombre] || null,
+        porDefecto: null, esArray: true, subcampos: [], soloCondicional: false, iuiPath: null,
+      };
+      campos.push(c);
+    }
+    c.esArray = true;
+    c.soloCondicional = false;
+    const ya = new Set(c.subcampos.map((s) => s.nombre.toUpperCase()));
+    for (const [nombre, tipo] of l.subcampos) {
+      if (ya.has(nombre)) continue;
+      const anidada = listas.get(`${l.nombre}.${nombre}`);
+      c.subcampos.push({
+        nombre, tipo,
+        instruccion: anidada && anidada.subcampos.size ? `Lista de: ${[...anidada.subcampos.keys()].join(', ')}` : null,
+        iuiPath: null,
+      });
+    }
   }
 
   const includes = [
