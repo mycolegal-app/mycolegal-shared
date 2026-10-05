@@ -30,9 +30,10 @@ describe('esquemaDeCampos', () => {
     const c = campo('{{DECLARE REGIMEN:INPUT(Régimen económico|GANANCIALES,SEPARACION)}}', 'REGIMEN');
     expect(c?.quien).toBe(QUIEN.IA);
     expect(c?.categoria).toBe('declare');
-    // Aunque el `quien` sea `ia`, la descripción y las opciones SÍ se conservan.
+    // Aunque el `quien` sea `ia`, la descripción y las opciones SÍ se conservan:
+    // son las del desplegable y la restricción que recibe la IA.
     expect(c?.instruccion).toBe('Régimen económico');
-    expect(c?.opciones).toEqual([]);
+    expect(c?.opciones).toEqual(['GANANCIALES', 'SEPARACION']);
   });
 
   it('los campos de sistema los resuelve el motor y no se piden', () => {

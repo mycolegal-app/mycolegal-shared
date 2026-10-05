@@ -139,7 +139,12 @@ export function esquemaDeCampos(
       // biblioteca escribe BOOLEAN o STRING (ver `declare-types.ts`).
       tipo: tipoCanonico(f.declareType),
       etiqueta: quien === QUIEN.MOTOR ? nombre : etiquetar(nombre),
-      opciones: esInput ? [...(f.inputOptions ?? [])] : [...(f.extractionOptions ?? [])],
+      // Un `DECLARE X:INPUT(desc|a,b)` guarda la lista en `inputOptions`, igual que
+      // el INPUT pintado: sin esto, 363 condiciones de la biblioteca llegaban a la
+      // pantalla como texto libre y a la IA sin «valores admitidos».
+      opciones: esInput || f.inputOptions?.length
+        ? [...(f.inputOptions ?? [])]
+        : [...(f.extractionOptions ?? [])],
       instruccion: f.declareInstruction || f.inputDescription || instrucciones[nombre] || null,
       porDefecto: f.inputDefault || f.declareValue || null,
       esArray: Boolean(f.isArray),
