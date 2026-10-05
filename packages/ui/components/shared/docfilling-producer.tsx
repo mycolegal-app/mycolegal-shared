@@ -106,6 +106,17 @@ export interface ProducerCampo {
   gobierna: boolean;
   nivel: number;
   porque?: string;
+  /** Una LISTA (F5.25): `valor` es su texto JSON y `subcampos` lo que se pide
+   *  de cada elemento. */
+  esLista?: boolean;
+  subcampos?: ProducerSubcampo[];
+}
+
+export interface ProducerSubcampo {
+  nombre: string; etiqueta: string; tipo: string; instruccion: string | null;
+  opciones: string[];
+  /** Decide qué más se pide de ese elemento. */
+  gobierna: boolean;
 }
 
 /**
@@ -1082,11 +1093,19 @@ export function DocFillingProducer({
                 {c.etiqueta}
               </label>
               {c.instruccion && <p className="mt-0.5 text-xs text-gray-500">{c.instruccion}</p>}
-              <CampoEntrada
-                campo={c}
-                guardando={guardando === c.nombre}
-                onGuardar={(v) => void patch({ campo: c.nombre, valor: v }, c.nombre)}
-              />
+              {c.esLista ? (
+                <CampoLista
+                  campo={c}
+                  guardando={guardando === c.nombre}
+                  onGuardar={(v) => void patch({ campo: c.nombre, valor: v }, c.nombre)}
+                />
+              ) : (
+                <CampoEntrada
+                  campo={c}
+                  guardando={guardando === c.nombre}
+                  onGuardar={(v) => void patch({ campo: c.nombre, valor: v }, c.nombre)}
+                />
+              )}
             </div>
           ))}
 
@@ -1219,5 +1238,97 @@ function CampoEntrada({ campo, guardando, onGuardar }: {
       onBlur={guardar}
       onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); guardar(); } }}
     />
+  );
+}
+
+/** Lee el texto JSON de una lista; lo que no sea un array de objetos, vacía. */
+function leerElementos(valor: string | null): Record<string, string>[] {
+  if (!valor) return [];
+  try {
+    const v = JSON.parse(valor);
+    return Array.isArray(v) ? v.filter((e) => e && typeof e === "object" && !Array.isArray(e)) as Record<string, string>[] : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Una LISTA (F5.25): comparecientes, fincas, solicitantes…
+ *
+ * Un bloque por elemento con los subcampos que el servidor dice que tocan para
+ * ESE documento. Los que gobiernan van primero y marcados: contestarlos cambia
+ * lo que se pregunta después —el servidor recalcula al guardar—, igual que con
+ * las condiciones sueltas. Se guarda la lista entera, como texto JSON, por el
+ * mismo PATCH que un campo normal.
+ */
+function CampoLista({ campo, guardando, onGuardar }: {
+  campo: ProducerCampo; guardando: boolean; onGuardar: (v: string) => void;
+}) {
+  const { t } = useI18n();
+  const [elementos, setElementos] = useState<Record<string, string>[]>(() => leerElementos(campo.valor));
+  useEffect(() => { setElementos(leerElementos(campo.valor)); }, [campo.valor]);
+  const subcampos = campo.subcampos ?? [];
+  const guardar = (nuevos: Record<string, string>[]) => {
+    setElementos(nuevos);
+    onGuardar(JSON.stringify(nuevos));
+  };
+  const comun = "mt-1 w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm disabled:opacity-50";
+
+  return (
+    <div className="mt-2 space-y-2">
+      {elementos.length === 0 && (
+        <p className="text-xs text-gray-500">{t("ui.docfillingProducer.listaVacia")}</p>
+      )}
+      {elementos.map((el, i) => (
+        <fieldset key={i} className="rounded-md border border-gray-200 bg-gray-50 p-2">
+          <legend className="px-1 text-xs font-medium text-gray-700">
+            {t("ui.docfillingProducer.elementoN", { n: i + 1 })}
+          </legend>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {subcampos.map((sc) => {
+              const id = `campo-${campo.nombre}-${i}-${sc.nombre}`;
+              const valor = el[sc.nombre] ?? "";
+              const cambiar = (v: string) => {
+                const nuevos = elementos.map((x, j) => (j === i ? { ...x, [sc.nombre]: v } : x));
+                if (!v) delete nuevos[i][sc.nombre];
+                return nuevos;
+              };
+              return (
+                <label key={sc.nombre} htmlFor={id} className="block text-xs text-gray-700">
+                  <span className={sc.gobierna ? "font-medium text-amber-800" : undefined}>
+                    {sc.etiqueta}{sc.gobierna ? " ◆" : ""}
+                  </span>
+                  {sc.opciones.length > 0 ? (
+                    <select id={id} className={comun} value={valor} disabled={guardando}
+                      onChange={(e) => guardar(cambiar(e.target.value))}>
+                      <option value="">—</option>
+                      {sc.opciones.map((o) => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  ) : (
+                    <input id={id} className={comun} defaultValue={valor} disabled={guardando}
+                      onBlur={(e) => { if (e.target.value !== valor) guardar(cambiar(e.target.value)); }}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); (e.target as HTMLInputElement).blur(); } }}
+                    />
+                  )}
+                </label>
+              );
+            })}
+          </div>
+          <button type="button" disabled={guardando}
+            onClick={() => guardar(elementos.filter((_, j) => j !== i))}
+            className="mt-2 text-xs text-red-700 hover:underline disabled:opacity-50">
+            {t("ui.docfillingProducer.quitarElemento")}
+          </button>
+        </fieldset>
+      ))}
+      <button type="button" disabled={guardando}
+        onClick={() => guardar([...elementos, {}])}
+        className="rounded-md border border-gray-300 px-3 py-1 text-xs text-gray-800 hover:bg-gray-50 disabled:opacity-50">
+        {t("ui.docfillingProducer.anadirElemento")}
+      </button>
+      {subcampos.some((sc) => sc.gobierna) && (
+        <p className="text-xs text-gray-500">{t("ui.docfillingProducer.listaGobierna")}</p>
+      )}
+    </div>
   );
 }
