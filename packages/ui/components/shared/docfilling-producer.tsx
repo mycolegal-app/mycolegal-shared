@@ -44,7 +44,7 @@
 // nadie ha descartado. Ese atajo no se ofrece.
 
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, Check, CircleHelp, FileDown, Loader2 } from "lucide-react";
+import { AlertTriangle, Check, CircleHelp, FileDown, FileText, Loader2, Sparkles, Upload } from "lucide-react";
 import { Button } from "../ui/button";
 import { AlertBanner } from "./alert-banner";
 import { useI18n } from "../i18n/i18n-context";
@@ -108,6 +108,37 @@ export interface ProducerCampo {
   porque?: string;
 }
 
+/**
+ * Un fichero ya aportado a un requisito.
+ *
+ * `caracteres` es lo que de verdad importa de cada uno: un PDF escaneado del que
+ * no se pudo leer texto **no le sirve a la IA**, y el oficial tiene que poder
+ * verlo antes de contar con que el dato va a salir de ahí.
+ */
+export interface ProducerAdjunto {
+  id: string;
+  requisitoCodigo: string;
+  documentoCodigo: string | null;
+  nombre: string;
+  tamanoBytes: number;
+  caracteres: number;
+  textoError: string | null;
+}
+
+/**
+ * Lo que la IA propone para un campo. **Propuesta, no valor**: hasta que una
+ * persona la acepta no entra en el documento, y por eso cada una trae su
+ * `fuente` — sin saber de dónde sale un dato, aceptarlo es firmar a ciegas.
+ */
+export interface ProducerPropuesta {
+  campo: string;
+  etiqueta: string;
+  valor: string;
+  confianza: "alta" | "media" | "baja";
+  fuente: string;
+  porque: string;
+}
+
 /** Lo que devuelve `GET {apiBase}/tareas/{id}`. */
 export interface ProducerEstado {
   tarea: {
@@ -127,6 +158,10 @@ export interface ProducerEstado {
   condicionesSinDeterminar: number;
   gobernantesPendientes: number;
   firma: ProducerFirma;
+  /** Los ficheros aportados, con su requisito. Puede faltar: una app anfitriona
+   *  con una versión anterior del endpoint no lo manda, y la pantalla tiene que
+   *  seguir funcionando sin la parte de adjuntos. */
+  adjuntos?: ProducerAdjunto[];
 }
 
 export interface DocFillingProducerProps {
@@ -172,6 +207,18 @@ export function DocFillingProducer({
   const [generando, setGenerando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resultado, setResultado] = useState<{ markdown: string; parrafos: number; creditos: number } | null>(null);
+  // Subida y lectura con IA. Van en estado propio y no en `guardando` porque
+  // tardan lo suyo —una subida extrae texto, la lectura llama a un modelo— y
+  // bloquear la pantalla entera mientras tanto impediría seguir rellenando.
+  const [subiendo, setSubiendo] = useState<string | null>(null);
+  const [extrayendo, setExtrayendo] = useState(false);
+  const [ia, setIa] = useState<{
+    propuestas: ProducerPropuesta[];
+    sinDatos: { campo: string; porque: string }[];
+    pedidos: number;
+    contexto: { adjuntos: number; conTexto: number };
+  } | null>(null);
+  const [iaError, setIaError] = useState<string | null>(null);
 
   const refrescar = useCallback(async (tid: string) => {
     const res = await fetch(`${apiBase}/tareas/${tid}`);
@@ -226,6 +273,84 @@ export function DocFillingProducer({
       // copia de esa lógica en el navegador es la forma de que discrepen.
       await refrescar(id);
     } finally { setGuardando(null); }
+  }
+
+  /**
+   * Adjunta un fichero a un requisito.
+   *
+   * `multipart` y no base64 en un JSON: un escaneado puede pesar varios MB y
+   * base64 lo infla un tercio para nada.
+   */
+  async function adjuntar(requisito: string, documento: string | null, fichero: File) {
+    if (!id) return;
+    setSubiendo(requisito); setError(null);
+    try {
+      const fd = new FormData();
+      fd.append("fichero", fichero);
+      fd.append("requisito", requisito);
+      if (documento) fd.append("documento", documento);
+      const res = await fetch(`${apiBase}/tareas/${id}/adjuntos`, { method: "POST", body: fd });
+      if (!res.ok) {
+        const cuerpo = await res.json().catch(() => null);
+        setError(cuerpo?.error?.code === "DEMASIADO_GRANDE"
+          ? t("ui.docfillingProducer.adjuntoGrande")
+          : t("ui.docfillingProducer.adjuntoFallo"));
+        return;
+      }
+      // Adjuntar marca el requisito como aportado: la casilla y el fichero son
+      // la misma afirmación, y dejarlas separadas permitiría un requisito con
+      // su documento dentro y sin marcar.
+      await fetch(`${apiBase}/tareas/${id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requisito, documento: { aportado: true, documentoCodigo: documento ?? undefined } }),
+      });
+      await refrescar(id);
+    } finally { setSubiendo(null); }
+  }
+
+  async function quitarAdjunto(requisito: string, adjuntoId: string) {
+    if (!id) return;
+    setSubiendo(requisito);
+    try {
+      await fetch(`${apiBase}/tareas/${id}/adjuntos?id=${encodeURIComponent(adjuntoId)}`, { method: "DELETE" });
+      await refrescar(id);
+    } finally { setSubiendo(null); }
+  }
+
+  /**
+   * Que la IA lea los documentos y proponga campos (F5).
+   *
+   * No escribe nada: deja las propuestas en pantalla con su fuente y el oficial
+   * acepta las que quiera. Un botón que rellenara los campos de golpe metería en
+   * una escritura pública datos que nadie ha mirado.
+   */
+  async function leerConIA() {
+    if (!id) return;
+    setExtrayendo(true); setIaError(null); setIa(null);
+    try {
+      const res = await fetch(`${apiBase}/tareas/${id}/extraer`, { method: "POST" });
+      const cuerpo = await res.json().catch(() => null);
+      if (!res.ok) {
+        setIaError(cuerpo?.error?.code === "IA_NO_CONFIGURADA"
+          ? t("ui.docfillingProducer.iaNoConfigurada")
+          : t("ui.docfillingProducer.iaFallo"));
+        return;
+      }
+      setIa({
+        propuestas: cuerpo.data.propuestas ?? [],
+        sinDatos: cuerpo.data.sinDatos ?? [],
+        pedidos: cuerpo.data.pedidos ?? 0,
+        contexto: cuerpo.data.contexto ?? { adjuntos: 0, conTexto: 0 },
+      });
+    } finally { setExtrayendo(false); }
+  }
+
+  /** Aceptar una propuesta la convierte en un valor normal: entra por el mismo
+   *  `PATCH` que si la hubiera teclado el oficial, que es exactamente lo que
+   *  significa aceptarla. */
+  async function aceptar(p: ProducerPropuesta) {
+    await patch({ campo: p.campo, valor: p.valor }, p.campo);
+    setIa((prev) => prev && { ...prev, propuestas: prev.propuestas.filter((x) => x.campo !== p.campo) });
   }
 
   async function generar() {
@@ -410,6 +535,60 @@ export function DocFillingProducer({
                   </div>
                 )}
                 {r.comoObtener && <p className="mt-2 text-xs text-gray-500">{r.comoObtener}</p>}
+
+                {/* LOS FICHEROS, que es lo que la casilla de «aportado» no
+                    puede dar: su texto viaja a la IA con el requisito al que
+                    pertenece, y es de donde salen los campos (F5). */}
+                <div className="mt-3 border-t border-gray-100 pt-2">
+                  {(estado.adjuntos ?? []).filter((a) => a.requisitoCodigo === r.codigo).map((a) => (
+                    <div key={a.id} className="flex flex-wrap items-center gap-2 py-1 text-xs">
+                      <FileText className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                      <span className="text-gray-900">{a.nombre}</span>
+                      {a.caracteres > 0 ? (
+                        <span className="text-gray-500">
+                          {t("ui.docfillingProducer.adjuntoLeido", { n: a.caracteres })}
+                        </span>
+                      ) : (
+                        // Un escaneado ilegible NO se oculta: sigue en la
+                        // carpeta del expediente, pero la IA no va a sacar
+                        // nada de él y contar con que sí es el error caro.
+                        <span className="inline-flex items-center gap-1 text-amber-700">
+                          <AlertTriangle className="h-3.5 w-3.5" />
+                          {t("ui.docfillingProducer.adjuntoSinTexto")}
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        className="ml-auto text-gray-500 underline hover:text-gray-900 disabled:opacity-50"
+                        disabled={subiendo === r.codigo}
+                        onClick={() => void quitarAdjunto(r.codigo, a.id)}
+                      >
+                        {t("ui.docfillingProducer.quitarAdjunto")}
+                      </button>
+                    </div>
+                  ))}
+                  <label className="mt-1 inline-flex cursor-pointer items-center gap-1.5 text-xs text-mc-action-700 hover:underline">
+                    {subiendo === r.codigo
+                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      : <Upload className="h-3.5 w-3.5" />}
+                    {subiendo === r.codigo
+                      ? t("ui.docfillingProducer.adjuntoSubiendo")
+                      : t("ui.docfillingProducer.adjuntar")}
+                    <input
+                      type="file"
+                      className="hidden"
+                      disabled={subiendo === r.codigo}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        // El input se limpia SIEMPRE: sin esto, volver a elegir
+                        // el mismo fichero no dispara `change` y parece que la
+                        // subida no hace nada.
+                        e.target.value = "";
+                        if (f) void adjuntar(r.codigo, a?.documentoCodigo ?? r.documentoCodigo ?? null, f);
+                      }}
+                    />
+                  </label>
+                </div>
               </div>
             );
           })}
@@ -487,6 +666,86 @@ export function DocFillingProducer({
               type="info"
               message={t("ui.docfillingProducer.condicionesAviso", { n: estado.condicionesSinDeterminar })}
             />
+          )}
+
+          {/* ── LA IA LEE LOS DOCUMENTOS (F5) ──────────────────────────────
+              Propone, no rellena. Y el botón se ofrece sólo si hay algo que
+              leer: sin documentos aportados no tiene de dónde sacar nada, y
+              un botón que siempre devuelve «no he podido» enseña a ignorarlo. */}
+          {(estado.adjuntos?.length ?? 0) > 0 && !tarea.generadoAt && (
+            <div className="rounded-lg border border-mc-action-200 bg-mc-action-50/50 p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="outline" onClick={() => void leerConIA()} disabled={extrayendo}>
+                  {extrayendo
+                    ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                    : <Sparkles className="mr-1.5 h-4 w-4" />}
+                  {extrayendo ? t("ui.docfillingProducer.iaLeyendo") : t("ui.docfillingProducer.iaLeer")}
+                </Button>
+                <span className="text-xs text-gray-600">
+                  {t("ui.docfillingProducer.iaDeQueLee", {
+                    n: estado.adjuntos?.filter((a) => a.caracteres > 0).length ?? 0,
+                    total: estado.adjuntos?.length ?? 0,
+                  })}
+                </span>
+              </div>
+
+              {iaError && <div className="mt-2"><AlertBanner type="warning" message={iaError} /></div>}
+
+              {ia && ia.propuestas.length === 0 && (
+                <p className="mt-2 text-xs text-gray-600">{t("ui.docfillingProducer.iaSinPropuestas")}</p>
+              )}
+
+              {ia && ia.propuestas.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {/* El aviso va ARRIBA de las propuestas y no debajo: quien
+                      acepta tiene que haberlo leído antes de aceptar. */}
+                  <p className="text-xs text-gray-700">{t("ui.docfillingProducer.iaRevisar")}</p>
+                  {ia.propuestas.map((p) => (
+                    <div key={p.campo} className="rounded-md border border-gray-200 bg-white p-2.5">
+                      <div className="flex flex-wrap items-baseline gap-2">
+                        <span className="text-sm font-medium text-gray-900">{p.etiqueta}</span>
+                        <span className={
+                          p.confianza === "alta" ? "rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700"
+                          : p.confianza === "media" ? "rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-700"
+                          : "rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600"
+                        }>
+                          {t(`ui.docfillingProducer.iaConfianza_${p.confianza}`)}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-sm text-gray-900">«{p.valor}»</p>
+                      <p className="mt-0.5 text-xs text-gray-500">
+                        {t("ui.docfillingProducer.iaFuente", { f: p.fuente })}
+                        {p.porque ? ` · ${p.porque}` : ""}
+                      </p>
+                      <div className="mt-2">
+                        <Button variant="outline" onClick={() => void aceptar(p)} disabled={guardando === p.campo}>
+                          {guardando === p.campo
+                            ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                            : <Check className="mr-1.5 h-3.5 w-3.5" />}
+                          {t("ui.docfillingProducer.iaAceptar")}
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Lo que la IA NO pudo proponer, con su motivo. «No hay escritura
+                  de origen» le dice al oficial qué documento le falta, que es
+                  más que un campo vacío. */}
+              {ia && ia.sinDatos.length > 0 && (
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-xs text-gray-600">
+                    {t("ui.docfillingProducer.iaSinDatos", { n: ia.sinDatos.length })}
+                  </summary>
+                  <ul className="mt-1 space-y-0.5 pl-4 text-xs text-gray-500">
+                    {ia.sinDatos.slice(0, 12).map((s) => (
+                      <li key={s.campo}>{s.campo}: {s.porque}</li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+            </div>
           )}
 
           {estado.campos.length === 0 ? (
