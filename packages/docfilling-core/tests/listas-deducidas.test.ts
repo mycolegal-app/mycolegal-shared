@@ -42,3 +42,14 @@ describe('listas deducidas', () => {
     expect(s?.instruccion).toBe('Lista de: TIPO');
   });
 });
+
+import { listasDeLaPlantilla } from '../index';
+describe('subcampos que gobiernan condiciones', () => {
+  it('se distinguen de los datos', async () => {
+    const t = (await expandirIncludes('{{FOR EACH ITEM IN L}}{{IF ITEM.TIPO=="PF"}}{{ITEM.NOMBRE}}{{ENDIF}}{{INCLUDE B(ITEM)}}{{ENDFOR}}',
+      repositorioDeMapa({ B: '{{IF CASADO}}{{CONYUGE}}{{ENDIF}}' }))).texto;
+    const l = listasDeLaPlantilla(t).listas.get('L')!;
+    expect([...l.condiciones].sort()).toEqual(['CASADO', 'TIPO']);
+    expect([...l.subcampos.keys()].sort()).toEqual(['CASADO', 'CONYUGE', 'NOMBRE', 'TIPO']);
+  });
+});

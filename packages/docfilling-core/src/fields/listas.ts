@@ -13,6 +13,8 @@ export interface ListaDeducida {
   nombre: string;
   /** subcampo → tipo ('TEXT' | 'LIST') */
   subcampos: Map<string, string>;
+  /** Subcampos que gobiernan un IF dentro del bucle: deciden qué más se pide. */
+  condiciones: Set<string>;
 }
 
 export interface ResultadoListas {
@@ -42,7 +44,7 @@ export function listasDeLaPlantilla(texto: string): ResultadoListas {
 
   const lista = (nombre: string): ListaDeducida => {
     let l = listas.get(nombre);
-    if (!l) { l = { nombre, subcampos: new Map() }; listas.set(nombre, l); }
+    if (!l) { l = { nombre, subcampos: new Map(), condiciones: new Set() }; listas.set(nombre, l); }
     return l;
   };
   const bucleDe = (it: string) => { for (let i = bucles.length - 1; i >= 0; i--) if (bucles[i].it === it) return bucles[i]; return null; };
@@ -64,16 +66,19 @@ export function listasDeLaPlantilla(texto: string): ResultadoListas {
     if (/^(ENDFOR|END[\s_]+FOR)\s*$/i.test(dentro)) { bucles.pop(); continue; }
     if (NO_CAMPO.test(dentro) || /^(ELSE|ENDIF)\b/i.test(dentro)) continue;
     const vinc = vinculos.length ? bucleDe(vinculos[vinculos.length - 1]) : null;
+    const esCondicion = /^IF[\s_]/i.test(dentro);
     for (const n of nombresDe(dentro)) {
       const N = n.toUpperCase(); const [cabeza, sub] = N.split('.');
       const b = sub ? bucleDe(cabeza) : null;
       if (b) {
         const l = lista(b.lista);
         if (!l.subcampos.has(sub)) l.subcampos.set(sub, 'TEXT');
+        if (esCondicion) l.condiciones.add(sub);
         enElemento.add(N);
       } else if (vinc && !N.includes('.')) {
         const l = lista(vinc.lista);
         if (!l.subcampos.has(N)) l.subcampos.set(N, 'TEXT');
+        if (esCondicion) l.condiciones.add(N);
         enElemento.add(N);
       } else {
         fueraDeElemento.add(N);

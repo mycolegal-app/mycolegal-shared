@@ -110,3 +110,4 @@ export { mapaIui, mapaIuiDetallado, generarIui, valorUtil, IUI_NAMESPACE } from 
 export type { MapeosIui, MapeoArray, ConflictoIui, OpcionesIui } from './src/iui/generar';
 export type { AnalisisBiblioteca, Documento, CondicionSospechosa, OpcionesAnalisis } from './src/biblioteca/analizar';
 export type { ParrafoRepository, ResultadoExpansion, OpcionesExpansion } from './src/compose/expand-includes';
+export { listasDeLaPlantilla, type ListaDeducida, type ResultadoListas } from './src/fields/listas';
