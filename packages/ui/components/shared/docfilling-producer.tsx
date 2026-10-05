@@ -425,10 +425,22 @@ export function DocFillingProducer({
     if (paso === 3 && id && candidatos === null) void cargarCandidatos(id);
   }, [paso, id, candidatos, cargarCandidatos]);
 
-  /** Tope de vueltas. No es un número mágico: medido, la frontera de una
-   *  segregación llega al nivel 5, así que seis cubre el caso real y evita que
-   *  un esquema raro encadene llamadas sin fin. Al llegar se PARA y se dice. */
-  const TOPE_PASADAS = 6;
+  /**
+   * Tope de vueltas, y el número sale de medir la puerta de entrega.
+   *
+   * ⚠️ Estaba en 6 «porque la frontera de una segregación llega al nivel 5», y
+   * eso era medir la frontera, no lo que hace falta para ENTREGAR. Medido el
+   * 5-oct-2026 con la puerta estricta —bloquean las condiciones evaluadas sin
+   * decidir—: una compraventa necesita **13 vueltas y 12 niveles**, contestando
+   * unas 320 condiciones, y sale igual respondiendo «Sí» o «No» porque son
+   * estructurales. Con el tope en 6 el bucle se paraba a mitad y el documento
+   * seguía sin poder entregarse.
+   *
+   * 16 deja margen sobre las 13 medidas sin dejar de ser un tope: el bucle corta
+   * antes por sus dos salidas naturales —no queda nada que pedir, o una pasada
+   * no propone nada—, que es lo que de verdad lo termina.
+   */
+  const TOPE_PASADAS = 16;
 
   /**
    * Una pasada de lectura. Devuelve si tiene sentido seguir.

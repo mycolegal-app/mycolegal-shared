@@ -1323,7 +1323,7 @@
       "iaFinTope": "Párome despois de {n} pasadas para non encadear chamadas sen fin. Podes volver premer.",
       "iaResumen": "{pasadas} pasadas, {aceptados} campos aceptados.",
       "iaFinTeToca": "A IA xa propuxo todo o que podía con estes documentos. Quedan {n} campos que tes que decidir ti: ao contestalos aparecerán os seguintes e poderás volver pedirlle que lea.",
-      "condicionesSinDecidir": "Faltan {n} condicións por decidir, e esas si cambian o documento: a súa cláusula aparece ou non segundo o que contestes ({c}). Ao contestalas aparecerán {mas} máis.",
+      "condicionesSinDecidir": "Faltan {n} condicións por decidir, e esas si cambian o documento: a súa cláusula aparece ou non segundo o que contestes ({c}). Ao contestalas aparecerán {mas} máis. Pídelle á IA que lea os documentos aportados e proporáchas.",
       "datosSalenComoHueco": "{n} datos sen encher. Non impiden xerar: sairán como oco na escritura e vense ao lela."
     },
     "escrituraModal": {

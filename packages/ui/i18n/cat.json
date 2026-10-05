@@ -1324,7 +1324,7 @@
       "iaFinTope": "Em paro després de {n} passades per no encadenar crides sense fi. Pots tornar a prémer.",
       "iaResumen": "{pasadas} passades, {aceptados} camps acceptats.",
       "iaFinTeToca": "La IA ja ha proposat tot el que podia amb aquests documents. Queden {n} camps que has de decidir tu: quan els contestis apareixeran els següents i podràs tornar a demanar-li que llegeixi.",
-      "condicionesSinDecidir": "Falten {n} condicions per decidir, i aquestes sí que canvien el document: la seva clàusula apareix o no segons què contestis ({c}). Quan les contestis n'apareixeran {mas} més.",
+      "condicionesSinDecidir": "Falten {n} condicions per decidir, i aquestes sí que canvien el document: la seva clàusula apareix o no segons què contestis ({c}). Quan les contestis n'apareixeran {mas} més. Demana a la IA que llegeixi els documents aportats i te les proposarà.",
       "datosSalenComoHueco": "{n} dades sense omplir. No impedeixen generar: sortiran com a buit a l'escriptura i es veuen en llegir-la."
     },
     "escrituraModal": {
