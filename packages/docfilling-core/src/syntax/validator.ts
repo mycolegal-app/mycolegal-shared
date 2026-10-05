@@ -325,6 +325,86 @@ function checkIncludeForm(
 }
 
 // =============================================================================
+// Rule: el NOMBRE del INCLUDE se cortó (E031) y su destino no existe (E030)
+// =============================================================================
+
+/**
+ * ⚠️ E031 — EL NOMBRE SE CORTÓ EN UN CARÁCTER QUE EL PARSER NO ADMITE.
+ *
+ * `INCLUDE_PATTERN` acepta `[\p{L}\p{N}_]`, así que `{{INCLUDE VAR_TERMINADA_28-1}}`
+ * se lee como `VAR_TERMINADA_28` y `{{INCLUDE VAR_OBRA_NUEVA.md}}` como
+ * `VAR_OBRA_NUEVA`. El Python tenía `(\w+)`: el mismo agujero.
+ *
+ * Esto NO es teórico y es la razón de que esta regla exista. Medido en la
+ * biblioteca el 5-oct-2026: **14 esquemas de obra nueva y demolición no se
+ * podían generar** porque sus `VAR_*_28-1` se buscaban como `VAR_*_28`, y otros
+ * 16 INCLUDE escribían el nombre con `.md`. El fichero estaba delante, con el
+ * nombre correcto, y el único síntoma era un «párrafo no encontrado» al cargar
+ * la biblioteca — nada en el editor.
+ *
+ * Se avisa SIN necesidad de la biblioteca: basta comparar lo que el parser leyó
+ * con lo que hay escrito. Y se ofrece el arreglo, que es calculable.
+ */
+function checkIncludeNombreCortado(
+  fields: ParsedField[],
+  result: ValidationResult,
+): void {
+  for (const f of fields) {
+    if (f.fieldType !== FieldType.INCLUDE || !f.includeTarget) continue;
+    const i = f.content.toUpperCase().indexOf(f.includeTarget.toUpperCase());
+    if (i < 0) continue;
+    const tras = f.content.slice(i + f.includeTarget.length);
+    // Sólo cuenta lo que PARECE seguir siendo el nombre: un guion, un punto o
+    // más letras. Las formas no canónicas —paréntesis, comillas— ya las avisa
+    // W081, y confundirlas aquí daría dos avisos por lo mismo.
+    const m = /^[-.][\p{L}\p{N}_.-]*/u.exec(tras.trim());
+    if (!m) continue;
+    const completo = f.includeTarget + m[0];
+    const limpio = completo.replace(/\.md$/i, '').replace(/-/g, '_');
+    const d = diag(f.line, f.col, f.raw.length, Severity.ERROR, "E031",
+      `El nombre del INCLUDE se corta en «${m[0][0]}»: se buscará `
+      + `'${f.includeTarget}' y no '${completo}'. Los nombres de párrafo sólo `
+      + `admiten letras, números y _`);
+    // Se compara con lo ESCRITO, no con lo que el parser leyó: quitar un `.md`
+    // deja el mismo destino —ya se leía sin él— y sin embargo el arreglo es
+    // justo ése, cambiar el texto para que diga lo que significa.
+    if (limpio !== completo) {
+      d.fix = { title: `Usar ${limpio}`, replacement: `{{INCLUDE ${limpio}}}` };
+    }
+    result.diagnostics.push(d);
+  }
+}
+
+/**
+ * E030 — el `{{INCLUDE}}` apunta a un párrafo que NO EXISTE.
+ *
+ * Sólo se puede comprobar con la biblioteca delante, así que depende del
+ * `resolver`: sin él no se dice nada (no hay forma de saberlo, y un falso
+ * positivo en el editor enseñaría a ignorar los avisos).
+ *
+ * Es ERROR y no aviso porque un INCLUDE que no resuelve **se lleva su cláusula**:
+ * el motor deja en su lugar «[Párrafo 'X' no encontrado]» y lo que no se vea
+ * acaba en la escritura. Hasta hoy esto sólo salía al cargar la biblioteca
+ * entera —61 de 105 esquemas lo tenían— y nunca en el editor, que es donde se
+ * escribe el INCLUDE.
+ */
+function checkIncludeDestinoExiste(
+  fields: ParsedField[],
+  resolver: IncludeResolver,
+  result: ValidationResult,
+): void {
+  for (const f of fields) {
+    if (f.fieldType !== FieldType.INCLUDE || !f.includeTarget) continue;
+    if (resolver(f.includeTarget)) continue;
+    result.diagnostics.push(
+      diag(f.line, f.col, f.raw.length, Severity.ERROR, "E030",
+        `El párrafo '${f.includeTarget}' no existe en la biblioteca: esta `
+        + `cláusula desaparecerá del documento`),
+    );
+  }
+}
+
+// =============================================================================
 // Rule (Phase 5.2): COMMENT_BEGIN/COMMENT_END deprecation
 // =============================================================================
 
@@ -1320,6 +1400,8 @@ export function validateText(
   checkBalancedConditionals(fields, result);
   checkLegacyConditionalForm(fields, result);
   checkIncludeForm(fields, result);
+  checkIncludeNombreCortado(fields, result);
+  if (resolver) checkIncludeDestinoExiste(fields, resolver, result);
   checkCommentBlockForm(fields, result);
   checkInputSyntax(fields, result);
   checkDependencySyntax(fields, result);
