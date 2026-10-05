@@ -53,7 +53,13 @@ function isTruthy(fields: FieldValues, fieldName: string): boolean {
   const sv = resolveFieldValue(fields, fieldName);
   if (sv === "") return false;
   if (sv.toUpperCase() === "NO DISPONIBLE") return false;
-  if (sv === "FALSE") return false;
+  // ⚠️ Comparación SIN mayúsculas, y es un arreglo, no una variante: esta línea
+  // decía `sv === "FALSE"`, así que `"false"` en minúscula era VERDADERO. No es
+  // teórico — lo levantó la extracción con IA de F5, que propuso
+  // `ES_ACTO_SUCESORIO = "false"`: aceptarlo habría metido una cláusula de
+  // sucesión en una compraventa. Un valor booleano mal leído no deja hueco ni
+  // aviso, mete o quita una cláusula entera.
+  if (sv.trim().toUpperCase() === "FALSE") return false;
   // Spanish boolean idiom: DocFilling templates commonly use
   // `:INPUT(...|No,Sí)` for bool prompts, so a literal "No"
   // must gate IFs as falsy. Match Python composer's _is_truthy.
