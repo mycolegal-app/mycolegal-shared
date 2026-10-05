@@ -724,78 +724,83 @@ export function expandForEach(
   fields: FieldValues,
   warnings?: ComposeWarning[],
 ): string {
-  // Closing tag: canonical {{ENDFOR}}, legacy {{END FOR}} / {{END_FOR}}.
-  const pattern =
-    /\{\{FOR\s+EACH\s+([\w\u00C0-\u024F]+)\s+IN\s+([\w\u00C0-\u024F]+)\}\}([\s\S]*?)\{\{(?:ENDFOR|END[\s_]+FOR)\}\}/gi;
+  // ⚠️ PARCHE A MANO (5-oct-2026) — reescrito. Antes era una regex perezosa:
+  // emparejaba el primer FOR con el primer ENDFOR (el del bucle INTERIOR), no
+  // reconocía `IN ITEM.ANEJOS` (el punto no entraba en el nombre) y dejaba un
+  // ENDFOR suelto que, con IF alrededor, se comía texto. Ahora se empareja por
+  // profundidad y cada bucle interior se expande DENTRO del ámbito de su
+  // elemento, antes de sustituir los `{{ITEM.X}}` del exterior —si no, el
+  // ITEM interior se pisaba con los valores del exterior.
+  const TOKEN = /\{\{(?:FOR\s+EACH\s+([\w\u00C0-\u024F]+)\s+IN\s+([\w.\u00C0-\u024F]+)|(ENDFOR|END[\s_]+FOR))\}\}/gi;
+  const MAX_PROFUNDIDAD = 20;
 
-  const maxIterations = 20;
-  let iteration = 0;
+  const expandir = (texto: string, scope: FieldValues, prof: number): string => {
+    if (prof > MAX_PROFUNDIDAD) {
+      warnings?.push({ code: "W101", message: `FOR EACH anidado más de ${MAX_PROFUNDIDAD} niveles; se deja sin expandir.`, iteration: prof });
+      return texto;
+    }
+    let out = "";
+    let cursor = 0;
+    TOKEN.lastIndex = 0;
+    const tokens = [...texto.matchAll(TOKEN)];
+    let k = 0;
+    while (k < tokens.length) {
+      const t = tokens[k];
+      if (!t[1]) { k++; continue; }            // ENDFOR suelto a este nivel: se deja
+      // Buscar su ENDFOR por profundidad.
+      let depth = 0; let cierre = -1;
+      for (let q = k; q < tokens.length; q++) {
+        if (tokens[q][1]) depth++; else { depth--; if (depth === 0) { cierre = q; break; } }
+      }
+      if (cierre < 0) {
+        warnings?.push({ code: "W101", message: `{{FOR EACH ${t[1]} IN ${t[2]}}} sin ENDFOR; se deja sin expandir.`, iteration: prof });
+        break;
+      }
+      const ini = t.index!; const finApertura = ini + t[0].length;
+      const cierreTok = tokens[cierre]; const finCierre = cierreTok.index! + cierreTok[0].length;
+      const cuerpo = texto.slice(finApertura, cierreTok.index!);
+      out += texto.slice(cursor, ini) + expandirBloque(t[1], t[2], cuerpo, scope, prof);
+      cursor = finCierre;
+      k = cierre + 1;
+    }
+    return out + texto.slice(cursor);
+  };
 
-  while (iteration < maxIterations) {
-    const prev = content;
-    content = content.replace(
-      pattern,
-      (_m: string, iteratorName: string, arrayName: string, body: string): string => {
-        const itUpper = iteratorName.toUpperCase();
-        const arrUpper = arrayName.toUpperCase();
-        const arrayValue = fields[arrUpper];
-        if (!Array.isArray(arrayValue)) return "";
+  const expandirBloque = (iteratorName: string, arrayName: string, body: string, scope: FieldValues, prof: number): string => {
+    const itUpper = iteratorName.toUpperCase();
+    const arrayValue = scope[arrayName.toUpperCase()];
+    if (!Array.isArray(arrayValue)) return "";
+    const parts: string[] = [];
+    for (const element of arrayValue as unknown[]) {
+      // Ámbito de la iteración: lo de fuera + ITERADOR + ITERADOR.SUB. Un
+      // iterador interior con el mismo nombre sombrea al exterior.
+      const iterScope: FieldValues = { ...scope };
+      for (const key of Object.keys(iterScope)) if (key.startsWith(itUpper + ".")) delete iterScope[key];
+      const upperEl: Record<string, unknown> = {};
+      if (element !== null && typeof element === "object") {
+        for (const [kk, v] of Object.entries(element as Record<string, unknown>)) upperEl[kk.toUpperCase()] = v;
+        iterScope[itUpper] = String(element);
+        for (const [subKey, subValue] of Object.entries(upperEl)) iterScope[`${itUpper}.${subKey}`] = subValue as never;
+      } else {
+        iterScope[itUpper] = String(element);
+      }
+      // 1) bucles interiores, con el ámbito de este elemento;
+      let elementContent = expandir(body, iterScope, prof + 1);
+      // 2) condicionales (Phase 3.2: ven el valor de este elemento);
+      elementContent = processConditionals(elementContent, iterScope, warnings);
+      // 3) sustitución de {{ITEM.SUB}} y {{ITEM}}.
+      for (const [subKey, subValue] of Object.entries(upperEl)) {
+        const subPat = new RegExp("\\{\\{\\s*" + escapeRe(itUpper) + "\\." + escapeRe(subKey) + "\\s*\\}\\}", "gi");
+        elementContent = elementContent.replace(subPat, () => String(subValue));
+      }
+      const itemPat = new RegExp("\\{\\{\\s*" + escapeRe(itUpper) + "\\s*\\}\\}", "gi");
+      elementContent = elementContent.replace(itemPat, () => String(element));
+      parts.push(elementContent);
+    }
+    return parts.join("");
+  };
 
-        const parts: string[] = [];
-        for (const element of arrayValue as unknown[]) {
-          // Build per-iteration scope: outer fields + ITERATOR + ITERATOR.SUB
-          const iterScope: FieldValues = { ...fields };
-          let upperEl: Record<string, unknown> = {};
-          if (element !== null && typeof element === "object") {
-            for (const [k, v] of Object.entries(element as Record<string, unknown>)) {
-              upperEl[k.toUpperCase()] = v;
-            }
-            iterScope[itUpper] = String(element);
-            for (const [subKey, subValue] of Object.entries(upperEl)) {
-              iterScope[`${itUpper}.${subKey}`] = subValue;
-            }
-          } else {
-            iterScope[itUpper] = String(element);
-          }
-
-          // Phase 3.2 — re-run conditionals on the body BEFORE substitution
-          // so {{IF P.CASADO}} inside the loop sees this element's value.
-          let elementContent = processConditionals(body, iterScope, warnings);
-
-          // Substitute {{ITEM.SUBFIELD}} (dict elements) and {{ITEM}}
-          if (Object.keys(upperEl).length > 0) {
-            for (const [subKey, subValue] of Object.entries(upperEl)) {
-              const subPat = new RegExp(
-                "\\{\\{\\s*" + escapeRe(itUpper) + "\\." + escapeRe(subKey) + "\\s*\\}\\}",
-                "gi",
-              );
-              elementContent = elementContent.replace(subPat, String(subValue));
-            }
-          }
-          const itemPat = new RegExp(
-            "\\{\\{\\s*" + escapeRe(itUpper) + "\\s*\\}\\}",
-            "gi",
-          );
-          elementContent = elementContent.replace(itemPat, String(element));
-          parts.push(elementContent);
-        }
-        return parts.join("");
-      },
-    );
-    if (content === prev) break;
-    iteration++;
-  }
-
-  if (warnings && iteration >= maxIterations && pattern.test(content)) {
-    warnings.push({
-      code: "W101",
-      message:
-        "expandForEach reached max_iterations=20; unresolved {{FOR EACH ...}} blocks remain — likely a deeply nested loop or a malformed ENDFOR.",
-      iteration,
-    });
-  }
-
-  return content;
+  return expandir(content, fields, 0);
 }
 
 // Sentinels wrapping each inlined include's body. The editor's
