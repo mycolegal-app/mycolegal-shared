@@ -1323,7 +1323,9 @@
       "iaFinSinPropuestas": "La IA no ha podido proponer nada más con estos documentos.",
       "iaFinTope": "Me paro después de {n} pasadas para no encadenar llamadas sin fin. Puedes volver a pulsar.",
       "iaResumen": "{pasadas} pasadas, {aceptados} campos aceptados.",
-      "iaFinTeToca": "La IA ya ha propuesto todo lo que podía con estos documentos. Quedan {n} campos que tienes que decidir tú: al contestarlos aparecerán los siguientes y podrás volver a pedirle que lea."
+      "iaFinTeToca": "La IA ya ha propuesto todo lo que podía con estos documentos. Quedan {n} campos que tienes que decidir tú: al contestarlos aparecerán los siguientes y podrás volver a pedirle que lea.",
+      "condicionesSinDecidir": "Faltan {n} condiciones por decidir, y ésas sí cambian el documento: su cláusula aparece o no según lo que contestes ({c}). Al contestarlas aparecerán {mas} más.",
+      "datosSalenComoHueco": "{n} datos sin rellenar. No impiden generar: saldrán como hueco en la escritura y se ven al leerla."
     },
     "escrituraModal": {
       "titulo": "La escritura",

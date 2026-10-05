@@ -137,3 +137,33 @@ describe('esquemaDeCampos', () => {
     expect(e.campos.map((c) => c.nombre)).toEqual(['AÑOS']);
   });
 });
+
+// ⚠️ LA DIVERGENCIA DELIBERADA CON `filler.py` (5-oct-2026).
+//
+// El Python marcaba auxiliar TODO campo declarado, también los que el documento
+// imprime. Medido en la biblioteca: 809 campos declarados **y** pintados, que
+// salían en blanco porque la pantalla no los ofrecía — entre ellos los del
+// antecedente de cesión del 0505, que figura «completo» y sale con la finca, el
+// CRU y el catastro vacíos.
+describe('DECLARE + pintado: se pregunta (divergencia con filler.py)', () => {
+  const esq = (t: string) => esquemaDeCampos(t);
+  const campoDe = (t: string, n: string) => esq(t).campos.find((c) => c.nombre === n);
+
+  it('declarado Y pintado NO es auxiliar: el documento lo imprime, así que se pide', () => {
+    const t = '{{DECLARE FECHA_OPCION AS DATE:[la fecha]}}el día {{FECHA_OPCION}} se pactó';
+    expect(campoDe(t, 'FECHA_OPCION')?.soloCondicional).toBe(false);
+    // Y conserva lo que el DECLARE aporta, que es la razón de arreglarlo aquí y
+    // no desdeclarando los 809 a mano: el tipo sobrevive.
+    expect(campoDe(t, 'FECHA_OPCION')?.tipo).toBe('DATE');
+  });
+
+  it('declarado y NO pintado sigue siendo auxiliar', () => {
+    const t = '{{DECLARE TIENE_HIPOTECA AS BOOL:[¿hay?]}}{{IF TIENE_HIPOTECA}}sí{{ENDIF}}';
+    expect(campoDe(t, 'TIENE_HIPOTECA')?.soloCondicional).toBe(true);
+  });
+
+  it('declarado, pintado Y gobernando un IF: se pide, porque se imprime', () => {
+    const t = '{{DECLARE CIUDAD:[la ciudad]}}{{IF CIUDAD}}en {{CIUDAD}}{{ENDIF}}';
+    expect(campoDe(t, 'CIUDAD')?.soloCondicional).toBe(false);
+  });
+});

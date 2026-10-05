@@ -66,6 +66,24 @@ export function camposSoloCondicionales(
 
   const salida = new Set<string>();
   for (const n of condicionales) if (!pintados.has(n)) salida.add(n);
-  for (const n of declarados) salida.add(n);
+  // ⚠️ UN `DECLARE` QUE ADEMÁS SE PINTA **NO** ES AUXILIAR, y esto es una
+  // divergencia deliberada con `filler.py` (que añadía todos los declarados sin
+  // mirar si se pintaban).
+  //
+  // El criterio del Python dejaba fuera de «lo que se pregunta» a cualquier
+  // campo declarado, incluidos los que el documento IMPRIME. Resultado medido en
+  // la biblioteca real el 5-oct-2026: **809 campos declarados y pintados a la
+  // vez** —2.381 declarados, 975 pintados— que salían en blanco en la escritura
+  // y que nadie podía rellenar porque la pantalla no los ofrecía.
+  //
+  // El caso que lo destapó: `0505_ESQUEMA_MAESTRO_CUMPLIMIENTO_PERMUTA` figura
+  // COMPLETO y su antecedente de cesión sale «Que mediante escritura autorizada
+  // por el Notario de , Don/Doña , el día , bajo el número ,…», con la finca, el
+  // CRU y el catastro vacíos.
+  //
+  // Con esta línea el invariante queda cierto: **lo que el documento imprime se
+  // pregunta**. Y lo que sólo gobierna un `{{IF}}` sigue siendo auxiliar, que es
+  // para lo que `DECLARE` existe.
+  for (const n of declarados) if (!pintados.has(n)) salida.add(n);
   return salida;
 }

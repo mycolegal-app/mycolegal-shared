@@ -1322,7 +1322,9 @@
       "iaFinSinPropuestas": "IAk ezin du besterik proposatu dokumentu hauekin.",
       "iaFinTope": "{n} pasaldiren ondoren gelditzen naiz, deiak amaierarik gabe ez kateatzeko. Berriro sakatu dezakezu.",
       "iaResumen": "{pasadas} pasaldi, {aceptados} eremu onartuta.",
-      "iaFinTeToca": "IAk dokumentu hauekin proposa zezakeen guztia proposatu du. {n} eremu dituzu zuk erabakitzeko: erantzuten dituzunean hurrengoak agertuko dira eta berriro irakurtzeko eskatu ahal izango diozu."
+      "iaFinTeToca": "IAk dokumentu hauekin proposa zezakeen guztia proposatu du. {n} eremu dituzu zuk erabakitzeko: erantzuten dituzunean hurrengoak agertuko dira eta berriro irakurtzeko eskatu ahal izango diozu.",
+      "condicionesSinDecidir": "{n} baldintza erabaki gabe daude, eta horiek bai aldatzen dute dokumentua: haien klausula agertu ala ez zuk erantzundakoaren arabera ({c}). Erantzutean beste {mas} agertuko dira.",
+      "datosSalenComoHueco": "{n} datu bete gabe. Ez dute sortzea eragozten: hutsune gisa agertuko dira eskrituran eta irakurtzean ikusten dira."
     },
     "escrituraModal": {
       "titulo": "Eskritura",

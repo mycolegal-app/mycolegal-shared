@@ -567,12 +567,15 @@ export function DocFillingProducer({
           : code === "PLANTILLA_INCOMPLETA" ? t("ui.docfillingProducer.faltaClausula")
           : code === "CAMPOS_SIN_RELLENAR"
             ? t("ui.docfillingProducer.camposSinRellenar", { d: (cuerpo.error.directivas ?? []).join(", ") })
-          // Distinto de lo anterior aunque se parezca: aquí los campos ESTÁN
-          // completos y lo que falta es la etapa de concordancia. Decir
-          // «faltan valores» mandaría al oficial a buscar un dato que no falta.
-          : code === "DATOS_INCOMPLETOS"
-            ? t("ui.docfillingProducer.datosIncompletos", {
-                n: cuerpo.error.pendientes ?? 0, c: (cuerpo.error.campos ?? []).join(", "),
+          // ⚠️ LO QUE BLOQUEA SON LAS CONDICIONES, NO LOS DATOS (5-oct-2026).
+          // Un dato que falta se ve —sale su hueco en la escritura—; una
+          // condición sin contestar es invisible: su cláusula no aparece y el
+          // documento sale más corto sin que nada lo diga.
+          : code === "CONDICIONES_SIN_DECIDIR"
+            ? t("ui.docfillingProducer.condicionesSinDecidir", {
+                n: (cuerpo.error.condiciones ?? []).length,
+                c: (cuerpo.error.condiciones ?? []).slice(0, 6).map((x: { etiqueta: string }) => x.etiqueta).join(", "),
+                mas: cuerpo.error.despuesDeFrontera ?? 0,
               })
           : code === "FIRMA_SIN_ELEGIR"
             ? t("ui.docfillingProducer.firmaPendiente")
@@ -1095,7 +1098,9 @@ export function DocFillingProducer({
             </p>
             {estado.camposPendientes > 0 && !tarea.generadoAt && (
               <p className="mt-2 text-sm text-amber-700">
-                {t("ui.docfillingProducer.camposPendientes", { n: estado.camposPendientes })}
+                {/* No bloquea: se entrega con el hueco a la vista. Lo que
+                    bloquea son las condiciones sin decidir. */}
+                {t("ui.docfillingProducer.datosSalenComoHueco", { n: estado.camposPendientes })}
               </p>
             )}
             {tarea.generadoAt ? (
