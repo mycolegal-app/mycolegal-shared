@@ -1304,7 +1304,12 @@
       "iaAceptar": "Balio hau onartu",
       "iaSinDatos": "{n} eremu daturik gabe",
       "iaNoConfigurada": "IArekin irakurtzea ez dago eskuragarri ingurune honetan.",
-      "iaFallo": "Ezin izan dira dokumentuak irakurri."
+      "iaFallo": "Ezin izan dira dokumentuak irakurri.",
+      "enlazarDelExpediente": "Espedienteko {n}etako bat lotu",
+      "candidatoSinLeer": "(irakurri behar da: une bat behar du)",
+      "adjuntoDelExpediente": "espedientekoa",
+      "desenlazarAdjunto": "Lotura kendu",
+      "enlaceFallo": "Ezin izan da espedienteko dokumentua lotu."
     },
     "escrituraModal": {
       "titulo": "Eskritura",

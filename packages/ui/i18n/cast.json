@@ -1305,7 +1305,12 @@
       "iaAceptar": "Aceptar este valor",
       "iaSinDatos": "{n} campos sin datos suficientes",
       "iaNoConfigurada": "La lectura con IA no está disponible en este entorno.",
-      "iaFallo": "No se ha podido leer los documentos."
+      "iaFallo": "No se ha podido leer los documentos.",
+      "enlazarDelExpediente": "Enlazar uno de los {n} del expediente",
+      "candidatoSinLeer": "(hay que leerlo: tarda un momento)",
+      "adjuntoDelExpediente": "del expediente",
+      "desenlazarAdjunto": "Desenlazar",
+      "enlaceFallo": "No se ha podido enlazar el documento del expediente."
     },
     "escrituraModal": {
       "titulo": "La escritura",

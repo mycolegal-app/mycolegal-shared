@@ -44,7 +44,7 @@
 // nadie ha descartado. Ese atajo no se ofrece.
 
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, Check, CircleHelp, FileDown, FileText, Loader2, Sparkles, Upload } from "lucide-react";
+import { AlertTriangle, Check, CircleHelp, FileDown, FileText, Link2, Loader2, Sparkles, Upload } from "lucide-react";
 import { Button } from "../ui/button";
 import { AlertBanner } from "./alert-banner";
 import { useI18n } from "../i18n/i18n-context";
@@ -117,6 +117,9 @@ export interface ProducerCampo {
  */
 export interface ProducerAdjunto {
   id: string;
+  /** Apunta a un fichero del expediente: es un ENLACE, no una subida. Se dice
+   *  en pantalla porque quitarlo no hace lo mismo. */
+  origenNodeId?: string | null;
   requisitoCodigo: string;
   documentoCodigo: string | null;
   nombre: string;
@@ -139,6 +142,19 @@ export interface ProducerPropuesta {
   porque: string;
 }
 
+/**
+ * Un documento del expediente que se puede ENLAZAR en vez de volver a subirlo
+ * (F5.15). `conTexto` importa: si ya está extraído, enlazarlo es instantáneo; si
+ * no, hay que leerlo al enlazar y eso tarda.
+ */
+export interface ProducerCandidato {
+  nodeId: string;
+  nombre: string;
+  mime: string | null;
+  tamanoBytes: number;
+  conTexto: boolean;
+}
+
 /** Lo que devuelve `GET {apiBase}/tareas/{id}`. */
 export interface ProducerEstado {
   tarea: {
@@ -146,6 +162,9 @@ export interface ProducerEstado {
     actoCodigo: string | null; estado: string;
     generadoAt: string | null; creditos: number | null;
     documentos: Record<string, ProducerAportado>;
+    /** El expediente o la actuación de donde viene. Es lo que permite ofrecer
+     *  sus documentos para enlazarlos (F5.15). */
+    entidad?: { app: string; tipo: string; id: string; etiqueta: string | null } | null;
   };
   preguntas: ProducerPregunta[];
   requisitos: ProducerRequisito[];
@@ -219,6 +238,11 @@ export function DocFillingProducer({
     contexto: { adjuntos: number; conTexto: number };
   } | null>(null);
   const [iaError, setIaError] = useState<string | null>(null);
+  // Los documentos del expediente que se pueden enlazar. `null` = aún no se han
+  // pedido; `[]` = se pidieron y no hay. La distinción evita enseñar «no hay
+  // documentos» mientras todavía se están cargando.
+  const [candidatos, setCandidatos] = useState<ProducerCandidato[] | null>(null);
+  const [enlazando, setEnlazando] = useState<string | null>(null);
 
   const refrescar = useCallback(async (tid: string) => {
     const res = await fetch(`${apiBase}/tareas/${tid}`);
@@ -312,10 +336,58 @@ export function DocFillingProducer({
     if (!id) return;
     setSubiendo(requisito);
     try {
-      await fetch(`${apiBase}/tareas/${id}/adjuntos?id=${encodeURIComponent(adjuntoId)}`, { method: "DELETE" });
-      await refrescar(id);
+      // ⚠️ El parámetro se llama `adjunto`, no `id`: `id` es el de la TAREA y ya
+      // va en la ruta. Con `id=` la ruta contesta 400 y el adjunto se queda.
+      await fetch(`${apiBase}/tareas/${id}/adjuntos?adjunto=${encodeURIComponent(adjuntoId)}`, { method: "DELETE" });
+      await Promise.all([refrescar(id), cargarCandidatos(id)]);
     } finally { setSubiendo(null); }
   }
+
+  /**
+   * Los documentos del expediente de origen.
+   *
+   * No hace falta que la app anfitriona los pase: la tarea guarda de qué
+   * expediente viene y la Unidad de Red sabe qué ficheros cuelgan de él. Sin
+   * expediente la lista sale vacía, y eso no es un error.
+   */
+  const cargarCandidatos = useCallback(async (tid: string) => {
+    try {
+      const res = await fetch(`${apiBase}/tareas/${tid}/adjuntos/enlazar`);
+      if (!res.ok) { setCandidatos([]); return; }
+      const { data } = await res.json();
+      setCandidatos(data.candidatos ?? []);
+    } catch { setCandidatos([]); }
+  }, [apiBase]);
+
+  /**
+   * Enlazar un documento del expediente a un requisito (F5.15).
+   *
+   * **No lo copia ni lo vuelve a subir**: cuelga un `ln -s` en la carpeta del
+   * caso. El fichero sigue siendo uno, así que si Notaría lo corrige, aquí se ve
+   * corregido — y no se facturan los bytes dos veces.
+   */
+  async function enlazar(requisito: string, documento: string | null, nodeId: string) {
+    if (!id) return;
+    setEnlazando(requisito); setError(null);
+    try {
+      const res = await fetch(`${apiBase}/tareas/${id}/adjuntos/enlazar`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nodeId, requisito, documento }),
+      });
+      if (!res.ok) { setError(t("ui.docfillingProducer.enlaceFallo")); return; }
+      await fetch(`${apiBase}/tareas/${id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requisito, documento: { aportado: true, documentoCodigo: documento ?? undefined } }),
+      });
+      await Promise.all([refrescar(id), cargarCandidatos(id)]);
+    } finally { setEnlazando(null); }
+  }
+
+  // Los candidatos se piden al entrar en el paso de documentos y no al arrancar:
+  // en una tarea que no llega a ese paso sería un viaje para nada.
+  useEffect(() => {
+    if (paso === 3 && id && candidatos === null) void cargarCandidatos(id);
+  }, [paso, id, candidatos, cargarCandidatos]);
 
   /**
    * Que la IA lea los documentos y proponga campos (F5).
@@ -557,16 +629,61 @@ export function DocFillingProducer({
                           {t("ui.docfillingProducer.adjuntoSinTexto")}
                         </span>
                       )}
+                      {/* «Del expediente» se dice, porque lo que pasa al
+                          quitarlo es distinto: un enlace SÓLO se desenlaza —el
+                          original lo borra la app que lo creó— y quien lo quita
+                          tiene que saber que no está borrando el documento del
+                          expediente. */}
+                      {a.origenNodeId && (
+                        <span className="inline-flex items-center gap-1 text-gray-500">
+                          <Link2 className="h-3 w-3" />
+                          {t("ui.docfillingProducer.adjuntoDelExpediente")}
+                        </span>
+                      )}
                       <button
                         type="button"
                         className="ml-auto text-gray-500 underline hover:text-gray-900 disabled:opacity-50"
                         disabled={subiendo === r.codigo}
                         onClick={() => void quitarAdjunto(r.codigo, a.id)}
                       >
-                        {t("ui.docfillingProducer.quitarAdjunto")}
+                        {t(a.origenNodeId
+                          ? "ui.docfillingProducer.desenlazarAdjunto"
+                          : "ui.docfillingProducer.quitarAdjunto")}
                       </button>
                     </div>
                   ))}
+                  {/* ENLAZAR EN VEZ DE SUBIR (F5.15). Cuando la generación
+                      viene de un expediente, lo más habitual es que el
+                      documento YA esté ahí: enlazarlo no duplica bytes y, si
+                      Notaría lo corrige, aquí se ve corregido. */}
+                  {candidatos && candidatos.length > 0 && (
+                    <details className="mt-1">
+                      <summary className="cursor-pointer text-xs text-mc-action-700 hover:underline">
+                        {t("ui.docfillingProducer.enlazarDelExpediente", { n: candidatos.length })}
+                      </summary>
+                      <div className="mt-1 space-y-1">
+                        {candidatos.map((c) => (
+                          <button
+                            key={c.nodeId}
+                            type="button"
+                            className="flex w-full items-center gap-1.5 rounded px-1 py-0.5 text-left text-xs hover:bg-gray-50 disabled:opacity-50"
+                            disabled={enlazando === r.codigo}
+                            onClick={() => void enlazar(r.codigo, a?.documentoCodigo ?? r.documentoCodigo ?? null, c.nodeId)}
+                          >
+                            {enlazando === r.codigo
+                              ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+                              : <Link2 className="h-3.5 w-3.5 shrink-0 text-gray-400" />}
+                            <span className="text-gray-900">{c.nombre}</span>
+                            {/* Si aún no tiene texto extraído, enlazarlo
+                                implica leerlo: se avisa porque tarda. */}
+                            {!c.conTexto && (
+                              <span className="text-gray-500">{t("ui.docfillingProducer.candidatoSinLeer")}</span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </details>
+                  )}
                   <label className="mt-1 inline-flex cursor-pointer items-center gap-1.5 text-xs text-mc-action-700 hover:underline">
                     {subiendo === r.codigo
                       ? <Loader2 className="h-3.5 w-3.5 animate-spin" />

@@ -1305,7 +1305,12 @@
       "iaAceptar": "Acceptar aquest valor",
       "iaSinDatos": "{n} camps sense dades suficients",
       "iaNoConfigurada": "La lectura amb IA no està disponible en aquest entorn.",
-      "iaFallo": "No s'han pogut llegir els documents."
+      "iaFallo": "No s'han pogut llegir els documents.",
+      "enlazarDelExpediente": "Enllaçar-ne un dels {n} de l'expedient",
+      "candidatoSinLeer": "(cal llegir-lo: triga un moment)",
+      "adjuntoDelExpediente": "de l'expedient",
+      "desenlazarAdjunto": "Desenllaçar",
+      "enlaceFallo": "No s'ha pogut enllaçar el document de l'expedient."
     },
     "escrituraModal": {
       "titulo": "L'escriptura",
