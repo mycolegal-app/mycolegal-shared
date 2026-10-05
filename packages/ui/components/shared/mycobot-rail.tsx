@@ -124,7 +124,7 @@ interface Cita {
 }
 
 // Cita a un ELEMENTO DE CATÁLOGO de la app que monta el rail: un esquema o un
-// párrafo de la Biblioteca de Esquemas de DocFilling, hoy; cualquier catálogo
+// párrafo de la Biblioteca de Esquemas de Redactor, hoy; cualquier catálogo
 // con ficha propia, mañana.
 //
 // POR QUÉ UN TERCER TIPO Y NO REUTILIZAR LOS DOS QUE HABÍA

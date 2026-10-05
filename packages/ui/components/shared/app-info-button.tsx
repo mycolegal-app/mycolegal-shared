@@ -88,7 +88,7 @@ export function AppInfoButton({
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                aria-label={t("ui.docfilling.close")}
+                aria-label={t("ui.common.close")}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X className="h-5 w-5" />
@@ -127,7 +127,7 @@ function VersionRow({ label, value }: { label: string; value?: string }) {
 function NotesBody({ state }: { state: ReturnType<typeof useReleaseNotes> }) {
   const { t } = useI18n();
   if (state.status === "loading") {
-    return <p className="text-sm text-gray-500">{t("ui.docfilling.loading")}</p>;
+    return <p className="text-sm text-gray-500">{t("ui.common.loading")}</p>;
   }
   if (state.status === "empty") {
     return <p className="text-sm text-gray-500">{t("ui.appInfo.notesEmpty")}</p>;

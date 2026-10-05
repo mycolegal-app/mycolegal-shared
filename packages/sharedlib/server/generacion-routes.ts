@@ -1,4 +1,4 @@
-// EL PROXY DE GENERACIÓN: de Notaría o LegiFirma a DocFilling.
+// EL PROXY DE GENERACIÓN: de Notaría o LegiFirma a Redactor.
 //
 // El modal de la escritura vive en `shared/ui` y toma su `apiBase`, así que una
 // app que lo embeba sólo necesita exponer la API de generación bajo una ruta
@@ -20,8 +20,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export interface ForwardGeneracionParams {
-  /** URL interna de DocFilling. */
-  docfillingUrl: string;
+  /** URL interna de Redactor (`REDACTOR_INTERNAL_URL`). */
+  redactorUrl: string;
   serviceKey: string;
   orgId: string;
   userId: string;
@@ -44,11 +44,11 @@ const CONSERVAR = [
 export async function forwardGeneracion(p: ForwardGeneracionParams): Promise<NextResponse> {
   const segs = p.path ?? [];
   const sub = segs.length ? `/${segs.join('/')}` : '';
-  const url = `${p.docfillingUrl.replace(/\/$/, '')}/api/generacion${sub}${p.request.nextUrl.search}`;
+  const url = `${p.redactorUrl.replace(/\/$/, '')}/api/generacion${sub}${p.request.nextUrl.search}`;
 
   const headers: Record<string, string> = {
     'X-Service-Key': p.serviceKey,
-    // Sin esto DocFilling no sabe de qué notaría se habla, y se niega a servir.
+    // Sin esto Redactor no sabe de qué notaría se habla, y se niega a servir.
     'X-Org-Id': p.orgId,
     'X-User-Id': p.userId,
   };

@@ -8,7 +8,7 @@
 // conserva.
 //
 // Lo que no estaba era compartido: el Revisor construye sus ~300 líneas de HTML
-// a mano. Al tener DocFilling que entregar su propio informe, la alternativa era
+// a mano. Al tener Redactor que entregar su propio informe, la alternativa era
 // un segundo HTML hecho a mano y dos informes de la misma casa que derivan en la
 // franja, en los márgenes y en la tipografía. Así que la cáscara se escribe una
 // vez aquí y cada app aporta su CONTENIDO.
@@ -39,6 +39,9 @@ export interface InformeHtmlArgs {
   secciones: SeccionInforme[];
   /** Pie: de dónde sale esto y qué no es. */
   nota?: string;
+  /** HTML de la cinta del motor, al pie (`docFillingCintaHtml()`). Se pinta tal
+   *  cual: lo genera código, no el usuario. */
+  cinta?: string;
 }
 
 /** Escapa para HTML. Se exporta porque el llamante compone su propio cuerpo y
@@ -125,5 +128,6 @@ export function informeHtml(a: InformeHtmlArgs): string {
   <div class="barra no-print"><button type="button" onclick="window.print()">Descargar / Imprimir PDF</button></div>
   ${secciones}
   ${a.nota ? `<footer>${esc(a.nota)}</footer>` : ''}
+  ${a.cinta ?? ''}
 </div></body></html>`;
 }

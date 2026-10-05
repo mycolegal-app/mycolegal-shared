@@ -10,15 +10,15 @@ describe('createTaskModelResolver', () => {
   it('usa el modelo de la tabla cuando la fila está activa', async () => {
     const r = createTaskModelResolver({
       prisma: prismaCon({ model: 'gemini-3.7-pro', active: true }),
-      app: 'docfilling', fallbackModel: 'de-reserva',
+      app: 'redactor', fallbackModel: 'de-reserva',
     });
-    expect(await r.modeloDeTarea('docfilling:mycobot')).toBe('gemini-3.7-pro');
+    expect(await r.modeloDeTarea('redactor:mycobot')).toBe('gemini-3.7-pro');
   });
 
   it('cae a la reserva si la fila está INACTIVA, que es como se desactiva una tarea', async () => {
     const r = createTaskModelResolver({
       prisma: prismaCon({ model: 'gemini-3.7-pro', active: false }),
-      app: 'docfilling', fallbackModel: 'de-reserva',
+      app: 'redactor', fallbackModel: 'de-reserva',
     });
     expect(await r.modeloDeTarea('x')).toBe('de-reserva');
   });
@@ -26,7 +26,7 @@ describe('createTaskModelResolver', () => {
   it('cae a la reserva si la consulta revienta: un fallo de BD no mata la función de IA', async () => {
     const r = createTaskModelResolver({
       prisma: { aiTaskModel: { findUnique: async () => { throw new Error('sin BD'); } } },
-      app: 'docfilling', fallbackModel: 'de-reserva',
+      app: 'redactor', fallbackModel: 'de-reserva',
     });
     expect(await r.modeloDeTarea('x')).toBe('de-reserva');
   });
@@ -35,7 +35,7 @@ describe('createTaskModelResolver', () => {
     const espia = vi.fn();
     const r = createTaskModelResolver({
       prisma: prismaCon({ model: 'm', active: true }, espia),
-      app: 'docfilling', fallbackModel: 'f',
+      app: 'redactor', fallbackModel: 'f',
     });
     await r.modeloDeTarea('t'); await r.modeloDeTarea('t');
     expect(espia).toHaveBeenCalledTimes(1);
@@ -49,10 +49,10 @@ describe('createTaskModelResolver', () => {
   it('consulta por (app, taskKey): el mismo taskKey en dos apps son dos filas', async () => {
     const espia = vi.fn();
     const r = createTaskModelResolver({
-      prisma: prismaCon({ model: 'm', active: true }, espia), app: 'docfilling', fallbackModel: 'f',
+      prisma: prismaCon({ model: 'm', active: true }, espia), app: 'redactor', fallbackModel: 'f',
     });
     await r.modeloDeTarea('mycobot');
-    expect(espia).toHaveBeenCalledWith({ where: { app_taskKey: { app: 'docfilling', taskKey: 'mycobot' } } });
+    expect(espia).toHaveBeenCalledWith({ where: { app_taskKey: { app: 'redactor', taskKey: 'mycobot' } } });
   });
 });
 
@@ -65,7 +65,7 @@ describe('createPromptCatalog', () => {
     const { createPromptCatalog } = await import('../src/prompts');
     const c = createPromptCatalog({
       prisma: { aiPrompt: { findMany: async () => [{ promptKey: 'k', prompt: 'EL DE ADMIN', defaultPrompt: 'x' }] } },
-      app: 'docfilling', catalogo: CATALOGO,
+      app: 'redactor', catalogo: CATALOGO,
     });
     expect(await c.promptDe('k')).toBe('EL DE ADMIN');
   });
@@ -76,7 +76,7 @@ describe('createPromptCatalog', () => {
     const { createPromptCatalog } = await import('../src/prompts');
     const c = createPromptCatalog({
       prisma: { aiPrompt: { findMany: async () => [{ promptKey: 'k', prompt: null, defaultPrompt: 'EL DE LA BASE' }] } },
-      app: 'docfilling', catalogo: CATALOGO,
+      app: 'redactor', catalogo: CATALOGO,
     });
     expect(await c.promptDe('k')).toBe('EL DE LA BASE');
   });
@@ -85,7 +85,7 @@ describe('createPromptCatalog', () => {
     const { createPromptCatalog } = await import('../src/prompts');
     const c = createPromptCatalog({
       prisma: { aiPrompt: { findMany: async () => { throw new Error('sin BD'); } } },
-      app: 'docfilling', catalogo: CATALOGO,
+      app: 'redactor', catalogo: CATALOGO,
     });
     expect(await c.promptDe('k')).toBe('EL DEL CÓDIGO');
   });
@@ -93,7 +93,7 @@ describe('createPromptCatalog', () => {
   it('una clave que no está en ninguna parte devuelve cadena vacía, no `undefined`', async () => {
     const { createPromptCatalog } = await import('../src/prompts');
     const c = createPromptCatalog({
-      prisma: { aiPrompt: { findMany: async () => [] } }, app: 'docfilling', catalogo: CATALOGO,
+      prisma: { aiPrompt: { findMany: async () => [] } }, app: 'redactor', catalogo: CATALOGO,
     });
     expect(await c.promptDe('no-existe')).toBe('');
   });

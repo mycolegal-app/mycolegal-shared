@@ -10,7 +10,7 @@
 // recibe o un texto (y termina) o peticiones de función; las ejecuta, mete los
 // resultados y vuelve. Nada más.
 //
-// **No decide qué herramientas hay** —eso es de cada app, y en DocFilling es
+// **No decide qué herramientas hay** —eso es de cada app, y en Redactor es
 // justo donde está la decisión de diseño: `escribir` no existe (D31)—, no sabe
 // de créditos ni de permisos, y no inventa un modelo: se le da.
 //
@@ -27,7 +27,7 @@
 //    existe, quizá te refieres a…».
 //
 // 3. **El consumo se acumula y se devuelve.** Quien llama tiene que poder
-//    imputarlo: en DocFilling la conversación es `meterMode: 'none'` —medida y
+//    imputarlo: en Redactor la conversación es `meterMode: 'none'` —medida y
 //    no facturada—, y sin estos números eso no se puede cumplir.
 
 export interface DeclaracionHerramienta {

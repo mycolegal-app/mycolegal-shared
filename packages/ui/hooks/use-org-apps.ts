@@ -40,8 +40,8 @@ export function invalidateOrgApps() {
  * - `apps`: Set vacío hasta que carga, luego los slugs
  *
  * Pensado para gating de funcionalidad cross-app: por ejemplo, deshabilitar
- * un botón de "Generar documento (DocFilling)" cuando la org no tiene la
- * app `docfilling` contratada, mostrando un tooltip explicativo.
+ * un botón de "Generar documento (Redactor)" cuando la org no tiene la
+ * app `redactor` contratada, mostrando un tooltip explicativo.
  */
 export function useOrgApps(): { apps: Set<string>; loading: boolean } {
   const [apps, setApps] = useState<Set<string>>(new Set());

@@ -60,14 +60,16 @@ export type { BillingPanelProps } from './components/shared/billing-panel';
 export { CreditBalanceBadge } from './components/shared/credit-balance-badge';
 export { CreditsPurchaseModal } from './components/shared/credits-purchase-modal';
 export { MycoBotRail } from './components/shared/mycobot-rail';
-// La conversación de generación de DocFilling, embebida (F7.8, D33). Sustituye
-// al `DocFillingModal`, que sigue exportado porque tres consumidores vivos lo
-// montan todavía y su migración depende de F4.
+// La conversación de generación de Redactor (motor DocFilling), embebida (F7.8,
+// D33). Sustituyó al `DocFillingModal`, borrado con el rename a Redactor (R7).
 //
 // ⚠️ NO se llama `DocumentProducer`, como dice el plan: ese nombre ya lo ocupa
 // el productor genérico de `document_templates` que usa Tramitación. Ver la
 // cabecera de `docfilling-producer.tsx`.
 export { DocFillingProducer, NO_LO_SE } from './components/shared/docfilling-producer';
+// La cinta «Powered by DocFilling» (rename a Redactor, M2): sólo en el modal de
+// la escritura y en los informes.
+export { DocFillingCinta, AZUL_MARINO_DOCFILLING } from './components/brand/docfilling-cinta';
 // El modal de la escritura: markdown, navegador de huecos y descarga del .docx.
 export { EscrituraModal } from './components/shared/escritura-modal';
 export type {
@@ -187,11 +189,8 @@ export { uiMessages, getUiDefaults } from './i18n';
 export { DocumentPreviewModal, isPreviewable, previewKind } from './components/shared/document-preview-modal';
 export type { DocumentPreviewModalProps, PreviewKind } from './components/shared/document-preview-modal';
 
-// DocFilling integration
-export { DocFillingModal } from './components/docfilling/DocFillingModal';
 
 // NOTE: e2e shared-lock helpers (./e2e/shared-lock and ./e2e/shared-lock-fixture)
 // are intentionally NOT re-exported here — they import `@playwright/test`,
 // which is not a runtime dep. Consumer apps import them directly via subpath:
 //   import { skipIfSharedAlreadyPassed } from '@mycolegal-app/ui/e2e/shared-lock-fixture';
-export type { DocFillingModalProps } from './components/docfilling/DocFillingModal';

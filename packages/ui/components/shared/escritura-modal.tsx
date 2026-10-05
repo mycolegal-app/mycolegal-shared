@@ -37,6 +37,7 @@
 // enseña sin maquillar porque lo que hace usable esto es que la IA resuelva el
 // grueso (F5).
 
+import { DocFillingCinta } from "../brand/docfilling-cinta";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Download, FileText, Loader2, X } from "lucide-react";
 import { Button } from "../ui/button";
@@ -152,7 +153,7 @@ export function EscrituraModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true">
-      <div className="flex max-h-[90vh] w-full max-w-5xl flex-col rounded-lg bg-white shadow-xl">
+      <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white shadow-xl">
         {/* ── cabecera ─────────────────────────────────────────────────────── */}
         <div className="flex items-start justify-between gap-3 border-b border-gray-200 p-4">
           <div className="min-w-0">
@@ -260,6 +261,9 @@ export function EscrituraModal({
           )}
           {prev && <Escritura markdown={prev.markdown} resaltado={hueco} />}
         </div>
+
+        {/* ── la cinta del motor (M2): sólo aquí y en los informes ───────── */}
+        <DocFillingCinta />
       </div>
     </div>
   );

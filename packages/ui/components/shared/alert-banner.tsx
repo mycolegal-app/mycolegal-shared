@@ -58,7 +58,7 @@ export function AlertBanner({ type, message, onDismiss }: AlertBannerProps) {
             "flex-shrink-0 rounded-sm p-1 transition-opacity hover:opacity-70",
             text
           )}
-          aria-label={t("ui.docfilling.close")}
+          aria-label={t("ui.common.close")}
         >
           <X className="h-4 w-4" />
         </button>

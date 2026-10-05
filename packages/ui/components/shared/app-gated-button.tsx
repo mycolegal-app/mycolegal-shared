@@ -4,7 +4,7 @@ import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { useIsAppEnabled } from "../../hooks/use-org-apps";
 
 interface AppGatedButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  /** Slug de la app cuya habilitación gobierna este botón (p.ej. "docfilling"). */
+  /** Slug de la app cuya habilitación gobierna este botón (p.ej. "redactor"). */
   appSlug: string;
   /**
    * Mensaje del tooltip cuando la app NO está habilitada para la org.
@@ -33,7 +33,7 @@ interface AppGatedButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
  * Uso típico (DocFilling):
  *
  *   <AppGatedButton
- *     appSlug="docfilling"
+ *     appSlug="redactor"
  *     disabledTooltip="La generación documental con IA (DocFilling) no está habilitada para tu organización."
  *     onClick={() => setDocFillingOpen(true)}
  *     className="..."

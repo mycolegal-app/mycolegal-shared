@@ -290,7 +290,7 @@ export function NotificationsBell({
             {loading && items.length === 0 && (
               <div className="flex items-center justify-center px-3 py-6 text-sm text-gray-500">
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {t("ui.docfilling.loading")}
+                {t("ui.common.loading")}
               </div>
             )}
             {!loading && error && (
@@ -377,7 +377,7 @@ export function NotificationsBell({
                 </div>
                 <button
                   type="button"
-                  aria-label={t("ui.docfilling.close")}
+                  aria-label={t("ui.common.close")}
                   onClick={() => setDetail(null)}
                   className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
                 >
@@ -397,7 +397,7 @@ export function NotificationsBell({
                   onClick={() => setDetail(null)}
                   className="rounded-md px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
                 >
-                  {t("ui.docfilling.close")}
+                  {t("ui.common.close")}
                 </button>
               </div>
             </div>

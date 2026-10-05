@@ -26,7 +26,7 @@ const STABLE_ACCELS: Record<string, string> = {
   archivo: "r",
   cancelaciones: "c",
   consultor: "o",
-  docfilling: "d",
+  redactor: "d",
   facturae: "f",
   legifirma: "l",
   moratorias: "m",
