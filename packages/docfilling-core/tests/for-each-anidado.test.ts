@@ -41,3 +41,14 @@ describe('FOR EACH anidado', () => {
     expect(compone(t, { A: ['1', '2'], B: ['x'] })).toBe('12|x');
   });
 });
+
+describe('FOR EACH … IN LISTA|ENUM', () => {
+  const T = '{{FOR EACH ITEM IN S|ENUM}}**{{ITEM.N}}**, con DNI {{ITEM.D}}{{ENDFOR}}, han solicitado';
+  it('une como enumeración en prosa', () => {
+    expect(compone(T, { S: [{ N: 'Ana', D: '1' }, { N: 'Luis', D: '2' }, { N: 'Eva', D: '3' }] }))
+      .toBe('**Ana**, con DNI 1, **Luis**, con DNI 2 y **Eva**, con DNI 3, han solicitado');
+  });
+  it('con uno solo no añade nada', () => {
+    expect(compone(T, { S: [{ N: 'Ana', D: '1' }] })).toBe('**Ana**, con DNI 1, han solicitado');
+  });
+});

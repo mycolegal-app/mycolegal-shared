@@ -746,7 +746,7 @@ export function expandForEach(
   // profundidad y cada bucle interior se expande DENTRO del ámbito de su
   // elemento, antes de sustituir los `{{ITEM.X}}` del exterior —si no, el
   // ITEM interior se pisaba con los valores del exterior.
-  const TOKEN = /\{\{(?:FOR\s+EACH\s+([\w\u00C0-\u024F]+)\s+IN\s+([\w.\u00C0-\u024F]+)|(ENDFOR|END[\s_]+FOR))\}\}/gi;
+  const TOKEN = /\{\{(?:FOR\s+EACH\s+([\w\u00C0-\u024F]+)\s+IN\s+([\w.\u00C0-\u024F]+)(\|ENUM)?|(ENDFOR|END[\s_]+FOR))\}\}/gi;
   const MAX_PROFUNDIDAD = 20;
 
   const expandir = (texto: string, scope: FieldValues, prof: number): string => {
@@ -774,14 +774,14 @@ export function expandForEach(
       const ini = t.index!; const finApertura = ini + t[0].length;
       const cierreTok = tokens[cierre]; const finCierre = cierreTok.index! + cierreTok[0].length;
       const cuerpo = texto.slice(finApertura, cierreTok.index!);
-      out += texto.slice(cursor, ini) + expandirBloque(t[1], t[2], cuerpo, scope, prof);
+      out += texto.slice(cursor, ini) + expandirBloque(t[1], t[2], cuerpo, scope, prof, Boolean(t[3]));
       cursor = finCierre;
       k = cierre + 1;
     }
     return out + texto.slice(cursor);
   };
 
-  const expandirBloque = (iteratorName: string, arrayName: string, body: string, scope: FieldValues, prof: number): string => {
+  const expandirBloque = (iteratorName: string, arrayName: string, body: string, scope: FieldValues, prof: number, enumerar = false): string => {
     const itUpper = iteratorName.toUpperCase();
     const arrayValue = scope[arrayName.toUpperCase()];
     if (!Array.isArray(arrayValue)) return "";
@@ -811,6 +811,12 @@ export function expandForEach(
       const itemPat = new RegExp("\\{\\{\\s*" + escapeRe(itUpper) + "\\s*\\}\\}", "gi");
       elementContent = elementContent.replace(itemPat, () => String(element));
       parts.push(elementContent);
+    }
+    // `IN LISTA|ENUM`: enumeración en prosa —«A, B y C»—. Lo usaban las
+    // cancelaciones para los solicitantes; sin esto salían pegados.
+    if (enumerar) {
+      const items = parts.map((x) => x.trim()).filter(Boolean);
+      return items.length <= 1 ? (items[0] ?? "") : items.slice(0, -1).join(", ") + " y " + items[items.length - 1];
     }
     return parts.join("");
   };
