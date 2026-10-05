@@ -236,8 +236,35 @@ export function DocFillingProducer({
     sinDatos: { campo: string; porque: string }[];
     pedidos: number;
     contexto: { adjuntos: number; conTexto: number };
+    /** Campos que siguen sin valor en la tarea. Es lo que distingue «ya está
+     *  todo» de «la IA no puede seguir y te toca a ti». */
+    pendientes: number;
   } | null>(null);
   const [iaError, setIaError] = useState<string | null>(null);
+  // ── EL BUCLE DE LECTURA, Y SU RELATO ─────────────────────────────────────
+  //
+  // Una sola pasada no basta: aceptar una condición **reescribe el documento** y
+  // aparecen campos nuevos. Medido en una segregación: 85 campos → 98 → 94 → 41
+  // → 32 → 28, con la frontera bajando del nivel 0 al 5 y 23 campos todavía
+  // pendientes tras seis vueltas.
+  //
+  // Con esos números, lo que no se puede hacer es dejar un reloj girando: hay
+  // que CONTAR lo que está pasando. De ahí que se guarde el historial de pasadas
+  // y los segundos de la que está en curso, y que el texto diga cuántos
+  // documentos lee y por cuántos campos pregunta — no «cargando».
+  const [iaPasadas, setIaPasadas] = useState<
+    { n: number; pedidos: number; propuestas: number; sinDatos: number; segundos: number }[]
+  >([]);
+  const [iaEnCurso, setIaEnCurso] = useState<
+    { n: number; docs: number; caracteres: number; campos: number; desde: number } | null
+  >(null);
+  const [iaSegundos, setIaSegundos] = useState(0);
+  /** Lo ya preguntado. Es lo que hace que el bucle TERMINE: un campo que nadie
+   *  puede resolver no se vuelve a pedir en la vuelta siguiente. */
+  const [iaPreguntados, setIaPreguntados] = useState<string[]>([]);
+  const [iaAplicando, setIaAplicando] = useState<{ hecho: number; total: number } | null>(null);
+  const [iaFin, setIaFin] = useState<"sinCampos" | "sinPropuestas" | "tope" | "teToca" | null>(null);
+  const [iaAceptados, setIaAceptados] = useState(0);
   // Los documentos del expediente que se pueden enlazar. `null` = aún no se han
   // pedido; `[]` = se pidieron y no hay. La distinción evita enseñar «no hay
   // documentos» mientras todavía se están cargando.
@@ -343,6 +370,15 @@ export function DocFillingProducer({
     } finally { setSubiendo(null); }
   }
 
+  // El contador de segundos de la pasada en curso. Es la diferencia entre «está
+  // pensando» y «se ha colgado»: sin un número que sube, a los veinte segundos
+  // cualquiera recarga la página.
+  useEffect(() => {
+    if (!iaEnCurso) { setIaSegundos(0); return; }
+    const t = setInterval(() => setIaSegundos(Math.round((Date.now() - iaEnCurso.desde) / 1000)), 1000);
+    return () => clearInterval(t);
+  }, [iaEnCurso]);
+
   /**
    * Los documentos del expediente de origen.
    *
@@ -389,32 +425,125 @@ export function DocFillingProducer({
     if (paso === 3 && id && candidatos === null) void cargarCandidatos(id);
   }, [paso, id, candidatos, cargarCandidatos]);
 
+  /** Tope de vueltas. No es un número mágico: medido, la frontera de una
+   *  segregación llega al nivel 5, así que seis cubre el caso real y evita que
+   *  un esquema raro encadene llamadas sin fin. Al llegar se PARA y se dice. */
+  const TOPE_PASADAS = 6;
+
   /**
-   * Que la IA lea los documentos y proponga campos (F5).
+   * Una pasada de lectura. Devuelve si tiene sentido seguir.
    *
-   * No escribe nada: deja las propuestas en pantalla con su fuente y el oficial
-   * acepta las que quiera. Un botón que rellenara los campos de golpe metería en
-   * una escritura pública datos que nadie ha mirado.
+   * Antes de llamar ya se sabe qué va a hacer —cuántos documentos, cuántos
+   * caracteres, cuántos campos— y se cuenta. Eso es lo que convierte la espera
+   * en algo legible: no «cargando», sino «leyendo 3 documentos (12.480
+   * caracteres) y preguntando por 44 campos».
    */
-  async function leerConIA() {
-    if (!id) return;
-    setExtrayendo(true); setIaError(null); setIa(null);
+  async function pasadaIA(n: number, preguntados: string[]): Promise<boolean> {
+    if (!id) return false;
+    const legibles = (estado?.adjuntos ?? []).filter((a) => a.caracteres > 0);
+    const caracteres = legibles.reduce((t, a) => t + a.caracteres, 0);
+    const pendientes = (estado?.campos ?? []).filter((c) => !c.valor && !preguntados.includes(c.nombre));
+    const frontera = Math.min(
+      ...pendientes.filter((c) => c.gobierna).map((c) => c.nivel),
+      Number.MAX_SAFE_INTEGER,
+    );
+    const van = pendientes.filter((c) => !c.gobierna || c.nivel === frontera).length;
+    if (van === 0) { setIaFin("sinCampos"); return false; }
+
+    setIaEnCurso({ n, docs: legibles.length, caracteres, campos: van, desde: Date.now() });
+    const desde = Date.now();
     try {
-      const res = await fetch(`${apiBase}/tareas/${id}/extraer`, { method: "POST" });
+      const res = await fetch(`${apiBase}/tareas/${id}/extraer`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ excluir: preguntados }),
+      });
       const cuerpo = await res.json().catch(() => null);
       if (!res.ok) {
         setIaError(cuerpo?.error?.code === "IA_NO_CONFIGURADA"
           ? t("ui.docfillingProducer.iaNoConfigurada")
           : t("ui.docfillingProducer.iaFallo"));
-        return;
+        return false;
       }
+      const d = cuerpo.data;
+      const propuestas: ProducerPropuesta[] = d.propuestas ?? [];
+      setIaPasadas((prev) => [...prev, {
+        n, pedidos: d.pedidos ?? 0, propuestas: propuestas.length,
+        sinDatos: (d.sinDatos ?? []).length, segundos: Math.round((Date.now() - desde) / 1000),
+      }]);
+      // Lo preguntado se acumula AUNQUE el modelo no haya propuesto nada: es
+      // justo lo que no hay que volver a preguntar.
+      const nuevos = [...preguntados, ...((d.camposPedidos ?? []) as string[])];
+      setIaPreguntados(nuevos);
       setIa({
-        propuestas: cuerpo.data.propuestas ?? [],
-        sinDatos: cuerpo.data.sinDatos ?? [],
-        pedidos: cuerpo.data.pedidos ?? 0,
-        contexto: cuerpo.data.contexto ?? { adjuntos: 0, conTexto: 0 },
+        propuestas,
+        sinDatos: d.sinDatos ?? [],
+        pedidos: d.pedidos ?? 0,
+        contexto: d.contexto ?? { adjuntos: 0, conTexto: 0 },
+        pendientes: d.pendientes ?? 0,
       });
-    } finally { setExtrayendo(false); }
+      // «Nada que pedir» con campos todavía pendientes NO es «ya está»: es que
+      // la frontera depende de condiciones que la IA no puede resolver y que
+      // tiene que decidir una persona. Medido: tras aceptar 8 propuestas
+      // quedaban 36 condiciones de nivel 0 sin datos en ningún documento, y
+      // hasta que alguien las contesta no aparece el nivel siguiente. Decir
+      // «no quedan campos» ahí sería mentir.
+      if (d.nadaQuePedir) {
+        setIaFin((d.pendientes ?? 0) > 0 ? "teToca" : "sinCampos");
+        return false;
+      }
+      // Sin propuestas no hay nada que aceptar, así que tampoco aparecerán
+      // campos nuevos: seguir sería repetir la misma llamada.
+      if (propuestas.length === 0) {
+        setIaFin((d.pendientes ?? 0) > 0 ? "sinPropuestas" : "sinCampos");
+        return false;
+      }
+      return true;
+    } finally { setIaEnCurso(null); }
+  }
+
+  /**
+   * Que la IA lea los documentos y proponga campos (F5).
+   *
+   * Arranca el bucle: lee, propone, y cuando la persona acepta vuelve a leer con
+   * los campos que acaban de aparecer. **Nunca acepta sola** — eso es lo que
+   * separa esta función de rellenar la escritura por su cuenta.
+   */
+  async function leerConIA() {
+    setIaError(null); setIaFin(null); setIa(null);
+    setIaPasadas([]); setIaPreguntados([]); setIaAceptados(0);
+    setExtrayendo(true);
+    try { await pasadaIA(1, []); } finally { setExtrayendo(false); }
+  }
+
+  /**
+   * Aceptar TODAS las propuestas de la pasada y seguir leyendo.
+   *
+   * Se aplican de una en una —contando por dónde va, porque son hasta decenas y
+   * cada una es un `PATCH`— y al acabar se vuelve a leer: aceptar condiciones
+   * reescribe el documento y lo que importa es lo que aparece DESPUÉS.
+   */
+  async function aceptarTodas() {
+    if (!id || !ia || ia.propuestas.length === 0) return;
+    const lote = ia.propuestas;
+    setExtrayendo(true);
+    try {
+      for (let k = 0; k < lote.length; k++) {
+        setIaAplicando({ hecho: k + 1, total: lote.length });
+        await fetch(`${apiBase}/tareas/${id}`, {
+          method: "PATCH", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ campo: lote[k].campo, valor: lote[k].valor }),
+        });
+      }
+      setIaAplicando(null);
+      setIaAceptados((n) => n + lote.length);
+      // El estado se recarga del servidor: qué campos existen ahora lo decide el
+      // motor, y mantener una copia de esa lógica aquí es la forma de que
+      // discrepen.
+      await refrescar(id);
+      const siguiente = iaPasadas.length + 1;
+      if (siguiente > TOPE_PASADAS) { setIaFin("tope"); return; }
+      await pasadaIA(siguiente, iaPreguntados);
+    } finally { setIaAplicando(null); setExtrayendo(false); }
   }
 
   /** Aceptar una propuesta la convierte en un valor normal: entra por el mismo
@@ -785,10 +914,11 @@ export function DocFillingProducer({
             />
           )}
 
-          {/* ── LA IA LEE LOS DOCUMENTOS (F5) ──────────────────────────────
-              Propone, no rellena. Y el botón se ofrece sólo si hay algo que
-              leer: sin documentos aportados no tiene de dónde sacar nada, y
-              un botón que siempre devuelve «no he podido» enseña a ignorarlo. */}
+          {/* ── LA IA LEE LOS DOCUMENTOS, EN VARIAS PASADAS (F5.1) ─────────
+              Propone, no rellena. Y **cuenta lo que hace**: una pasada puede
+              tardar y detrás vienen más, así que lo que no puede haber es un
+              reloj girando sin decir nada. Cada línea dice cuántos documentos
+              lee, por cuántos campos pregunta y cuántos segundos lleva. */}
           {(estado.adjuntos?.length ?? 0) > 0 && !tarea.generadoAt && (
             <div className="rounded-lg border border-mc-action-200 bg-mc-action-50/50 p-3">
               <div className="flex flex-wrap items-center gap-2">
@@ -796,20 +926,78 @@ export function DocFillingProducer({
                   {extrayendo
                     ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
                     : <Sparkles className="mr-1.5 h-4 w-4" />}
-                  {extrayendo ? t("ui.docfillingProducer.iaLeyendo") : t("ui.docfillingProducer.iaLeer")}
+                  {iaPasadas.length > 0 && !extrayendo
+                    ? t("ui.docfillingProducer.iaLeerOtraVez")
+                    : t("ui.docfillingProducer.iaLeer")}
                 </Button>
-                <span className="text-xs text-gray-600">
-                  {t("ui.docfillingProducer.iaDeQueLee", {
-                    n: estado.adjuntos?.filter((a) => a.caracteres > 0).length ?? 0,
-                    total: estado.adjuntos?.length ?? 0,
-                  })}
-                </span>
+                {!extrayendo && iaPasadas.length === 0 && (
+                  <span className="text-xs text-gray-600">
+                    {t("ui.docfillingProducer.iaDeQueLee", {
+                      n: estado.adjuntos?.filter((a) => a.caracteres > 0).length ?? 0,
+                      total: estado.adjuntos?.length ?? 0,
+                    })}
+                  </span>
+                )}
               </div>
+
+              {/* EL RELATO. Las pasadas ya hechas, en gris; la que está
+                  corriendo, con su contador de segundos subiendo. */}
+              {(iaPasadas.length > 0 || iaEnCurso || iaAplicando) && (
+                <div className="mt-2 space-y-0.5 text-xs">
+                  {iaPasadas.map((p) => (
+                    <div key={p.n} className="flex items-center gap-1.5 text-gray-600">
+                      <Check className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                      <span>
+                        {t("ui.docfillingProducer.iaPasada", { n: p.n })} ·{" "}
+                        {t("ui.docfillingProducer.iaPasadaHecha", { propuestas: p.propuestas, pedidos: p.pedidos })}
+                        {p.sinDatos > 0 ? ` · ${t("ui.docfillingProducer.iaSinDatos", { n: p.sinDatos })}` : ""}
+                        {" · "}{t("ui.docfillingProducer.iaSegundos", { s: p.segundos })}
+                      </span>
+                    </div>
+                  ))}
+                  {iaAplicando && (
+                    <div className="flex items-center gap-1.5 text-gray-700">
+                      <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+                      {t("ui.docfillingProducer.iaAplicando", { hecho: iaAplicando.hecho, total: iaAplicando.total })}
+                    </div>
+                  )}
+                  {iaEnCurso && !iaAplicando && (
+                    <div className="flex items-center gap-1.5 text-gray-700">
+                      <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+                      <span>
+                        {t("ui.docfillingProducer.iaPasada", { n: iaEnCurso.n })} ·{" "}
+                        {t("ui.docfillingProducer.iaEnCurso", {
+                          docs: iaEnCurso.docs,
+                          chars: iaEnCurso.caracteres.toLocaleString("es-ES"),
+                          campos: iaEnCurso.campos,
+                        })}
+                        {" · "}
+                        <span className="tabular-nums">{t("ui.docfillingProducer.iaSegundos", { s: iaSegundos })}</span>
+                      </span>
+                    </div>
+                  )}
+                  {/* A partir de medio minuto, decir DE QUIÉN es la espera. Es
+                      cierto —la latencia de Vertex es capacidad compartida— y
+                      es lo que evita que alguien recargue la página a mitad. */}
+                  {iaEnCurso && iaSegundos >= 25 && (
+                    <div className="pl-5 text-gray-500">{t("ui.docfillingProducer.iaLento")}</div>
+                  )}
+                </div>
+              )}
 
               {iaError && <div className="mt-2"><AlertBanner type="warning" message={iaError} /></div>}
 
-              {ia && ia.propuestas.length === 0 && (
-                <p className="mt-2 text-xs text-gray-600">{t("ui.docfillingProducer.iaSinPropuestas")}</p>
+              {/* Por qué se paró. Cada final significa algo distinto y el
+                  oficial tiene que saber cuál le toca. */}
+              {iaFin && !extrayendo && (
+                <p className="mt-2 text-xs text-gray-600">
+                  {t(iaFin === "sinCampos" ? "ui.docfillingProducer.iaFinSinCampos"
+                    : iaFin === "sinPropuestas" ? "ui.docfillingProducer.iaFinSinPropuestas"
+                    : iaFin === "teToca" ? "ui.docfillingProducer.iaFinTeToca"
+                    : "ui.docfillingProducer.iaFinTope",
+                    { n: iaFin === "teToca" ? (ia?.pendientes ?? 0) : TOPE_PASADAS })}
+                  {iaAceptados > 0 && ` ${t("ui.docfillingProducer.iaResumen", { pasadas: iaPasadas.length, aceptados: iaAceptados })}`}
+                </p>
               )}
 
               {ia && ia.propuestas.length > 0 && (
@@ -817,6 +1005,10 @@ export function DocFillingProducer({
                   {/* El aviso va ARRIBA de las propuestas y no debajo: quien
                       acepta tiene que haberlo leído antes de aceptar. */}
                   <p className="text-xs text-gray-700">{t("ui.docfillingProducer.iaRevisar")}</p>
+                  <Button onClick={() => void aceptarTodas()} disabled={extrayendo}>
+                    <Check className="mr-1.5 h-4 w-4" />
+                    {t("ui.docfillingProducer.iaAceptarTodas", { n: ia.propuestas.length })}
+                  </Button>
                   {ia.propuestas.map((p) => (
                     <div key={p.campo} className="rounded-md border border-gray-200 bg-white p-2.5">
                       <div className="flex flex-wrap items-baseline gap-2">
@@ -835,7 +1027,7 @@ export function DocFillingProducer({
                         {p.porque ? ` · ${p.porque}` : ""}
                       </p>
                       <div className="mt-2">
-                        <Button variant="outline" onClick={() => void aceptar(p)} disabled={guardando === p.campo}>
+                        <Button variant="outline" onClick={() => void aceptar(p)} disabled={guardando === p.campo || extrayendo}>
                           {guardando === p.campo
                             ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                             : <Check className="mr-1.5 h-3.5 w-3.5" />}
@@ -847,9 +1039,9 @@ export function DocFillingProducer({
                 </div>
               )}
 
-              {/* Lo que la IA NO pudo proponer, con su motivo. «No hay escritura
-                  de origen» le dice al oficial qué documento le falta, que es
-                  más que un campo vacío. */}
+              {/* Lo que la IA NO pudo proponer, con su motivo. «Faltan los
+                  documentos de identidad de la parte compradora» le dice al
+                  oficial qué pedir, que es más que un campo vacío. */}
               {ia && ia.sinDatos.length > 0 && (
                 <details className="mt-2">
                   <summary className="cursor-pointer text-xs text-gray-600">

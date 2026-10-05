@@ -1309,7 +1309,20 @@
       "candidatoSinLeer": "(hai que lelo: tarda un momento)",
       "adjuntoDelExpediente": "do expediente",
       "desenlazarAdjunto": "Desligar",
-      "enlaceFallo": "Non se puido ligar o documento do expediente."
+      "enlaceFallo": "Non se puido ligar o documento do expediente.",
+      "iaLeerOtraVez": "Volver a ler coa IA",
+      "iaPasada": "Pasada {n}",
+      "iaEnCurso": "lendo {docs} documentos ({chars} caracteres) e preguntando por {campos} campos…",
+      "iaSegundos": "{s} s",
+      "iaLento": "O modelo está a tardar. É capacidade compartida de Vertex, non un problema da aplicación: agarda un momento máis.",
+      "iaPasadaHecha": "{propuestas} propostas de {pedidos} campos",
+      "iaAplicando": "Gardando os valores aceptados: {hecho} de {total}…",
+      "iaAceptarTodas": "Aceptar as {n} e seguir lendo",
+      "iaFinSinCampos": "Non quedan campos que a IA poida propoñer.",
+      "iaFinSinPropuestas": "A IA non puido propoñer nada máis con estes documentos.",
+      "iaFinTope": "Párome despois de {n} pasadas para non encadear chamadas sen fin. Podes volver premer.",
+      "iaResumen": "{pasadas} pasadas, {aceptados} campos aceptados.",
+      "iaFinTeToca": "A IA xa propuxo todo o que podía con estes documentos. Quedan {n} campos que tes que decidir ti: ao contestalos aparecerán os seguintes e poderás volver pedirlle que lea."
     },
     "escrituraModal": {
       "titulo": "A escritura",

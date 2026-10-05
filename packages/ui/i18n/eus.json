@@ -1309,7 +1309,20 @@
       "candidatoSinLeer": "(irakurri behar da: une bat behar du)",
       "adjuntoDelExpediente": "espedientekoa",
       "desenlazarAdjunto": "Lotura kendu",
-      "enlaceFallo": "Ezin izan da espedienteko dokumentua lotu."
+      "enlaceFallo": "Ezin izan da espedienteko dokumentua lotu.",
+      "iaLeerOtraVez": "Berriro irakurri IArekin",
+      "iaPasada": "{n}. pasaldia",
+      "iaEnCurso": "{docs} dokumentu irakurtzen ({chars} karaktere) eta {campos} eremuri buruz galdetzen…",
+      "iaSegundos": "{s} s",
+      "iaLento": "Modeloa denbora hartzen ari da. Vertex-en partekatutako ahalmena da, ez aplikazioaren arazoa: itxaron une bat gehiago.",
+      "iaPasadaHecha": "{pedidos} eremutik {propuestas} proposamen",
+      "iaAplicando": "Onartutako balioak gordetzen: {total}(e)tik {hecho}…",
+      "iaAceptarTodas": "Onartu {n} eta irakurtzen jarraitu",
+      "iaFinSinCampos": "Ez da IAk proposa dezakeen eremurik geratzen.",
+      "iaFinSinPropuestas": "IAk ezin du besterik proposatu dokumentu hauekin.",
+      "iaFinTope": "{n} pasaldiren ondoren gelditzen naiz, deiak amaierarik gabe ez kateatzeko. Berriro sakatu dezakezu.",
+      "iaResumen": "{pasadas} pasaldi, {aceptados} eremu onartuta.",
+      "iaFinTeToca": "IAk dokumentu hauekin proposa zezakeen guztia proposatu du. {n} eremu dituzu zuk erabakitzeko: erantzuten dituzunean hurrengoak agertuko dira eta berriro irakurtzeko eskatu ahal izango diozu."
     },
     "escrituraModal": {
       "titulo": "Eskritura",
