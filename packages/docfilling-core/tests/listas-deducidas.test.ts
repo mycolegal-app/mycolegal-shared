@@ -66,3 +66,13 @@ describe('marcarListasParaSonda', () => {
     expect(sondado).not.toContain('CASADO');
   });
 });
+
+describe('valores con que se compara un subcampo', () => {
+  it('== e IN, por ITEM.X y dentro de un vinculado', async () => {
+    const t = (await expandirIncludes('{{FOR EACH ITEM IN L}}{{IF ITEM.TIPO=="Persona Física"}}a{{ENDIF}}{{IF ITEM.TIPO IN ("Persona Jurídica","UTE")}}b{{ENDIF}}{{INCLUDE B(ITEM)}}{{ENDFOR}}',
+      repositorioDeMapa({ B: '{{IF INTERVIENE_EN=="Propio Nombre"}}c{{ENDIF}}' }))).texto;
+    const l = listasDeLaPlantilla(t).listas.get('L')!;
+    expect([...l.valores.get('TIPO')!].sort()).toEqual(['Persona Física', 'Persona Jurídica', 'UTE']);
+    expect([...l.valores.get('INTERVIENE_EN')!]).toEqual(['Propio Nombre']);
+  });
+});

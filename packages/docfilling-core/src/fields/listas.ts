@@ -15,6 +15,9 @@ export interface ListaDeducida {
   subcampos: Map<string, string>;
   /** Subcampos que gobiernan un IF dentro del bucle: deciden qué más se pide. */
   condiciones: Set<string>;
+  /** Los literales con que la plantilla compara cada subcampo (`SUB == "x"`,
+   *  `SUB IN ("a","b")`): son las opciones que tiene sentido ofrecer. */
+  valores: Map<string, Set<string>>;
 }
 
 export interface ResultadoListas {
@@ -44,7 +47,7 @@ export function listasDeLaPlantilla(texto: string): ResultadoListas {
 
   const lista = (nombre: string): ListaDeducida => {
     let l = listas.get(nombre);
-    if (!l) { l = { nombre, subcampos: new Map(), condiciones: new Set() }; listas.set(nombre, l); }
+    if (!l) { l = { nombre, subcampos: new Map(), condiciones: new Set(), valores: new Map() }; listas.set(nombre, l); }
     return l;
   };
   const bucleDe = (it: string) => { for (let i = bucles.length - 1; i >= 0; i--) if (bucles[i].it === it) return bucles[i]; return null; };
@@ -67,6 +70,22 @@ export function listasDeLaPlantilla(texto: string): ResultadoListas {
     if (NO_CAMPO.test(dentro) || /^(ELSE|ENDIF)\b/i.test(dentro)) continue;
     const vinc = vinculos.length ? bucleDe(vinculos[vinculos.length - 1]) : null;
     const esCondicion = /^IF[\s_]/i.test(dentro);
+    if (esCondicion) {
+      // Literales comparados con un subcampo del elemento → opciones.
+      const re2 = /([A-Za-z_][\w.\u00C0-\u024F]*)\s*(?:==|!=)\s*["\u201c]([^"\u201d]*)["\u201d]|([A-Za-z_][\w.\u00C0-\u024F]*)\s+(?:NOT\s+)?IN\s*\(([^)]*)\)/gi;
+      for (const c of dentro.matchAll(re2)) {
+        const ref = (c[1] ?? c[3]).toUpperCase();
+        const lits = c[2] !== undefined ? [c[2]] : [...(c[4] ?? '').matchAll(/["\u201c]([^"\u201d]*)["\u201d]/g)].map((x) => x[1]);
+        const [cab, sub] = ref.split('.');
+        const b = sub ? bucleDe(cab) : null;
+        const lst = b ? b.lista : (vinc && !ref.includes('.') ? vinc.lista : null);
+        if (!lst) continue;
+        const nom = b ? sub : ref;
+        const l = lista(lst);
+        if (!l.valores.has(nom)) l.valores.set(nom, new Set());
+        for (const x of lits) l.valores.get(nom)!.add(x);
+      }
+    }
     for (const n of nombresDe(dentro)) {
       const N = n.toUpperCase(); const [cabeza, sub] = N.split('.');
       const b = sub ? bucleDe(cabeza) : null;
