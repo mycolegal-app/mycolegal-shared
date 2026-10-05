@@ -1351,7 +1351,10 @@
     "buscarPlaceholder": "Buscar por protocolo o nombre…",
     "resultadosBusqueda": "Resultados para «{q}»",
     "limpiarBusqueda": "Limpiar",
-    "sinResultados": "Sin resultados para esa búsqueda"
+    "sinResultados": "Sin resultados para esa búsqueda",
+    "enlace": "Enlace",
+    "enlacePapelera": "Original en la papelera",
+    "enlaceRoto": "Enlace roto"
   },
   "agendaPage": {
     "title": "Agenda",

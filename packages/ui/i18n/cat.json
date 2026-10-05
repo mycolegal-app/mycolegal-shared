@@ -1351,7 +1351,10 @@
     "buscarPlaceholder": "Cerca per protocol o nom…",
     "resultadosBusqueda": "Resultats per a «{q}»",
     "limpiarBusqueda": "Netejar",
-    "sinResultados": "Sense resultats per a aquesta cerca"
+    "sinResultados": "Sense resultats per a aquesta cerca",
+    "enlace": "Enllaç",
+    "enlacePapelera": "Original a la paperera",
+    "enlaceRoto": "Enllaç trencat"
   },
   "agendaPage": {
     "title": "Agenda",

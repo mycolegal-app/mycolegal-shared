@@ -41,6 +41,8 @@ export interface DriveNodeRecord {
   partnerOrgId: string | null;
   partnerDeptId: string | null;
   partnerInbox: boolean;
+  /** Enlace lógico (B.7): el nodo real al que apunta. Ver `linkNode`. */
+  linkToNodeId?: string | null;
   gcsBucket: string | null;
   gcsPath: string | null;
   mimeType: string | null;
@@ -69,6 +71,7 @@ export interface DriveNodeWriteData {
   partnerOrgId?: string | null;
   partnerDeptId?: string | null;
   partnerInbox?: boolean;
+  linkToNodeId?: string | null;
   gcsBucket?: string | null;
   gcsPath?: string | null;
   mimeType?: string | null;
@@ -449,6 +452,82 @@ export async function linkExisting(
     ? await db.driveNode.update({ where: { id: existing.id }, data })
     : await db.driveNode.create({ data });
   return { nodeId: node.id, gcsPath: input.gcsPath };
+}
+
+// ---- Enlaces lógicos (B.7) --------------------------------------------------
+
+export interface LinkNodeInput extends AreaContext {
+  /** Carpetas (relativas a la raíz del área) donde cuelga el enlace. */
+  folderPath?: string[];
+  /** El fichero REAL al que apunta: de la misma org, fuera de la papelera, no otro enlace. */
+  targetId: string;
+  /** Nombre del enlace en su carpeta. Por defecto, el del destino. */
+  name?: string;
+  /** La entidad del CONTEXTO del enlace — nunca la del destino (ver abajo). */
+  entity?: { type: string; id: string; label?: string };
+}
+
+export interface LinkNodeResult {
+  nodeId: string;
+  targetId: string;
+}
+
+/**
+ * Cuelga en otra carpeta un ENLACE a un fichero que ya está catalogado: un
+ * `ln -s`. El enlace es un FILE sin `gcsPath`, sin `sizeBytes` y con
+ * `linkToNodeId`; el factory resuelve al destino al listar, descargar y leer.
+ *
+ * Semántica de sistema de ficheros:
+ * - Borrar el enlace sólo quita el enlace. El original lo borra la app que lo creó.
+ * - Si el original se va a la papelera o se purga, el enlace se queda y la Unidad
+ *   lo enseña como tal. `linkToNodeId` no tiene FK a propósito.
+ * - Un enlace vale 0 bytes: la facturación suma `sizeBytes` y el enlace no tiene.
+ *
+ * ⚠️ `linkExisting` NO es esto: con un objeto ya catalogado hace `update` y
+ * movería el original. Y la `entity` del enlace es la de su contexto: si copiara
+ * la del destino, quien busca «los ficheros del expediente» encontraría nodos sin
+ * `gcsPath`.
+ *
+ * Idempotente por (carpeta, destino). No se permiten enlaces en el Área de
+ * archivos ni en la Biblioteca global: un enlace en la `_bandeja` de una gestoría
+ * a un documento interno se lo enseñaría. Ver PLAN_TECNICO_UNIDAD_DE_RED.md §B.7.
+ */
+export async function linkNode(db: DriveDb, input: LinkNodeInput): Promise<LinkNodeResult> {
+  if (input.area === 'PARTNER' || input.area === 'GLOBAL') {
+    throw new Error(`linkNode: no se crean enlaces en el área ${input.area}`);
+  }
+  const target = await db.driveNode.findFirst({
+    where: { id: input.targetId, orgId: input.orgId, type: 'FILE', trashedAt: null },
+  });
+  if (!target) throw new Error('linkNode: el destino no existe en la organización o está en la papelera');
+  if (target.linkToNodeId) throw new Error('linkNode: el destino es otro enlace (sólo un salto)');
+  if (!target.gcsPath) throw new Error('linkNode: el destino no tiene fichero físico');
+
+  const parentId = await ensureFolderChain(db, input, input.folderPath ?? []);
+  const existing = await db.driveNode.findFirst({
+    where: { orgId: input.orgId, parentId, linkToNodeId: target.id, trashedAt: null },
+  });
+  if (existing) return { nodeId: existing.id, targetId: target.id };
+
+  const node = await db.driveNode.create({
+    data: {
+      orgId: input.orgId,
+      parentId,
+      type: 'FILE',
+      name: input.name ?? target.name,
+      visibility: areaVisibility(input.area),
+      ownerUserId: input.area === 'PERSONAL' ? input.userId ?? null : null,
+      managedBy: input.area === 'DOCUMENTS' ? input.app ?? null : null,
+      linkToNodeId: target.id,
+      gcsPath: null,
+      sizeBytes: null,
+      entityType: input.entity?.type ?? null,
+      entityId: input.entity?.id ?? null,
+      entityLabel: input.entity?.label ?? null,
+      createdBy: input.createdBy ?? null,
+    },
+  });
+  return { nodeId: node.id, targetId: target.id };
 }
 
 // ---- Mover / renombrar / papelera / borrar ---------------------------------

@@ -1350,7 +1350,10 @@
     "buscarPlaceholder": "Bilatu protokoloz edo izenez…",
     "resultadosBusqueda": "«{q}» bilaketaren emaitzak",
     "limpiarBusqueda": "Garbitu",
-    "sinResultados": "Ez dago emaitzarik bilaketa horretarako"
+    "sinResultados": "Ez dago emaitzarik bilaketa horretarako",
+    "enlace": "Esteka",
+    "enlacePapelera": "Jatorrizkoa zakarrontzian",
+    "enlaceRoto": "Esteka hautsia"
   },
   "agendaPage": {
     "title": "Agenda",

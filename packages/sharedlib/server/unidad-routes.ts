@@ -207,6 +207,8 @@ interface DriveNodeRow {
   partnerOrgId: string | null;
   partnerDeptId: string | null;
   partnerInbox: boolean;
+  /** Enlace lógico (B.7). Ausente en apps cuyo schema aún no tiene la columna. */
+  linkToNodeId?: string | null;
   entityType: string | null;
   entityId: string | null;
   entityLabel: string | null;
@@ -228,10 +230,18 @@ export interface DriveNodeDTO {
   partnerInbox?: boolean;
   /** Metadatos visuales del smart folder (B.5), si esta carpeta gestionada lo es. */
   smartFolder?: { color: string | null; icon: string | null; description: string | null };
+  /**
+   * Presente ⇒ es un enlace lógico (B.7). `ok` = el original se puede abrir;
+   * `papelera` = el original está en la papelera; `roto` = ya no existe o este
+   * usuario no puede verlo (no se distingue, para no revelar que existe).
+   */
+  link?: { estado: LinkState };
   mimeType: string | null;
   sizeBytes: number | null;
   createdAt: string;
 }
+
+export type LinkState = 'ok' | 'papelera' | 'roto';
 
 export function createUnidadRoutes(deps: UnidadDeps) {
   const { prisma, storage, withPermission, summarize } = deps;
@@ -349,6 +359,85 @@ export function createUnidadRoutes(deps: UnidadDeps) {
       sizeBytes: n.sizeBytes == null ? null : Number(n.sizeBytes),
       createdAt: n.createdAt.toISOString(),
     };
+  }
+
+  // ---- Enlaces lógicos (B.7) ----------------------------------------------
+  //
+  // Un enlace es un FILE sin `gcsPath` con `linkToNodeId` → el nodo real: un
+  // `ln -s`. Tiene nombre propio; mime, tamaño, bytes, texto y versiones son los
+  // del destino. Borrarlo sólo quita el enlace; el original lo borra la app que
+  // lo creó. Si el original se va a la papelera o se purga, el enlace se queda
+  // y se dice, en vez de enseñar un fichero que no se puede abrir.
+  //
+  // Permisos: la visibilidad del DESTINO se evalúa siempre con quien mira, nunca
+  // la del enlace. Un enlace en Compartido a un fichero de Mi espacio ajeno sale
+  // `roto`, y en el Área de archivos el filtro de partner deja fuera cualquier
+  // destino interno.
+
+  /** Destinos de los enlaces de `rows`, vistos por este usuario (incluidos los de la papelera). */
+  async function loadLinkTargets(auth: UnidadAuth, rows: DriveNodeRow[]): Promise<Map<string, DriveNodeRow & { trashedAt: Date | null }>> {
+    const ids = [...new Set(rows.map((r) => r.linkToNodeId).filter((x): x is string => !!x))];
+    if (!ids.length) return new Map();
+    const targets = await prisma.driveNode.findMany({
+      where: {
+        ...scopeWhere(auth),
+        // Se quita el `trashedAt: null` del scope: un original en la papelera se
+        // enseña como tal, no como roto.
+        trashedAt: undefined,
+        id: { in: ids },
+        orgId: auth.orgId,
+        type: 'FILE',
+        linkToNodeId: null,
+      },
+    });
+    return new Map(targets.map((t: DriveNodeRow & { trashedAt: Date | null }) => [t.id, t]));
+  }
+
+  /** `serializeNode` en lote, resolviendo los enlaces. Conserva el orden de `rows`. */
+  async function serializeNodes(rows: DriveNodeRow[], auth: UnidadAuth): Promise<DriveNodeDTO[]> {
+    const targets = await loadLinkTargets(auth, rows);
+    return rows.map((r) => {
+      const dto = serializeNode(r, auth);
+      if (!r.linkToNodeId) return dto;
+      const t = targets.get(r.linkToNodeId);
+      const estado: LinkState = !t ? 'roto' : t.trashedAt ? 'papelera' : 'ok';
+      return {
+        ...dto,
+        link: { estado },
+        mimeType: estado === 'ok' ? t!.mimeType : null,
+        sizeBytes: estado === 'ok' && t!.sizeBytes != null ? Number(t!.sizeBytes) : null,
+      };
+    });
+  }
+
+  /**
+   * El fichero FÍSICO detrás de `id`: el propio nodo o, si es un enlace, su
+   * destino — visible para este usuario y fuera de la papelera. `node` es lo que
+   * el usuario abrió (su nombre manda en la descarga); `file` es lo que se lee.
+   */
+  async function getVisibleFile(
+    auth: UnidadAuth,
+    id: string,
+  ): Promise<{ ok: true; node: any; file: any } | { ok: false; res: Response }> {
+    const node = await getVisibleNode(auth, id);
+    if (!node || node.type !== 'FILE') {
+      return { ok: false, res: errorResponse('NOT_FOUND', 'Fichero no encontrado', 404) };
+    }
+    if (!node.linkToNodeId) {
+      return node.gcsPath
+        ? { ok: true, node, file: node }
+        : { ok: false, res: errorResponse('NOT_FOUND', 'Fichero no encontrado', 404) };
+    }
+    const file = await prisma.driveNode.findFirst({
+      where: { ...scopeWhere(auth), id: node.linkToNodeId, orgId: node.orgId, type: 'FILE', linkToNodeId: null },
+    });
+    if (!file?.gcsPath) {
+      return {
+        ok: false,
+        res: errorResponse('LINK_BROKEN', 'El original de este enlace ya no está disponible', 404),
+      };
+    }
+    return { ok: true, node, file };
   }
 
   /**
@@ -602,7 +691,7 @@ export function createUnidadRoutes(deps: UnidadDeps) {
       return successResponse({
         breadcrumb: [{ id: root.id, name: 'Área de archivos', rootKey: root.rootKey }],
         parent: { id: root.id, name: 'Área de archivos', rootKey: root.rootKey, managed: true },
-        nodes: children.map((n: DriveNodeRow) => serializeNode(n, auth)),
+        nodes: await serializeNodes(children, auth),
       });
     }
 
@@ -617,7 +706,7 @@ export function createUnidadRoutes(deps: UnidadDeps) {
     return successResponse({
       breadcrumb: await buildBreadcrumb(folder.id, auth.orgId),
       parent: { id: folder.id, name: folder.name, rootKey: folder.rootKey, managed: folder.managedBy != null },
-      nodes: children.map((n: DriveNodeRow) => serializeNode(n, auth)),
+      nodes: await serializeNodes(children, auth),
     });
   };
 
@@ -715,7 +804,7 @@ export function createUnidadRoutes(deps: UnidadDeps) {
       return successResponse({
         breadcrumb: [{ id: parentId, name: 'Papelera', rootKey: parentId }],
         parent: { id: parentId, name: label, rootKey: parentId, managed: true, trash: true },
-        nodes: topLevel.map((n: DriveNodeRow) => serializeNode(n, auth)),
+        nodes: await serializeNodes(topLevel, auth),
       });
     }
 
@@ -781,7 +870,7 @@ export function createUnidadRoutes(deps: UnidadDeps) {
         ]
       : [];
 
-    const childDtos = children.map((n: DriveNodeRow) => serializeNode(n, auth));
+    const childDtos = await serializeNodes(children, auth);
     await enrichSmartFolders(children, childDtos);
 
     return successResponse({
@@ -846,6 +935,11 @@ export function createUnidadRoutes(deps: UnidadDeps) {
     const existing = await prisma.driveNode.findFirst({
       where: { parentId: parent.id, orgId: auth.orgId, type: 'FILE', name: filename },
     });
+    // Sobrescribir por nombre un ENLACE le daría `gcsPath` y `linkToNodeId` a la
+    // vez: dejaría de ser un enlace sin dejar de parecerlo.
+    if (existing?.linkToNodeId) {
+      return errorResponse('CONFLICT', 'Ya hay un enlace con ese nombre en esta carpeta', 409);
+    }
 
     let node = existing;
     if (!node) {
@@ -936,7 +1030,7 @@ export function createUnidadRoutes(deps: UnidadDeps) {
       orderBy: { trashedAt: 'desc' },
       take: 200,
     });
-    return successResponse({ nodes: nodes.map((n: DriveNodeRow) => serializeNode(n, auth)) });
+    return successResponse({ nodes: await serializeNodes(nodes, auth) });
   };
 
   /**
@@ -949,29 +1043,29 @@ export function createUnidadRoutes(deps: UnidadDeps) {
     const disposition =
       new URL(request.url).searchParams.get('disposition') === 'inline' ? 'inline' : 'attachment';
 
-    const node = await getVisibleNode(auth, id);
-    if (!node || node.type !== 'FILE' || !node.gcsPath) {
-      return errorResponse('NOT_FOUND', 'Fichero no encontrado', 404);
-    }
+    const r = await getVisibleFile(auth, id);
+    if (!r.ok) return r.res;
+    // Por un enlace se descarga el original con el nombre del enlace, como `cat` de un symlink.
+    const { node, file } = r;
 
     const generation = new URL(request.url).searchParams.get('generation');
     if (generation) {
       if (!storage.downloadVersion) {
         return errorResponse('STORAGE_ERROR', 'Descarga de versiones no disponible', 503);
       }
-      const dl = await storage.downloadVersion(node.gcsPath, generation);
+      const dl = await storage.downloadVersion(file.gcsPath, generation);
       if (!dl.ok || !dl.body) {
         return errorResponse('STORAGE_ERROR', dl.error ?? 'No se pudo descargar la versión', 503);
       }
       return new NextResponse(new Uint8Array(dl.body), {
         headers: {
-          'Content-Type': node.mimeType ?? 'application/octet-stream',
+          'Content-Type': file.mimeType ?? 'application/octet-stream',
           'Content-Disposition': `attachment; filename="${node.name.replace(/["\\]/g, '')}"`,
         },
       });
     }
 
-    const signed = await storage.signDownloadUrl(node.gcsPath, { disposition, filename: node.name });
+    const signed = await storage.signDownloadUrl(file.gcsPath, { disposition, filename: node.name });
     if (!signed.ok || !signed.url) {
       return errorResponse('STORAGE_ERROR', signed.error ?? 'No se pudo firmar la descarga', 503);
     }
@@ -1009,6 +1103,9 @@ export function createUnidadRoutes(deps: UnidadDeps) {
     if (newParentId) {
       const target = await getWritableFolder(auth, newParentId);
       if (!target) return errorResponse('FORBIDDEN', 'Carpeta destino no válida', 403);
+      if (node.linkToNodeId && target.partnerOrgId) {
+        return errorResponse('FORBIDDEN', 'Los enlaces no pueden entrar en el Área de archivos', 403);
+      }
       if (await wouldCreateCycle(node.id, target.id, auth.orgId)) {
         return errorResponse('BAD_REQUEST', 'No se puede mover una carpeta dentro de sí misma', 400);
       }
@@ -1059,17 +1156,19 @@ export function createUnidadRoutes(deps: UnidadDeps) {
   /** GET /api/unidad/node/[id]/versions — historial de versiones (GCS). */
   const versionsGetHandler: UnidadHandler = async (_request, { params, auth }) => {
     const { id } = params;
-    const node = await getVisibleNode(auth, id);
-    if (!node || node.type !== 'FILE' || !node.gcsPath) {
-      return errorResponse('NOT_FOUND', 'Fichero no encontrado', 404);
-    }
-    return successResponse({ versions: await storage.listVersions(node.gcsPath) });
+    const r = await getVisibleFile(auth, id);
+    if (!r.ok) return r.res;
+    // Un enlace enseña las versiones del original (sólo lectura: ver el POST).
+    return successResponse({ versions: await storage.listVersions(r.file.gcsPath) });
   };
 
   /** POST /api/unidad/node/[id]/versions { generation } — restaura esa versión. */
   const versionsPostHandler: UnidadHandler = async (request, { params, auth }) => {
     const { id } = params;
     const node = await getVisibleNode(auth, id);
+    if (node?.linkToNodeId) {
+      return errorResponse('FORBIDDEN', 'Las versiones se restauran en el original, no en el enlace', 403);
+    }
     if (!node || node.type !== 'FILE' || !node.gcsPath) {
       return errorResponse('NOT_FOUND', 'Fichero no encontrado', 404);
     }
@@ -1132,13 +1231,14 @@ export function createUnidadRoutes(deps: UnidadDeps) {
     const nodeId = String(body?.nodeId ?? '');
     if (!nodeId) return errorResponse('BAD_REQUEST', 'Falta nodeId', 400);
 
-    const node = await getVisibleNode(auth, nodeId);
-    if (!node || node.type !== 'FILE' || !node.gcsPath) {
-      return errorResponse('NOT_FOUND', 'Fichero no encontrado', 404);
-    }
+    const r = await getVisibleFile(auth, nodeId);
+    if (!r.ok) return r.res;
+    // `node` es el FICHERO: por un enlace se lee —y se cachea— el original, así
+    // que su texto (y su OCR) se aprovecha desde todos los sitios que lo enlazan.
+    const node = r.file;
 
     // Caché: hay texto y el sha256 coincide (o no hay sha256) → devuelve cacheado.
-    const cached = await prisma.fileText.findUnique({ where: { driveNodeId: nodeId } });
+    const cached = await prisma.fileText.findUnique({ where: { driveNodeId: node.id } });
     if (cached?.texto && (!node.sha256 || cached.sha256 === node.sha256)) {
       return successResponse({
         texto: cached.texto, chars: cached.chars, metodo: cached.metodo, cached: true, needsOcr: false,
@@ -1163,9 +1263,9 @@ export function createUnidadRoutes(deps: UnidadDeps) {
     // Solo cachea si hay texto real (capa de texto u OCR).
     if (!needsOcr && texto) {
       await prisma.fileText.upsert({
-        where: { driveNodeId: nodeId },
+        where: { driveNodeId: node.id },
         create: {
-          driveNodeId: nodeId, orgId: auth.orgId, texto, chars,
+          driveNodeId: node.id, orgId: auth.orgId, texto, chars,
           metodo, sha256: node.sha256 ?? null, extractedAt: new Date(),
         },
         update: {
@@ -1188,13 +1288,13 @@ export function createUnidadRoutes(deps: UnidadDeps) {
     const nodeId = String(body?.nodeId ?? '');
     if (!nodeId) return errorResponse('BAD_REQUEST', 'Falta nodeId', 400);
 
-    const node = await getVisibleNode(auth, nodeId);
-    if (!node || node.type !== 'FILE' || !node.gcsPath) {
-      return errorResponse('NOT_FOUND', 'Fichero no encontrado', 404);
-    }
+    const r = await getVisibleFile(auth, nodeId);
+    if (!r.ok) return r.res;
+    // Como en `read`: el resumen es del original y se comparte entre sus enlaces.
+    const node = r.file;
 
     // Resumen cacheado → gratis/instantáneo.
-    let ft = await prisma.fileText.findUnique({ where: { driveNodeId: nodeId } });
+    let ft = await prisma.fileText.findUnique({ where: { driveNodeId: node.id } });
     if (ft?.resumen) return successResponse({ resumen: ft.resumen, cached: true });
 
     // Asegura el texto (caché o extrae ahora).
@@ -1215,9 +1315,9 @@ export function createUnidadRoutes(deps: UnidadDeps) {
         return errorResponse('NEEDS_OCR', 'Documento escaneado sin capa de texto', 422);
       }
       ft = await prisma.fileText.upsert({
-        where: { driveNodeId: nodeId },
+        where: { driveNodeId: node.id },
         create: {
-          driveNodeId: nodeId, orgId: auth.orgId, texto: exTexto, chars: exChars,
+          driveNodeId: node.id, orgId: auth.orgId, texto: exTexto, chars: exChars,
           metodo: exMetodo, sha256: node.sha256 ?? null, extractedAt: new Date(),
         },
         update: {
@@ -1229,17 +1329,17 @@ export function createUnidadRoutes(deps: UnidadDeps) {
     }
 
     if (!summarize) return errorResponse('NOT_CONFIGURED', 'Resumen IA no disponible en esta app', 501);
-    const r = await summarize(texto);
-    if (!r.ok || !r.resumen) {
-      const code = r.status === 402 ? 'NO_CREDITS' : 'SUMMARY_FAILED';
-      return errorResponse(code, r.error ?? 'No se pudo resumir', r.status ?? 502);
+    const sum = await summarize(texto);
+    if (!sum.ok || !sum.resumen) {
+      const code = sum.status === 402 ? 'NO_CREDITS' : 'SUMMARY_FAILED';
+      return errorResponse(code, sum.error ?? 'No se pudo resumir', sum.status ?? 502);
     }
 
     await prisma.fileText.update({
-      where: { driveNodeId: nodeId },
-      data: { resumen: r.resumen, resumidoAt: new Date() },
+      where: { driveNodeId: node.id },
+      data: { resumen: sum.resumen, resumidoAt: new Date() },
     });
-    return successResponse({ resumen: r.resumen, cached: false, trace: r.trace ?? null });
+    return successResponse({ resumen: sum.resumen, cached: false, trace: sum.trace ?? null });
   };
 
   /**
@@ -1258,6 +1358,9 @@ export function createUnidadRoutes(deps: UnidadDeps) {
     if (!nodeId) return errorResponse('BAD_REQUEST', 'Falta nodeId', 400);
 
     const node = await getVisibleNode(auth, nodeId);
+    if (node?.linkToNodeId) {
+      return errorResponse('FORBIDDEN', 'Se incorpora el original, no un enlace', 403);
+    }
     if (!node || node.type !== 'FILE' || !node.gcsPath) {
       return errorResponse('NOT_FOUND', 'Fichero no encontrado', 404);
     }
@@ -1317,10 +1420,10 @@ export function createUnidadRoutes(deps: UnidadDeps) {
     });
     return successResponse({
       total: nodes.length,
-      items: nodes.map((n: DriveNodeRow) => {
-        const s = serializeNode(n, auth);
-        return { id: s.id, name: s.name, type: s.type, mimeType: s.mimeType, sizeBytes: s.sizeBytes };
-      }),
+      items: (await serializeNodes(nodes, auth)).map((s) => ({
+        id: s.id, name: s.name, type: s.type, mimeType: s.mimeType, sizeBytes: s.sizeBytes,
+        ...(s.link ? { link: s.link } : {}),
+      })),
     });
   };
 

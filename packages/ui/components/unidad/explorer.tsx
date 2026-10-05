@@ -16,6 +16,7 @@ import {
   History,
   Info,
   Inbox,
+  Link2,
   Lock,
   Mail,
   Move,
@@ -99,6 +100,35 @@ export interface DriveNode {
   createdAt: string;
   /** Metadatos visuales del smart folder (B.5). */
   smartFolder?: { color: string | null; icon: string | null; description: string | null } | null;
+  /** Enlace lógico (B.7): un `ln -s` a un fichero de otro sitio. */
+  link?: DriveLink | null;
+}
+
+/**
+ * Estado del original de un enlace: `ok` se abre; `papelera` y `roto` no, y se
+ * dice en vez de enseñar un fichero que no se puede abrir.
+ */
+interface DriveLink {
+  estado: "ok" | "papelera" | "roto";
+}
+
+/** ¿Se puede abrir? Un fichero siempre; un enlace sólo si su original está. */
+function opensFile(n: { link?: DriveLink | null }): boolean {
+  return !n.link || n.link.estado === "ok";
+}
+
+/** Aviso junto al nombre de un enlace cuyo original no se puede abrir. */
+function LinkBadge({ link, t }: { link?: DriveLink | null; t: (k: string) => string }) {
+  if (!link || link.estado === "ok") return null;
+  const text = link.estado === "papelera" ? t("unidad.enlacePapelera") : t("unidad.enlaceRoto");
+  return (
+    <span
+      title={text}
+      className="inline-flex shrink-0 items-center rounded bg-gray-100 px-1.5 py-0.5 text-[10px] uppercase text-gray-600"
+    >
+      {text}
+    </span>
+  );
 }
 
 /** Ítem devuelto por `POST /search` (DTO ligero por nombre). */
@@ -108,6 +138,7 @@ interface SearchItem {
   type: "FOLDER" | "FILE";
   mimeType: string | null;
   sizeBytes: number | null;
+  link?: DriveLink | null;
 }
 
 interface Crumb {
@@ -545,11 +576,15 @@ export function UnidadExplorer({
               </button>
             );
           }
-          const Icon = FileText;
+          const Icon = n.link ? Link2 : FileText;
           return (
             <div className="flex items-center gap-2 min-w-0">
-              <Icon className="h-4 w-4 shrink-0 text-gray-500" />
-              <span className="truncate">{label}</span>
+              <Icon
+                className="h-4 w-4 shrink-0 text-gray-500"
+                aria-label={n.link ? t("unidad.enlace") : undefined}
+              />
+              <span className={`truncate ${opensFile(n) ? "" : "text-gray-400 line-through"}`}>{label}</span>
+              <LinkBadge link={n.link} t={t} />
             </div>
           );
         },
@@ -611,7 +646,7 @@ export function UnidadExplorer({
                   {t("unidad.seleccionar")}
                 </button>
               )}
-              {n.type === "FILE" && !n.managed && (
+              {n.type === "FILE" && !n.managed && !n.link && (
                 <button
                   type="button"
                   onClick={() => handleVersions(n)}
@@ -621,7 +656,7 @@ export function UnidadExplorer({
                   <History className="h-3 w-3" />
                 </button>
               )}
-              {n.type === "FILE" && isPreviewable(n.mimeType, n.name) && (
+              {n.type === "FILE" && opensFile(n) && isPreviewable(n.mimeType, n.name) && (
                 <button
                   type="button"
                   onClick={() => handlePreview(n)}
@@ -631,7 +666,7 @@ export function UnidadExplorer({
                   <Eye className="h-3 w-3" />
                 </button>
               )}
-              {n.type === "FILE" && (
+              {n.type === "FILE" && opensFile(n) && (
                 <button
                   type="button"
                   onClick={() => handleDownload(n)}
@@ -812,8 +847,14 @@ export function UnidadExplorer({
                       </button>
                     ) : (
                       <>
-                        <FileText className="h-4 w-4 shrink-0 text-gray-500" />
-                        <span className="truncate">{r.name}</span>
+                        {r.link ? (
+                          <Link2 className="h-4 w-4 shrink-0 text-gray-500" aria-label={t("unidad.enlace")} />
+                        ) : (
+                          <FileText className="h-4 w-4 shrink-0 text-gray-500" />
+                        )}
+                        <span className={`truncate ${opensFile(r) ? "" : "text-gray-400 line-through"}`}>{r.name}</span>
+                        <LinkBadge link={r.link} t={t} />
+                        {opensFile(r) && (
                         <div className="ml-auto flex shrink-0 items-center gap-2">
                           {isPreviewable(r.mimeType, r.name) && (
                             <button
@@ -834,6 +875,7 @@ export function UnidadExplorer({
                             <Download className="h-3 w-3" />
                           </button>
                         </div>
+                        )}
                       </>
                     )}
                   </li>

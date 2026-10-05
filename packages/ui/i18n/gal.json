@@ -1350,7 +1350,10 @@
     "buscarPlaceholder": "Buscar por protocolo ou nome…",
     "resultadosBusqueda": "Resultados para «{q}»",
     "limpiarBusqueda": "Limpar",
-    "sinResultados": "Sen resultados para esa busca"
+    "sinResultados": "Sen resultados para esa busca",
+    "enlace": "Ligazón",
+    "enlacePapelera": "Orixinal na papeleira",
+    "enlaceRoto": "Ligazón rota"
   },
   "agendaPage": {
     "title": "Axenda",
