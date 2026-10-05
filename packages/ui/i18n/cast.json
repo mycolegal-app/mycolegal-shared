@@ -1526,5 +1526,56 @@
     "deleteError": "Error al eliminar",
     "btnExcel": "Excel",
     "apply": "Aplicar"
+  },
+  "copiaCustodio": {
+    "bloqueTitulo": "Datos de la copia a notario custodio",
+    "tipoSolicitud": "Tipo de solicitud",
+    "subtipo": "Subtipo",
+    "modo": {
+      "COPIA_ESCRITURA": "Copia de escritura",
+      "TESTIMONIO_POLIZA": "Testimonio de póliza",
+      "CEE": "Certificado ejecutivo europeo"
+    },
+    "ceeRama": {
+      "ESCRITURA": "CEE de escritura",
+      "POLIZA": "CEE de póliza"
+    },
+    "copia": {
+      "AUTENTICA_COMPLETA_EJECUTIVA": "Auténtica completa ejecutiva",
+      "AUTENTICA_COMPLETA_INFORMATIVA": "Auténtica completa informativa",
+      "AUTENTICA_PARCIAL_EJECUTIVA": "Auténtica parcial ejecutiva",
+      "AUTENTICA_PARCIAL_INFORMATIVA": "Auténtica parcial informativa",
+      "SIMPLE": "Simple",
+      "TESTIMONIO_EJECUTIVO": "Testimonio ejecutivo",
+      "TESTIMONIO_INFORMATIVO": "Testimonio informativo",
+      "CERTIFICADO_CONFORMIDAD_ASIENTO": "Certificado conformidad asiento",
+      "TITULO_EJECUTIVO_EUROPEO": "Título Ejecutivo Europeo"
+    },
+    "parteParcial": "Contenido de la copia parcial",
+    "parteParcialHint": "Vd. ha solicitado copia parcial: por favor, concrete qué fincas o aspectos deben aparecer necesariamente (o cuáles no se necesitan).",
+    "notario": "Notario autorizante",
+    "protocolo": "Nº de protocolo",
+    "asiento": "Nº de asiento",
+    "fecha": "Fecha",
+    "referencia": "Referencia propia",
+    "concepto": "Concepto",
+    "entidadOrigen": "Entidad de origen",
+    "entidadOrigenPlaceholder": "Selecciona una opción…",
+    "entidadOrigenOtra": "Otra",
+    "sedasOficina": "SEDAS oficina",
+    "sedasExpediente": "SEDAS expediente",
+    "sedasAutos": "SEDAS autos",
+    "gcr": "GCR",
+    "codigoServicio": "Código de servicio",
+    "titular": "Titular original",
+    "titularHint": "Persona física o jurídica que intervino en el documento solicitado, incluso si actualmente no es el titular. Obligatorio si no hay nº de protocolo.",
+    "titularNif": "NIF/NIE del titular original",
+    "notarioRequerido": "Indica el notario autorizante",
+    "entidadOrigenRequerida": "Indica la entidad de origen",
+    "referenciaPropiaRequerida": "Indica la referencia propia de la solicitud",
+    "referenciaRequerida": "Indica una referencia (propia o SEDAS)",
+    "titularRequerido": "Sin protocolo, indica el titular original",
+    "adjuntoRequerido": "Es necesario adjuntar nota simple.",
+    "parteParcialRequerida": "Indique el contenido de la copia parcial."
   }
 }

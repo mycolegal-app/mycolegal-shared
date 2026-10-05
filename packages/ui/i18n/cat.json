@@ -1526,5 +1526,56 @@
     "deleteError": "Error en eliminar",
     "btnExcel": "Excel",
     "apply": "Aplica"
+  },
+  "copiaCustodio": {
+    "bloqueTitulo": "Dades de la còpia a notari custodi",
+    "tipoSolicitud": "Tipus de sol·licitud",
+    "subtipo": "Subtipus",
+    "modo": {
+      "COPIA_ESCRITURA": "Còpia d'escriptura",
+      "TESTIMONIO_POLIZA": "Testimoni de pòlissa",
+      "CEE": "Certificat executiu europeu"
+    },
+    "ceeRama": {
+      "ESCRITURA": "CEE d'escriptura",
+      "POLIZA": "CEE de pòlissa"
+    },
+    "copia": {
+      "AUTENTICA_COMPLETA_EJECUTIVA": "Autèntica completa executiva",
+      "AUTENTICA_COMPLETA_INFORMATIVA": "Autèntica completa informativa",
+      "AUTENTICA_PARCIAL_EJECUTIVA": "Autèntica parcial executiva",
+      "AUTENTICA_PARCIAL_INFORMATIVA": "Autèntica parcial informativa",
+      "SIMPLE": "Simple",
+      "TESTIMONIO_EJECUTIVO": "Testimoni executiu",
+      "TESTIMONIO_INFORMATIVO": "Testimoni informatiu",
+      "CERTIFICADO_CONFORMIDAD_ASIENTO": "Certificat conformitat seient",
+      "TITULO_EJECUTIVO_EUROPEO": "Títol Executiu Europeu"
+    },
+    "parteParcial": "Contingut de la còpia parcial",
+    "parteParcialHint": "Ha sol·licitat còpia parcial: si us plau, concreti quines finques o aspectes han d'aparèixer necessàriament (o quins no calen).",
+    "notario": "Notari autoritzant",
+    "protocolo": "Núm. de protocol",
+    "asiento": "Núm. d'assentament",
+    "fecha": "Data",
+    "referencia": "Referència pròpia",
+    "concepto": "Concepte",
+    "entidadOrigen": "Entitat d'origen",
+    "entidadOrigenPlaceholder": "Selecciona una opció…",
+    "entidadOrigenOtra": "Altra",
+    "sedasOficina": "SEDAS oficina",
+    "sedasExpediente": "SEDAS expedient",
+    "sedasAutos": "SEDAS actuacions",
+    "gcr": "GCR",
+    "codigoServicio": "Codi de servei",
+    "titular": "Titular original",
+    "titularHint": "Persona física o jurídica que va intervenir en el document sol·licitat, encara que actualment no en sigui el titular. Obligatori si no hi ha núm. de protocol.",
+    "titularNif": "NIF/NIE del titular original",
+    "notarioRequerido": "Indica el notari autoritzant",
+    "entidadOrigenRequerida": "Indica l'entitat d'origen",
+    "referenciaPropiaRequerida": "Indiqui la referència pròpia de la sol·licitud",
+    "referenciaRequerida": "Indica una referència (pròpia o SEDAS)",
+    "titularRequerido": "Sense protocol, indica el titular original",
+    "adjuntoRequerido": "Cal adjuntar nota simple.",
+    "parteParcialRequerida": "Indiqui el contingut de la còpia parcial."
   }
 }

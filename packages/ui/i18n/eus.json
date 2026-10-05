@@ -1525,5 +1525,56 @@
     "deleteError": "Errorea ezabatzean",
     "btnExcel": "Excel",
     "apply": "Aplikatu"
+  },
+  "copiaCustodio": {
+    "bloqueTitulo": "Notario zaintzaileari kopiaren datuak",
+    "tipoSolicitud": "Eskaera mota",
+    "subtipo": "Azpimota",
+    "modo": {
+      "COPIA_ESCRITURA": "Eskrituraren kopia",
+      "TESTIMONIO_POLIZA": "Polizaren testigantza",
+      "CEE": "Europako ziurtagiri betearazlea"
+    },
+    "ceeRama": {
+      "ESCRITURA": "Eskrituraren CEE",
+      "POLIZA": "Polizaren CEE"
+    },
+    "copia": {
+      "AUTENTICA_COMPLETA_EJECUTIVA": "Benetako osoa betearazlea",
+      "AUTENTICA_COMPLETA_INFORMATIVA": "Benetako osoa informatiboa",
+      "AUTENTICA_PARCIAL_EJECUTIVA": "Benetako partziala betearazlea",
+      "AUTENTICA_PARCIAL_INFORMATIVA": "Benetako partziala informatiboa",
+      "SIMPLE": "Soila",
+      "TESTIMONIO_EJECUTIVO": "Testigantza betearazlea",
+      "TESTIMONIO_INFORMATIVO": "Testigantza informatiboa",
+      "CERTIFICADO_CONFORMIDAD_ASIENTO": "Idazpenaren adostasun ziurtagiria",
+      "TITULO_EJECUTIVO_EUROPEO": "Europako Titulu Betearazlea"
+    },
+    "parteParcial": "Kopia partzialaren edukia",
+    "parteParcialHint": "Kopia partziala eskatu duzu: mesedez, zehaztu zein finka edo alderdi agertu behar diren nahitaez (edo zein ez diren beharrezkoak).",
+    "notario": "Baimentzen duen notarioa",
+    "protocolo": "Protokolo zk.",
+    "asiento": "Idatzoharraren zk.",
+    "fecha": "Data",
+    "referencia": "Erreferentzia propioa",
+    "concepto": "Kontzeptua",
+    "entidadOrigen": "Jatorriaren erakundea",
+    "entidadOrigenPlaceholder": "Aukeratu bat…",
+    "entidadOrigenOtra": "Beste bat",
+    "sedasOficina": "SEDAS bulegoa",
+    "sedasExpediente": "SEDAS espedientea",
+    "sedasAutos": "SEDAS autoak",
+    "gcr": "GCR",
+    "codigoServicio": "Zerbitzu-kodea",
+    "titular": "Jatorrizko titularra",
+    "titularHint": "Eskatutako dokumentuan esku hartu zuen pertsona fisiko edo juridikoa, gaur egun titularra ez bada ere. Derrigorrezkoa protokolo-zenbakirik ez badago.",
+    "titularNif": "Jatorrizko titularraren IFZ/AIZ",
+    "notarioRequerido": "Adierazi baimentzen duen notarioa",
+    "entidadOrigenRequerida": "Adierazi jatorriaren erakundea",
+    "referenciaPropiaRequerida": "Adierazi eskaeraren beraren erreferentzia",
+    "referenciaRequerida": "Adierazi erreferentzia bat (propioa edo SEDAS)",
+    "titularRequerido": "Protokolorik gabe, adierazi jatorrizko titularra",
+    "adjuntoRequerido": "Nota sinplea erantsi behar da.",
+    "parteParcialRequerida": "Adierazi kopia partzialaren edukia."
   }
 }
