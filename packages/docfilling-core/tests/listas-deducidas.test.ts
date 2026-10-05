@@ -53,3 +53,16 @@ describe('subcampos que gobiernan condiciones', () => {
     expect([...l.subcampos.keys()].sort()).toEqual(['CASADO', 'CONYUGE', 'NOMBRE', 'TIPO']);
   });
 });
+
+import { marcarListasParaSonda, composeWithDiagnostics } from '../index';
+describe('marcarListasParaSonda', () => {
+  it('testigo de bucle y de condición alcanzada, sólo en las ramas que se toman', async () => {
+    const t = (await expandirIncludes('{{FOR EACH ITEM IN L}}{{IF ITEM.TIPO=="PF"}}{{INCLUDE PF(ITEM)}}{{ELSE}}{{INCLUDE PJ(ITEM)}}{{ENDIF}}{{ENDFOR}}',
+      repositorioDeMapa({ PF: '{{IF CASADO}}c{{ENDIF}}', PJ: '{{IF ES_SA}}sa{{ENDIF}}' }))).texto;
+    const sondado = (composeWithDiagnostics(marcarListasParaSonda(t), { L: [{ TIPO: 'PJ' }] } as never) as { text: string }).text;
+    expect(sondado).toContain('«L:L»');
+    expect(sondado).toContain('«C:L:TIPO»');
+    expect(sondado).toContain('«C:L:ES_SA»');
+    expect(sondado).not.toContain('CASADO');
+  });
+});
