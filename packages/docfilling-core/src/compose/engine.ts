@@ -632,6 +632,23 @@ export function processConditionals(
   };
 
   // Recursive evaluator — precedence: NOT (highest) > AND > OR (lowest).
+  // ¿Envuelve un único par de paréntesis la expresión ENTERA? `(A OR B)` sí;
+  // `(A) AND (B)` no —el primer `(` cierra antes del final—. Consciente de
+  // comillas, para no contar un paréntesis que va dentro de un valor.
+  const envueltaEnParentesis = (e: string): boolean => {
+    if (!e.startsWith("(") || !e.endsWith(")")) return false;
+    let depth = 0;
+    let quote: string | null = null;
+    for (let i = 0; i < e.length; i++) {
+      const c = e[i];
+      if (quote !== null) { if (quoteCloses(quote, c)) quote = null; continue; }
+      if ("'\"\u201c\u00ab".includes(c)) { quote = c; continue; }
+      if (c === "(") depth++;
+      else if (c === ")") { depth--; if (depth === 0 && i < e.length - 1) return false; }
+    }
+    return depth === 0;
+  };
+
   const evalExpr = (expr: string): boolean => {
     const e = expr.trim();
     if (!e) return false;
@@ -639,7 +656,11 @@ export function processConditionals(
     if (orParts.length > 1) return orParts.some((p) => evalExpr(p));
     const andParts = splitLogical(e, "AND");
     if (andParts.length > 1) return andParts.every((p) => evalExpr(p));
-    if (/^NOT\s+/i.test(e)) return !evalExpr(e.slice(3).trim());
+    // ⚠️ PARCHE A MANO (5-oct-2026). Sin esto un grupo `(…)` llegaba entero a
+    // `evalAtom`, que buscaba un campo llamado `(A` y daba FALSO: las 483
+    // condiciones con paréntesis de la biblioteca tomaban la rama equivocada.
+    if (/^NOT\s*\(/i.test(e) || /^NOT\s+/i.test(e)) return !evalExpr(e.slice(3).trim());
+    if (envueltaEnParentesis(e)) return evalExpr(e.slice(1, -1));
     return evalAtom(e);
   };
 

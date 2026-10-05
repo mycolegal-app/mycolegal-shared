@@ -1073,8 +1073,25 @@ function isValidIfExpression(expr: string): boolean {
   if (orParts.length > 1) return orParts.every(isValidIfExpression);
   const andParts = splitLogicalTop(e, "AND");
   if (andParts.length > 1) return andParts.every(isValidIfExpression);
-  if (/^NOT\s+/i.test(e)) return isValidIfExpression(e.slice(3).trim());
+  if (/^NOT\s*\(/i.test(e) || /^NOT\s+/i.test(e)) return isValidIfExpression(e.slice(3).trim());
+  // ⚠️ PARCHE A MANO (5-oct-2026): un grupo `(…)` que envuelve la expresión
+  // entera es válido; el motor lo evalúa desde la misma fecha (ver engine.ts).
+  if (envueltaEnParentesisTop(e)) return isValidIfExpression(e.slice(1, -1));
   return isValidIfAtom(e);
+}
+
+function envueltaEnParentesisTop(e: string): boolean {
+  if (!e.startsWith("(") || !e.endsWith(")")) return false;
+  let depth = 0;
+  let quote: string | null = null;
+  for (let i = 0; i < e.length; i++) {
+    const c = e[i];
+    if (quote !== null) { if (c === quote || (quote === "\u201c" && c === "\u201d") || (quote === "\u00ab" && c === "\u00bb")) quote = null; continue; }
+    if ("'\"\u201c\u00ab".includes(c)) { quote = c; continue; }
+    if (c === "(") depth++;
+    else if (c === ")") { depth--; if (depth === 0 && i < e.length - 1) return false; }
+  }
+  return depth === 0;
 }
 
 function checkMalformedDirectives(
