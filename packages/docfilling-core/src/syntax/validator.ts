@@ -1042,6 +1042,8 @@ function parseInAtomForValidation(atom: string): boolean {
   return false;
 }
 
+const RE_COUNT_EN_CONDICION = /^COUNT\s*\(\s*[\w.\u00C0-\u024F]+\s*\)\s*(<=|>=|==|!=|<|>)\s*\d+\s*$/i;
+
 function isValidIfAtom(atom: string): boolean {
   const upper = atom.trim().toUpperCase();
   if (!upper) return false;
@@ -1054,6 +1056,8 @@ function isValidIfAtom(atom: string): boolean {
   // desde el 3-oct-2026. Antes daban `E013` y la condición no protegía nada —
   // los 7 esquemas de cancelaciones BS. Ver `src/syntax/comparar.ts`.
   if (parseComparacionParaValidar(atom.trim())) return true;
+  // ⚠️ PARCHE A MANO (5-oct-2026): `COUNT(ARRAY) <op> número` en una condición.
+  if (RE_COUNT_EN_CONDICION.test(atom.trim())) return true;
   return false;
 }
 

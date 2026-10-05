@@ -590,6 +590,21 @@ export function processConditionals(
 
   // Evaluate a single non-logical atom (no AND / OR / NOT).
   const evalAtom = (atom: string): boolean => {
+    // ⚠️ PARCHE A MANO (5-oct-2026): `COUNT(ARRAY) <op> número`. La plantilla
+    // necesita saber si hay una finca o varias («FINCA HIPOTECADA» / «FINCAS
+    // HIPOTECADAS»); las de cancelaciones lo escribían `LEN(FINCAS) > 1`, que
+    // no existe y daba siempre falso. COUNT es la función que ya define la
+    // sintaxis (§ COUNT); aquí sólo se admite también dentro de un IF.
+    const mCount = atom.trim().match(/^COUNT\s*\(\s*([\w.\u00C0-\u024F]+)\s*\)\s*(<=|>=|==|!=|<|>)\s*(\d+)\s*$/i);
+    if (mCount) {
+      const arr = fields[mCount[1].toUpperCase()];
+      const n = Array.isArray(arr) ? arr.length : 0;
+      const k = Number(mCount[3]);
+      switch (mCount[2]) {
+        case "<=": return n <= k; case ">=": return n >= k; case "<": return n < k;
+        case ">": return n > k; case "==": return n === k; default: return n !== k;
+      }
+    }
     const inAtom = parseInAtom(atom);
     if (inAtom !== null) {
       const vals = splitTopCommas(inAtom.body).map((v) => v.trim().replace(QUOTE_RE, ""));
