@@ -919,6 +919,11 @@ export function processExitIncludes(content: string): string {
     }
     content = content.slice(0, begin) + inner + content.slice(end + INC_END_MARK.length);
   }
+  // ⚠️ PARCHE A MANO (6-oct-2026): también los CIERRES huérfanos. Un INCLUDE que abre dentro de
+  // un IF descartado y cierra fuera deja su `INC_END` sin pareja; quedaba en la salida, y sus
+  // `\x00` hacían inválido el XML del .docx (medido con la donación 0701: Word/LibreOffice no
+  // lo abrían).
+  content = content.split(INC_END_MARK).join("");
   return content.replace(/\{\{\s*EXIT_INCLUDE\s*\}\}/gi, "");
 }
 

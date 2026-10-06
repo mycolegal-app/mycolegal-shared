@@ -1,5 +1,9 @@
 # @mycolegal-app/docfilling-core
 
+## 0.1.15 — 6-oct-2026
+
+`processExitIncludes` quita también los **cierres** de INCLUDE huérfanos (`INC_END` sin su `INC_BEGIN`, cuando el INCLUDE abre dentro de un IF descartado y cierra fuera). Quedaban en la salida con sus `\x00` y hacían inválido el XML del `.docx`: la donación 0701 compuesta sin datos salía corrupta (ni Word ni LibreOffice la abrían). `tests/inc-end-huerfano.test.ts`.
+
 ## 0.1.14 — 6-oct-2026
 
 `offsetToLineCol` deja de ser cuadrática: índice de inicios de línea (cacheado para el último texto) y búsqueda binaria. `parseFields` la llama una vez por campo y recontaba los `\n` desde el principio en cada llamada: con la compraventa 0501 expandida (2,7 MB, 1.341 campos) eran **7,4 s de los 7,6 s de `esquemaDeCampos`**, con el proceso de Redactor bloqueado mientras tanto. Mismo resultado, fijado por `tests/offset-linea.test.ts`.
