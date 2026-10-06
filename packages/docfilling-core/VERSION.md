@@ -1,5 +1,9 @@
 # @mycolegal-app/docfilling-core
 
+## 0.1.14 — 6-oct-2026
+
+`offsetToLineCol` deja de ser cuadrática: índice de inicios de línea (cacheado para el último texto) y búsqueda binaria. `parseFields` la llama una vez por campo y recontaba los `\n` desde el principio en cada llamada: con la compraventa 0501 expandida (2,7 MB, 1.341 campos) eran **7,4 s de los 7,6 s de `esquemaDeCampos`**, con el proceso de Redactor bloqueado mientras tanto. Mismo resultado, fijado por `tests/offset-linea.test.ts`.
+
 ## 0.1.1 — 3-oct-2026
 
 Misma corrección que `ai-core@0.1.2`: el `exports` de los 7 subpaths sólo declaraba `import`, y un consumidor que resolviera por `require` fallaba con «No "exports" main defined». Añadida la condición `default`. No cambia nada del motor.

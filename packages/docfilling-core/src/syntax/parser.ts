@@ -226,12 +226,35 @@ export function classifyField(content: string): FieldType {
 // Helpers
 // =============================================================================
 
+/**
+ * Línea y columna (1-based) de un desplazamiento.
+ *
+ * ⚠️ Con ÍNDICE de inicios de línea y búsqueda binaria, no recontando desde el principio:
+ * `parseFields` la llama una vez por campo, y la versión que cortaba el texto y contaba los
+ * `\n` en cada llamada era CUADRÁTICA. Medido el 6-oct-2026 con la compraventa 0501
+ * expandida (2,7 MB, 1.341 campos): 7,4 s de los 7,6 s de `esquemaDeCampos`, con el
+ * proceso de Redactor bloqueado entero mientras tanto (hasta 22 s sin atender a nadie
+ * durante una generación). El índice se guarda para el último texto: las llamadas de un
+ * mismo análisis comparten texto.
+ */
+let indiceDe: { text: string; inicios: number[] } | null = null;
+function iniciosDeLinea(text: string): number[] {
+  if (indiceDe && indiceDe.text === text) return indiceDe.inicios;
+  const inicios = [0];
+  for (let i = text.indexOf("\n"); i >= 0; i = text.indexOf("\n", i + 1)) inicios.push(i + 1);
+  indiceDe = { text, inicios };
+  return inicios;
+}
+
 export function offsetToLineCol(text: string, offset: number): [number, number] {
-  const before = text.slice(0, offset);
-  const line = (before.match(/\n/g) || []).length + 1;
-  const lastNl = before.lastIndexOf("\n");
-  const col = offset - lastNl; // 1-based
-  return [line, col];
+  const inicios = iniciosDeLinea(text);
+  // La última línea cuyo inicio es <= offset.
+  let lo = 0, hi = inicios.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (inicios[mid] <= offset) lo = mid; else hi = mid - 1;
+  }
+  return [lo + 1, offset - inicios[lo] + 1];
 }
 
 function _scanParenBody(
