@@ -28,6 +28,11 @@
 import type { RepositorioRequisitos, ReglaGolden, NodoTipo } from '@mycolegal-app/requisitos-core';
 import { ORIGEN_GOLDEN } from '@mycolegal-app/requisitos-core';
 
+// Se declara aquí y no se importa: `requisitos-core` lo exporta desde la versión de las dos
+// capas, y la dependencia es `>=0.1.0`. Con una app que tenga el core anterior, el import
+// llegaría `undefined` y el `[...]` reventaría en tiempo de ejecución.
+const ORIGENES_UNIVERSAL = [ORIGEN_GOLDEN, 'BASICO'] as const;
+
 /**
  * Lo que el adaptador necesita del cliente: tres modelos, sólo lectura.
  *
@@ -70,10 +75,12 @@ const INCLUDE_GOLDEN = {
   evidenciaGrupo: { include: { documentos: { orderBy: { prioridad: 'asc' } } } },
 } as const;
 
-/** Golden = `origen IA`; básica = todo lo demás. Es el filtro de capa, y vive
- *  en el adaptador porque es una cláusula `where`, no una decisión del motor. */
-function whereCapa(golden: boolean): Record<string, unknown> {
-  return golden ? { origen: ORIGEN_GOLDEN } : { origen: { not: ORIGEN_GOLDEN } };
+/** Catálogo universal = `origen` IA (o el BASICO de cuando el libro era otra capa);
+ *  heredada = todo lo demás. Es el filtro de capa, y vive en el adaptador porque es
+ *  una cláusula `where`, no una decisión del motor. */
+function whereCapa(universal: boolean): Record<string, unknown> {
+  const origenes = [...ORIGENES_UNIVERSAL];
+  return universal ? { origen: { in: origenes } } : { origen: { notIn: origenes } };
 }
 
 /**
@@ -124,7 +131,7 @@ export function crearRepositorioRequisitos(client: ClienteGolden): RepositorioRe
     async actosConGolden(actoCodigos) {
       if (actoCodigos.length === 0) return new Set();
       const filas = await client.legalActDocumentGlobal.findMany({
-        where: { actoCodigo: { in: actoCodigos }, origen: ORIGEN_GOLDEN, active: true },
+        where: { actoCodigo: { in: actoCodigos }, origen: { in: [...ORIGENES_UNIVERSAL] }, active: true },
         select: { actoCodigo: true },
         distinct: ['actoCodigo'],
       }) as { actoCodigo: string | null }[];
