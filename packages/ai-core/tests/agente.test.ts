@@ -30,6 +30,26 @@ const pide = (name: string, args: Record<string, unknown> = {}) => ({
 });
 
 describe('conversarConHerramientas', () => {
+  it('devuelve al modelo su turno ENTERO, con la thoughtSignature de Gemini 3', async () => {
+    const conFirma = {
+      candidates: [{ content: { parts: [
+        { text: 'Voy a buscar.' },
+        { functionCall: { name: 'buscar', args: { q: 'x' } }, thoughtSignature: 'FIRMA-123' },
+      ] } }],
+      usageMetadata: { promptTokenCount: 20, candidatesTokenCount: 8 },
+    };
+    const m = modeloGuionado([conFirma, texto('Hecho.')]);
+    const r = await conversarConHerramientas({
+      llamar: m.llamar, systemPrompt: 's', pregunta: 'p',
+      herramientas: HERRAMIENTAS, ejecutar: async () => ({ texto: 'resultado' }),
+    });
+    expect(r.texto).toBe('Hecho.');
+    const segunda = m.vistos[1] as { contents: { role: string; parts: Record<string, unknown>[] }[] };
+    const turnoModelo = segunda.contents.find((c) => c.role === 'model')!;
+    expect(turnoModelo.parts).toContainEqual({ functionCall: { name: 'buscar', args: { q: 'x' } }, thoughtSignature: 'FIRMA-123' });
+    expect(turnoModelo.parts).toContainEqual({ text: 'Voy a buscar.' });
+  });
+
   it('sin herramientas pedidas, contesta y para', async () => {
     const m = modeloGuionado([texto('La respuesta.')]);
     const r = await conversarConHerramientas({

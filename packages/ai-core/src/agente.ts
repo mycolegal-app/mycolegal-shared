@@ -80,6 +80,9 @@ interface Parte {
   text?: string;
   functionCall?: { name: string; args?: Record<string, unknown> };
   functionResponse?: { name: string; response: unknown };
+  /** Gemini 3: firma del razonamiento que acompaña a un `functionCall`. Hay que
+   *  devolverla tal cual en la vuelta siguiente o la API responde 400. */
+  thoughtSignature?: string;
 }
 interface Contenido { role: 'user' | 'model' | 'function'; parts: Parte[] }
 
@@ -117,7 +120,13 @@ export async function conversarConHerramientas(o: OpcionesAgente): Promise<Resul
 
     // Se guarda lo que el modelo pidió ANTES de ejecutar: el protocolo exige que
     // la petición esté en la conversación para que la respuesta case con ella.
-    contents.push({ role: 'model', parts: llamadas.map((functionCall) => ({ functionCall })) });
+    //
+    // ⚠️ El turno del modelo va ENTERO, tal como llegó, y no reconstruido con sólo
+    // sus `functionCall`: Gemini 3 adjunta a cada llamada una `thoughtSignature` que
+    // exige de vuelta («Function call is missing a thought_signature», 400). Con la
+    // reconstrucción, cualquier conversación que usara una herramienta fallaba en la
+    // segunda vuelta (medido el 7-oct-2026 con gemini-3.7-flash en Redactor).
+    contents.push({ role: 'model', parts: partes });
 
     const respuestas: Parte[] = [];
     for (const c of llamadas) {

@@ -1,5 +1,9 @@
 # @mycolegal-app/ai-core
 
+## 0.1.4 — 7-oct-2026
+
+`conversarConHerramientas` devolvía al modelo su turno RECONSTRUIDO con sólo los `functionCall`, y Gemini 3 exige de vuelta la `thoughtSignature` que acompaña a cada llamada: cualquier conversación que usara una herramienta fallaba en la segunda vuelta con un 400 («Function call is missing a thought_signature»). Ahora el turno del modelo vuelve entero, tal como llegó. Afectaba al MycoBot de la Librería de Redactor (el único consumidor) y al chat de la generación (F6). Test nuevo en `tests/agente.test.ts`.
+
 ## 0.1.2 — 3-oct-2026
 
 El `exports` sólo declaraba la condición `import`, así que cualquier consumidor que no resolviera por ella —`tsx` tratando un `.ts` de la app como CJS, por ejemplo— moría con «No "exports" main defined», un mensaje que no dice nada de lo que pasa. Añadida la condición `default`, que cubre `require` y cualquier otra que venga.
