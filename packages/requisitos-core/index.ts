@@ -32,6 +32,6 @@ export {
   type NodoTipo,
 } from './src/puerto';
 
-export { decidirCapa, enCapaQueManda, capaDeFila, ORIGEN_GOLDEN, ORIGEN_LIBRO, type Capa, type CapaResuelta } from './src/capa';
+export { decidirCapa, enCapaQueManda, capaDeFila, ORIGEN_GOLDEN, ORIGENES_UNIVERSAL, type Capa, type CapaResuelta } from './src/capa';
 
 export { esMencion, MODOS_MENCION, type ReglaMencionable } from './src/menciones';

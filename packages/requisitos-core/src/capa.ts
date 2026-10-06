@@ -1,31 +1,27 @@
-// Las TRES capas del catálogo de requisitos documentales y quién lee cuál.
+// Las DOS capas del catálogo de requisitos documentales y quién lee cuál.
 //
-// En `legal_act_documents_global` conviven tres catálogos, discriminados por `origen`:
+// En `legal_act_documents_global` conviven dos catálogos, discriminados por `origen`:
 //
-//   · GOLDEN   (`origen = IA`)     — 34 actos contrastados uno a uno contra su
-//                                    plantilla de DocFilling. Reglas con hechos,
-//                                    casos y fundamento.
-//   · LIBRO    (`origen = BASICO`) — el libro básico de Javier convertido a
-//                                    golden-files: 925 reglas, 154 actos y 292
-//                                    transversales. **Sin revisar.**
-//   · HEREDADA (el resto)          — lo que había en las copias per-org de
-//                                    producción, códigos `MIG:…`: documentos
-//                                    planos por acto y CCAA, sin condiciones.
+//   · UNIVERSAL (`origen = IA`) — el catálogo universal: todo lo que carga el
+//                                 cargador del golden desde el contrato, curado
+//                                 contra DocFilling o venido del libro básico de
+//                                 Javier. Cuánto está revisada cada regla lo dice
+//                                 su `estado`, no su capa.
+//   · HEREDADA  (el resto)      — la legacy: lo que había en las copias per-org de
+//                                 producción, códigos `MIG:…`: documentos planos
+//                                 por acto y CCAA, sin condiciones.
 //
-// Eran dos hasta el 4-oct-2026; el libro entró con capa propia por decisión de
-// Carles (§7 bis del diseño) y no reutilizando `MIGRADA`, porque no cabía: el
-// índice único parcial de la básica impone una regla por coordenada y las 925 del
-// libro chocaban con las heredadas.
+// Fueron tres entre el 4 y el 6-oct-2026: el libro iba en una capa propia
+// (`BASICO`) que se encendía con CAPA_LIBRO. Decisión de Carles del 6-oct: una
+// sola. El cargador ya no escribe `BASICO`; si alguna base lo conserva, cuenta
+// como universal.
 //
-// - **Lo que decide por el expediente** (Notaría, Revisor, DocFilling) elige por
-//   acto y por especificidad: golden si el acto está curado, si no el libro si lo
-//   cubre, si no la heredada.
+// - **Lo que decide por el expediente** elige por acto: el universal si el acto
+//   lo sirve, y si no la heredada.
 // - **Las pantallas de curación de la Lista básica** siguen viendo la HEREDADA.
-//   Apuntarlas al libro es otra decisión: hoy el libro está sin revisar.
 //
-// ⚠️ ESTE FICHERO VA UN PASO POR DETRÁS de los gemelos de las apps mientras el
-// paquete no se publique. Los adaptadores llevan `BASICO` declarado en local; al
-// publicar, que lo tomen de aquí.
+// Los nombres con «golden» (`soloGolden`, `actosConGolden`, `capa: 'golden'`) son
+// del catálogo universal: se quedan por no romper la interfaz del puerto.
 //
 // ⚠️ QUÉ CAMBIA AL SUBIR A PAQUETE, Y POR QUÉ
 //
@@ -42,27 +38,24 @@ import type { RepositorioRequisitos } from './puerto';
 
 export type Capa = 'auto' | 'golden' | 'basica';
 
-/** Origen que marca una regla del golden curado. */
+/** Origen con que el cargador escribe el catálogo universal. */
 export const ORIGEN_GOLDEN = 'IA' as const;
-/** Origen que marca una regla del libro básico convertido (§7 bis, 4-oct-2026). */
-export const ORIGEN_LIBRO = 'BASICO' as const;
+/** Lo que cuenta como catálogo universal: `IA` y el `BASICO` de cuando el libro era otra capa. */
+export const ORIGENES_UNIVERSAL = [ORIGEN_GOLDEN, 'BASICO'] as const;
 
-/** La capa que de verdad sirve, ya resuelta. De más específica a más genérica. */
-export type CapaResuelta = 'GOLDEN' | 'LIBRO' | 'HEREDADA';
+/** La capa que de verdad sirve, ya resuelta. */
+export type CapaResuelta = 'UNIVERSAL' | 'HEREDADA';
 
 /** A qué capa pertenece una fila, por su `origen`. */
 export function capaDeFila(origen: string): CapaResuelta {
-  if (origen === ORIGEN_GOLDEN) return 'GOLDEN';
-  if (origen === ORIGEN_LIBRO) return 'LIBRO';
-  return 'HEREDADA';
+  return (ORIGENES_UNIVERSAL as readonly string[]).includes(origen) ? 'UNIVERSAL' : 'HEREDADA';
 }
 
 /**
- * ¿Se sirve el golden para este acto?
+ * ¿Sirve el catálogo universal este acto?
  *
- * `auto` es lo que usa todo lo que decide por el expediente: golden si el acto lo
- * tiene, y si no la lista de siempre. Que el fallback exista es lo que permite
- * servir los 33 actos y no sólo los curados.
+ * `auto` es lo que usa todo lo que decide por el expediente: el universal si el
+ * acto lo tiene, y si no la heredada.
  */
 export async function decidirCapa(
   repo: RepositorioRequisitos,
@@ -80,16 +73,15 @@ export async function decidirCapa(
  *
  * ⚠️ Una regla de ámbito TODOS, FAMILIA o SUBFAMILIA no lleva acto, así que no hay
  * acto al que preguntarle qué capa le manda y cuenta como HEREDADA — o sea que las
- * 292 transversales del libro salen de aquí INVISIBLES. Es lo mismo que pasaba
+ * transversales del catálogo salen de aquí INVISIBLES. Es lo mismo que pasaba
  * antes y está pendiente a propósito: lo arregla el resolutor de cuatro ámbitos,
  * que es quien sabe a qué actos alcanza cada una.
  */
 export function enCapaQueManda(
   fila: { actoCodigo: string | null; origen: string },
-  golden: Set<string>,
-  libro: Set<string>,
+  universal: Set<string>,
 ): boolean {
   const a = fila.actoCodigo;
-  const manda: CapaResuelta = a && golden.has(a) ? 'GOLDEN' : a && libro.has(a) ? 'LIBRO' : 'HEREDADA';
+  const manda: CapaResuelta = a && universal.has(a) ? 'UNIVERSAL' : 'HEREDADA';
   return capaDeFila(fila.origen) === manda;
 }
