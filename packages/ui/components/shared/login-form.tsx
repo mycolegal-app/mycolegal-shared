@@ -132,6 +132,9 @@ export function LoginForm({
   // Org selection state (superadmin flow)
   const [orgs, setOrgs] = useState<Organization[] | null>(null);
   const [selectToken, setSelectToken] = useState<string | null>(null);
+  // Última org elegida por el superadmin (auth la recuerda, una para todas las
+  // apps): se pinta marcada y con el foco, así que basta con pulsar Intro.
+  const [lastOrgId, setLastOrgId] = useState<string | null>(null);
   const [userName, setUserName] = useState("");
 
   // Pending-activation state (invited user logging in — we resend the activation email)
@@ -208,6 +211,7 @@ export function LoginForm({
     if (data.requiresOrgSelection) {
       setOrgs(data.organizations);
       setSelectToken(data.selectToken);
+      setLastOrgId(data.lastOrgId ?? null);
       setUserName(data.user?.displayName || "");
       return;
     }
@@ -322,6 +326,7 @@ export function LoginForm({
   function handleBackToLogin() {
     setOrgs(null);
     setSelectToken(null);
+    setLastOrgId(null);
     setUserName("");
     setPassword("");
     setError("");
@@ -449,18 +454,29 @@ export function LoginForm({
               )}
 
               <div className="mt-6 space-y-2 max-h-80 overflow-y-auto">
-                {orgs.map((org) => (
-                  <button
-                    key={org.id}
-                    type="button"
-                    disabled={loading}
-                    onClick={() => handleOrgSelect(org.id)}
-                    className="w-full text-left rounded-lg border border-mc-neutral-300 bg-white px-4 py-3 hover:border-mc-primary-400 hover:bg-mc-primary-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <span className="font-medium text-mc-slate-900">{org.name}</span>
-                    <span className="block text-xs text-mc-slate-400">{org.slug}</span>
-                  </button>
-                ))}
+                {orgs.map((org) => {
+                  const isLast = org.id === lastOrgId;
+                  return (
+                    <button
+                      key={org.id}
+                      type="button"
+                      disabled={loading}
+                      autoFocus={isLast}
+                      onClick={() => handleOrgSelect(org.id)}
+                      className={`w-full text-left rounded-lg border px-4 py-3 hover:border-mc-primary-400 hover:bg-mc-primary-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                        isLast ? "border-mc-primary-500 bg-mc-primary-50 ring-1 ring-mc-primary-500" : "border-mc-neutral-300 bg-white"
+                      }`}
+                    >
+                      <span className="flex items-center justify-between gap-2">
+                        <span className="font-medium text-mc-slate-900">{org.name}</span>
+                        {isLast && (
+                          <span className="shrink-0 text-xs font-medium text-mc-primary-700">{t("ui.login.selectOrgLast")}</span>
+                        )}
+                      </span>
+                      <span className="block text-xs text-mc-slate-400">{org.slug}</span>
+                    </button>
+                  );
+                })}
               </div>
 
               <button

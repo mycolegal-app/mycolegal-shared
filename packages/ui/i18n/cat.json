@@ -307,6 +307,7 @@
       "backToLogin": "← Tornar al login",
       "selectOrgTitle": "Selecciona organització",
       "selectOrgIntro": "Hola {name}, tria amb quina organització vols treballar",
+      "selectOrgLast": "Última utilitzada",
       "title": "Iniciar sessió",
       "subtitle": "Introdueix les teves credencials per accedir",
       "email": "Correu electrònic",

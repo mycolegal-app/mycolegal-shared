@@ -307,6 +307,7 @@
       "backToLogin": "← Volver al login",
       "selectOrgTitle": "Selecciona organización",
       "selectOrgIntro": "Hola {name}, elige con qué organización deseas trabajar",
+      "selectOrgLast": "Última utilizada",
       "title": "Iniciar sesión",
       "subtitle": "Introduce tus credenciales para acceder",
       "email": "Correo electrónico",
