@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   metadatosDeEsquema, metadatosDeParrafo, validateText, compose, parseFields, FieldType,
-  esquemaDeCampos,
+  esquemaDeCampos, camposSoloCondicionales,
 } from '../index';
 
 const ESQUEMA = `{{SCHEMA_ACT:1104}}
@@ -81,5 +81,26 @@ describe('SCHEMA_ACT en el lenguaje', () => {
     expect(doble.diagnostics.some((d) => d.code === 'W120')).toBe(true);
     const bien = validateText(ESQUEMA);
     expect(bien.diagnostics.some((d) => d.code === 'E120' || d.code === 'W120')).toBe(false);
+  });
+});
+
+// F5.22 (6-oct-2026): un campo que se PINTA no puede ser «sólo condicional»,
+// aunque su nombre contenga `IF_` (NIF_, CIF_) o su instrucción diga «el NIF del…».
+describe('camposSoloCondicionales: la palabra condicional abre la directiva', () => {
+  it('PJ_NIF_VEND se pinta y por tanto se pregunta', () => {
+    const t = '{{DECLARE PJ_NIF_VEND:[NIF de la entidad.]}}\n{{IF PJ_NIF_VEND}}con NIF {{PJ_NIF_VEND}}{{ENDIF}}';
+    const c = esquemaDeCampos(t, {}).campos.find((x: { nombre: string }) => x.nombre === 'PJ_NIF_VEND');
+    expect(c?.soloCondicional).toBe(false);
+  });
+  it('una instrucción que menciona «el NIF del» sigue contando como pintado', () => {
+    const t = '{{IF X}}a{{ENDIF}} {{X:[Extrae el NIF del vendedor]}}';
+    const c = esquemaDeCampos(t, {}).campos.find((x: { nombre: string }) => x.nombre === 'X');
+    expect(c?.soloCondicional).toBe(false);
+  });
+  it('un campo sólo en condiciones sigue siendo sólo condicional', () => {
+    const t = '{{IF HAY_HIPOTECA}}Con hipoteca.{{ELSE}}Libre.{{ENDIF}} Precio {{PRECIO}}.';
+    const solo = camposSoloCondicionales(t, { camposDeSistema: new Set(), camposPredefinidos: new Set() });
+    expect(solo.has('HAY_HIPOTECA')).toBe(true);
+    expect(solo.has('PRECIO')).toBe(false);
   });
 });

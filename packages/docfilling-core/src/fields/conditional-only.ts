@@ -6,7 +6,9 @@
 // Si este cálculo se desvía, la frontera pedirá datos que no hacen falta (o
 // dejará de pedir los que sí).
 
-const PALABRAS_CONDICIONALES = ['IF', 'ELSE', 'ENDIF'] as const;
+/** `{{IF …}}`, `{{IF_X}}`, `{{ELSE}}`, `{{ELSE_X}}`, `{{ENDIF}}`, `{{ENDIF_X}}`, `{{END IF}}`,
+ *  `{{END_IF}}`: la palabra va AL PRINCIPIO del cuerpo. */
+const ES_CONDICIONAL = /^(?:IF|ELSE|ENDIF|END[\s_]+IF)(?:[\s_]|$)/i;
 
 /** Quita el sufijo `:HELP(fichero)` del cuerpo de un campo. */
 function quitarHelp(cuerpo: string): string {
@@ -33,9 +35,13 @@ export function camposSoloCondicionales(
   for (const m of plantilla.matchAll(/\{\{([^}]+)\}\}/g)) {
     const cuerpo = quitarHelp(m[1]);
     if (
-      PALABRAS_CONDICIONALES.some(
-        (k) => cuerpo.includes(`${k} `) || cuerpo.includes(`${k}_`) || cuerpo === k,
-      )
+      // ⚠️ La palabra condicional tiene que ABRIR la directiva. Antes era
+      // `includes`, y `NIF_` contiene `IF_`: `{{PJ_NIF_VEND}}` se tomaba por un
+      // condicional, no contaba como pintado y el campo —que sí se imprime— se
+      // marcaba «sólo condicional»: salía en blanco y nunca se preguntaba. 264
+      // apariciones en la biblioteca (6-oct-2026, F5.22). Lo mismo con una
+      // instrucción que mencione «el NIF del…» (`NIF ` contiene `IF `).
+      ES_CONDICIONAL.test(cuerpo.trim())
     ) continue;
     if (cuerpo.startsWith('@autonumber:')) continue;
     if (cuerpo.startsWith('DECLARE ')) continue;
