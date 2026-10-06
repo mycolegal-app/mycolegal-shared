@@ -169,6 +169,12 @@ export function evaluar(
   hechos: Hechos,
   ambitoDe: (fact: string) => string,
   presunciones: Record<string, unknown> = {},
+  /**
+   * Cómo se decide que un rol cumple el `scopeRolCodigo` de una condición. Opcional y con
+   * igualdad por defecto para no romper a quien ya llama a `evaluar` con cuatro argumentos;
+   * el motor le pasa el recorrido por la jerarquía.
+   */
+  esUnRol: (rol: string | null | undefined, exigido: string) => boolean = (rol, exigido) => rol === exigido,
 ): { valor: Ternario; faltan: string[]; presumidos: string[] } {
   if (condiciones.length === 0) return { valor: true, faltan: [], presumidos: [] };
   // Tercera fuente de valor, después del dato: lo que el escenario base presume. Solo
@@ -202,7 +208,7 @@ export function evaluar(
         // Sujetos y objetos: basta que UNO haga match. Con `scopeRolCodigo` se acota a
         // los que tienen ese rol -«casado, pero el VENDEDOR»-.
         const cands = ambito === 'SUJETO'
-          ? (hechos.sujetos ?? []).filter((s) => !c.scopeRolCodigo || s.rol === c.scopeRolCodigo)
+          ? (hechos.sujetos ?? []).filter((s) => !c.scopeRolCodigo || esUnRol(s.rol, c.scopeRolCodigo))
           : (hechos.objetos ?? []);
         // Sin intervinientes u objetos, la presunción hace de interviniente u objeto virtual.
         // El tipo de bien o de interviniente no es un atributo: vive en `tipo`, no en
@@ -321,23 +327,33 @@ export async function resolverRequisitos(
   // INMUEBLE no encuentra una VIVIENDA, y los requisitos MÁS BÁSICOS -la nota simple, la
   // referencia catastral- generan CERO instancias. Se ve solo al contar instancias, no al
   // contar requisitos: la regla aparece en la lista y no materializa nada.
-  const [tiposObj, tiposSuj] = await Promise.all([
+  const [tiposObj, tiposSuj, tiposRol] = await Promise.all([
     repo.tiposDeObjeto(),
     repo.tiposDeSujeto(),
+    repo.tiposDeRol(),
   ]);
   const padres = new Map<string, string | null>();
   for (const t of [...tiposObj, ...tiposSuj]) padres.set(t.codigo, t.parentCodigo);
+  // Mapa APARTE para los roles. Hoy no hay ni un código repetido entre los tres catálogos
+  // —comprobado—, así que cabrían en el mismo; pero una colisión futura entre, digamos, un
+  // tipo de sujeto y un rol homónimos daría un padre equivocado sin avisar de nada.
+  const padresRol = new Map<string, string | null>();
+  for (const t of tiposRol) padresRol.set(t.codigo, t.parentCodigo);
+  const sube = (mapa: Map<string, string | null>) =>
+    (tipo: string | null | undefined, exigido: string): boolean => {
+      let t: string | null | undefined = tipo;
+      const visto = new Set<string>();
+      while (t && !visto.has(t)) {
+        if (t === exigido) return true;
+        visto.add(t);
+        t = mapa.get(t) ?? null;
+      }
+      return false;
+    };
   /** `VIVIENDA` cumple una regla que pide `URBANO`, `INMUEBLE` u `OBJETO`. */
-  const esUn = (tipo: string | null | undefined, exigido: string): boolean => {
-    let t: string | null | undefined = tipo;
-    const visto = new Set<string>();
-    while (t && !visto.has(t)) {
-      if (t === exigido) return true;
-      visto.add(t);
-      t = padres.get(t) ?? null;
-    }
-    return false;
-  };
+  const esUn = sube(padres);
+  /** Y un `VENDEDOR` cumple una regla escrita para `DISPONENTE`. Mismo recorrido, otro mapa. */
+  const esUnRol = sube(padresRol);
 
   // La consulta la hace el adaptador: aquí sólo se le dice QUÉ se quiere. El
   // filtro de capa, los `include` y los `orderBy` son suyos, y es lo que permite
@@ -408,7 +424,7 @@ export async function resolverRequisitos(
       fact: `${c.atributoDef.ambito}.${c.atributoDef.codigo}`,
       operador: c.operador, valor: c.valor, scopeRolCodigo: c.scopeRolCodigo, grupo: c.grupo,
     }));
-    const porCondicion = evaluar(conds, hechos, ambitoDe, presunciones);
+    const porCondicion = evaluar(conds, hechos, ambitoDe, presunciones, esUnRol);
     const tiposRegla = r.objetos.map((o) => o.objetoTipoCodigo);
     const acotaPorObjeto = tiposRegla.length > 0 && tiposRegla.every(estrecha);
     const tipoObjPres = typeof presunciones[FACT_TIPO_OBJETO] === 'string' ? (presunciones[FACT_TIPO_OBJETO] as string) : undefined;
@@ -459,7 +475,7 @@ export async function resolverRequisitos(
       porPresuncion: valor === null ? [] : [...new Set([...porCondicion.presumidos, ...presumidosTipo])],
       roles: [...new Set(r.roles.map((x) => x.rolCodigo).filter(Boolean) as string[])],
       hechosQueDecide: [...new Set([...conds.map((c) => c.fact), ...(acotaPorObjeto ? [FACT_TIPO_OBJETO] : []), ...(tiposSujeto.length ? [FACT_TIPO_SUJETO] : [])])],
-      instancias: expandir(r.scopeGeneracion, r.roles, r.objetos, hechos, esUn),
+      instancias: expandir(r.scopeGeneracion, r.roles, r.objetos, hechos, esUn, esUnRol),
     };
 
     if (valor === false) descartados.push(resuelto);
@@ -527,10 +543,13 @@ function expandir(
   objetos: { objetoTipoCodigo: string }[],
   hechos: Hechos,
   esUn: (tipo: string | null | undefined, exigido: string) => boolean,
+  esUnRol: (rol: string | null | undefined, exigido: string) => boolean,
 ): { sujetoId?: string; objetoId?: string }[] {
   const rolesOk = roles.map((r) => r.rolCodigo).filter(Boolean) as string[];
   const tiposOk = objetos.map((o) => o.objetoTipoCodigo);
-  const sujetos = (hechos.sujetos ?? []).filter((s) => rolesOk.length === 0 || (s.rol && rolesOk.includes(s.rol)));
+  // is-a también aquí: el expediente dice VENDEDOR y la regla pide DISPONENTE. Antes era un
+  // `includes` sobre la cadena, y por eso las reglas genéricas no generaban ni una instancia.
+  const sujetos = (hechos.sujetos ?? []).filter((s) => rolesOk.length === 0 || rolesOk.some((r) => esUnRol(s.rol, r)));
   // is-a, NO igualdad: la regla pide INMUEBLE y el expediente trae una VIVIENDA.
   const objs = (hechos.objetos ?? []).filter((o) => tiposOk.length === 0 || tiposOk.some((t) => esUn(o.tipo, t)));
 

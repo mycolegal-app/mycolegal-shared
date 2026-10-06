@@ -107,6 +107,16 @@ export interface RepositorioRequisitos {
   /** Jerarquía de tipos de sujeto (`sujeto_tipo_global`). */
   tiposDeSujeto(): Promise<NodoTipo[]>;
 
+  /**
+   * Jerarquía de ROLES (`rol_sujeto_global`). Llegó tarde —hasta octubre de 2026 el rol se
+   * comparaba por igualdad de cadena— y ésa era la causa de que 81 reglas no alcanzaran a
+   * nadie: las que el curador escribió sobre `ADQUIRENTE`, `DISPONENTE`, `CAUSAHABIENTE` y
+   * `HEREDERO` para no repetir la identidad, el titular real o la ficha ATC en cada hijo.
+   * Los cuatro nodos con hijos del catálogo llevan reglas encima: la jerarquía no era
+   * decorativa, simplemente no la leía nadie.
+   */
+  tiposDeRol(): Promise<NodoTipo[]>;
+
   /** ¿Cuáles de estos actos tienen golden activo? Decide la capa en modo `auto`. */
   actosConGolden(actoCodigos: string[]): Promise<Set<string>>;
 }

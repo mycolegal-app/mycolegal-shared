@@ -48,6 +48,7 @@ export interface ClienteGolden {
   legalActDocumentGlobal: { findMany(args: any): Promise<any[]> };
   objetoTipoGlobal: { findMany(args: any): Promise<any[]> };
   sujetoTipoGlobal: { findMany(args: any): Promise<any[]> };
+  rolSujetoGlobal: { findMany(args: any): Promise<any[]> };
   /* eslint-enable @typescript-eslint/no-explicit-any */
 }
 
@@ -108,6 +109,13 @@ export function crearRepositorioRequisitos(client: ClienteGolden): RepositorioRe
 
     async tiposDeSujeto() {
       const filas = await client.sujetoTipoGlobal.findMany({
+        select: { codigo: true, parentCodigo: true },
+      });
+      return filas as NodoTipo[];
+    },
+
+    async tiposDeRol() {
+      const filas = await client.rolSujetoGlobal.findMany({
         select: { codigo: true, parentCodigo: true },
       });
       return filas as NodoTipo[];

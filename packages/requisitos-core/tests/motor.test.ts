@@ -72,6 +72,46 @@ describe('resolverRequisitos', () => {
     expect(r.firmes[0].instancias).toEqual([{ objetoId: 'o1' }]);
   });
 
+  it('⚠️ la jerarquía is-a TAMBIÉN en el rol: un VENDEDOR cumple una regla escrita para DISPONENTE', async () => {
+    // Hasta octubre de 2026 el rol se comparaba con `includes` sobre la cadena, y por eso las
+    // 81 reglas que el curador colgó de ADQUIRENTE, DISPONENTE, CAUSAHABIENTE y HEREDERO —la
+    // identidad, el titular real, la ficha notarial ATC, el AJD— no alcanzaban a ningún
+    // expediente cuyo sujeto dijera VENDEDOR, COMPRADOR o HEREDERO. Mismo síntoma que tenía el
+    // objeto: la regla sale en la lista y materializa cero instancias.
+    const reglas = [regla({
+      codigo: 'ACTIVO_ESENCIAL', scopeGeneracion: 'POR_SUJETO',
+      roles: [{ rolCodigo: 'DISPONENTE', sujetoTipoCodigo: null }],
+    })];
+    const r = await resolverRequisitos(repo({ ...BASE, reglas }), '0501', {
+      sujetos: [{ id: 's1', rol: 'VENDEDOR', tipo: null, hechos: {} }],
+    });
+    expect(r.firmes).toHaveLength(1);
+    expect(r.firmes[0].instancias).toEqual([{ sujetoId: 's1' }]);
+  });
+
+  it('y el rol de otra rama no la cumple: un COMPRADOR no es un DISPONENTE', async () => {
+    const reglas = [regla({
+      codigo: 'ACTIVO_ESENCIAL', scopeGeneracion: 'POR_SUJETO',
+      roles: [{ rolCodigo: 'DISPONENTE', sujetoTipoCodigo: null }],
+    })];
+    const r = await resolverRequisitos(repo({ ...BASE, reglas }), '0501', {
+      sujetos: [{ id: 's1', rol: 'COMPRADOR', tipo: null, hechos: {} }],
+    });
+    expect(r.firmes[0].instancias).toEqual([]);
+  });
+
+  it('el nieto también: un TRANSMISARIO cumple una regla de CAUSAHABIENTE', async () => {
+    // CAUSAHABIENTE → HEREDERO → TRANSMISARIO. Son las 42 reglas de la adjudicación sucesoria.
+    const reglas = [regla({
+      codigo: 'FICHA_ATC', scopeGeneracion: 'POR_SUJETO',
+      roles: [{ rolCodigo: 'CAUSAHABIENTE', sujetoTipoCodigo: null }],
+    })];
+    const r = await resolverRequisitos(repo({ ...BASE, reglas }), '1103', {
+      sujetos: [{ id: 's1', rol: 'TRANSMISARIO', tipo: null, hechos: {} }],
+    });
+    expect(r.firmes[0].instancias).toEqual([{ sujetoId: 's1' }]);
+  });
+
   it('y NO la cumple un tipo de otra rama', async () => {
     const reglas = [regla({
       codigo: 'URBANISTICO', scopeGeneracion: 'POR_OBJETO',

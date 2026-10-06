@@ -52,6 +52,7 @@ export function repo(opciones: {
   reglas?: ReglaGolden[];
   tiposObjeto?: NodoTipo[];
   tiposSujeto?: NodoTipo[];
+  tiposRol?: NodoTipo[];
   conGolden?: string[];
   /** Para comprobar con qué se llamó al puerto. */
   espia?: (args: unknown) => void;
@@ -60,11 +61,32 @@ export function repo(opciones: {
     async reglasDeActo(args) { opciones.espia?.(args); return opciones.reglas ?? []; },
     async tiposDeObjeto() { return opciones.tiposObjeto ?? []; },
     async tiposDeSujeto() { return opciones.tiposSujeto ?? []; },
+    async tiposDeRol() { return opciones.tiposRol ?? TIPOS_ROL; },
     async actosConGolden(actos) {
       return new Set(actos.filter((a) => (opciones.conGolden ?? []).includes(a)));
     },
   };
 }
+
+/**
+ * Las cuatro ramas de roles que el catálogo tiene de verdad (8 aristas de 47 roles). Van por
+ * defecto en el doble: una regla escrita para `DISPONENTE` debe alcanzar al `VENDEDOR`, y sin
+ * esto el test pasaría por el camino equivocado.
+ */
+export const TIPOS_ROL: NodoTipo[] = [
+  { codigo: 'ADQUIRENTE', parentCodigo: null },
+  { codigo: 'COMPRADOR', parentCodigo: 'ADQUIRENTE' },
+  { codigo: 'DONATARIO', parentCodigo: 'ADQUIRENTE' },
+  { codigo: 'DISPONENTE', parentCodigo: null },
+  { codigo: 'VENDEDOR', parentCodigo: 'DISPONENTE' },
+  { codigo: 'DONANTE', parentCodigo: 'DISPONENTE' },
+  { codigo: 'CAUSAHABIENTE', parentCodigo: null },
+  { codigo: 'HEREDERO', parentCodigo: 'CAUSAHABIENTE' },
+  { codigo: 'TRANSMISARIO', parentCodigo: 'HEREDERO' },
+  { codigo: 'LEGATARIO', parentCodigo: 'CAUSAHABIENTE' },
+  { codigo: 'LEGITIMARIO', parentCodigo: 'CAUSAHABIENTE' },
+  { codigo: 'REPRESENTANTE', parentCodigo: null },
+];
 
 /** La jerarquía is-a que el motor necesita para que VIVIENDA cumpla INMUEBLE. */
 export const TIPOS_OBJETO: NodoTipo[] = [

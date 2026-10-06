@@ -76,18 +76,6 @@ case "$PKG" in
     die "sin configuración para el paquete '$PKG': añade su rama a este case y sus variables a platform/scripts/common.sh (CONSUMER_APPS, MARKER, PUBLISHED_PATHS, PKG_DIR)" ;;
 esac
 
-$DRY_RUN && yellow "  «DRY-RUN» — no se publica, pushea ni bumpea nada."
-# ── 0. El workflow que publica, sin cambios pendientes ───────────────────
-#
-# Este script sólo hace `git add packages/<pkg>`, así que un cambio en
-# `.github/workflows/publish.yml` **no viaja con el publish**. Si está sucio, el
-# push dispara el workflow VIEJO: sale verde y no publica lo que debía. Es el
-# fallo del 3-oct-2026, y costaba diez minutos de espera descubrirlo.
-#
-# Mejor pararlo aquí, antes de tocar git, que después de haber pusheado.
-if [ -n "$(git -C "$SHARED_DIR" status --porcelain -- .github/workflows/publish.yml)" ]; then
-  die "'.github/workflows/publish.yml' tiene cambios sin commitear. Este script no los sube, así que el push dispararía el workflow viejo: commitéalo y pushéalo antes."
-fi
 
 cyan "── publish-package: $PKG (monorepo mycolegal-shared) ──"
 
@@ -111,7 +99,7 @@ has_local_changes=false
 WILL_PUBLISH=true
 $already_published && ! $has_local_changes && WILL_PUBLISH=false
 
-# ── 2b. Guard: publicar sólo desde main (el CI dispara on push main) ──
+# ── 2b. Guard: publicar sólo desde main ──────────────────────────────
 if $WILL_PUBLISH && ! $DRY_RUN; then
   branch=$(git -C "$SHARED_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "?")
   [ "$branch" = "main" ] || die "publish-package debe correr desde 'main' (estás en '$branch')."
@@ -126,7 +114,7 @@ if $already_published && $has_local_changes; then
   already_published=false
 fi
 
-# ── 3a-c. Commit + push + esperar CI + verificar en registry ─────────
+# ── 3a-c. Commit + npm publish local + push + verificar en registry ──
 if $already_published; then
   yellow "  ⚠ $PKG_SCOPED@$VERSION ya está en el registry — salto publish."
 else
@@ -143,47 +131,39 @@ else
   else
     dim "  · sin cambios pendientes en packages/$PKG — sólo push"
   fi
+  # ⚠️ SE PUBLICA DESDE AQUÍ, NO DESDE GITHUB ACTIONS (5-oct-2026).
+  #
+  # Antes esto hacía push y se quedaba esperando a que `.github/workflows/
+  # publish.yml` publicase. Con Actions degradado (runners sin asignar, runs en
+  # `queued` 25 min) cada publish —y con él cada deploy— se quedaba colgado de
+  # una plataforma que no aporta nada: el código publicado es el mismo commit.
+  # Ahora: commit → `npm publish` local → push. Publicar ANTES del push evita la
+  # carrera con el workflow, que al recibir el push ve la versión ya publicada y
+  # no hace nada (queda de red de seguridad). Requiere ~/.npmrc con un token
+  # `write:packages` para npm.pkg.github.com.
+  if ! $DRY_RUN; then
+    yellow "  ⏳ npm publish $PKG_SCOPED@$VERSION (local)…"
+    # prepublishOnly (ui: build + build:e2e) corre solo, contra el node_modules
+    # del workspace.
+    if ! ( cd "$PKG_DIR" && npm publish ); then
+      # Si otro camino (el workflow, otra sesión) ya la subió, npm da 409: vale.
+      npm view "$PKG_SCOPED@$VERSION" version --registry=https://npm.pkg.github.com >/dev/null 2>&1 \
+        || die "npm publish de $PKG_SCOPED@$VERSION falló (el commit está hecho pero SIN pushear)."
+      yellow "  · npm publish falló pero la versión ya está en el registry — sigo."
+    fi
+  else
+    dim "    [dry-run] (cd '$PKG_DIR' && npm publish)"
+  fi
   run "git -C '$SHARED_DIR' push origin main"
   green "  ✓ Pushed mycolegal-shared @ $PKG $VERSION"
 
   if ! $DRY_RUN; then
-    yellow "  ⏳ Esperando el workflow de publish (GitHub Actions)…"
-    head_sha=$(git -C "$SHARED_DIR" rev-parse HEAD); run_id=""
-    for _ in 1 2 3 4 5 6; do
-      run_id=$(gh run list --repo mycolegal-app/mycolegal-shared --limit 5 --json databaseId,headSha \
-                 --jq ".[] | select(.headSha==\"$head_sha\") | .databaseId" 2>/dev/null | head -1 || true)
-      [ -n "$run_id" ] && break; sleep 5
-    done
-    [ -n "$run_id" ] && gh run watch "$run_id" --repo mycolegal-app/mycolegal-shared --exit-status >/dev/null 2>&1 \
-      && green "  ✓ workflow OK" || yellow "  ⚠ sin run/verificable — compruebo el registry."
     verified=false
     for a in $(seq 1 10); do
       npm view "$PKG_SCOPED@$VERSION" version --registry=https://npm.pkg.github.com >/dev/null 2>&1 && { verified=true; break; }
       yellow "  ⏳ propagando en registry… ($a/10)"; sleep 5
     done
-    if ! $verified; then
-      # «Revisa el workflow» a secas no ayudaba. El modo de fallo real medido el
-      # 3-oct-2026: el workflow sale **en VERDE** y el paquete no se publica,
-      # porque su job no existe — la matriz no lo incluía. Así que si el run fue
-      # verde, se mira si hubo job para ESTE paquete y se dice.
-      if [ -n "$run_id" ]; then
-        jobs=$(gh run view "$run_id" --repo mycolegal-app/mycolegal-shared \
-                 --json jobs --jq '.jobs[].name' 2>/dev/null || true)
-        case "$jobs" in
-          *"($PKG)"*) yellow "  · el workflow SÍ tuvo job para $PKG — mira su log: gh run view $run_id --log" ;;
-          "") yellow "  · no pude leer los jobs del run $run_id." ;;
-          *) red "  · el workflow NO tuvo job para '$PKG'. Jobs que corrieron:"
-             # Con `$jobs` sin comillas, «publish (ui)» salía partido en dos
-             # líneas: `gh` los devuelve uno por línea y el word-splitting los
-             # troceaba por el espacio. Se recorre por líneas.
-             printf '%s\n' "$jobs" | sed 's/^/      /' 
-             red "    Su matriz no incluye el paquete. OJO: este script sólo hace"
-             red "    'git add packages/$PKG', así que un arreglo de"
-             red "    .github/workflows/publish.yml NO viaja con el publish: hay que pushearlo aparte." ;;
-        esac
-      fi
-      die "no pude verificar $PKG_SCOPED@$VERSION en el registry."
-    fi
+    $verified || die "publiqué $PKG_SCOPED@$VERSION pero el registry no la devuelve."
     green "  ✓ Verified: $PKG_SCOPED@$VERSION"
   fi
 fi
