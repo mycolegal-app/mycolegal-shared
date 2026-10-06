@@ -268,6 +268,8 @@ export function stripDirectives(content: string): string {
   content = content.replace(/\{\{TAGS:[^}]*\}\}/gi, "");
   content = content.replace(/^[ \t]*\{\{SUMMARY:[^}]*\}\}[ \t]*\n/gim, "");
   content = content.replace(/\{\{SUMMARY:[^}]*\}\}/gi, "");
+  content = content.replace(/^[ \t]*\{\{\s*SCHEMA_ACT\s*:[^}]*\}\}[ \t]*\n/gim, "");
+  content = content.replace(/\{\{\s*SCHEMA_ACT\s*:[^}]*\}\}/gi, "");
   content = content.replace(/^[ \t]*\{\{COMMENT:[^}]*\}\}[ \t]*\n/gim, "");
   content = content.replace(/\{\{COMMENT:[^}]*\}\}/gi, "");
   content = content.replace(/^[ \t]*\{\{DEPENDENCY:[^}]*\}\}[ \t]*\n/gim, "");
@@ -371,7 +373,7 @@ export function applyFieldSuffix(content: string, suffix: string): string {
     if (
       upper.startsWith("COMMENT:") || upper.startsWith("COMMENT_BEGIN") ||
       upper.startsWith("COMMENT_END") || upper.startsWith("TAGS:") ||
-      upper.startsWith("SUMMARY:") || upper.startsWith("LANG=") ||
+      upper.startsWith("SUMMARY:") || upper.startsWith("SCHEMA_ACT") || upper.startsWith("LANG=") ||
       upper.startsWith("LANG ") || upper.startsWith("DEPENDENCY:") ||
       upper.startsWith("MAP_IUI:") || upper.startsWith("DOCUBOT") ||
       upper.startsWith("AUTO:") || upper.startsWith("AUTO(") ||
@@ -850,7 +852,7 @@ export function stripBindMarks(content: string): string {
   return content.replace(/\x00BIND:[\w\u00C0-\u024F]+\x00/g, "").split(BIND_END_MARK).join("");
 }
 
-const DIRECTIVAS_NO_CAMPO = /^\s*(?:DECLARE|COMMENT|INCLUDE|TAGS|SUMMARY|DEPENDENCY|MAP_IUI|HUMAN_ACTION|END_HUMAN_ACTION|LANG|WORD_STYLE|@autonumber|AUTO[:(]|SYSTEM:|FOR\s+EACH|ENDFOR|END[\s_]+FOR|EXIT_INCLUDE)/i;
+const DIRECTIVAS_NO_CAMPO = /^\s*(?:DECLARE|COMMENT|INCLUDE|TAGS|SUMMARY|SCHEMA_ACT|DEPENDENCY|MAP_IUI|HUMAN_ACTION|END_HUMAN_ACTION|LANG|WORD_STYLE|@autonumber|AUTO[:(]|SYSTEM:|FOR\s+EACH|ENDFOR|END[\s_]+FOR|EXIT_INCLUDE)/i;
 
 /** Dentro de las regiones vinculadas a `iterador`, `NOMBRE` → `ITERADOR.NOMBRE`
  *  para los nombres que trae el elemento. Respeta comillas. */

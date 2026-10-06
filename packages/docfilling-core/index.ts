@@ -97,6 +97,8 @@ export type { TipoInferido } from './src/fields/inferir-tipo';
 // F1.3 (residuo) — `{{LANG=xx}}`: el idioma de la PLANTILLA, que decide en qué
 // idioma salen las fechas del motor.
 export { idiomaDePlantilla, IDIOMA_POR_DEFECTO } from './src/syntax/template-lang';
+export { metadatosDeEsquema, metadatosDeParrafo, esSchemaAct, CODIGO_ACTO } from './src/syntax/schema-act';
+export type { MetadatosDeEsquema, MetadatosDeParrafo } from './src/syntax/schema-act';
 export { checkInputConOptions, checkIncludeConRuta, checkDosPuntosEnPalabraClave, checkEndIfNoCanonico } from './src/syntax/checks-pendientes';
 export { expandirIncludes, repositorioDeMapa, normalizarNombre } from './src/compose/expand-includes';
 

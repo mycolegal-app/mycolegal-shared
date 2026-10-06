@@ -17,6 +17,7 @@ import {
 // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py.
 import { esPageBreak } from "./page-break";
 import { esWordStyle, nombreDeEstilo } from "./word-style";
+import { esSchemaAct, codigoDeSchemaAct } from "./schema-act";
 
 // =============================================================================
 // FieldType enum
@@ -53,6 +54,9 @@ export enum FieldType {
   // `{{WORD_STYLE:Nombre}}`: el estilo de párrafo de la plantilla. Ver
   // `src/syntax/word-style.ts`.
   WORD_STYLE = "word_style",
+  // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py.
+  // `{{SCHEMA_ACT:1104}}` (F1.9): el acto IUI del esquema. Ver `src/syntax/schema-act.ts`.
+  SCHEMA_ACT = "schema_act",
   UNKNOWN = "unknown",
 }
 
@@ -172,6 +176,8 @@ export function classifyField(content: string): FieldType {
   if (esPageBreak(content)) return FieldType.PAGE_BREAK;
   // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py. Ver word-style.ts.
   if (esWordStyle(content)) return FieldType.WORD_STYLE;
+  // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py. Ver schema-act.ts.
+  if (esSchemaAct(content)) return FieldType.SCHEMA_ACT;
   if (upper.startsWith("COMMENT:")) return FieldType.COMMENT;
   // DECLARE ARRAY must be checked before plain DECLARE (longer-prefix wins).
   if (upper.startsWith("DECLARE ARRAY ") || upper === "DECLARE ARRAY") return FieldType.DECLARE_ARRAY;
@@ -443,6 +449,12 @@ export function parseFields(text: string): ParsedField[] {
       // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py.
       case FieldType.WORD_STYLE: {
         pf.name = nombreDeEstilo(content) ?? "";
+        break;
+      }
+
+      // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py.
+      case FieldType.SCHEMA_ACT: {
+        pf.name = codigoDeSchemaAct(content) ?? "";
         break;
       }
 

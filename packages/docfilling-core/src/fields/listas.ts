@@ -27,7 +27,7 @@ export interface ResultadoListas {
 }
 
 const RESERVADAS = new Set(['IF', 'ELSE', 'ENDIF', 'AND', 'OR', 'NOT', 'IN', 'TRUE', 'FALSE', 'COUNT', 'FOR', 'EACH', 'ENDFOR', 'END']);
-const NO_CAMPO = /^\s*(?:DECLARE|COMMENT|INCLUDE|TAGS|SUMMARY|DEPENDENCY|MAP_IUI|HUMAN_ACTION|END_HUMAN_ACTION|LANG|WORD_STYLE|@autonumber|AUTO[:(]|SYSTEM:|EXIT_INCLUDE|SET\s)/i;
+const NO_CAMPO = /^\s*(?:DECLARE|COMMENT|INCLUDE|TAGS|SUMMARY|SCHEMA_ACT|DEPENDENCY|MAP_IUI|HUMAN_ACTION|END_HUMAN_ACTION|LANG|WORD_STYLE|@autonumber|AUTO[:(]|SYSTEM:|EXIT_INCLUDE|SET\s)/i;
 const BIND_BEGIN = /\x00BIND:([\wÀ-ɏ]+)\x00/y;
 
 function nombresDe(dentro: string): string[] {

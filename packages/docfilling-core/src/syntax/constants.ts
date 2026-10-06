@@ -132,6 +132,15 @@ export const DIRECTIVES: readonly DirectiveSpec[] = [
     endDirective: null,
     runtimeOwner: "composer",
   },
+  // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py. F1.9, ver schema-act.ts.
+  {
+    name: "SCHEMA_ACT",
+    prefixes: ["SCHEMA_ACT:"],
+    isMetadata: true,
+    isBlock: false,
+    endDirective: null,
+    runtimeOwner: "composer",
+  },
   {
     name: "COMMENT",
     prefixes: ["COMMENT:"],
@@ -272,6 +281,7 @@ export const KNOWN_DIRECTIVE_PREFIXES = [
   "SET ",
   "TAGS:",
   "SUMMARY:",
+  "SCHEMA_ACT:",
   "COMMENT:",
   "COMMENT_BEGIN",
   "SYSTEM:",
@@ -308,6 +318,7 @@ export const METADATA_PREFIXES = [
   "SET ",
   "TAGS:",
   "SUMMARY:",
+  "SCHEMA_ACT:",
   "COMMENT:",
   "COMMENT_BEGIN",
   "SYSTEM:",

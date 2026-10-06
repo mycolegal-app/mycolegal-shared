@@ -13,6 +13,7 @@ import { parseComparacion, parseNumero } from "./comparar";
 // ⚠️ Import añadido a mano — no quitar al regenerar (ver declare-types.ts).
 import { tipoAceptado, tipoCanonico } from "./declare-types";
 import { parseFields, FieldType, offsetToLineCol, type ParsedField } from "./parser";
+import { CODIGO_ACTO } from "./schema-act";
 
 // =============================================================================
 // Types
@@ -1173,6 +1174,34 @@ function checkMalformedDirectives(
 }
 
 // =============================================================================
+// Rule (F1.9): SCHEMA_ACT — forma de código IUI (E120) y una sola vez (W120)
+// =============================================================================
+
+function checkSchemaAct(
+  fields: ParsedField[],
+  result: ValidationResult,
+): void {
+  let primero: ParsedField | null = null;
+  for (const f of fields) {
+    if (f.fieldType !== FieldType.SCHEMA_ACT) continue;
+    if (!CODIGO_ACTO.test(f.name)) {
+      result.diagnostics.push(
+        diag(f.line, f.col, f.raw.length, Severity.ERROR, "E120",
+          `SCHEMA_ACT «${f.name}» no es un código de acto IUI: deben ser cuatro dígitos (ej. {{SCHEMA_ACT:1104}})`),
+      );
+    }
+    if (primero) {
+      result.diagnostics.push(
+        diag(f.line, f.col, f.raw.length, Severity.WARNING, "W120",
+          `SCHEMA_ACT repetido: el esquema ya lo declara en la línea ${primero.line}; deje uno solo`),
+      );
+    } else {
+      primero = f;
+    }
+  }
+}
+
+// =============================================================================
 // Rule: TAGS and SUMMARY must have content
 // =============================================================================
 
@@ -1453,6 +1482,7 @@ export function validateText(
   checkUndeclaredUses(fields, result, resolver, extraDeclared);
   checkMalformedDirectives(fields, result);
   checkTagsSummarySyntax(fields, result);
+  checkSchemaAct(fields, result);
   checkForEachSubfieldReferences(fields, result);
   checkIfTypeCompatibility(fields, result);
 
