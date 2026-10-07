@@ -1,6 +1,6 @@
 {
   "name": "@mycolegal-app/ai-core",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "type": "module",
   "main": "./index.ts",
   "types": "./index.ts",
