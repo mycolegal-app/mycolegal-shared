@@ -8,6 +8,9 @@
 // - Pulsar para empezar y pulsar para parar (D7); `cancelar()` descarta sin enviar.
 // - Para sola a los `maxSegundos` (120 por defecto, D8).
 // - Libera el micrófono al terminar (`track.stop()`), para que no quede el piloto rojo del navegador.
+// - Mide el nivel del micrófono mientras graba: si no ha captado voz (micro silenciado, o se pulsa y no se
+//   habla), NO envía nada y avisa «sinVoz». Con audio sin voz, un LLM tiende a inventarse texto; el servidor
+//   también lo filtra, pero así ni se llama.
 // - Si la app todavía no tiene la ruta montada (responde 404 a una sonda), `disponible` es false
 //   y el botón no se pinta: la UI puede publicarse antes de que cada app cablee su proxy.
 
@@ -16,6 +19,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 export type EstadoDictado = "inactivo" | "pidiendo-permiso" | "grabando" | "transcribiendo";
 export type AvisoDictado =
   | "permisoDenegado" | "sinVoz" | "demasiadoLargo" | "formatoNoAdmitido" | "noDisponible" | "error";
+
+/** Nivel RMS (0-1) a partir del cual una muestra cuenta como voz (~-34 dBFS), y voz mínima para enviar. */
+const UMBRAL_VOZ = 0.02;
+const VOZ_MINIMA_MS = 300;
 
 /** Formatos medidos en la F0, por orden de preferencia (Chrome/Edge/Firefox → Safari). */
 const FORMATOS = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"];
@@ -65,6 +72,8 @@ export function useDictado(opts: UseDictadoOpts) {
   const trozos = useRef<Blob[]>([]);
   const cancelado = useRef(false);
   const reloj = useRef<ReturnType<typeof setInterval> | null>(null);
+  const audioCtx = useRef<AudioContext | null>(null);
+  const vozMs = useRef(0);
   const optsRef = useRef(opts);
   optsRef.current = opts;
 
@@ -86,6 +95,8 @@ export function useDictado(opts: UseDictadoOpts) {
     stream.current?.getTracks().forEach((t) => t.stop());
     stream.current = null;
     recorder.current = null;
+    void audioCtx.current?.close().catch(() => {});
+    audioCtx.current = null;
   }, []);
 
   useEffect(() => liberar, [liberar]);
@@ -148,13 +159,41 @@ export function useDictado(opts: UseDictadoOpts) {
       const blob = new Blob(trozos.current, { type: tipo });
       liberar();
       if (cancelado.current || !blob.size) { setEstado("inactivo"); setSegundos(0); return; }
+      // Sin voz captada: no se envía (si no se pudo medir, vozMs es -1 y se envía igual).
+      if (vozMs.current >= 0 && vozMs.current < VOZ_MINIMA_MS) {
+        setEstado("inactivo"); setSegundos(0); optsRef.current.onAviso?.("sinVoz"); return;
+      }
       void enviar(blob, tipo);
     };
+    // Medidor de nivel: cuenta cuánto tiempo el micrófono capta algo por encima del umbral de voz.
+    vozMs.current = -1;
+    let medir: (() => void) | null = null;
+    try {
+      const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (Ctx) {
+        const ctx = new Ctx();
+        audioCtx.current = ctx;
+        const analizador = ctx.createAnalyser();
+        analizador.fftSize = 2048;
+        ctx.createMediaStreamSource(stream.current).connect(analizador);
+        const buf = new Float32Array(analizador.fftSize);
+        vozMs.current = 0;
+        medir = () => {
+          analizador.getFloatTimeDomainData(buf);
+          let suma = 0;
+          for (let i = 0; i < buf.length; i++) suma += buf[i] * buf[i];
+          if (Math.sqrt(suma / buf.length) > UMBRAL_VOZ) vozMs.current += 250;
+        };
+      }
+    } catch {
+      vozMs.current = -1;
+    }
     rec.start();
     setSegundos(0);
     setEstado("grabando");
     const inicio = Date.now();
     reloj.current = setInterval(() => {
+      medir?.();
       const s = Math.floor((Date.now() - inicio) / 1000);
       setSegundos(s);
       if (s >= maxSegundos && recorder.current?.state === "recording") recorder.current.stop();
