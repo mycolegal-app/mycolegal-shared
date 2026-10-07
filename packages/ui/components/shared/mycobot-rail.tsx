@@ -38,6 +38,7 @@ import { useSidebarCollapse } from "../layout/sidebar-collapse-context";
 import { cn } from "../../lib/utils";
 import { apiErrorMessage } from "../../lib/api-error";
 import { readClasesSel, writeClasesSel, CLASES_CHANGED_EVENT } from "../../lib/biblioteca-clases";
+import { BotonDictado } from "./boton-dictado";
 import { readFuentesSel } from "../../lib/biblioteca-fuentes";
 import { FuentesModal } from "./fuentes-modal";
 // Color + icono por CLASE (badge de tipo de las citas, #548): espejo de la leyenda
@@ -222,6 +223,10 @@ interface MycoBotRailProps {
    * adelante, dar foco a la recuperación de ayuda de producto.
    */
   appSlug?: string;
+  /** Ruta de la app para el dictado por voz (por defecto `/api/transcribe`). */
+  transcribeUrl?: string;
+  /** `false` quita el botón de dictado. Por defecto se muestra si la app tiene la ruta montada. */
+  dictado?: boolean;
 }
 
 const OPEN_STORAGE_KEY = "mycolegal:mycobot:open";
@@ -290,8 +295,12 @@ export function MycoBotRail({
   askUrl = "/api/resoluciones/ask",
   consultorUrl,
   appSlug,
+  transcribeUrl = "/api/transcribe",
+  dictado = true,
 }: MycoBotRailProps) {
   const { t, language } = useI18n();
+  // Aviso del dictado (permiso denegado, no se ha oído voz…), en el lugar del pie legal.
+  const [avisoDictado, setAvisoDictado] = useState<string | null>(null);
   const { collapsed } = useSidebarCollapse();
   const [open, setOpen] = useState(false);
   // #563 — modo expandido: el rail ocupa toda la pantalla salvo el sidebar
@@ -2264,6 +2273,22 @@ export function MycoBotRail({
                   >
                     {attaching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
                   </button>
+                  {dictado && (
+                    <BotonDictado
+                      url={transcribeUrl}
+                      contexto={appSlug ? `mycobot-${appSlug}` : "mycobot"}
+                      disabled={loading}
+                      onAviso={setAvisoDictado}
+                      onTexto={(texto) => {
+                        // Se AÑADE a lo que hubiera y NO se envía (D3): la persona revisa y envía.
+                        setInput((prev) => (prev.trim() ? `${prev.trimEnd()} ${texto}` : texto));
+                        requestAnimationFrame(() => {
+                          const el = inputRef.current;
+                          if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+                        });
+                      }}
+                    />
+                  )}
                   <textarea
                     ref={inputRef}
                     value={input}
@@ -2295,7 +2320,11 @@ export function MycoBotRail({
                     <Send className="h-4 w-4" />
                   </button>
                 </div>
-                <p className="mt-1.5 text-[10px] text-gray-400">{t("ui.mycobot.disclaimer")}</p>
+                {avisoDictado ? (
+                  <p role="status" className="mt-1.5 text-[10px] text-amber-700">{avisoDictado}</p>
+                ) : (
+                  <p className="mt-1.5 text-[10px] text-gray-400">{t("ui.mycobot.disclaimer")}</p>
+                )}
               </form>
             </>
           )}

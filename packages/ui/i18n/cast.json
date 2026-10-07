@@ -989,6 +989,18 @@
       "limpiarTodas": "Limpiar todas",
       "despejadoAviso": "Sin fuentes seleccionadas. Marca las que quieras consultar; si cierras sin elegir ninguna, se conserva la selección anterior."
     },
+    "dictado": {
+      "empezar": "Dictar",
+      "parar": "Parar y transcribir",
+      "escapeCancela": "Esc para cancelar",
+      "transcribiendo": "Transcribiendo…",
+      "permisoDenegado": "El navegador no tiene permiso para usar el micrófono. Actívalo en la barra de direcciones y vuelve a probar.",
+      "sinVoz": "No se ha oído nada. Prueba a hablar más cerca del micrófono.",
+      "demasiadoLargo": "El dictado es demasiado largo. Divídelo en partes de menos de dos minutos.",
+      "formatoNoAdmitido": "Este navegador graba en un formato que no podemos transcribir.",
+      "noDisponible": "El dictado no está disponible en esta aplicación.",
+      "error": "No se ha podido transcribir. Vuelve a intentarlo."
+    },
     "mycobot": {
       "railAria": "Abrir MycoBot — asistente de resoluciones",
       "title": "MycoBot",

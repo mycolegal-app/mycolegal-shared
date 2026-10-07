@@ -30,6 +30,7 @@
     "storage.ts",
     "drive.ts",
     "vertex.ts",
+    "idioma.ts",
     "seeds.ts",
     "index.ts",
     "tsconfig.json",

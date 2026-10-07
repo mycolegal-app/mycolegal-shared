@@ -60,6 +60,10 @@ export type { BillingPanelProps } from './components/shared/billing-panel';
 export { CreditBalanceBadge } from './components/shared/credit-balance-badge';
 export { CreditsPurchaseModal } from './components/shared/credits-purchase-modal';
 export { MycoBotRail } from './components/shared/mycobot-rail';
+export { BotonDictado } from './components/shared/boton-dictado';
+export type { BotonDictadoProps } from './components/shared/boton-dictado';
+export { useDictado } from './hooks/use-dictado';
+export type { EstadoDictado, AvisoDictado, UseDictadoOpts } from './hooks/use-dictado';
 // La conversación de generación de Redactor (motor DocFilling), embebida (F7.8,
 // D33). Sustituyó al `DocFillingModal`, borrado con el rename a Redactor (R7).
 //

@@ -988,6 +988,18 @@
       "limpiarTodas": "Guztiak garbitu",
       "despejadoAviso": "Iturririk hautatu gabe. Markatu kontsultatu nahi dituzunak; bat ere aukeratu gabe ixten baduzu, aurreko hautaketa mantenduko da."
     },
+    "dictado": {
+      "empezar": "Diktatu",
+      "parar": "Gelditu eta transkribatu",
+      "escapeCancela": "Esc bertan behera uzteko",
+      "transcribiendo": "Transkribatzen…",
+      "permisoDenegado": "Nabigatzaileak ez du mikrofonoa erabiltzeko baimenik. Aktibatu helbide-barran eta saiatu berriro.",
+      "sinVoz": "Ez da ezer entzun. Saiatu mikrofonotik hurbilago hitz egiten.",
+      "demasiadoLargo": "Diktaketa luzeegia da. Zatitu bi minutu baino gutxiagoko zatitan.",
+      "formatoNoAdmitido": "Nabigatzaile honek transkribatu ezin dugun formatuan grabatzen du.",
+      "noDisponible": "Diktaketa ez dago erabilgarri aplikazio honetan.",
+      "error": "Ezin izan da transkribatu. Saiatu berriro."
+    },
     "mycobot": {
       "railAria": "Ireki MycoBot — ebazpenen laguntzailea",
       "title": "MycoBot",

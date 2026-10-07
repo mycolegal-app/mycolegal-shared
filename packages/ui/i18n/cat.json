@@ -989,6 +989,18 @@
       "limpiarTodas": "Netejar-les totes",
       "despejadoAviso": "Cap font seleccionada. Marca les que vulguis consultar; si tanques sense triar-ne cap, es conserva la selecció anterior."
     },
+    "dictado": {
+      "empezar": "Dictar",
+      "parar": "Atura i transcriu",
+      "escapeCancela": "Esc per cancel·lar",
+      "transcribiendo": "Transcrivint…",
+      "permisoDenegado": "El navegador no té permís per fer servir el micròfon. Activa'l a la barra d'adreces i torna-ho a provar.",
+      "sinVoz": "No s'ha sentit res. Prova de parlar més a prop del micròfon.",
+      "demasiadoLargo": "El dictat és massa llarg. Divideix-lo en parts de menys de dos minuts.",
+      "formatoNoAdmitido": "Aquest navegador grava en un format que no podem transcriure.",
+      "noDisponible": "El dictat no està disponible en aquesta aplicació.",
+      "error": "No s'ha pogut transcriure. Torna-ho a provar."
+    },
     "mycobot": {
       "railAria": "Obrir MycoBot — assistent de resolucions",
       "title": "MycoBot",
