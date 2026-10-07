@@ -1,5 +1,9 @@
 # @mycolegal-app/docfilling-core
 
+## 0.1.17 — 7-oct-2026
+
+`expandirIncludes` ignora los `{{INCLUDE}}` de las líneas `//`: ni los expande ni los cuenta como `faltantes`. `stripDirectives` ya borraba esas líneas al componer, así que el documento no cambia; lo que cambia es el grafo de la biblioteca, que avisaba de «faltan» por una inclusión retirada a propósito (la reducción aragonesa por inundaciones, caducada en 2015). `tests/include-comentado.test.ts`.
+
 ## 0.1.15 — 6-oct-2026
 
 `processExitIncludes` quita también los **cierres** de INCLUDE huérfanos (`INC_END` sin su `INC_BEGIN`, cuando el INCLUDE abre dentro de un IF descartado y cierra fuera). Quedaban en la salida con sus `\x00` y hacían inválido el XML del `.docx`: la donación 0701 compuesta sin datos salía corrupta (ni Word ni LibreOffice la abrían). `tests/inc-end-huerfano.test.ts`.

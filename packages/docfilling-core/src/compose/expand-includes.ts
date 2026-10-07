@@ -94,6 +94,14 @@ export interface OpcionesExpansion {
   centinelas?: boolean;
 }
 
+/** ¿Cae `offset` en una línea `//`? `stripDirectives` borrará esa línea entera, así
+ *  que un `{{INCLUDE}}` comentado no se expande ni cuenta como faltante: es como
+ *  la biblioteca retira una inclusión sin borrarla. */
+function enLineaComentada(texto: string, offset: number): boolean {
+  const inicio = texto.lastIndexOf('\n', offset - 1) + 1;
+  return /^[ \t]*\/\//.test(texto.slice(inicio, offset));
+}
+
 export async function expandirIncludes(
   texto: string,
   repo: ParrafoRepository,
@@ -111,7 +119,7 @@ export async function expandirIncludes(
     if (profundidad > profundidadMaxima) return actual;
 
     const directivas = parseFields(actual).filter(
-      (f) => f.fieldType === FieldType.INCLUDE && f.includeTarget,
+      (f) => f.fieldType === FieldType.INCLUDE && f.includeTarget && !enLineaComentada(actual, f.offset),
     );
     if (directivas.length === 0) return actual;
 
