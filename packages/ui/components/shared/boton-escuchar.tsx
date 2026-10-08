@@ -93,7 +93,7 @@ export function BotonEscuchar({ texto, idioma, url, contexto, onAviso, className
         <span
           role="listbox"
           aria-label={t("ui.voz.elegir")}
-          className="absolute bottom-full left-0 z-50 mb-1 w-56 rounded-md border bg-white p-1 text-[12px] shadow-lg"
+          className="absolute bottom-full right-0 z-50 mb-1 w-56 rounded-md border bg-white p-1 text-[12px] shadow-lg"
         >
           <span className="block px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-gray-400">
             {t("ui.voz.elegir")}
