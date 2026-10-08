@@ -426,6 +426,14 @@ export interface OpcionesMotor {
    * la lista básica; `basica` = siempre la lista de siempre (Lista básica de Consultor).
    */
   capa?: Capa;
+  /**
+   * Un interviniente SIN rol cuenta para cualquier rol (menos el de representante). Es el caso
+   * de Redactor: el operador contesta sobre «el interviniente» sin decir cuál, y las 175
+   * condiciones acotadas a un rol («el VENDEDOR casado») no se resolvían nunca aunque se
+   * contestaran (medido el 8-oct-2026: 9 preguntas en 0501, 8 en 1103). Los intervinientes con
+   * rol —los que lee la IA— siguen acotando como siempre.
+   */
+  rolComodin?: boolean;
 }
 
 export async function resolverRequisitos(
@@ -490,7 +498,10 @@ export async function resolverRequisitos(
     return [...out].sort();
   };
   /** Y un `VENDEDOR` cumple una regla escrita para `DISPONENTE`. Mismo recorrido, otro mapa. */
-  const esUnRol = sube(padresRol);
+  const subeRol = sube(padresRol);
+  const esUnRol = opciones.rolComodin
+    ? (rol: string | null | undefined, exigido: string) => (rol ? subeRol(rol, exigido) : exigido !== ROL_REPRESENTANTE)
+    : subeRol;
 
   // Qué reglas alcanzan al acto: las suyas y, si lo sirve el catálogo universal, también
   // las TRANSVERSALES —las de TODOS los actos, las de su FAMILIA y las de su SUBFAMILIA—. La

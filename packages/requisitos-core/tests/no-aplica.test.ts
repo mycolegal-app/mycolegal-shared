@@ -93,3 +93,16 @@ describe('condiciones en palabras, para el evaluador', () => {
     ]);
   });
 });
+
+describe('rol comodín (Redactor)', () => {
+  const regla1 = regla({ codigo: 'CONSENT', condiciones: [cond('SUJETO', 'ESTADO_CIVIL', 'EQ', 'CASADO', { scopeRolCodigo: 'VENDEDOR' })] });
+  const parte = { sujetos: [{ id: 'p', rol: null, tipo: null, hechos: { ESTADO_CIVIL: 'CASADO' } }] };
+  it('sin la opción, un interviniente sin rol no alcanza una condición acotada a VENDEDOR', async () => {
+    const r = await resolverRequisitos(repo({ ...BASE, reglas: [regla1] }), '0501', parte);
+    expect(r.condicionados.map((x) => x.codigo)).toEqual(['CONSENT']);
+  });
+  it('con rolComodin, sí', async () => {
+    const r = await resolverRequisitos(repo({ ...BASE, reglas: [regla1] }), '0501', parte, { rolComodin: true });
+    expect(r.firmes.map((x) => x.codigo)).toEqual(['CONSENT']);
+  });
+});
