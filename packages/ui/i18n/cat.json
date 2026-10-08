@@ -1322,6 +1322,12 @@
       "sinHuecos": "No falta cap dada: l'escriptura està completa i es pot generar.",
       "faltanParrafos": "Falten {n} paràgrafs de la biblioteca. La seva clàusula surt BUIDA sense donar error.",
       "dependen": "{n} depenen d'aquestes"
+    },
+    "voz": {
+      "escuchar": "Escolta",
+      "parar": "Atura",
+      "preparando": "Preparant la veu…",
+      "error": "No s'ha pogut llegir la resposta en veu alta. Torna-ho a provar."
     }
   },
   "unidad": {

@@ -1321,6 +1321,12 @@
       "sinHuecos": "Non falta ningún dato: a escritura está completa e pódese xerar.",
       "faltanParrafos": "Faltan {n} parágrafos da biblioteca. A súa cláusula sae BALEIRA sen dar erro.",
       "dependen": "{n} dependen destas"
+    },
+    "voz": {
+      "escuchar": "Escoitar",
+      "parar": "Parar",
+      "preparando": "Preparando a voz…",
+      "error": "Non se puido ler a resposta en voz alta. Téntao de novo."
     }
   },
   "unidad": {

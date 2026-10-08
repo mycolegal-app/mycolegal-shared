@@ -64,6 +64,10 @@ export { BotonDictado } from './components/shared/boton-dictado';
 export type { BotonDictadoProps } from './components/shared/boton-dictado';
 export { useDictado } from './hooks/use-dictado';
 export type { EstadoDictado, AvisoDictado, UseDictadoOpts } from './hooks/use-dictado';
+export { BotonEscuchar } from './components/shared/boton-escuchar';
+export type { BotonEscucharProps } from './components/shared/boton-escuchar';
+export { useVoz } from './hooks/use-voz';
+export type { EstadoVoz, UseVozOpts } from './hooks/use-voz';
 // La conversación de generación de Redactor (motor DocFilling), embebida (F7.8,
 // D33). Sustituyó al `DocFillingModal`, borrado con el rename a Redactor (R7).
 //

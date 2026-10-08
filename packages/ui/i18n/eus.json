@@ -1321,6 +1321,12 @@
       "sinHuecos": "Ez da daturik falta: eskritura osatuta dago eta sor daiteke.",
       "faltanParrafos": "Liburutegiko {n} paragrafo falta dira. Haien klausula HUTSIK ateratzen da errorerik eman gabe.",
       "dependen": "{n} hauen menpe daude"
+    },
+    "voz": {
+      "escuchar": "Entzun",
+      "parar": "Gelditu",
+      "preparando": "Ahotsa prestatzen…",
+      "error": "Ezin izan da erantzuna ozen irakurri. Saiatu berriro."
     }
   },
   "unidad": {

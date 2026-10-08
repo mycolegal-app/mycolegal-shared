@@ -1322,6 +1322,12 @@
       "sinHuecos": "No falta ningún dato: la escritura está completa y se puede generar.",
       "faltanParrafos": "Faltan {n} párrafos de la biblioteca. Su cláusula sale VACÍA sin dar error.",
       "dependen": "{n} dependen de éstas"
+    },
+    "voz": {
+      "escuchar": "Escuchar",
+      "parar": "Parar",
+      "preparando": "Preparando la voz…",
+      "error": "No se ha podido leer la respuesta en voz alta. Inténtalo de nuevo."
     }
   },
   "unidad": {

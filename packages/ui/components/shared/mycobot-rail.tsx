@@ -39,6 +39,7 @@ import { cn } from "../../lib/utils";
 import { apiErrorMessage } from "../../lib/api-error";
 import { readClasesSel, writeClasesSel, CLASES_CHANGED_EVENT } from "../../lib/biblioteca-clases";
 import { BotonDictado } from "./boton-dictado";
+import { BotonEscuchar } from "./boton-escuchar";
 import { readFuentesSel } from "../../lib/biblioteca-fuentes";
 import { FuentesModal } from "./fuentes-modal";
 // Color + icono por CLASE (badge de tipo de las citas, #548): espejo de la leyenda
@@ -112,6 +113,8 @@ interface DonePayload {
   skill?: Msg["skill"];
   sinResultado?: boolean;
   trace?: AiTrace;
+  /** Idioma en que respondió MycoBot (F8): el botón 🔊 lo lee con ese acento. */
+  idioma?: string;
 }
 
 // Cita devuelta por el backend (AskResult.citas de consultor).
@@ -175,6 +178,8 @@ interface Msg {
   /** Identificación de la salida de IA (modelo, residencia, versión, contexto):
    *  badge discreto al pie de la respuesta (PLAN_TECNICO_IA_RESPONSABLE §3). */
   trace?: AiTrace | null;
+  /** Idioma de la respuesta (F8). Ausente en las conversaciones recargadas: el motor de voz lo detecta. */
+  idioma?: string;
 }
 
 // Resumen de conversación (GET …/conversaciones).
@@ -227,6 +232,10 @@ interface MycoBotRailProps {
   transcribeUrl?: string;
   /** `false` quita el botón de dictado. Por defecto se muestra si la app tiene la ruta montada. */
   dictado?: boolean;
+  /** Ruta de la app para la respuesta hablada (por defecto `/api/tts`). */
+  ttsUrl?: string;
+  /** `false` quita el botón 🔊 «Escuchar». Por defecto se muestra si la app tiene la ruta y platform la voz. */
+  voz?: boolean;
 }
 
 const OPEN_STORAGE_KEY = "mycolegal:mycobot:open";
@@ -297,6 +306,8 @@ export function MycoBotRail({
   appSlug,
   transcribeUrl = "/api/transcribe",
   dictado = true,
+  ttsUrl = "/api/tts",
+  voz = true,
 }: MycoBotRailProps) {
   const { t, language } = useI18n();
   // Aviso del dictado (permiso denegado, no se ha oído voz…), en el lugar del pie legal.
@@ -831,6 +842,7 @@ export function MycoBotRail({
               skill: data.skill,
               sinResultado: !!data.sinResultado,
               trace: data.trace ?? null,
+              idioma: data.idioma,
             },
           ]);
           return;
@@ -900,6 +912,7 @@ export function MycoBotRail({
             sinResultado: !!final?.sinResultado,
             steps: steps.length ? steps.slice() : undefined,
             trace: final?.trace ?? null,
+            idioma: final?.idioma,
           },
         ]);
       } catch {
@@ -1942,6 +1955,16 @@ export function MycoBotRail({
                               <line x1="4" y1="22" x2="4" y2="15" />
                             </svg>
                           </button>
+                          {voz && (
+                            <BotonEscuchar
+                              texto={m.text}
+                              idioma={m.idioma}
+                              url={ttsUrl}
+                              contexto="mycobot"
+                              onAviso={setAvisoDictado}
+                              className="px-0 py-0 text-gray-400 hover:bg-transparent hover:text-gray-600"
+                            />
+                          )}
                           <button
                             type="button"
                             onClick={() => printAnswer(i, m)}
