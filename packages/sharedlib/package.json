@@ -49,7 +49,7 @@
     "jose": ">=5",
     "next": ">=14",
     "zod": ">=3",
-    "@mycolegal-app/requisitos-core": ">=0.1.0"
+    "@mycolegal-app/requisitos-core": ">=0.3.0"
   },
   "peerDependenciesMeta": {
     "@google-cloud/storage": {

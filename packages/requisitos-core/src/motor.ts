@@ -52,6 +52,11 @@ export interface RequisitoResuelto {
    *  que engancha sus overrides por `globalId`. */
   id: string;
   codigo: string;
+  /**
+   * De dónde le llega la regla al acto: la suya propia (`ACTO`) o una transversal de su
+   * SUBFAMILIA, su FAMILIA o de TODOS los actos.
+   */
+  ambito: string;
   descripcion: string | null;
   tipo: 'OBLIGATORIO' | 'RECOMENDADO';
   momento: string;
@@ -103,6 +108,16 @@ export interface RequisitoResuelto {
 export const FACT_TIPO_OBJETO = 'OBJETO.TIPO';
 /** Hecho sintético gemelo para el interviniente: persona física, jurídica, sociedad de capital… */
 export const FACT_TIPO_SUJETO = 'SUJETO.TIPO';
+/**
+ * Los otros dos ejes de condición del catálogo que no son hechos de `atributo_defs_global`:
+ * `condMedioPago` (cheque, transferencia, efectivo…) y `condCausa` (renuncia de herencia,
+ * codicilo…). Viven en columnas propias de la regla y el motor NO los miraba, así que una regla
+ * «sólo si se paga con cheque» o «sólo si la causa es la renuncia» salía FIRME siempre: 297
+ * reglas de acto y 8 transversales. El medio de pago reutiliza el hecho `ACTO.MEDIO_PAGO`, que
+ * admite una lista (se puede pagar parte por transferencia y parte con cheque).
+ */
+export const FACT_MEDIO_PAGO = 'ACTO.MEDIO_PAGO';
+export const FACT_CAUSA = 'ACTO.CAUSA';
 
 export interface Resultado {
   firmes: RequisitoResuelto[];
@@ -122,6 +137,10 @@ export interface Resultado {
     descartadasPorObjeto: number;
     descartadasPorSujeto: number;
     sinRevisionNotarial: number;
+    /** De las consideradas, cuántas son transversales (TODOS, FAMILIA o SUBFAMILIA). */
+    transversales: number;
+    /** Desplazadas por una regla más específica que pide lo mismo bajo las mismas condiciones. */
+    desplazadasPorEspecificidad: number;
   };
 }
 
@@ -145,6 +164,8 @@ function comparar(op: string, valor: unknown, esperado: unknown): Ternario {
     case 'GTE': return Number(valor) >= Number(esperado);
     case 'LT': return Number(valor) < Number(esperado);
     case 'LTE': return Number(valor) <= Number(esperado);
+    // El hecho puede ser un valor o una lista de valores: «¿se paga, entre otros, con cheque?».
+    case 'INCLUYE': return Array.isArray(valor) ? valor.includes(esperado) : valor === esperado;
     case 'EXISTS': return valor !== null && valor !== '';
     case 'NOT_EXISTS': return valor === null || valor === '';
     // IS_A necesita la jerarquía de tipos; hasta que se implemente NO se finge que se
@@ -257,16 +278,18 @@ function aplicaPorObjeto(
 ): Ternario {
   if (tiposRegla.length === 0) return true;
   // El tipo presumido rellena los objetos sin tipo, o hace de objeto virtual si no hay.
-  const objs = (hechos.objetos ?? []).map((ob) => ({ ...ob, tipo: ob.tipo ?? tipoPresumido ?? null }));
+  const objs = (hechos.objetos ?? []).map((ob) => ({ ...ob, tipo: ob.tipo ?? tipoPresumido ?? null, presumido: !ob.tipo && !!tipoPresumido }));
   if (objs.length === 0) {
-    if (tipoPresumido) return aplicaPorObjeto(tiposRegla, { objetos: [{ id: '*', tipo: tipoPresumido, hechos: {} }] }, esUn, estrecha);
+    if (tipoPresumido) return aplicaPorObjeto(tiposRegla, { objetos: [{ id: '*', tipo: null, hechos: {} }] }, esUn, estrecha, tipoPresumido);
     return estrecha ? null : true;
   }
   const conTipo = objs.filter((o) => o.tipo);
   if (conTipo.some((o) => tiposRegla.some((t) => esUn(o.tipo, t)))) return true;
   // Un tipo PADRE del que pide la regla —«es urbano, no sé si vivienda»— no la descarta:
   // el bien podría ser ese subtipo. Solo un tipo ajeno (rústica frente a vivienda) descarta.
-  if (conTipo.some((o) => tiposRegla.some((t) => esUn(t, o.tipo as string)))) return null;
+  // Salvo que el tipo sea PRESUNCIÓN: el escenario base presume el caso ordinario, y lo
+  // excepcional se presume falso. Ver `aplicaPorSujeto`.
+  if (conTipo.some((o) => !o.presumido && tiposRegla.some((t) => esUn(t, o.tipo as string)))) return null;
   return conTipo.length < objs.length ? null : false;
 }
 
@@ -284,14 +307,20 @@ function aplicaPorSujeto(
   tipoPresumido?: string,
 ): Ternario {
   if (tiposRegla.length === 0) return true;
-  const sujetos = (hechos.sujetos ?? []).map((su) => ({ ...su, tipo: su.tipo ?? tipoPresumido ?? null }));
+  const sujetos = (hechos.sujetos ?? []).map((su) => ({ ...su, tipo: su.tipo ?? tipoPresumido ?? null, presumido: !su.tipo && !!tipoPresumido }));
   if (sujetos.length === 0) {
-    if (tipoPresumido) return aplicaPorSujeto(tiposRegla, { sujetos: [{ id: '*', tipo: tipoPresumido, hechos: {} }] }, esUn);
+    if (tipoPresumido) return aplicaPorSujeto(tiposRegla, { sujetos: [{ id: '*', tipo: null, hechos: {} }] }, esUn, tipoPresumido);
     return null;
   }
   const conTipo = sujetos.filter((s) => s.tipo);
   if (conTipo.some((s) => tiposRegla.some((t) => esUn(s.tipo, t)))) return true;
-  if (conTipo.some((s) => tiposRegla.some((t) => esUn(t, s.tipo as string)))) return null;
+  // Un tipo conocido PADRE del que pide la regla no la descarta: una persona física puede ser
+  // apoderado, menor o tener medidas de apoyo, y eso no se sabe. Pero un tipo PRESUMIDO es el
+  // caso ordinario del escenario base —«persona física» que actúa por sí, mayor y sin apoyos—,
+  // y ahí lo excepcional se presume falso, igual que las reglas del acto presumen
+  // `SUJETO.ACTUA_POR_REPRESENTANTE = false`. Las transversales lo expresan con subtipos
+  // (PF_APODERADO, PF_MENOR_*…): sin esto quedaban todas pendientes con el escenario puesto.
+  if (conTipo.some((s) => !s.presumido && tiposRegla.some((t) => esUn(t, s.tipo as string)))) return null;
   return conTipo.length < sujetos.length ? null : false;
 }
 
@@ -355,12 +384,11 @@ export async function resolverRequisitos(
   /** Y un `VENDEDOR` cumple una regla escrita para `DISPONENTE`. Mismo recorrido, otro mapa. */
   const esUnRol = sube(padresRol);
 
-  // La consulta la hace el adaptador: aquí sólo se le dice QUÉ se quiere. El
-  // filtro de capa, los `include` y los `orderBy` son suyos, y es lo que permite
-  // que este motor no sepa de Prisma (D30). Lo que el adaptador debe devolver
-  // está descrito campo a campo en `puerto.ts` — incluidos los dos órdenes que
-  // son parte del dato: `fundamentos` por `orden` y los documentos del grupo de
-  // evidencia por `prioridad`.
+  // Qué reglas alcanzan al acto: las suyas y, si lo sirve el catálogo universal, también
+  // las TRANSVERSALES —las de TODOS los actos, las de su FAMILIA y las de su SUBFAMILIA—. La
+  // consulta la hace el adaptador (`puerto.ts` dice qué debe devolver): el filtro de capa,
+  // los `include` y los `orderBy` son suyos, y es lo que permite que este motor no sepa de
+  // Prisma (D30). La legacy no tiene transversales: todas sus filas llevan acto.
   const reglas = await repo.reglasDeActo({
     actoCodigo,
     estados: opciones.estados ?? null,
@@ -375,6 +403,8 @@ export async function resolverRequisitos(
     descartadasPorObjeto: 0,
     descartadasPorSujeto: 0,
     sinRevisionNotarial: 0,
+    transversales: reglas.filter((r) => r.ambito !== 'ACTO').length,
+    desplazadasPorEspecificidad: 0,
   };
 
   // 1. Jurisdicción: se sirve lo estatal más lo de la comunidad del expediente.
@@ -393,8 +423,28 @@ export async function resolverRequisitos(
       sustituidos.add(r.modificaCodigo);
     }
   }
-  const vivas = aplicables.filter((r) => {
+  const supervivientes = aplicables.filter((r) => {
     if (sustituidos.has(r.codigo)) { diag.sustituidasPorDelta++; return false; }
+    return true;
+  });
+
+  // 2 bis. Precedencia: GANA LA MÁS ESPECÍFICA, no la más estricta (decisión de Carles,
+  //    3-oct-2026; la misma regla que `matrizEfectiva`). Dos reglas compiten si piden LO MISMO
+  //    BAJO LAS MISMAS CONDICIONES —misma coordenada—; entonces la del acto desplaza a la de su
+  //    subfamilia, ésta a la de la familia y ésta a la de TODOS. Es lex specialis: la familia
+  //    puede reforzar el default transversal o relajarlo. Dentro de un mismo ámbito no compiten:
+  //    son hermanas y salen las dos.
+  const ESPECIFICIDAD: Record<string, number> = { ACTO: 3, SUBFAMILIA: 2, FAMILIA: 1, TODOS: 0 };
+  const coordenada = (r: (typeof reglas)[number]) =>
+    [r.documentoCodigo ?? `GE:${r.evidenciaGrupoCodigo ?? ''}`, r.ccaaCodigo,
+     r.condObjeto ?? '', r.condSujeto ?? '', r.condMedioPago ?? '', r.condCausa ?? ''].join('\u0001');
+  const masEspecifica = new Map<string, number>();
+  for (const r of supervivientes) {
+    const k = coordenada(r);
+    masEspecifica.set(k, Math.max(masEspecifica.get(k) ?? -1, ESPECIFICIDAD[r.ambito] ?? 3));
+  }
+  const vivas = supervivientes.filter((r) => {
+    if ((ESPECIFICIDAD[r.ambito] ?? 3) < masEspecifica.get(coordenada(r))!) { diag.desplazadasPorEspecificidad++; return false; }
     return true;
   });
 
@@ -411,7 +461,9 @@ export async function resolverRequisitos(
   // regla del acto declara un ancestro suyo: RUSTICA estrecha en una compraventa porque
   // hay reglas para INMUEBLE; INMUEBLE no estrecha porque ninguna regla pide OBJETO. Así
   // no hace falta que el acto lleve su tipo base en la base de datos: se deduce.
-  const declarados = new Set(vivas.flatMap((r) => r.objetos.map((o) => o.objetoTipoCodigo)));
+  // ⚠️ Sólo con las reglas PROPIAS del acto: las transversales declaran tipos de cualquier
+  // acto (VEHICULO, VALORES, EMPRESA_NEGOCIO…) y no dicen nada de cuál es el bien de éste.
+  const declarados = new Set(vivas.filter((r) => r.ambito === 'ACTO').flatMap((r) => r.objetos.map((o) => o.objetoTipoCodigo)));
   const estrecha = (t: string) => [...declarados].some((d) => d !== t && esUn(t, d));
 
   const firmes: RequisitoResuelto[] = [];
@@ -424,9 +476,26 @@ export async function resolverRequisitos(
       fact: `${c.atributoDef.ambito}.${c.atributoDef.codigo}`,
       operador: c.operador, valor: c.valor, scopeRolCodigo: c.scopeRolCodigo, grupo: c.grupo,
     }));
-    const porCondicion = evaluar(conds, hechos, ambitoDe, presunciones, esUnRol);
+    // Medio de pago y causa van APARTE y se combinan con AND: `conds` se agrupan con OR entre
+    // grupos, y meterlas como un grupo más las convertiría en alternativas en vez de requisitos.
+    const ejes: Cond[] = [
+      ...(r.condMedioPago ? [{ fact: FACT_MEDIO_PAGO, operador: 'INCLUYE', valor: r.condMedioPago, scopeRolCodigo: null, grupo: 0 }] : []),
+      ...(r.condCausa ? [{ fact: FACT_CAUSA, operador: 'EQ', valor: r.condCausa, scopeRolCodigo: null, grupo: 0 }] : []),
+    ];
+    const porCuerpo = evaluar(conds, hechos, ambitoDe, presunciones, esUnRol);
+    const porEjes = evaluar(ejes, hechos, ambitoDe, presunciones, esUnRol);
+    const valorCond = y(porCuerpo.valor, porEjes.valor);
+    const porCondicion = {
+      valor: valorCond,
+      faltan: valorCond === null ? [...porCuerpo.faltan, ...porEjes.faltan] : [],
+      presumidos: [...porCuerpo.presumidos, ...porEjes.presumidos],
+    };
     const tiposRegla = r.objetos.map((o) => o.objetoTipoCodigo);
-    const acotaPorObjeto = tiposRegla.length > 0 && tiposRegla.every(estrecha);
+    // Una transversal que pide un tipo que el acto no declara SIEMPRE acota: la tarjeta ITV
+    // es de vehículos, y en una compraventa de inmuebles sin saber el bien queda pendiente,
+    // no firme. Si pide el tipo base del acto (INMUEBLE en 0501) se comporta como las suyas.
+    const transversal = r.ambito !== 'ACTO';
+    const acotaPorObjeto = tiposRegla.length > 0 && tiposRegla.every((t) => estrecha(t) || (transversal && !declarados.has(t)));
     const tipoObjPres = typeof presunciones[FACT_TIPO_OBJETO] === 'string' ? (presunciones[FACT_TIPO_OBJETO] as string) : undefined;
     const porObjeto = aplicaPorObjeto(tiposRegla, hechos, esUn, acotaPorObjeto, tipoObjPres);
     const tiposSujeto = [...new Set(r.roles.map((x) => x.sujetoTipoCodigo).filter(Boolean) as string[])];
@@ -448,6 +517,7 @@ export async function resolverRequisitos(
     const resuelto: RequisitoResuelto = {
       id: r.id,
       codigo: r.codigo,
+      ambito: r.ambito,
       descripcion: r.descripcion,
       tipo: r.tipo as 'OBLIGATORIO' | 'RECOMENDADO',
       momento: r.momento,
@@ -471,10 +541,10 @@ export async function resolverRequisitos(
         norma: f.normaBoeId, articulo: f.articulo, nota: f.nota,
       })),
       faltan,
-      condicionada: conds.length > 0 || acotaPorObjeto || tiposSujeto.length > 0,
+      condicionada: conds.length > 0 || ejes.length > 0 || acotaPorObjeto || tiposSujeto.length > 0,
       porPresuncion: valor === null ? [] : [...new Set([...porCondicion.presumidos, ...presumidosTipo])],
       roles: [...new Set(r.roles.map((x) => x.rolCodigo).filter(Boolean) as string[])],
-      hechosQueDecide: [...new Set([...conds.map((c) => c.fact), ...(acotaPorObjeto ? [FACT_TIPO_OBJETO] : []), ...(tiposSujeto.length ? [FACT_TIPO_SUJETO] : [])])],
+      hechosQueDecide: [...new Set([...conds.map((c) => c.fact), ...ejes.map((c) => c.fact), ...(acotaPorObjeto ? [FACT_TIPO_OBJETO] : []), ...(tiposSujeto.length ? [FACT_TIPO_SUJETO] : [])])],
       instancias: expandir(r.scopeGeneracion, r.roles, r.objetos, hechos, esUn, esUnRol),
     };
 
@@ -495,6 +565,22 @@ export async function resolverRequisitos(
         };
         p.bloquea.push(r.codigo);
         preguntas.set(fact, p);
+      }
+      // Medio de pago y causa no tienen `AtributoDef` propio en todas las bases: la pregunta se
+      // compone aquí con los valores que de verdad distinguen algo en este acto.
+      for (const e of ejes) {
+        if (!faltan.includes(e.fact)) continue;
+        const p = preguntas.get(e.fact) ?? {
+          fact: e.fact,
+          label: e.fact === FACT_CAUSA ? 'Causa o modalidad del acto' : 'Medio de pago',
+          tipoDato: 'ENUM',
+          opciones: [] as string[],
+          fuentePreferente: null,
+          bloquea: [],
+        };
+        if (Array.isArray(p.opciones)) p.opciones = [...new Set([...(p.opciones as string[]), e.valor as string])].sort();
+        if (!p.bloquea.includes(r.codigo)) p.bloquea.push(r.codigo);
+        preguntas.set(e.fact, p);
       }
       if (faltan.includes(FACT_TIPO_SUJETO)) {
         const p = preguntas.get(FACT_TIPO_SUJETO) ?? {
@@ -547,8 +633,6 @@ function expandir(
 ): { sujetoId?: string; objetoId?: string }[] {
   const rolesOk = roles.map((r) => r.rolCodigo).filter(Boolean) as string[];
   const tiposOk = objetos.map((o) => o.objetoTipoCodigo);
-  // is-a también aquí: el expediente dice VENDEDOR y la regla pide DISPONENTE. Antes era un
-  // `includes` sobre la cadena, y por eso las reglas genéricas no generaban ni una instancia.
   const sujetos = (hechos.sujetos ?? []).filter((s) => rolesOk.length === 0 || rolesOk.some((r) => esUnRol(s.rol, r)));
   // is-a, NO igualdad: la regla pide INMUEBLE y el expediente trae una VIVIENDA.
   const objs = (hechos.objetos ?? []).filter((o) => tiposOk.length === 0 || tiposOk.some((t) => esUn(o.tipo, t)));

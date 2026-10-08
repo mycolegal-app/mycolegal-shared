@@ -17,6 +17,8 @@ export {
   evaluar,
   FACT_TIPO_OBJETO,
   FACT_TIPO_SUJETO,
+  FACT_MEDIO_PAGO,
+  FACT_CAUSA,
   type Hechos,
   type Pregunta,
   type RequisitoResuelto,

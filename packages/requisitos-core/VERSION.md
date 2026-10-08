@@ -1,5 +1,28 @@
 # @mycolegal-app/requisitos-core
 
+## 0.3.0 — 8-oct-2026
+
+**Un solo motor.** Consultor deja su copia (`consultor/src/lib/requisitos/motor.ts`, que ya
+discrepaba) y usa este paquete; lo que sólo tenía la copia sube aquí:
+
+- **Reglas transversales** (`TODOS`, `FAMILIA`, `SUBFAMILIA`) con **precedencia por
+  especificidad**: dos reglas que piden lo mismo bajo las mismas condiciones → gana la más
+  específica (acto > subfamilia > familia > todos). Hasta ahora Redactor no veía ni una.
+- Ejes **causa** (`ACTO.CAUSA`) y **medio de pago** (`ACTO.MEDIO_PAGO`, operador `INCLUYE`
+  sobre listas), combinados con AND con las condiciones.
+- **Presunción exacta** de tipos: un tipo presumido por el escenario es el caso ordinario y
+  lo excepcional se presume falso.
+- `ambito` en cada requisito; `transversales` y `desplazadasPorEspecificidad` en el diagnóstico.
+
+⚠️ **Rompe el puerto**: `ReglaGolden` gana `ambito`, `condObjeto`, `condSujeto`,
+`condMedioPago`, `condCausa` y `evidenciaGrupoCodigo`, y `reglasDeActo` debe devolver también
+las transversales cuando `soloGolden`. El adaptador de `sharedlib` (`requisitos-repo.ts`) ya lo
+hace, y `actosConGolden` pasa a leer `goldenSirve` del acto. Requiere `sharedlib` con el
+adaptador nuevo.
+
+Medido: Consultor con este paquete da **exactamente** lo mismo que con su copia en 2.471 casos
+(353 actos × 3 CCAA × 2 juegos de hechos, más la matriz con ajustes por organización).
+
 ## 0.1.0 — 3-oct-2026
 
 El motor de requisitos notariales, sacado de Consultor a `mycolegal-shared` para

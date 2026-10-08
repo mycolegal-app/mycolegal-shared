@@ -40,6 +40,19 @@ export interface ReglaGolden {
   sustituye: boolean | null;
   modificaCodigo: string | null;
   actoCodigo: string | null;
+  /** `ACTO` o una transversal: `SUBFAMILIA`, `FAMILIA`, `TODOS`. Decide la precedencia
+   *  (gana la más específica) y si un tipo de objeto que pide «acota». */
+  ambito: string;
+  /** Ejes de condición en columnas propias. `condObjeto`/`condSujeto` tienen su espejo en
+   *  `objetos`/`roles` (medido: 240/240 y 249/249), pero forman parte de la COORDENADA con
+   *  que se decide qué regla desplaza a cuál. Medio de pago y causa se evalúan con AND. */
+  condObjeto: string | null;
+  condSujeto: string | null;
+  condMedioPago: string | null;
+  condCausa: string | null;
+  /** El grupo de evidencia por código (FK), sin cargar: entra en la coordenada de
+   *  precedencia de las reglas que no piden un documento concreto. */
+  evidenciaGrupoCodigo: string | null;
 
   condiciones: {
     /** El hecho se compone como `${ambito}.${codigo}`, y el resto es lo que
@@ -92,7 +105,11 @@ export interface NodoTipo {
  * en los tests— sin que el motor se entere.
  */
 export interface RepositorioRequisitos {
-  /** Reglas del golden de un acto, con el filtro de capa ya aplicado. */
+  /**
+   * Reglas que alcanzan a un acto, con el filtro de capa ya aplicado: las del acto y, cuando
+   * `soloGolden`, también las TRANSVERSALES activas de ámbito `TODOS`, `FAMILIA` (la del acto) y
+   * `SUBFAMILIA` (la del acto). La legacy no tiene transversales.
+   */
   reglasDeActo(args: {
     actoCodigo: string;
     /** `null` = sin filtro de estado. */
@@ -117,6 +134,8 @@ export interface RepositorioRequisitos {
    */
   tiposDeRol(): Promise<NodoTipo[]>;
 
-  /** ¿Cuáles de estos actos tienen golden activo? Decide la capa en modo `auto`. */
+  /** ¿Cuáles de estos actos sirve el catálogo universal? Es el dato `goldenSirve` del acto,
+   *  no una deducción por filas: un acto puede tener reglas retiradas o ser un STUB curado
+   *  sin reglas. Decide la capa en modo `auto`. */
   actosConGolden(actoCodigos: string[]): Promise<Set<string>>;
 }

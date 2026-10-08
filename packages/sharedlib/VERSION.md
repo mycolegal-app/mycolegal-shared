@@ -1,5 +1,13 @@
 # mycolegal-sharedlib — Changelog
 
+## (siguiente) — el adaptador de requisitos sirve las transversales (2026-10-08)
+
+`requisitos-repo.ts` para `requisitos-core` 0.3.0: `reglasDeActo` devuelve también las reglas
+transversales (`TODOS`, la `FAMILIA` y la `SUBFAMILIA` del acto) cuando sirve el catálogo
+universal, y `actosConGolden` lee `legal_acts_global.goldenSirve` en vez de deducirlo contando
+reglas. El cliente necesita ahora `legalActGlobal` (con `familiaCodigo`, `subfamiliaCodigo` y
+`goldenSirve`). La peerDependency sube a `requisitos-core >=0.3.0`.
+
 ## 0.12.4 — la app contratada se comprueba al verificar el token (2026-09-29)
 
 Type: **minor**

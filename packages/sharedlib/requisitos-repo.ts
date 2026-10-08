@@ -51,6 +51,8 @@ const ORIGENES_UNIVERSAL = [ORIGEN_GOLDEN, 'BASICO'] as const;
 export interface ClienteGolden {
   /* eslint-disable @typescript-eslint/no-explicit-any */
   legalActDocumentGlobal: { findMany(args: any): Promise<any[]> };
+  /** `goldenSirve` (capa) y la familia/subfamilia del acto (transversales). */
+  legalActGlobal: { findMany(args: any): Promise<any[]> };
   objetoTipoGlobal: { findMany(args: any): Promise<any[]> };
   sujetoTipoGlobal: { findMany(args: any): Promise<any[]> };
   rolSujetoGlobal: { findMany(args: any): Promise<any[]> };
@@ -95,9 +97,22 @@ function whereCapa(universal: boolean): Record<string, unknown> {
 export function crearRepositorioRequisitos(client: ClienteGolden): RepositorioRequisitos {
   return {
     async reglasDeActo({ actoCodigo, estados, soloGolden }) {
+      // Las del acto y, en el catálogo universal, las TRANSVERSALES que le alcanzan: TODOS,
+      // su FAMILIA y su SUBFAMILIA. La legacy no tiene transversales. Hasta 0.3.0 sólo se
+      // leían las del acto y Redactor no veía ni una transversal (identidad, medios de pago,
+      // consulta de listas…): sólo existían en la copia del motor de Consultor.
+      const alcance: Record<string, unknown>[] = [{ actoCodigo }];
+      if (soloGolden) {
+        const [acto] = await client.legalActGlobal.findMany({
+          where: { codigo: actoCodigo }, select: { familiaCodigo: true, subfamiliaCodigo: true }, take: 1,
+        }) as { familiaCodigo: string | null; subfamiliaCodigo: string | null }[];
+        alcance.push({ ambito: 'TODOS', actoCodigo: null });
+        if (acto?.familiaCodigo) alcance.push({ ambito: 'FAMILIA', actoCodigo: null, familiaCodigo: acto.familiaCodigo });
+        if (acto?.subfamiliaCodigo) alcance.push({ ambito: 'SUBFAMILIA', actoCodigo: null, subfamiliaCodigo: acto.subfamiliaCodigo });
+      }
       const filas = await client.legalActDocumentGlobal.findMany({
         where: {
-          actoCodigo,
+          OR: alcance,
           active: true,
           ...whereCapa(soloGolden),
           ...(estados ? { estado: { in: estados } } : {}),
@@ -130,14 +145,14 @@ export function crearRepositorioRequisitos(client: ClienteGolden): RepositorioRe
 
     async actosConGolden(actoCodigos) {
       if (actoCodigos.length === 0) return new Set();
-      const filas = await client.legalActDocumentGlobal.findMany({
-        where: { actoCodigo: { in: actoCodigos }, origen: { in: [...ORIGENES_UNIVERSAL] }, active: true },
-        select: { actoCodigo: true },
-        distinct: ['actoCodigo'],
-      }) as { actoCodigo: string | null }[];
-      // El `in` no casa NULL, así que ninguna regla sin acto (#823/C1: las de
-      // ámbito FAMILIA o TODOS) llega aquí; el filtro sólo estrecha el tipo.
-      return new Set(filas.flatMap((f) => (f.actoCodigo ? [f.actoCodigo] : [])));
+      // Es un DATO, no una deducción por filas: `goldenSirve` lo enciende el cargador en
+      // todo acto al que el contrato trae reglas. Contar reglas activas fallaba en los dos
+      // sentidos: un acto con reglas retiradas, o un STUB curado sin reglas (1901).
+      const filas = await client.legalActGlobal.findMany({
+        where: { codigo: { in: actoCodigos }, goldenSirve: true },
+        select: { codigo: true },
+      }) as { codigo: string }[];
+      return new Set(filas.map((f) => f.codigo));
     },
   };
 }
