@@ -1,7 +1,7 @@
 # PLAN TÉCNICO — Un solo motor de requisitos y evaluación continua por IA
 
-> Estado: F0 hecha en código (8-oct-2026), pendiente de PUBLICAR requisitos-core 0.3.0 + sharedlib
-> (lo hace el deploy de Carles). Nada desplegado. Fases en LOCAL; TEST lo decide Carles.
+> Estado (8-oct-2026): F0–F3 hechas; F4 hecha salvo el panel (sesión «mycolegal-auth-ab»).
+> PUBLICADOS requisitos-core 0.3.0 y sharedlib 0.12.23 (Carles lo pidió). Nada desplegado. Fases en LOCAL; TEST lo decide Carles.
 > Repos: `mycolegal-shared` (requisitos-core, sharedlib), `mycolegal-consultor` (Revisor),
 > `mycolegal-redactor`. Dueño: sesión «mycolegal-auth-a3».
 
@@ -59,8 +59,8 @@ Lo que se midió antes de escribir esto (local + PROD en solo lectura, 370 infor
       modelos que pide el adaptador.
 - [x] F0.5 **Equivalencia medida**: para cada acto × CCAA, mismo resultado antes/después en
       Consultor (salvo lo que cambia a propósito: herencia de roles).
-- [ ] F0.6 Publicar `requisitos-core` 0.3.0 + `sharedlib`; Redactor sube versión. **Bloquea el
-      build de Consultor**: su `package.json` ya pide `^0.3.0`.
+- [x] F0.6 Publicados `requisitos-core` 0.3.0 + `sharedlib` 0.12.23; Consultor (`ddafdc6`), Redactor
+      (`f1c1884`) y Tramitación (`b64651a`, declaraba el motor sin estar en apps.json) suben versión.
 
 Resultado F0 (8-oct): commits shared `2c02dbf`, platform `86ae70f`, consultor `cb339df`, redactor
 `7c81c33`. Equivalencia Consultor antes/después **2.471/2.471** (`consultor/scripts/foto-motor-requisitos.ts`).
@@ -116,11 +116,12 @@ descartados 62 → 81, 84 evaluados (20 cumplen, 14 no, 50 NS), 31 s. Requiere e
 
 ### F4 — Redactor
 - [x] F4.1 Hechos con varios intervinientes CON ROL (no uno sintético) desde el chat y los documentos.
-- [ ] F4.2 Evaluación persistida por tarea; se dispara tras cada turno del chat, cada adjunto y cada
+- [x] F4.2 Evaluación persistida por tarea; se dispara tras cada turno del chat, cada adjunto y cada
       respuesta del panel (en segundo plano, con huella).
 - [ ] F4.3 Panel y lista de validación muestran el veredicto IA (y lo proponen como casilla).
 
-Estado F4 (8-oct): hecho y probado con modelo real (trabajo 0501 sólo chat: 57 s, pendientes
+Estado F4 (8-oct): reaplicado en `f1c1884` tras publicar; falta engancharlo al disparador común y
+el panel (los dos de la sesión «mycolegal-auth-ab», avisada). Historia: hecho y probado con modelo real (trabajo 0501 sólo chat: 57 s, pendientes
 16 → 13), commiteado en Redactor `c1764a1` y **REVERTIDO** en `c9c8003` porque Redactor no compilaba
 contra los paquetes publicados y otra sesión tenía que reconstruirlo. Pendiente tras publicar
 requisitos-core 0.3.x + sharedlib: `git revert c9c8003`; enganchar `requisitos: evaluarRequisitosTarea`
