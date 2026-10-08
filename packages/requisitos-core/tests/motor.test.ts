@@ -272,8 +272,8 @@ describe('resolverRequisitos', () => {
     const r = await resolverRequisitos(repo({ ...BASE, reglas }), '0501', {});
     expect(r.condicionados.map((x) => x.codigo)).toEqual(['CEDULA']);
     expect(r.preguntas.map((p) => p.fact)).toEqual([FACT_TIPO_OBJETO]);
-    // El tipo pedido y los de primer nivel (aquí sólo INMUEBLE): con cualquiera hay respuesta.
-    expect(r.preguntas[0].opciones).toEqual(['INMUEBLE', 'VIVIENDA']);
+    // El tipo pedido y «Ninguno de estos»: siempre hay respuesta.
+    expect(r.preguntas[0].opciones).toEqual(['VIVIENDA', 'NINGUNO_DE_ESTOS']);
   });
 
   it('sin reglas no revienta: devuelve todo vacío', async () => {

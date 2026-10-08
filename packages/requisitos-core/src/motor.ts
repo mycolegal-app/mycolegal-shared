@@ -115,6 +115,8 @@ export interface RequisitoResuelto {
 export const FACT_TIPO_OBJETO = 'OBJETO.TIPO';
 /** Hecho sintético gemelo para el interviniente: persona física, jurídica, sociedad de capital… */
 export const FACT_TIPO_SUJETO = 'SUJETO.TIPO';
+/** Respuesta a la pregunta de tipo: «ninguno de los tipos ofrecidos». Descarta sus reglas. */
+export const TIPO_NINGUNO = 'NINGUNO_DE_ESTOS';
 /**
  * Los otros dos ejes de condición del catálogo que no son hechos de `atributo_defs_global`:
  * `condMedioPago` (cheque, transferencia, efectivo…) y `condCausa` (renuncia de herencia,
@@ -474,34 +476,15 @@ export async function resolverRequisitos(
   /** `VIVIENDA` cumple una regla que pide `URBANO`, `INMUEBLE` u `OBJETO`. */
   const esUn = sube(padres);
   /**
-   * Las opciones de la pregunta «¿qué tipo es?». Antes eran SÓLO los tipos que pedían las
-   * reglas en duda, y entonces la pregunta podía no tener respuesta: un aumento de capital
-   * (1936) de una SL preguntaba el tipo de interviniente con una única opción, «SA» (sesión
-   * «Redactor - sociedades», 8-oct-2026). Ahora: esos tipos, sus HERMANOS (SA → también SL) y
-   * los tipos de primer nivel (persona física, persona jurídica…). Con cualquiera de ellos la
-   * jerarquía decide: un hermano descarta la regla; un ancestro la deja en duda.
+   * Las opciones de la pregunta «¿qué tipo es?»: los tipos que piden las reglas en duda y
+   * «Ninguno de estos». Sólo con los pedidos la pregunta podía no tener respuesta —un aumento
+   * de capital (1936) de una SL preguntaba el tipo de interviniente con una única opción, «SA»
+   * (8-oct-2026)—. Ofrecer además los tipos hermanos llenaba el panel de opciones que ninguna
+   * regla pide; decisión de Carles: los pedidos y «Ninguno de estos». Ese valor no está en la
+   * jerarquía, así que el motor lo trata como un tipo conocido que no es ninguno de los pedidos
+   * y descarta esas reglas, sin lógica aparte.
    */
-  const hijosDe = new Map<string | null, string[]>();
-  for (const t of [...tiposObj, ...tiposSuj]) {
-    const l = hijosDe.get(t.parentCodigo) ?? [];
-    l.push(t.codigo);
-    hijosDe.set(t.parentCodigo, l);
-  }
-  const MAX_HERMANOS = 6;
-  const opcionesDeTipo = (pedidos: string[], raiz: 'SUJETO' | 'OBJETO'): string[] => {
-    const out = new Set<string>();
-    for (const t of pedidos) {
-      out.add(t);
-      // Los hermanos sólo si son pocos: SA → SL sí; las catorce clases de persona jurídica
-      // hermanas de SOCIEDAD_CAPITAL, no (salían como una pared de botones, 8-oct-2026). Sin
-      // ellos sigue habiendo respuesta: un tipo de primer nivel distinto descarta la regla.
-      const hermanos = hijosDe.get(padres.get(t) ?? null) ?? [];
-      if (hermanos.length <= MAX_HERMANOS) for (const h of hermanos) out.add(h);
-    }
-    for (const h of hijosDe.get(raiz) ?? []) out.add(h);
-    out.delete(raiz);
-    return [...out].sort();
-  };
+  const opcionesDeTipo = (pedidos: string[]): string[] => [...new Set(pedidos)].sort().concat(TIPO_NINGUNO);
   /** Y un `VENDEDOR` cumple una regla escrita para `DISPONENTE`. Mismo recorrido, otro mapa. */
   const subeRol = sube(padresRol);
   const esUnRol = opciones.rolComodin
@@ -729,7 +712,7 @@ export async function resolverRequisitos(
           fuentePreferente: null,
           bloquea: [],
         };
-        p.opciones = opcionesDeTipo([...new Set([...(p.opciones as string[]), ...tiposSujeto])], 'SUJETO');
+        p.opciones = opcionesDeTipo([...(p.opciones as string[]).filter((x) => x !== TIPO_NINGUNO), ...tiposSujeto]);
         p.bloquea.push(r.codigo);
         preguntas.set(FACT_TIPO_SUJETO, p);
       }
@@ -744,7 +727,7 @@ export async function resolverRequisitos(
           fuentePreferente: null,
           bloquea: [],
         };
-        p.opciones = opcionesDeTipo([...new Set([...(p.opciones as string[]), ...tiposRegla])], 'OBJETO');
+        p.opciones = opcionesDeTipo([...(p.opciones as string[]).filter((x) => x !== TIPO_NINGUNO), ...tiposRegla]);
         p.bloquea.push(r.codigo);
         preguntas.set(FACT_TIPO_OBJETO, p);
       }

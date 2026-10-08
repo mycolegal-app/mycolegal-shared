@@ -1,5 +1,17 @@
 # @mycolegal-app/requisitos-core
 
+## 0.3.1 — 8-oct-2026
+
+- **Evaluador: lectura de datos aparte.** Antes de evaluar el cumplimiento, una sola llamada
+  lee los datos que le faltan al motor, por su nombre y con sus opciones; el motor decide con
+  ellos. Pedidos requisito a requisito, el modelo repetía el tipo del vendedor diez veces y se
+  saltaba el medio de pago. Medido en un trabajo real: preguntas pendientes 51 → 41, datos
+  leídos 14 → 38, 126 s → 65 s. Cada «puede aplicar» dice además qué datos le faltan.
+- **Pregunta de tipo: los tipos pedidos y «Ninguno de estos»** (`TIPO_NINGUNO =
+  'NINGUNO_DE_ESTOS'`), decisión de Carles. Sustituye a ofrecer los tipos hermanos (0.3.0), que
+  llenaba el panel de opciones que ninguna regla pide. «Ninguno» no está en la jerarquía, así
+  que el motor lo trata como un tipo conocido distinto de los pedidos y descarta esas reglas.
+
 ## 0.3.0 — 8-oct-2026
 
 **Un solo motor.** Consultor deja su copia (`consultor/src/lib/requisitos/motor.ts`, que ya

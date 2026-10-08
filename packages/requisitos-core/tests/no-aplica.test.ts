@@ -71,11 +71,14 @@ describe('datos que no existen para un interviniente', () => {
 });
 
 describe('la pregunta de tipo siempre tiene respuesta', () => {
-  it('una regla de SA ofrece también SL y los tipos de primer nivel; con SL se descarta', async () => {
+  it('una regla de SA ofrece SA y «Ninguno de estos»; con una SL se contesta «ninguno» y se descarta', async () => {
     const reglas = [regla({ codigo: 'SA_ACCIONES', roles: [{ rolCodigo: null, sujetoTipoCodigo: 'SA' }] })];
     let r = await resolverRequisitos(repo({ ...BASE, reglas }), '1936', {});
     const p = r.preguntas.find((x) => x.fact === FACT_TIPO_SUJETO)!;
-    expect(p.opciones).toEqual(['PERSONA_FISICA', 'PERSONA_JURIDICA', 'SA', 'SL']);
+    expect(p.opciones).toEqual(['SA', 'NINGUNO_DE_ESTOS']);
+    r = await resolverRequisitos(repo({ ...BASE, reglas }), '1936', { sujetos: [{ id: 's', rol: null, tipo: 'NINGUNO_DE_ESTOS', hechos: {} }] });
+    expect(r.descartados.map((x) => x.codigo)).toEqual(['SA_ACCIONES']);
+    // Y sigue valiendo contestar el tipo real: una SL tampoco es una SA.
     r = await resolverRequisitos(repo({ ...BASE, reglas }), '1936', { sujetos: [{ id: 's', rol: null, tipo: 'SL', hechos: {} }] });
     expect(r.descartados.map((x) => x.codigo)).toEqual(['SA_ACCIONES']);
   });
