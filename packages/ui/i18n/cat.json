@@ -1327,7 +1327,17 @@
       "escuchar": "Escolta",
       "parar": "Atura",
       "preparando": "Preparant la veu…",
-      "error": "No s'ha pogut llegir la resposta en veu alta. Torna-ho a provar."
+      "error": "No s'ha pogut llegir la resposta en veu alta. Torna-ho a provar.",
+      "elegir": "Tria la veu",
+      "muestra": "Escolta una mostra",
+      "voces": {
+        "f-firme": "Femenina · ferma",
+        "f-calida": "Femenina · càlida",
+        "f-madura": "Femenina · madura",
+        "m-informativa": "Masculina · informativa",
+        "m-uniforme": "Masculina · serena",
+        "m-suave": "Masculina · suau"
+      }
     }
   },
   "unidad": {

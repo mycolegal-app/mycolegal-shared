@@ -4,11 +4,15 @@
 //   export const { GET, POST } = createTtsRoute({...})
 // El botón 🔊 de `@mycolegal-app/ui` llama a esa ruta y el proxy habla con platform con la service-key:
 //
-// - GET  → `{ data: { disponible } }`. El botón sólo se pinta si es true: si Google retira el modelo de voz,
-//   o la tarea apunta a uno fuera de la UE, platform dice que no y la voz desaparece sin tocar las apps.
-//   Se cachea un minuto por instancia.
+// - GET  → `{ data: { disponible, voz, voces } }`. El botón sólo se pinta si `disponible`: si Google retira el
+//   modelo de voz, o la tarea apunta a uno fuera de la UE, platform dice que no y la voz desaparece sin tocar las
+//   apps (se cachea un minuto por instancia). `voz` es la que tiene elegida el usuario y `voces`, la lista corta.
+// - GET `?muestra=<voz>&idioma=<es|ca|…>` → la frase de muestra de esa voz (mp3), para oírla antes de elegirla.
 // - POST `{ texto, idioma, contexto }` → el PCM (24 kHz, mono, 16 bits) en streaming, tal como llega de
-//   platform. El navegador lo va reproduciendo con Web Audio; el primer audio sale en ~1-2 s.
+//   platform, con la voz del usuario. El navegador lo va reproduciendo con Web Audio; el primer audio sale en
+//   ~1-2 s.
+// - POST `{ voz }` (sin texto) → guarda la voz elegida por el usuario (F7b). Va por POST para no tener que
+//   tocar la ruta de cada app.
 //
 // El `orgId` y el `userId` salen de la SESIÓN, nunca del cuerpo.
 import { NextResponse, type NextRequest } from 'next/server';
@@ -34,26 +38,63 @@ export function createTtsRoute(config: TtsRouteConfig) {
   const base = config.platformUrl.replace(/\/$/, '');
   let estado: { disponible: boolean; expira: number } | null = null;
 
-  async function disponible(): Promise<boolean> {
-    if (!base) return false;
-    if (estado && estado.expira > Date.now()) return estado.disponible;
-    const res = await fetch(`${base}/internal/tts/estado`, {
+  const usuario = (auth: TtsAuth) => auth.authUserId ?? auth.userId ?? null;
+
+  /** Estado de la voz para este usuario. `disponible` se cachea; la voz elegida, no (cambia al elegir). */
+  async function consultarEstado(userId: string | null) {
+    const vacio = { disponible: false, voz: null as string | null, voces: [] as unknown[] };
+    if (!base) return vacio;
+    if (estado && estado.expira > Date.now() && !estado.disponible) return vacio;
+    const qs = userId ? `?userId=${encodeURIComponent(userId)}` : '';
+    const res = await fetch(`${base}/internal/tts/estado${qs}`, {
       headers: { 'X-Service-Key': config.serviceKey },
       signal: AbortSignal.timeout(5_000),
     }).catch(() => null);
-    const j = res?.ok ? ((await res.json().catch(() => null)) as { disponible?: unknown } | null) : null;
+    const j = res?.ok
+      ? ((await res.json().catch(() => null)) as { disponible?: unknown; voz?: unknown; voces?: unknown } | null)
+      : null;
     // platform antiguo (sin la ruta) o caído: no hay voz, y se vuelve a mirar al minuto.
     const ok = j?.disponible === true;
     estado = { disponible: ok, expira: Date.now() + CACHE_ESTADO_MS };
-    return ok;
+    return ok
+      ? { disponible: true, voz: typeof j?.voz === 'string' ? j.voz : null, voces: Array.isArray(j?.voces) ? j.voces : [] }
+      : vacio;
   }
 
-  const GET = config.withAuth(async () => NextResponse.json({ data: { disponible: await disponible() } }));
+  const GET = config.withAuth(async (request, context) => {
+    const url = new URL(request.url);
+    const voz = url.searchParams.get('muestra');
+    if (voz) {
+      if (!base) return NextResponse.json({ error: { code: 'NO_CONFIGURADO' } }, { status: 503 });
+      const idioma = url.searchParams.get('idioma') ?? '';
+      const res = await fetch(
+        `${base}/internal/tts/muestra?voz=${encodeURIComponent(voz)}&idioma=${encodeURIComponent(idioma)}&formato=mp3`,
+        { headers: { 'X-Service-Key': config.serviceKey }, signal: AbortSignal.timeout(10_000) },
+      ).catch(() => null);
+      if (!res?.ok || !res.body) return NextResponse.json({ error: { code: 'SIN_MUESTRA' } }, { status: 404 });
+      return new Response(res.body, {
+        headers: { 'Content-Type': 'audio/mpeg', 'Cache-Control': 'private, max-age=86400' },
+      });
+    }
+    return NextResponse.json({ data: await consultarEstado(usuario(context.auth)) });
+  });
 
   const POST = config.withAuth(async (request, context) => {
     const body = (await request.json().catch(() => null)) as
-      | { texto?: unknown; idioma?: unknown; contexto?: unknown }
+      | { texto?: unknown; idioma?: unknown; contexto?: unknown; voz?: unknown }
       | null;
+    // Elegir voz: `{ voz }` sin texto.
+    if (body && body.texto === undefined && typeof body.voz === 'string') {
+      const userId = usuario(context.auth);
+      if (!base || !userId) return NextResponse.json({ error: { code: 'NO_CONFIGURADO' } }, { status: 503 });
+      const res = await fetch(`${base}/internal/tts/voz`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Service-Key': config.serviceKey },
+        body: JSON.stringify({ userId, voz: body.voz }),
+      }).catch(() => null);
+      if (!res?.ok) return NextResponse.json({ error: { code: 'VOZ_NO_VALIDA' } }, { status: res?.status === 400 ? 400 : 502 });
+      return NextResponse.json({ data: await res.json() });
+    }
     if (typeof body?.texto !== 'string' || !body.texto.trim() || body.texto.length > MAX_TEXTO) {
       return NextResponse.json({ error: { code: 'DATOS_INVALIDOS' } }, { status: 400 });
     }
@@ -67,7 +108,7 @@ export function createTtsRoute(config: TtsRouteConfig) {
         idioma: typeof body.idioma === 'string' ? body.idioma : null,
         contexto: typeof body.contexto === 'string' ? body.contexto.slice(0, 60) : null,
         orgId: context.auth.orgId,
-        userId: context.auth.authUserId ?? context.auth.userId ?? null,
+        userId: usuario(context.auth),
         app: config.app,
       }),
       // Si quien escucha pulsa ⏹ o cierra la pestaña, se corta también la llamada a platform.

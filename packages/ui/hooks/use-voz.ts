@@ -9,6 +9,8 @@
 // - `parar()` corta la reproducción y la descarga (y, a través del proxy, la generación en platform).
 // - Si la app no tiene la ruta, o platform dice que la voz no está disponible (modelo retirado o fuera de
 //   la UE), `disponible` es false y el botón no se pinta.
+// - Voz de cada usuario (F7b): `voz` es la elegida y `voces` la lista corta; `elegirVoz` la guarda en platform y
+//   la cambia a la vez en todos los botones de la página; `oirMuestra` reproduce una frase de muestra.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -16,18 +18,36 @@ export type EstadoVoz = "inactivo" | "preparando" | "sonando";
 
 const RATE = 24_000;
 
-// Sonda de disponibilidad por URL, compartida entre instancias. Se renueva a los 5 minutos: si platform
-// apaga la voz, los botones desaparecen sin recargar la página.
-const sondas = new Map<string, { p: Promise<boolean>; expira: number }>();
-function vozDisponible(url: string): Promise<boolean> {
+export interface OpcionVoz { id: string; genero: "F" | "M" }
+interface EstadoRuta { disponible: boolean; voz: string | null; voces: OpcionVoz[] }
+const SIN_VOZ: EstadoRuta = { disponible: false, voz: null, voces: [] };
+
+// Estado por URL, compartido entre instancias. Se renueva a los 5 minutos: si platform apaga la voz, los
+// botones desaparecen sin recargar la página. Al elegir voz se avisa a todos los botones (`oyentes`).
+const sondas = new Map<string, { p: Promise<EstadoRuta>; expira: number }>();
+const oyentes = new Map<string, Set<(e: EstadoRuta) => void>>();
+function estadoRuta(url: string): Promise<EstadoRuta> {
   const hit = sondas.get(url);
   if (hit && hit.expira > Date.now()) return hit.p;
   const p = fetch(url, { method: "GET" })
-    .then(async (r) => (r.ok ? ((await r.json().catch(() => null)) as { data?: { disponible?: boolean } } | null)?.data?.disponible === true : false))
-    .catch(() => false);
+    .then(async (r) => {
+      if (!r.ok) return SIN_VOZ;
+      const d = ((await r.json().catch(() => null)) as { data?: Partial<EstadoRuta> } | null)?.data;
+      return d?.disponible === true
+        ? { disponible: true, voz: d.voz ?? null, voces: Array.isArray(d.voces) ? d.voces : [] }
+        : SIN_VOZ;
+    })
+    .catch(() => SIN_VOZ);
   sondas.set(url, { p, expira: Date.now() + 5 * 60_000 });
   return p;
 }
+function publicar(url: string, e: EstadoRuta) {
+  sondas.set(url, { p: Promise.resolve(e), expira: Date.now() + 5 * 60_000 });
+  oyentes.get(url)?.forEach((f) => f(e));
+}
+
+/** La muestra que suena ahora (sólo una). */
+let muestraSonando: HTMLAudioElement | null = null;
 
 /** La reproducción en curso en la página (sólo una). */
 let enCurso: { parar: () => void } | null = null;
@@ -43,7 +63,7 @@ export interface UseVozOpts {
 export function useVoz(opts: UseVozOpts = {}) {
   const url = opts.url ?? "/api/tts";
   const [estado, setEstado] = useState<EstadoVoz>("inactivo");
-  const [disponible, setDisponible] = useState(false);
+  const [ruta, setRuta] = useState<EstadoRuta>(SIN_VOZ);
   const yo = useRef<{ parar: () => void } | null>(null);
   const optsRef = useRef(opts);
   optsRef.current = opts;
@@ -56,9 +76,31 @@ export function useVoz(opts: UseVozOpts = {}) {
   useEffect(() => {
     if (!soportado) return;
     let vivo = true;
-    void vozDisponible(url).then((ok) => vivo && setDisponible(ok));
-    return () => { vivo = false; };
+    void estadoRuta(url).then((e) => vivo && setRuta(e));
+    const set = oyentes.get(url) ?? new Set();
+    oyentes.set(url, set);
+    const oir = (e: EstadoRuta) => vivo && setRuta(e);
+    set.add(oir);
+    return () => { vivo = false; set.delete(oir); };
   }, [soportado, url]);
+
+  const elegirVoz = useCallback(async (voz: string) => {
+    const antes = ruta;
+    publicar(url, { ...ruta, voz }); // se ve al momento; si falla, se deshace
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ voz }),
+    }).catch(() => null);
+    if (!res?.ok) { publicar(url, antes); optsRef.current.onError?.(); }
+  }, [url, ruta]);
+
+  const oirMuestra = useCallback((voz: string, idioma?: string | null) => {
+    muestraSonando?.pause();
+    const a = new Audio(`${url}?muestra=${encodeURIComponent(voz)}&idioma=${encodeURIComponent(idioma ?? "")}`);
+    muestraSonando = a;
+    void a.play().catch(() => optsRef.current.onError?.());
+  }, [url]);
 
   const parar = useCallback(() => {
     yo.current?.parar();
@@ -101,7 +143,7 @@ export function useVoz(opts: UseVozOpts = {}) {
         signal: corte.signal,
       });
       if (!res.ok || !res.body) {
-        if (res.status === 503 || res.status === 404) { sondas.delete(url); setDisponible(false); }
+        if (res.status === 503 || res.status === 404) publicar(url, SIN_VOZ);
         throw new Error(`tts ${res.status}`);
       }
       const reader = res.body.getReader();
@@ -148,5 +190,8 @@ export function useVoz(opts: UseVozOpts = {}) {
     }
   }, [soportado, url]);
 
-  return { estado, disponible: soportado && disponible, escuchar, parar };
+  return {
+    estado, disponible: soportado && ruta.disponible, escuchar, parar,
+    voz: ruta.voz, voces: ruta.voces, elegirVoz, oirMuestra,
+  };
 }

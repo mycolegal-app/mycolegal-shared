@@ -1327,7 +1327,17 @@
       "escuchar": "Escuchar",
       "parar": "Parar",
       "preparando": "Preparando la voz…",
-      "error": "No se ha podido leer la respuesta en voz alta. Inténtalo de nuevo."
+      "error": "No se ha podido leer la respuesta en voz alta. Inténtalo de nuevo.",
+      "elegir": "Elegir voz",
+      "muestra": "Escuchar muestra",
+      "voces": {
+        "f-firme": "Femenina · firme",
+        "f-calida": "Femenina · cálida",
+        "f-madura": "Femenina · madura",
+        "m-informativa": "Masculina · informativa",
+        "m-uniforme": "Masculina · serena",
+        "m-suave": "Masculina · suave"
+      }
     }
   },
   "unidad": {

@@ -1326,7 +1326,17 @@
       "escuchar": "Entzun",
       "parar": "Gelditu",
       "preparando": "Ahotsa prestatzen…",
-      "error": "Ezin izan da erantzuna ozen irakurri. Saiatu berriro."
+      "error": "Ezin izan da erantzuna ozen irakurri. Saiatu berriro.",
+      "elegir": "Ahotsa aukeratu",
+      "muestra": "Lagina entzun",
+      "voces": {
+        "f-firme": "Emakumea · irmoa",
+        "f-calida": "Emakumea · beroa",
+        "f-madura": "Emakumea · heldua",
+        "m-informativa": "Gizona · informatiboa",
+        "m-uniforme": "Gizona · lasaia",
+        "m-suave": "Gizona · leuna"
+      }
     }
   },
   "unidad": {
