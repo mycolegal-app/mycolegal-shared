@@ -1,6 +1,7 @@
 # PLAN TÉCNICO — Un solo motor de requisitos y evaluación continua por IA
 
-> Estado: F0 en curso (8-oct-2026). Nada desplegado. Fases en LOCAL; TEST lo decide Carles.
+> Estado: F0 hecha en código (8-oct-2026), pendiente de PUBLICAR requisitos-core 0.3.0 + sharedlib
+> (lo hace el deploy de Carles). Nada desplegado. Fases en LOCAL; TEST lo decide Carles.
 > Repos: `mycolegal-shared` (requisitos-core, sharedlib), `mycolegal-consultor` (Revisor),
 > `mycolegal-redactor`. Dueño: sesión «mycolegal-auth-a3».
 
@@ -48,17 +49,25 @@ Lo que se midió antes de escribir esto (local + PROD en solo lectura, 370 infor
 ## Fases
 
 ### F0 — Un solo motor (shared + consultor + redactor)
-- [ ] F0.1 Subir al paquete lo que sólo tiene la copia: transversales (el puerto pide reglas por
+- [x] F0.1 Subir al paquete lo que sólo tiene la copia: transversales (el puerto pide reglas por
       acto **y** por familia/subfamilia/todos), causa y medio de pago, `INCLUYE`, presunción exacta,
       `ambito` y los contadores nuevos del diagnóstico, capa por `goldenSirve`.
-- [ ] F0.2 Adaptador Prisma de `sharedlib` al día (familia/subfamilia del acto, `goldenSirve`).
-- [ ] F0.3 Tests del paquete con los casos de la copia de Consultor.
-- [ ] F0.4 Consultor importa el paquete: borra `lib/requisitos/motor.ts` y `capa.ts`;
+- [x] F0.2 Adaptador Prisma de `sharedlib` al día (familia/subfamilia del acto, `goldenSirve`).
+- [x] F0.3 Tests del paquete con los casos de la copia de Consultor.
+- [x] F0.4 Consultor importa el paquete: borra `lib/requisitos/motor.ts` y `capa.ts`;
       `requisitos-documentales.ts` (overrides) queda encima. Espejo Prisma del Consultor con los
       modelos que pide el adaptador.
-- [ ] F0.5 **Equivalencia medida**: para cada acto × CCAA, mismo resultado antes/después en
+- [x] F0.5 **Equivalencia medida**: para cada acto × CCAA, mismo resultado antes/después en
       Consultor (salvo lo que cambia a propósito: herencia de roles).
-- [ ] F0.6 Publicar `requisitos-core` 0.3.0 + `sharedlib`; Redactor sube versión.
+- [ ] F0.6 Publicar `requisitos-core` 0.3.0 + `sharedlib`; Redactor sube versión. **Bloquea el
+      build de Consultor**: su `package.json` ya pide `^0.3.0`.
+
+Resultado F0 (8-oct): commits shared `2c02dbf`, platform `86ae70f`, consultor `cb339df`, redactor
+`7c81c33`. Equivalencia Consultor antes/después **2.471/2.471** (`consultor/scripts/foto-motor-requisitos.ts`).
+30 tests del paquete en verde (5 nuevos). Efecto en Redactor: entran las transversales — 0501 pasa de
+66 a 161 requisitos y 1104/0201 ya preguntan la causa. Un test de integración del Consultor
+(`test:motor-requisitos`, «el TIPO DE SUJETO también acota», 0501-R08) falla **igual con el motor
+viejo**: es de datos, no de la unificación.
 
 ### F1 — Hechos que hoy no se pueden resolver (catálogo + motor)
 - [ ] F1.1 `ACTO.CAUSA` como `AtributoDef` (ENUM con `causas_global`) → la IA lo lee.
