@@ -208,7 +208,9 @@ for app in $CONSUMERS; do
   app_dir="$ROOT_DIR/mycolegal-${app}"
   [ -f "$app_dir/package.json" ] || continue
   if ! is_affected "$app"; then
-    dim "$(printf '    · %-*s  no afectada — skip (recogerá por caret en su próximo deploy)' "$NAME_W" "$app")"
+    # El caret NO la sube: el deploy hace `npm ci` y manda el package-lock.json. Se queda en la
+    # versión que tenga, que es correcto sólo porque lo que usa no ha cambiado (affected.mjs).
+    dim "$(printf '    · %-*s  no afectada — sigue en la versión de su lockfile (lo que usa no ha cambiado)' "$NAME_W" "$app")"
     continue
   fi
   current=$(node -e "const p=require('$app_dir/package.json');console.log((p.dependencies&&p.dependencies['$PKG_SCOPED'])||(p.devDependencies&&p.devDependencies['$PKG_SCOPED'])||'')" 2>/dev/null || true)

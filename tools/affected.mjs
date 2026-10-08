@@ -146,20 +146,27 @@ for (const pkg of PKG_KEYS) {
   }
 }
 
-// ================= parse ui barrel (index.ts) symbol -> module =================
-const barrelIndex = resolveEntry('ui', 'index');
-const barrelSymbol = new Map();  // exported name -> module file
-const barrelWildcards = [];      // export * from -> module file
-if (barrelIndex) {
-  const text = readFileSync(barrelIndex, 'utf8');
-  for (const imp of parseImports(barrelIndex, text)) {
+// ================= parse barrels (index.ts) symbol -> module, POR PAQUETE =================
+// 8-oct-2026: antes sólo se leía el barrel de ui. Un import del barrel de requisitos-core,
+// docfilling-core o ai-core salía como «símbolo desconocido», se le asignaban los módulos de
+// ui y la app quedaba «sin solape»: publish-package.sh no la actualizaba y su lockfile seguía
+// en la versión vieja (redactor llegó a ir siete versiones de docfilling-core por detrás).
+const barrels = {};  // pkg -> { index, symbol: Map(name -> module), wildcards: [] }
+for (const pkg of PKG_KEYS) {
+  const index = resolveEntry(pkg, 'index');
+  const b = { index, symbol: new Map(), wildcards: [] };
+  barrels[pkg] = b;
+  if (!index) continue;
+  const text = readFileSync(index, 'utf8');
+  for (const imp of parseImports(index, text)) {
     if (!imp.exportFrom || !imp.spec || !imp.spec.startsWith('.')) continue;
-    const tgt = resolveFrom(dirname(barrelIndex), imp.spec);
+    const tgt = resolveFrom(dirname(index), imp.spec);
     if (!tgt) continue;
-    if (imp.star) barrelWildcards.push(tgt);
-    else for (const n of imp.exportedNames) barrelSymbol.set(n, tgt);
+    if (imp.star) b.wildcards.push(tgt);
+    else for (const n of imp.exportedNames) b.symbol.set(n, tgt);
   }
 }
+const barrelIndex = barrels.ui.index;
 
 // ================= compute changed set =================
 function normalizeChanged(list) {
@@ -198,6 +205,8 @@ const changedArr = [...changed];
 const inUi = (f) => f.startsWith(PKG_DIRS.ui);
 const broadCssChannel = changedArr.some((f) => inUi(f) && (/\/tokens\//.test(f) || /\/tailwind-preset\.ts$/.test(f) || /\/globals\.css$/.test(f)));
 const barrelChanged = barrelIndex && changed.has(barrelIndex);
+// Paquetes con algún fichero cambiado (para la regla conservadora de uso irresoluble).
+const pkgChanged = (pkg) => changedArr.some((f) => f.startsWith(PKG_DIRS[pkg] + '/'));
 const e2eOnly = (f) => inUi(f) && /\/e2e\//.test(f);
 const allChangedAreE2e = changedArr.length > 0 && changedArr.every(e2eOnly);
 
@@ -211,8 +220,9 @@ function consumerApps() {
     if (!isFile(pj)) continue;
     let deps = {}; try { const j = JSON.parse(readFileSync(pj, 'utf8')); deps = { ...j.dependencies, ...j.devDependencies }; } catch { continue; }
     const usesUi = !!deps[PKG_NAME.ui]; const usesSl = !!deps[PKG_NAME.sharedlib]; const usesTe = !!deps[PKG_NAME['text-extract']];
-    if (!usesUi && !usesSl && !usesTe) continue;
-    apps.push({ name: e.name, dir: join(APPS_ROOT, e.name), usesUi, usesSl, usesTe });
+    const uses = new Set(PKG_KEYS.filter((k) => !!deps[PKG_NAME[k]]));
+    if (uses.size === 0) continue;
+    apps.push({ name: e.name, dir: join(APPS_ROOT, e.name), usesUi, usesSl, usesTe, uses });
   }
   return apps.sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -224,41 +234,44 @@ function analyzeApp(app) {
     .filter((f) => ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.astro'].includes(extname(f)));
   const used = new Set();        // package module files this app depends on (entrypoints)
   let usesBarrel = false, wholeBarrel = false, wholePkg = false;
+  const barrelPkgs = new Set();      // paquetes cuyo barrel importa la app
+  const wholeBarrelPkgs = new Set(); // … y de los que usa algo que no se sabe a qué módulo va
+  const wholePkgs = new Set();       // paquetes que usa de forma irresoluble
   const reasons = new Set();
   for (const f of files) {
     let text; try { text = readFileSync(f, 'utf8'); } catch { continue; }
     if (!text.includes('@mycolegal-app/')) continue;
-    let imps; try { imps = extname(f) === '.astro' ? parseImportsRegex(text) : parseImports(f, text); } catch { wholePkg = true; reasons.add('parse-fail'); continue; }
+    let imps; try { imps = extname(f) === '.astro' ? parseImportsRegex(text) : parseImports(f, text); } catch { wholePkg = true; for (const k of app.uses) wholePkgs.add(k); reasons.add('parse-fail'); continue; }
     for (const imp of imps) {
-      if (!imp.spec) { if (imp.dynamic) { wholePkg = true; reasons.add('dynamic-import'); } continue; }
+      if (!imp.spec) { if (imp.dynamic) { wholePkg = true; for (const k of app.uses) wholePkgs.add(k); reasons.add('dynamic-import'); } continue; }
       const head = imp.spec.split('/').slice(0, 2).join('/');
       const pkg = NAME_TO_PKG[head]; if (!pkg) continue;
       const sub = imp.spec.slice(head.length + 1); // '' for barrel
       if (sub === '') {
         // barrel import
-        if (pkg === 'sharedlib') { wholePkg = true; reasons.add('sharedlib-barrel'); continue; }
-        if (pkg === 'text-extract') { wholePkg = true; reasons.add('text-extract-barrel'); continue; }
-        usesBarrel = true;
-        if (imp.star || imp.dynamic) { wholeBarrel = true; reasons.add('barrel-namespace/dynamic'); }
-        else for (const n of imp.named) { const m = barrelSymbol.get(n); if (m) used.add(m); else { wholeBarrel = true; reasons.add(`barrel-unknown:${n}`); } }
+        if (pkg === 'sharedlib') { wholePkg = true; wholePkgs.add(pkg); reasons.add('sharedlib-barrel'); continue; }
+        if (pkg === 'text-extract') { wholePkg = true; wholePkgs.add(pkg); reasons.add('text-extract-barrel'); continue; }
+        usesBarrel = true; barrelPkgs.add(pkg);
+        if (imp.star || imp.dynamic) { wholeBarrel = true; wholeBarrelPkgs.add(pkg); reasons.add('barrel-namespace/dynamic'); }
+        else for (const n of imp.named) { const m = barrels[pkg].symbol.get(n); if (m) used.add(m); else { wholeBarrel = true; wholeBarrelPkgs.add(pkg); reasons.add(`barrel-unknown:${pkg}:${n}`); } }
       } else {
         if (pkg === 'ui' && sub.startsWith('e2e/')) continue; // no se envía
         const m = resolveEntry(pkg, sub);
-        if (m) used.add(m); else { wholePkg = true; reasons.add(`unresolved-subpath:${pkg}/${sub}`); }
+        if (m) used.add(m); else { wholePkg = true; wholePkgs.add(pkg); reasons.add(`unresolved-subpath:${pkg}/${sub}`); }
       }
     }
   }
-  // wholeBarrel → depende de todos los módulos reexportados por el barrel (+ wildcards)
-  if (wholeBarrel) { for (const m of barrelSymbol.values()) used.add(m); for (const m of barrelWildcards) used.add(m); }
+  // wholeBarrel → depende de todos los módulos reexportados por el barrel DE ESE PAQUETE (+ wildcards)
+  for (const pkg of wholeBarrelPkgs) { for (const m of barrels[pkg].symbol.values()) used.add(m); for (const m of barrels[pkg].wildcards) used.add(m); }
 
   // ---- decidir afectada ----
   const hits = [];
   if (allChangedAreE2e) return { app, affected: false, reason: 'solo e2e (no se envía)', used: used.size };
   if (broadCssChannel && app.usesUi) return { app, affected: true, reason: 'canal CSS/tokens/preset (afecta a todo consumidor de ui)', used: used.size };
-  if (barrelChanged && usesBarrel) return { app, affected: true, reason: 'cambió el barrel index.ts y la app lo importa', used: used.size };
+  for (const pkg of barrelPkgs) if (barrels[pkg].index && changed.has(barrels[pkg].index)) return { app, affected: true, reason: `cambió el barrel index.ts de ${pkg} y la app lo importa`, used: used.size };
   if (wholePkg) { // conservador: usa el paquete de forma irresoluble → afectada si hubo cualquier cambio en ese pkg
-    const anyUi = changedArr.some(inUi), anySl = changedArr.some((f) => f.startsWith(PKG_DIRS.sharedlib)), anyTe = changedArr.some((f) => f.startsWith(PKG_DIRS['text-extract']));
-    if ((app.usesUi && anyUi) || (app.usesSl && anySl) || (app.usesTe && anyTe)) return { app, affected: true, reason: `uso irresoluble (${[...reasons].join(', ')})`, used: used.size };
+    const hit = [...wholePkgs].find(pkgChanged);
+    if (hit) return { app, affected: true, reason: `uso irresoluble de ${hit} (${[...reasons].join(', ')})`, used: used.size };
   }
   for (const m of used) if (reverseClosure.has(m)) hits.push(m);
   return { app, affected: hits.length > 0, reason: hits.length ? `usa ${hits.length} entrypoint(s) afectado(s)` : 'sin solape', used: used.size, hits, flags: [...reasons], wholeBarrel, wholePkg };
