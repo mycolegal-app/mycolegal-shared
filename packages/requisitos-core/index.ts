@@ -53,6 +53,7 @@ export {
   type ModoEvaluacion,
   type FuenteCaso,
   type ContextoEvaluacion,
+  type CatalogoDatos,
   type RequisitoAEvaluar,
   type EvaluacionRequisito,
   type EvaluacionDelCaso,

@@ -27,11 +27,26 @@ export interface FuenteCaso {
   texto: string;
 }
 
+/**
+ * El vocabulario cerrado con que se contestan los datos: qué datos hay, con qué valores, y
+ * qué roles y tipos existen. Sin él el modelo se inventa códigos —«comprador»,
+ * «PARTE_TRANSMITENTE», «PF_CAPAZ», «SOCIEDAD_ANONIMA», medido el 8-oct-2026 sobre una
+ * compraventa real— que el motor no puede cruzar con nada.
+ */
+export interface CatalogoDatos {
+  datos: { fact: string; label: string; tipoDato: string; opciones: string[] | null }[];
+  roles: string[];
+  tiposSujeto: string[];
+  tiposObjeto: string[];
+}
+
 export interface ContextoEvaluacion {
   modo: ModoEvaluacion;
   acto: { codigo: string; nombre: string };
   ccaa?: string | null;
   fuentes: FuenteCaso[];
+  /** Si se da, va en el mensaje y la respuesta se filtra contra él. */
+  catalogo?: CatalogoDatos;
 }
 
 /** Un requisito tal como se le enseña al modelo. Lo compone la app: sabe del catálogo de
@@ -109,6 +124,12 @@ Reglas que no se rompen:
   del vendedor o el comprador.
 - Lo dicho por el operador o en la conversación prevalece sobre un documento.
 - Si dudas, NS. Un NO o un SI equivocados son peores que un NS.
+- Usa SOLO los identificadores de dato, los roles, los tipos y los valores del VOCABULARIO.
+  Un rol, un tipo o un valor que no esté en él no sirve: si no encaja, no lo devuelvas.
+- Si no sabes un dato, no lo devuelvas: nunca pongas «NS» como valor de un dato.
+- Para el TIPO de un interviniente o de un bien da el MÁS ESPECÍFICO del vocabulario que
+  la fuente permita (SA mejor que PERSONA_JURIDICA; el subtipo de persona física que
+  corresponda, p. ej. quien actúa por sí mismo), aunque ya se conozca uno más general.
 - Responde SOLO con el JSON pedido, sin texto alrededor.
 
 Formato de respuesta:
@@ -130,6 +151,19 @@ export function cabeceraDelMensaje(ctx: ContextoEvaluacion): string {
     '',
     '## FUENTES',
   ];
+  if (ctx.catalogo) {
+    const c = ctx.catalogo;
+    partes.push('', '## VOCABULARIO (los únicos códigos válidos)');
+    if (c.roles.length) partes.push(`Roles: ${c.roles.join(', ')}`);
+    if (c.tiposSujeto.length) partes.push(`Tipos de interviniente [SUJETO.TIPO]: ${c.tiposSujeto.join(', ')}`);
+    if (c.tiposObjeto.length) partes.push(`Tipos de bien [OBJETO.TIPO]: ${c.tiposObjeto.join(', ')}`);
+    partes.push('Datos:');
+    for (const d of c.datos) {
+      const vals = d.opciones?.length ? d.opciones.join(' | ') : d.tipoDato === 'BOOLEANO' || d.tipoDato === 'BOOL' ? 'SI | NO' : d.tipoDato;
+      partes.push(`- [${d.fact}] ${d.label}: ${vals}`);
+    }
+    partes.push('Para cualquier dato vale también NO_APLICA si no existe para ese interviniente o bien.', '', '## FUENTES');
+  }
   if (ctx.fuentes.length === 0) partes.push('', '(No hay ninguna fuente: todo es NS.)');
   for (const f of ctx.fuentes) partes.push('', `### ${f.id} — ${f.nombre}`, f.texto.trim() || '(sin texto legible)');
   return partes.join('\n');
@@ -191,7 +225,36 @@ export function normalizarRespuesta(
   lote: RequisitoAEvaluar[],
   fuentes: FuenteCaso[],
   huellaDe: (r: RequisitoAEvaluar) => string,
+  catalogo?: CatalogoDatos,
 ): EvaluacionRequisito[] {
+  // Contra el vocabulario: el código tal cual, o el mismo sin mayúsculas ni acentos.
+  const canon = (lista: string[]) => new Map(lista.map((x) => [normalizarTexto(x).replace(/\s+/g, '_'), x]));
+  const roles = catalogo ? canon(catalogo.roles) : null;
+  const tiposS = catalogo ? canon(catalogo.tiposSujeto) : null;
+  const tiposO = catalogo ? canon(catalogo.tiposObjeto) : null;
+  const defDe = new Map((catalogo?.datos ?? []).map((d) => [d.fact, d]));
+  const enLista = (m: Map<string, string> | null, v: unknown): string | null | undefined => {
+    if (!m) return typeof v === 'string' ? v : null;
+    return m.get(normalizarTexto(String(v ?? '')).replace(/\s+/g, '_'));
+  };
+  /** El valor válido de un dato según el vocabulario, o `undefined` si no vale. */
+  const valorValido = (dato: string, v: unknown): unknown => {
+    const x = valorDe(v);
+    if (x === null || x === undefined || x === '' || x === 'NS') return undefined;
+    if (x === NO_APLICA) return dato.endsWith('.TIPO') ? undefined : NO_APLICA;
+    if (dato === FACT_TIPO_SUJETO) return enLista(tiposS, x) ?? undefined;
+    if (dato === FACT_TIPO_OBJETO) return enLista(tiposO, x) ?? undefined;
+    if (!catalogo) return x;
+    const def = defDe.get(dato);
+    if (!def) return undefined;
+    if (def.opciones?.length) {
+      const ops = canon(def.opciones);
+      const una = (y: unknown) => ops.get(normalizarTexto(String(y)).replace(/\s+/g, '_'));
+      if (Array.isArray(x)) { const l = x.map(una).filter(Boolean); return l.length ? l : undefined; }
+      return una(x);
+    }
+    return x;
+  };
   const limpio = texto.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
   let crudo: unknown;
   try { crudo = JSON.parse(limpio); } catch { return []; }
@@ -215,10 +278,19 @@ export function normalizarRespuesta(
     for (const d of (Array.isArray(e.datos) ? e.datos : []) as Record<string, unknown>[]) {
       const dato = String(d?.dato ?? '');
       if (!/^(ACTO|SUJETO|OBJETO)\.[A-Z0-9_]+$/.test(dato)) continue;
+      const valor = valorValido(dato, d.valor);
+      if (valor === undefined) continue;
+      // Un dato de interviniente necesita un rol del vocabulario (o ninguno).
+      let rol: string | null = null;
+      if (dato.startsWith('SUJETO.') && d.rol) {
+        const r = enLista(roles, d.rol);
+        if (!r) continue;
+        rol = r;
+      }
       const p = verificada(d.fuente, d.cita);
       if (!p) continue;
       const confianza = CONFIANZAS.has(d.confianza as Confianza) ? d.confianza as Confianza : 'baja';
-      datos.push({ dato, valor: valorDe(d.valor), rol: d.rol ? String(d.rol) : null, fuente: p.fuente, cita: p.cita, confianza });
+      datos.push({ dato, valor, rol, fuente: p.fuente, cita: p.cita, confianza });
     }
     const evidencia = ((Array.isArray(e.evidencia) ? e.evidencia : []) as Record<string, unknown>[])
       .map((x) => verificada(x?.fuente, x?.cita)).filter((x): x is Prueba => x !== null);
@@ -268,6 +340,8 @@ export interface OpcionesEvaluacion {
   paralelo?: number;
   /** Evaluaciones anteriores: las de huella igual se reutilizan sin llamar al modelo. */
   previas?: EvaluacionRequisito[];
+  /** Jerarquía de tipos (ver `anadirDatos`). */
+  esUnTipo?: (tipo: string, ancestro: string) => boolean;
 }
 
 /** Evalúa una lista de requisitos contra el contexto. Nunca lanza: un lote que falla se
@@ -300,7 +374,7 @@ export async function evaluarRequisitos(
       const i = siguiente++;
       try {
         const texto = await op.llm(sistema, cabecera + '\n' + loteDelMensaje(lotes[i], i + 1, lotes.length));
-        evaluaciones.push(...normalizarRespuesta(texto, lotes[i], ctx.fuentes, huellaDe));
+        evaluaciones.push(...normalizarRespuesta(texto, lotes[i], ctx.fuentes, huellaDe, ctx.catalogo));
       } catch (err) {
         errores.push(`lote ${i + 1}: ${err instanceof Error ? err.message : String(err)}`);
       }
@@ -315,7 +389,16 @@ export async function evaluarRequisitos(
  * conocido: lo que dijo una persona manda. Los de confianza baja no entran. Un dato de
  * SUJETO va al interviniente con ese rol (o a uno nuevo con ese rol, si no lo hay).
  */
-export function anadirDatos(hechos: Hechos, datos: DatoLeido[]): Hechos {
+export function anadirDatos(
+  hechos: Hechos,
+  datos: DatoLeido[],
+  /** Jerarquía de tipos: un tipo MÁS CONCRETO del ya conocido lo refina (PERSONA_JURIDICA →
+   *  SA). Es el mismo dato, más preciso, no otro: no pisa nada que haya dicho una persona. */
+  esUnTipo?: (tipo: string, ancestro: string) => boolean,
+): Hechos {
+  const refina = (actual: string | null | undefined, nuevo: unknown): nuevo is string =>
+    typeof nuevo === 'string' && nuevo !== NO_APLICA
+    && (!actual || (nuevo !== actual && !!esUnTipo && esUnTipo(nuevo, actual)));
   const out: Hechos = {
     acto: { ...(hechos.acto ?? {}) },
     sujetos: (hechos.sujetos ?? []).map((s) => ({ ...s, hechos: { ...s.hechos } })),
@@ -330,12 +413,12 @@ export function anadirDatos(hechos: Hechos, datos: DatoLeido[]): Hechos {
     } else if (ambito === 'SUJETO') {
       let s = out.sujetos!.find((x) => (x.rol ?? null) === d.rol);
       if (!s) { s = { id: `IA-${d.rol ?? out.sujetos!.length + 1}`, rol: d.rol, tipo: null, hechos: {} }; out.sujetos!.push(s); }
-      if (d.dato === FACT_TIPO_SUJETO) { if (!s.tipo && typeof d.valor === 'string' && d.valor !== NO_APLICA) s.tipo = d.valor; }
+      if (d.dato === FACT_TIPO_SUJETO) { if (refina(s.tipo, d.valor)) s.tipo = d.valor; }
       else if (s.hechos[nombre] === undefined) s.hechos[nombre] = d.valor;
     } else if (ambito === 'OBJETO') {
       let o = out.objetos![0];
       if (!o) { o = { id: 'IA-BIEN', tipo: null, hechos: {} }; out.objetos!.push(o); }
-      if (d.dato === FACT_TIPO_OBJETO) { if (!o.tipo && typeof d.valor === 'string' && d.valor !== NO_APLICA) o.tipo = d.valor; }
+      if (d.dato === FACT_TIPO_OBJETO) { if (refina(o.tipo, d.valor)) o.tipo = d.valor; }
       else if (o.hechos[nombre] === undefined) o.hechos[nombre] = d.valor;
     }
   }
@@ -379,7 +462,7 @@ export async function evaluarCaso(args: {
 
   const datos = primera.evaluaciones.flatMap((e) => e.datos);
   if (datos.length) {
-    hechos = anadirDatos(hechos, datos);
+    hechos = anadirDatos(hechos, datos, args.esUnTipo);
     resultado = await args.resolver(hechos);
     // Segunda vuelta: lo que ahora aplica o puede aplicar y no se evaluó, o cuya situación
     // cambió (de «puede aplicar» a «aplica» cambia su huella).

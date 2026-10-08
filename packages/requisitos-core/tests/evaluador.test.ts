@@ -94,3 +94,42 @@ describe('evaluador', () => {
     expect(citaEnFuente('casada en separación de bienes', f)).toBe(false);
   });
 });
+
+describe('vocabulario cerrado', () => {
+  it('roles, tipos y valores inventados se tiran; los que casan sin mayúsculas se normalizan', async () => {
+    const reqs: RequisitoAEvaluar[] = [{ codigo: 'X', situacion: 'PUEDE_APLICAR', titulo: 'X', clase: 'DOCUMENTO', aporta: null, tratamiento: null, obligatorio: true, exige: null, condicionesTexto: [], fundamento: [] }];
+    const c: ContextoEvaluacion = {
+      ...ctx(['DOÑA ANA, divorciada, compra a BANCO SABADELL S.A. la finca urbana']),
+      catalogo: {
+        datos: [{ fact: 'SUJETO.ESTADO_CIVIL', label: 'Estado civil', tipoDato: 'ENUM', opciones: ['SOLTERO', 'CASADO', 'DIVORCIADO'] }],
+        roles: ['VENDEDOR', 'COMPRADOR'], tiposSujeto: ['PERSONA_FISICA', 'SA'], tiposObjeto: ['URBANO'],
+      },
+    };
+    const { llm } = modelo({ evaluaciones: [{ codigo: 'X', cumplido: 'NS', evidencia: [], datos: [
+      { dato: 'SUJETO.ESTADO_CIVIL', valor: 'divorciado', rol: 'comprador', fuente: 'F1', cita: 'DOÑA ANA, divorciada', confianza: 'alta' },
+      { dato: 'SUJETO.TIPO', valor: 'SOCIEDAD_ANONIMA', rol: 'VENDEDOR', fuente: 'F1', cita: 'BANCO SABADELL S.A.', confianza: 'alta' },
+      { dato: 'SUJETO.TIPO', valor: 'SA', rol: 'PARTE_TRANSMITENTE', fuente: 'F1', cita: 'BANCO SABADELL S.A.', confianza: 'alta' },
+      { dato: 'SUJETO.ESTADO_CIVIL', valor: 'NS', rol: 'VENDEDOR', fuente: 'F1', cita: 'BANCO SABADELL S.A.', confianza: 'alta' },
+      { dato: 'OBJETO.TIPO', valor: 'urbano', rol: null, fuente: 'F1', cita: 'la finca urbana', confianza: 'alta' },
+    ] }] });
+    const r = await evaluarRequisitos(reqs, c, { llm });
+    expect(r.evaluaciones[0].datos.map((d) => [d.dato, d.rol, d.valor])).toEqual([
+      ['SUJETO.ESTADO_CIVIL', 'COMPRADOR', 'DIVORCIADO'],
+      ['OBJETO.TIPO', null, 'URBANO'],
+    ]);
+  });
+});
+
+describe('tipos más concretos', () => {
+  it('SA refina a PERSONA_JURIDICA; un tipo distinto no pisa el conocido', () => {
+    const padre: Record<string, string> = { SA: 'PERSONA_JURIDICA', PERSONA_JURIDICA: 'SUJETO', PERSONA_FISICA: 'SUJETO' };
+    const esUn = (t: string, a: string) => { let x: string | undefined = t; while (x) { if (x === a) return true; x = padre[x]; } return false; };
+    const h = anadirDatos(
+      { sujetos: [{ id: 'v', rol: 'VENDEDOR', tipo: 'PERSONA_JURIDICA', hechos: {} }, { id: 'c', rol: 'COMPRADOR', tipo: 'PERSONA_FISICA', hechos: {} }] },
+      [{ dato: 'SUJETO.TIPO', valor: 'SA', rol: 'VENDEDOR', fuente: 'F1', cita: 'x', confianza: 'alta' },
+       { dato: 'SUJETO.TIPO', valor: 'SA', rol: 'COMPRADOR', fuente: 'F1', cita: 'x', confianza: 'alta' }],
+      esUn,
+    );
+    expect(h.sujetos!.map((s) => s.tipo)).toEqual(['SA', 'PERSONA_FISICA']);
+  });
+});
