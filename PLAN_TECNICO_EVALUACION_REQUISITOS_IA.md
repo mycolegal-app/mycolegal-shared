@@ -74,6 +74,11 @@ viejo**: es de datos, no de la unificación.
 - [ ] F1.2 Hechos que no existen para un interviniente → NO_APLICA (falso) en vez de UNKNOWN:
       régimen sólo si CASADO; datos personales sólo en persona física; condiciones sin rol no cuentan
       al REPRESENTANTE. Declarado en el catálogo de atributos, no en código.
+- [ ] F1.3 Preguntas de TIPO que no se pueden contestar: las opciones de `SUJETO.TIPO` /
+      `OBJETO.TIPO` son sólo los tipos que piden las reglas en duda. Caso real (8-oct, sesión
+      «Redactor - sociedades»): 1936 (aumento de capital) de una SL pregunta «Tipo de
+      interviniente» con opciones `["SA"]` — una SL no tiene respuesta. Las opciones deben ser
+      los tipos reales del catálogo (con su jerarquía) y el motor descartar por is-a.
 
 ### F2 — Evaluador IA compartido (requisitos-core)
 - [ ] F2.1 `evaluarRequisitos({ resultado del motor, contexto, llm })` → por requisito:
