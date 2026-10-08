@@ -299,6 +299,15 @@ interface ViewerState {
  * Se monta UNA vez en el app-shell de cada app (como <IncidentReporter/>), con
  * `available` calculado server-side a partir de las apps de la org.
  */
+/** #34 — Documentos adjuntos a la conversación, tal como los devuelve `/doc-context`. */
+interface DocsAdjuntos {
+  docs: { id: string; fileName: string; chars: number }[];
+  totalChars: number;
+  maxChars: number;
+  tokensEstimados: number;
+  creditosPorPregunta: number | null;
+}
+
 export function MycoBotRail({
   available = false,
   askUrl = "/api/resoluciones/ask",
@@ -477,8 +486,12 @@ export function MycoBotRail({
   // F1 — chat con documento: adjunto EFÍMERO de la conversación (el server extrae solo el
   // texto y lo inyecta como contexto; no persiste el binario). Se limpia en conversación nueva.
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [attachedDoc, setAttachedDoc] = useState<{ fileName: string } | null>(null);
+  // #34 — VARIOS documentos por conversación. El servidor devuelve la lista con el
+  // tamaño total y una estimación de créditos por pregunta (el texto viaja en cada
+  // turno y el turno se cobra por tokens), que se enseña junto a los adjuntos.
+  const [attachedDocs, setAttachedDocs] = useState<DocsAdjuntos | null>(null);
   const [attaching, setAttaching] = useState(false);
+  const [attachError, setAttachError] = useState<string | null>(null);
   // F3 — skills disponibles (las de la org + las de fábrica) y la skill ACTIVA de la
   // conversación (su instrucción se inyecta como contexto al preguntar).
   const [skills, setSkills] = useState<{ id: string; nombre: string; descripcion: string | null; deFabrica: boolean; editable: boolean }[]>([]);
@@ -729,7 +742,10 @@ export function MycoBotRail({
   }, [consultorUrl, messages, conversacionId]);
 
   const ask = useCallback(
-    async (pregunta: string) => {
+    // #34 — `cid` explícito: quien acaba de adjuntar documentos a una conversación
+    // recién creada pregunta antes de que el estado `conversacionId` se refresque.
+    async (pregunta: string, cid?: string | null) => {
+      const convId = cid ?? conversacionId;
       const q = pregunta.trim();
       if (!q || loading) return;
 
@@ -800,7 +816,7 @@ export function MycoBotRail({
           // editable con /sources). Ausente/null = todas las clases.
           body: JSON.stringify({
             pregunta: q,
-            conversacionId,
+            conversacionId: convId,
             appSlug,
             // Idioma de la UI → MycoBot acota el Manual a esa lengua (citas en el
             // idioma que lee el usuario, no mezcladas).
@@ -934,7 +950,8 @@ export function MycoBotRail({
     setConversacionId(null);
     setViewer(null);
     setView("chat");
-    setAttachedDoc(null);
+    setAttachedDocs(null);
+    setAttachError(null);
     setActiveSkillId(null);
     // F1 — borra el contexto documental efímero de la conversación anterior.
     if (prev) {
@@ -949,44 +966,78 @@ export function MycoBotRail({
     }
   }, [conversacionId, baseUrl]);
 
-  // F1 — adjunta un documento a la conversación: el server extrae el texto y lo guarda
+  // F1 — adjunta documentos a la conversación: el server extrae el texto y lo guarda
   // como contexto efímero por conversacionId. Si aún no hay conversación, se pre-genera
-  // el id para colgar el documento de ESTA conversación desde ya.
-  const attachDoc = useCallback(
-    async (file: File) => {
+  // el id para colgar los documentos de ESTA conversación desde ya. #34 — varios, en
+  // serie (cada uno se mide contra el cupo que dejan los anteriores).
+  const attachDocs = useCallback(
+    async (files: File[]): Promise<string | null> => {
+      if (files.length === 0) return conversacionId;
       setAttaching(true);
+      setAttachError(null);
+      let cid = conversacionId;
+      if (!cid) {
+        cid = crypto.randomUUID();
+        setConversacionId(cid);
+      }
       try {
-        let cid = conversacionId;
-        if (!cid) {
-          cid = crypto.randomUUID();
-          setConversacionId(cid);
+        for (const file of files) {
+          const fd = new FormData();
+          fd.append("file", file);
+          fd.append("conversacionId", cid);
+          const res = await fetch(`${baseUrl}/doc-context`, { method: "POST", body: fd });
+          const json = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            setAttachError(`${file.name}: ${json?.error?.message ?? t("ui.mycobot.attachError")}`);
+            continue;
+          }
+          const data = (json?.data ?? json) as DocsAdjuntos & { truncated?: boolean; fileName?: string };
+          setAttachedDocs(data);
+          if (data.truncated) setAttachError(t("ui.mycobot.attachTruncated", { name: file.name }));
         }
-        const fd = new FormData();
-        fd.append("file", file);
-        fd.append("conversacionId", cid);
-        const res = await fetch(`${baseUrl}/doc-context`, { method: "POST", body: fd });
-        if (!res.ok) {
-          setAttachedDoc(null);
-          return;
-        }
-        setAttachedDoc({ fileName: file.name });
       } catch {
-        setAttachedDoc(null);
+        setAttachError(t("ui.mycobot.attachError"));
       } finally {
         setAttaching(false);
       }
+      return cid;
+    },
+    [conversacionId, baseUrl, t],
+  );
+
+  const removeDoc = useCallback(
+    async (docId: string) => {
+      const cid = conversacionId;
+      if (!cid) return;
+      setAttachError(null);
+      const res = await fetch(
+        `${baseUrl}/doc-context?conversacionId=${encodeURIComponent(cid)}&docId=${encodeURIComponent(docId)}`,
+        { method: "DELETE" },
+      ).catch(() => null);
+      const json = res?.ok ? await res.json().catch(() => null) : null;
+      setAttachedDocs((json?.data ?? null) as DocsAdjuntos | null);
     },
     [conversacionId, baseUrl],
   );
 
-  const removeDoc = useCallback(async () => {
-    const cid = conversacionId;
-    setAttachedDoc(null);
-    if (cid) {
-      await fetch(`${baseUrl}/doc-context?conversacionId=${encodeURIComponent(cid)}`, {
-        method: "DELETE",
-      }).catch(() => {});
+  // #34 — Al cambiar de conversación (abrir una del historial, restaurar la de la
+  // sesión) se recuperan sus documentos: siguen inyectándose en cada turno y el
+  // usuario tiene que verlos (y su coste) para poder quitarlos.
+  useEffect(() => {
+    if (!conversacionId) {
+      setAttachedDocs(null);
+      return;
     }
+    let vivo = true;
+    fetch(`${baseUrl}/doc-context?conversacionId=${encodeURIComponent(conversacionId)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (vivo && j) setAttachedDocs((j.data ?? j) as DocsAdjuntos);
+      })
+      .catch(() => {});
+    return () => {
+      vivo = false;
+    };
   }, [conversacionId, baseUrl]);
 
   // Carga la lista de conversaciones (sin cambiar de vista). La usan tanto el panel
@@ -1162,11 +1213,21 @@ export function MycoBotRail({
       // El scope de clases lo lee el `ask` de la cookie compartida (que la propia
       // Biblioteca escribe), así que aquí solo abrimos y lanzamos la pregunta.
       const pregunta = detail.pregunta as string | undefined;
+      // #34 — La barra principal de Consultor también adjunta: los ficheros llegan
+      // en el evento, se cuelgan de la conversación y, si hay pregunta, se lanza
+      // DESPUÉS, para que el primer turno ya los vea.
+      const files = Array.isArray(detail.files) ? (detail.files as File[]) : [];
+      if (files.length > 0) {
+        void attachDocs(files).then((cid) => {
+          if (pregunta) void ask(pregunta, cid);
+        });
+        return;
+      }
       if (pregunta) void ask(pregunta);
     };
     window.addEventListener("mycolegal:open-mycobot", handler);
     return () => window.removeEventListener("mycolegal:open-mycobot", handler);
-  }, [ask, openHistory, setOpenPersisted]);
+  }, [ask, attachDocs, openHistory, setOpenPersisted]);
 
   // Auto-scroll al final del hilo.
   useEffect(() => {
@@ -2260,29 +2321,47 @@ export function MycoBotRail({
                     </select>
                   </div>
                 )}
-                {attachedDoc && (
-                  <div className="mb-2 flex items-center gap-2 rounded-md border bg-gray-50 px-2 py-1 text-xs text-gray-700">
-                    <Paperclip className="h-3.5 w-3.5 shrink-0 text-cyan-600" />
-                    <span className="flex-1 truncate" title={attachedDoc.fileName}>{attachedDoc.fileName}</span>
-                    <button
-                      type="button"
-                      onClick={() => void removeDoc()}
-                      aria-label={t("ui.mycobot.attachRemove")}
-                      className="rounded p-0.5 text-gray-400 hover:text-gray-700"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
+                {attachedDocs && attachedDocs.docs.length > 0 && (
+                  <div className="mb-2 space-y-1 rounded-md border bg-gray-50 px-2 py-1 text-xs text-gray-700">
+                    {attachedDocs.docs.map((d) => (
+                      <div key={d.id} className="flex items-center gap-2">
+                        <Paperclip className="h-3.5 w-3.5 shrink-0 text-cyan-600" />
+                        <span className="flex-1 truncate" title={d.fileName}>{d.fileName}</span>
+                        <button
+                          type="button"
+                          onClick={() => void removeDoc(d.id)}
+                          aria-label={t("ui.mycobot.attachRemove")}
+                          className="rounded p-0.5 text-gray-400 hover:text-gray-700"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                    {/* #34 — el texto viaja en CADA pregunta: tamaño y coste a la vista. */}
+                    <p className="border-t pt-1 text-[11px] text-gray-500">
+                      {t("ui.mycobot.attachSummary", {
+                        tokens: attachedDocs.tokensEstimados.toLocaleString(),
+                        pct: String(Math.min(100, Math.round((attachedDocs.totalChars / attachedDocs.maxChars) * 100))),
+                      })}
+                      {attachedDocs.creditosPorPregunta != null && (
+                        <> · {t("ui.mycobot.attachCost", { creditos: attachedDocs.creditosPorPregunta.toLocaleString() })}</>
+                      )}
+                    </p>
                   </div>
+                )}
+                {attachError && (
+                  <p className="mb-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-800">{attachError}</p>
                 )}
                 <div className="flex items-end gap-2">
                   <input
                     ref={fileInputRef}
                     type="file"
                     accept=".pdf,.doc,.docx,.xlsx,.xls,image/*"
+                    multiple
                     className="hidden"
                     onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) void attachDoc(f);
+                      const files = Array.from(e.target.files ?? []);
+                      if (files.length > 0) void attachDocs(files);
                       e.target.value = "";
                     }}
                   />

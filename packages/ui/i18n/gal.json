@@ -1119,7 +1119,11 @@
       "reportPrefill": "Resposta de MycoBot incorrecta, incompleta ou nesgada. O que respondeu:",
       "interrumpida": "Esta pregunta quedou sen resposta ao cambiar de pantalla. Se a resposta chegou a xerarse, aparecerá no historial da conversa; se non, volve preguntala.",
       "interrumpidaReintentar": "Preguntar de novo",
-      "print": "Imprimir esta resposta"
+      "print": "Imprimir esta resposta",
+      "attachSummary": "~{tokens} tokens ({pct} % do máximo)",
+      "attachCost": "≈ {creditos} créditos por pregunta",
+      "attachError": "Non se puido achegar o ficheiro",
+      "attachTruncated": "«{name}» non cabía enteiro: recortouse ao máximo da conversa."
     },
     "registradorPicker": {
       "placeholder": "Buscar rexistro por nome ou poboación…",
@@ -1512,7 +1516,9 @@
     "irAlDiaAria": "Ir ao día",
     "navAnterior": "Anterior",
     "navSiguiente": "Seguinte",
-    "vistasAria": "Vista do calendario"
+    "vistasAria": "Vista do calendario",
+    "vincularExpedienteExistente": "vincular a un expediente existente",
+    "vincularExpedienteHint": "O vínculo gárdase ao premer Gardar."
   },
   "common": {
     "save": "Gardar",

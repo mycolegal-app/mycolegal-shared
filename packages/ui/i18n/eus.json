@@ -1119,7 +1119,11 @@
       "reportPrefill": "MycoBoten erantzun okerra, osatugabea edo alboratua. Erantzun zuena:",
       "interrumpida": "Galdera hau erantzunik gabe geratu da pantailaz aldatzean. Erantzuna sortu bazen, elkarrizketaren historian agertuko da; bestela, galdetu berriro.",
       "interrumpidaReintentar": "Galdetu berriro",
-      "print": "Inprimatu erantzun hau"
+      "print": "Inprimatu erantzun hau",
+      "attachSummary": "~{tokens} token (gehienekoaren % {pct})",
+      "attachCost": "≈ {creditos} kreditu galdera bakoitzeko",
+      "attachError": "Ezin izan da fitxategia erantsi",
+      "attachTruncated": "«{name}» ez zen osorik sartzen: elkarrizketaren gehienekora moztu da."
     },
     "registradorPicker": {
       "placeholder": "Bilatu erregistroa izenez edo herriz…",
@@ -1512,7 +1516,9 @@
     "irAlDiaAria": "Joan egunera",
     "navAnterior": "Aurrekoa",
     "navSiguiente": "Hurrengoa",
-    "vistasAria": "Egutegiaren ikuspegia"
+    "vistasAria": "Egutegiaren ikuspegia",
+    "vincularExpedienteExistente": "lotu dagoen espediente batera",
+    "vincularExpedienteHint": "Lotura Gorde sakatzean gordetzen da."
   },
   "common": {
     "save": "Gorde",

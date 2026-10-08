@@ -1120,7 +1120,11 @@
       "reportPrefill": "Resposta de MycoBot incorrecta, incompleta o esbiaixada. El que va respondre:",
       "interrumpida": "Aquesta pregunta va quedar sense resposta al canviar de pantalla. Si la resposta es va arribar a generar, apareixerà a l'historial de la conversa; si no, torna a preguntar-la.",
       "interrumpidaReintentar": "Preguntar de nou",
-      "print": "Imprimir aquesta resposta"
+      "print": "Imprimir aquesta resposta",
+      "attachSummary": "~{tokens} tokens ({pct} % del màxim)",
+      "attachCost": "≈ {creditos} crèdits per pregunta",
+      "attachError": "No s'ha pogut adjuntar el fitxer",
+      "attachTruncated": "«{name}» no hi cabia sencer: s'ha retallat al màxim de la conversa."
     },
     "registradorPicker": {
       "placeholder": "Cercar registre per nom o població…",
@@ -1513,7 +1517,9 @@
     "irAlDiaAria": "Anar al dia",
     "navAnterior": "Anterior",
     "navSiguiente": "Següent",
-    "vistasAria": "Vista del calendari"
+    "vistasAria": "Vista del calendari",
+    "vincularExpedienteExistente": "vincular a un expedient existent",
+    "vincularExpedienteHint": "El vincle es desa en prémer Desa."
   },
   "common": {
     "save": "Desar",

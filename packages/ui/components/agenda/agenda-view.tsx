@@ -115,6 +115,9 @@ type EventoForm = {
   // #672 — ese expediente está anulado: la cita sigue viva y hay que cancelarla
   // a mano (o abrir otro expediente), pero eso lo decide una persona.
   expedienteVinculadoAnulado: boolean;
+  // #964 — el usuario ha vinculado a mano la cita a un expediente YA existente
+  // (dado de alta por otro camino): viaja en el guardado como `expedienteId`.
+  vinculoCambiado?: boolean;
   // #731 — se está EDITANDO una firma ya agendada, no creando una. No basta con
   // `id`, que es el del hito de agenda y una firma no tiene: la firma vive en el
   // expediente. De esto dependen el título del diálogo, que no se ofrezca
@@ -394,6 +397,36 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
       clearTimeout(id);
     };
   }, [expBusqueda, form, conExpedientes]);
+
+  // #964 — buscador para VINCULAR una cita existente a un expediente que se dio de
+  // alta por otro camino (no desde la cita). Mismo endpoint que el de las firmas,
+  // con su propio estado para no mezclarse con el modo "firma".
+  const [vincAbierto, setVincAbierto] = useState(false);
+  const [vincBusqueda, setVincBusqueda] = useState("");
+  const [vincResultados, setVincResultados] = useState<{ id: string; numero: number; referencia: string | null }[]>([]);
+  useEffect(() => {
+    if (!conExpedientes || !vincAbierto || vincBusqueda.trim().length < 2) {
+      setVincResultados([]);
+      return;
+    }
+    let cancel = false;
+    const id = setTimeout(() => {
+      fetch(`${apiBase}/expedientes?search=${encodeURIComponent(vincBusqueda.trim())}&pageSize=8&incluirTerminados=true`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => {
+          if (!cancel && Array.isArray(j?.data)) setVincResultados(j.data);
+        })
+        .catch(() => {});
+    }, 250);
+    return () => {
+      cancel = true;
+      clearTimeout(id);
+    };
+  }, [vincBusqueda, vincAbierto, conExpedientes, apiBase]);
+  useEffect(() => {
+    setVincAbierto(false);
+    setVincBusqueda("");
+  }, [form?.id]);
 
   // #626 — buscador del contacto citado (solo en modo hito, que es la cita
   // manual). Reutiliza el directorio de Contactos: nada que mantener aparte.
@@ -709,6 +742,8 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
           // #629/#630 — el servidor los descarta si el tipo no es FIRMA.
           asignadoId: form.asignadoId || null,
           importante: form.importante,
+          // #964 — vínculo a un expediente existente, solo si se ha cambiado aquí.
+          ...(form.id && form.vinculoCambiado ? { expedienteId: form.expedienteVinculadoId } : {}),
         };
         res = await fetch(form.id ? `${apiBase}/agenda/eventos/${form.id}` : `${apiBase}/agenda/eventos`, {
           method: form.id ? "PATCH" : "POST",
@@ -1502,7 +1537,59 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
                       : t("agendaPage.crearExpedienteDesdeCita")}
                   </button>
                 )}
+                {/* #964 — El expediente se dio de alta por otro camino: la cita
+                    se puede vincular a él en vez de crear otro. */}
+                {(!form.expedienteVinculadoId || form.expedienteVinculadoAnulado) && !vincAbierto && (
+                  <>
+                    {" · "}
+                    <button
+                      type="button"
+                      onClick={() => setVincAbierto(true)}
+                      className="font-medium text-cyan-700 underline underline-offset-2 hover:text-cyan-800"
+                    >
+                      {t("agendaPage.vincularExpedienteExistente")}
+                    </button>
+                  </>
+                )}
               </p>
+            )}
+            {conExpedientes && form.id && form.modo === "hito" && vincAbierto && (
+              <div className="mb-3">
+                <input
+                  type="text"
+                  value={vincBusqueda}
+                  onChange={(e) => setVincBusqueda(e.target.value)}
+                  placeholder={t("agendaPage.buscarExpediente")}
+                  className="w-full rounded-md border px-3 py-2 text-sm"
+                  autoFocus
+                />
+                {vincResultados.length > 0 && (
+                  <ul className="mt-1 max-h-40 overflow-y-auto rounded-md border">
+                    {vincResultados.map((e) => (
+                      <li key={e.id}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setForm({
+                              ...form,
+                              expedienteVinculadoId: e.id,
+                              expedienteVinculadoRef: e.referencia || `EXP-${e.numero}`,
+                              expedienteVinculadoAnulado: false,
+                              vinculoCambiado: true,
+                            });
+                            setVincAbierto(false);
+                            setVincBusqueda("");
+                          }}
+                          className="block w-full px-3 py-1.5 text-left text-sm hover:bg-cyan-50"
+                        >
+                          {e.referencia || `EXP-${e.numero}`}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <p className="mt-1 text-[11px] text-gray-500">{t("agendaPage.vincularExpedienteHint")}</p>
+              </div>
             )}
             <div className="space-y-3">
               {form.modo === "firma" ? (
