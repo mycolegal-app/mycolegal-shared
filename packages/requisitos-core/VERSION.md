@@ -1,5 +1,15 @@
 # @mycolegal-app/requisitos-core
 
+## Sin publicar (próxima: 0.3.2)
+
+- **Datos que se deducen del rol** (`DEDUCIDO_DEL_ROL`). `SUJETO.DISPONE_DE_SUS_BIENES` ya no
+  hay que preguntarlo cuando el interviniente tiene rol: lo que cuelga de DISPONENTE (vendedor,
+  donante…) dispone y lo que cuelga de ADQUIRENTE no. No se puede presumir —una presunción vale
+  igual para todos los intervinientes y callaba la autorización judicial cuando vende un menor—;
+  el catálogo lo prohíbe desde las presunciones transversales del 8-oct. Un rol fuera de las dos
+  ramas o un interviniente sin rol sigue en duda; un dato del expediente manda siempre, y lo
+  deducido manda sobre una presunción. Sin cambios en el puerto ni en quien llama.
+
 ## 0.3.1 — 8-oct-2026
 
 - **Evaluador: lectura de datos aparte.** Antes de evaluar el cumplimiento, una sola llamada

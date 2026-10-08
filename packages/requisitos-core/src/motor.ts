@@ -240,6 +240,19 @@ const DEPENDE_DE: Record<string, { fact: string; valores: unknown[] }> = {
 };
 
 /**
+ * Datos que se DEDUCEN DEL ROL del interviniente cuando el expediente no los trae (8-oct-2026).
+ * No se pueden presumir: una presunción vale igual para todos los intervinientes, y
+ * `DISPONE_DE_SUS_BIENES` es cierto para el vendedor y falso para el comprador. Presumirlo
+ * `false` callaba la autorización judicial cuando vende un menor; presumirlo `true` la pedía
+ * cuando compra. El rol lo dice: lo que cuelga de DISPONENTE dispone y lo que cuelga de
+ * ADQUIRENTE no. Un rol fuera de las dos ramas, o un interviniente sin rol, sigue sin saberse
+ * (se pregunta). Un dato del expediente manda siempre sobre lo deducido.
+ */
+const DEDUCIDO_DEL_ROL: Record<string, [rolBase: string, valor: unknown][]> = {
+  'SUJETO.DISPONE_DE_SUS_BIENES': [['DISPONENTE', true], ['ADQUIRENTE', false]],
+};
+
+/**
  * Datos del estado civil y familiar de una PARTE del negocio. Los del representante no
  * cuentan en una condición sin rol («algún interviniente casado en gananciales»): el que
  * comparece por otro no es quien vende ni quien compra.
@@ -311,10 +324,13 @@ export function evaluar(
         // El tipo de bien o de interviniente no es un atributo: vive en `tipo`, no en
         // `hechos`. Una condición sobre OBJETO.TIPO / SUJETO.TIPO (reglas propias de una
         // notaría) lo lee de ahí.
-        const leer = (x: { tipo?: string | null; hechos: Record<string, unknown> }): unknown => {
+        const leer = (x: { tipo?: string | null; rol?: string | null; hechos: Record<string, unknown> }): unknown => {
           if (nombre === 'TIPO') return x.tipo ?? undefined;
           const v = x.hechos[nombre];
           if (v !== undefined) return v;
+          // ¿Lo dice su rol? (DISPONE_DE_SUS_BIENES: vendedor sí, comprador no). Sólo con un rol
+          // declarado: sin rol, el comodín de Redactor lo haría a la vez disponente y adquirente.
+          if (x.rol) for (const [base, valor] of DEDUCIDO_DEL_ROL[c.fact] ?? []) if (esUnRol(x.rol, base)) return valor;
           // El dato no está: ¿es que no existe para éste? Por su tipo, o por el dato del que depende.
           if (c.paraTipo && !RAICES_TIPO.has(c.paraTipo) && x.tipo && !esUnTipo(x.tipo, c.paraTipo)) return NO_APLICA;
           const dep = DEPENDE_DE[c.fact];
