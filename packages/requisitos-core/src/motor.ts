@@ -561,13 +561,43 @@ export async function resolverRequisitos(
   const coordenada = (r: (typeof reglas)[number]) =>
     [r.documentoCodigo ?? `GE:${r.evidenciaGrupoCodigo ?? ''}`, r.ccaaCodigo,
      r.condObjeto ?? '', r.condSujeto ?? '', r.condMedioPago ?? '', r.condCausa ?? ''].join('\u0001');
-  const masEspecifica = new Map<string, number>();
-  for (const r of supervivientes) {
-    const k = coordenada(r);
-    masEspecifica.set(k, Math.max(masEspecifica.get(k) ?? -1, ESPECIFICIDAD[r.ambito] ?? 3));
-  }
+  //
+  //    ⚠️ Y SÓLO SI LA CUBRE (8-oct-2026). La coordenada no mira condiciones, roles ni objetos, así
+  //    que una regla del acto MÁS ESTRECHA desplazaba a la transversal más ancha y se perdía un
+  //    requisito: 0507-R03 (sólo si el comunero está casado) se llevaba por delante el título
+  //    previo de 05C-R02 en una extinción entre solteros; 0701-R12 (sólo el DONATARIO) el poder del
+  //    donante de GLOBAL-R04. Ahora la específica desplaza a la general sólo si se aplica, como
+  //    mínimo, en todos los casos de la general: sin condiciones o con las mismas, con roles que
+  //    abarcan los suyos y con tipos de bien que abarcan los suyos (el tipo base del acto —INMUEBLE
+  //    en una compraventa— no estrecha nada). Si no la cubre, salen las dos: mejor un documento
+  //    repetido, que se agrupa al presentarlo, que uno perdido.
+  const declaradosActo = new Set(supervivientes.filter((r) => r.ambito === 'ACTO').flatMap((r) => r.objetos.map((o) => o.objetoTipoCodigo)));
+  const estrechaTipo = (t: string) => [...declaradosActo].some((d) => d !== t && esUn(t, d));
+  const firmaConds = (r: (typeof reglas)[number]) => r.condiciones
+    .map((c) => `${c.grupo}|${c.atributoDef.ambito}.${c.atributoDef.codigo}|${c.operador}|${JSON.stringify(c.valor)}|${c.scopeRolCodigo ?? ''}`)
+    .sort().join('\u0002');
+  /** ¿Cada elemento de `estrecha` es-un alguno de `ancha`? `ancha` vacía abarca todo. */
+  const abarca = (ancha: string[], estrecha: string[], es: (a: string, b: string) => boolean) =>
+    ancha.length === 0 || (estrecha.length > 0 && estrecha.every((e) => ancha.some((a) => es(e, a))));
+  const cubre = (w: (typeof reglas)[number], r: (typeof reglas)[number]): boolean => {
+    const cw = firmaConds(w);
+    if (cw && cw !== firmaConds(r)) return false;
+    const rolesW = w.roles.map((x) => x.rolCodigo).filter(Boolean) as string[];
+    const rolesR = r.roles.map((x) => x.rolCodigo).filter(Boolean) as string[];
+    if (!abarca(rolesW, rolesR, (a, b) => subeRol(a, b))) return false;
+    const tiposW = w.roles.map((x) => x.sujetoTipoCodigo).filter(Boolean) as string[];
+    const tiposR = r.roles.map((x) => x.sujetoTipoCodigo).filter(Boolean) as string[];
+    if (!abarca(tiposW, tiposR, (a, b) => esUn(a, b))) return false;
+    const objW = w.objetos.map((o) => o.objetoTipoCodigo).filter(estrechaTipo);
+    const objR = r.objetos.map((o) => o.objetoTipoCodigo);
+    return abarca(objW, objR, (a, b) => esUn(a, b));
+  };
+  const porCoordenada = new Map<string, (typeof reglas)[number][]>();
+  for (const r of supervivientes) (porCoordenada.get(coordenada(r)) ?? porCoordenada.set(coordenada(r), []).get(coordenada(r))!).push(r);
   const vivas = supervivientes.filter((r) => {
-    if ((ESPECIFICIDAD[r.ambito] ?? 3) < masEspecifica.get(coordenada(r))!) { diag.desplazadasPorEspecificidad++; return false; }
+    const nivel = ESPECIFICIDAD[r.ambito] ?? 3;
+    const desplaza = porCoordenada.get(coordenada(r))!.some((w) => (ESPECIFICIDAD[w.ambito] ?? 3) > nivel && cubre(w, r));
+    if (desplaza) { diag.desplazadasPorEspecificidad++; return false; }
     return true;
   });
 

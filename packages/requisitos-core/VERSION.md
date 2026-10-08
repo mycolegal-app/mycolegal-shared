@@ -9,6 +9,16 @@
   el catálogo lo prohíbe desde las presunciones transversales del 8-oct. Un rol fuera de las dos
   ramas o un interviniente sin rol sigue en duda; un dato del expediente manda siempre, y lo
   deducido manda sobre una presunción. Sin cambios en el puerto ni en quien llama.
+- **La específica desplaza a la general sólo si la cubre.** La precedencia por especificidad
+  comparaba la coordenada (documento, comunidad y ejes `cond*`) sin mirar condiciones, roles ni
+  objetos, y una regla del acto más estrecha se llevaba por delante un requisito transversal:
+  el título previo entre comuneros solteros (0507), el poder del donante (0701, GLOBAL-R04). Ahora
+  desplaza sólo si tiene las mismas condiciones o ninguna, roles y tipos de bien que abarcan los
+  de la otra (el tipo base del acto no estrecha). Si no, salen las dos. Medido sobre el catálogo
+  del 8-oct en LOCAL: 8 actos recuperan reglas (0501, 0504, 0505, 0507, 0515, 0701, 1103, 1104),
+  ninguno pierde ninguna; 17 casos de oro en verde.
+  ⚠️ **Al publicar**, la instantánea de `consultor/scripts/regresion-catalogo` cambia en esos 8
+  actos: cargar en LOCAL, revisar el informe y aceptarla (`--aceptar`) antes de subir el catálogo.
 
 ## 0.3.1 — 8-oct-2026
 
