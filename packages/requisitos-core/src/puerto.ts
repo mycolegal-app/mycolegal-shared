@@ -69,6 +69,10 @@ export interface ReglaGolden {
       /** `Json?`: las opciones de una LISTA. */
       opciones: unknown;
       fuentePreferente: string | null;
+      /** Para qué tipo de interviniente / de bien existe el dato (nulo = para todos). En uno
+       *  de otro tipo el motor lo da por NO_APLICA en vez de desconocido. */
+      sujetoTipoCodigo?: string | null;
+      objetoTipoCodigo?: string | null;
     };
     operador: string;
     /** `Json?` en el schema: el valor de una condición puede ser booleano,

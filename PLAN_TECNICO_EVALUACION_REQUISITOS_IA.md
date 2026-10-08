@@ -70,15 +70,27 @@ Resultado F0 (8-oct): commits shared `2c02dbf`, platform `86ae70f`, consultor `c
 viejo**: es de datos, no de la unificación.
 
 ### F1 — Hechos que hoy no se pueden resolver (catálogo + motor)
-- [ ] F1.1 `ACTO.CAUSA` como `AtributoDef` (ENUM con `causas_global`) → la IA lo lee.
-- [ ] F1.2 Hechos que no existen para un interviniente → NO_APLICA (falso) en vez de UNKNOWN:
+- [x] F1.1 La causa la lee la IA del Revisor. **Desviación:** no se da de alta un `AtributoDef`
+      (`facts.md` es derivado del golden y la causa vive en una columna de la regla); la lectura de
+      hechos usa, para los datos sin definición, la pregunta que compone el motor (rótulo y
+      opciones). 1104 → 77 reglas, 0515 → 58, ya decidibles.
+- [x] F1.2 Hechos que no existen para un interviniente → NO_APLICA (falso) en vez de UNKNOWN:
       régimen sólo si CASADO; datos personales sólo en persona física; condiciones sin rol no cuentan
       al REPRESENTANTE. Declarado en el catálogo de atributos, no en código.
-- [ ] F1.3 Preguntas de TIPO que no se pueden contestar: las opciones de `SUJETO.TIPO` /
+      **Hecho así:** el tipo sale del catálogo (`sujetoTipoCodigo`/`objetoTipoCodigo` del atributo);
+      la dependencia del régimen respecto del estado civil y la lista de datos «de la parte» van
+      en dos tablas cortas en `motor.ts` (no hay columna para expresarlas). Quien no tiene el dato
+      **no cumple la condición con ningún operador** (la primera versión hacía verdadero un NE y la
+      foto lo cazó en GLOBAL-R50). Efecto medido: sin hechos, 0 cambios; con intervinientes,
+      702 requisitos pasan de en duda a descartados y ninguno a firme.
+- [x] F1.3 Preguntas de TIPO que no se pueden contestar: las opciones de `SUJETO.TIPO` /
       `OBJETO.TIPO` son sólo los tipos que piden las reglas en duda. Caso real (8-oct, sesión
       «Redactor - sociedades»): 1936 (aumento de capital) de una SL pregunta «Tipo de
       interviniente» con opciones `["SA"]` — una SL no tiene respuesta. Las opciones deben ser
       los tipos reales del catálogo (con su jerarquía) y el motor descartar por is-a.
+      **Hecho:** opciones = tipos pedidos + sus hermanos + los de primer nivel.
+- [x] F1.4 (para F2) `condicionesTexto` en cada requisito: las condiciones en palabras con el
+      identificador del dato entre corchetes.
 
 ### F2 — Evaluador IA compartido (requisitos-core)
 - [ ] F2.1 `evaluarRequisitos({ resultado del motor, contexto, llm })` → por requisito:

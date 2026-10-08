@@ -92,6 +92,13 @@ export interface RequisitoResuelto {
    */
   hechosQueDecide: string[];
   /**
+   * Las condiciones de la regla en palabras, con el identificador exacto de cada dato entre
+   * corchetes: «Estado civil [SUJETO.ESTADO_CIVIL] (rol VENDEDOR) = CASADO». Grupos alternativos
+   * separados por « O ». Es lo que el evaluador por IA necesita para saber QUÉ buscar en las
+   * fuentes (el motor sabe qué falta; sin esto, la IA no sabría qué significa).
+   */
+  condicionesTexto: string[];
+  /**
    * Hechos que se han decidido con una PRESUNCIÓN del escenario base, no con un dato del
    * expediente. Vacío si no se pasaron presunciones o si todo lo que mira la regla se
    * sabía. La pantalla lo enseña («según el escenario base: …») porque una presunción
@@ -146,14 +153,48 @@ export interface Resultado {
 
 // ── evaluación ───────────────────────────────────────────────────────────────
 
+const OPERADOR_TEXTO: Record<string, string> = {
+  EQ: '=', NE: '≠', IN: 'es uno de', NOT_IN: 'no es ninguno de', GT: '>', GTE: '≥', LT: '<', LTE: '≤',
+  INCLUYE: 'incluye', EXISTS: 'consta', NOT_EXISTS: 'no consta', IS_A: 'es un',
+};
+function valorTexto(v: unknown): string {
+  if (v === true) return 'SÍ';
+  if (v === false) return 'NO';
+  if (Array.isArray(v)) return v.map(valorTexto).join(', ');
+  return v === null || v === undefined ? '' : String(v);
+}
+/** Una condición en palabras, con su dato entre corchetes (ver `condicionesTexto`). */
+function condicionTexto(c: Cond, label: string): string {
+  const op = OPERADOR_TEXTO[c.operador] ?? c.operador;
+  const rol = c.scopeRolCodigo ? ` (rol ${c.scopeRolCodigo})` : '';
+  const valor = c.operador === 'EXISTS' || c.operador === 'NOT_EXISTS' ? '' : ` ${valorTexto(c.valor)}`;
+  return `${label} [${c.fact}]${rol} ${op}${valor}`.trim();
+}
+
 const y = (a: Ternario, b: Ternario): Ternario =>
   a === false || b === false ? false : a === null || b === null ? null : true;
 
 const o = (a: Ternario, b: Ternario): Ternario =>
   a === true || b === true ? true : a === null || b === null ? null : false;
 
+/**
+ * Valor de un dato que NO EXISTE para ese interviniente o ese bien: el régimen económico de un
+ * soltero, el estado civil de una sociedad. No es desconocido —se sabe que no hay—, y tratarlo
+ * como UNKNOWN dejaba en duda toda condición «algún interviniente…» en cuanto uno de ellos no
+ * tenía el dato (medido en PROD el 8-oct-2026: 60 de 141 informes con «falta régimen» lo
+ * tenían leído de los casados).
+ *
+ * Un interviniente o bien para quien el dato no existe **no cumple la condición, con
+ * cualquier operador**: la condición habla de quienes pueden tenerlo. Primero lo hice
+ * casar con NE/NOT_IN/NOT_EXISTS y la foto del motor lo cazó: GLOBAL-R50 («activo esencial = NO
+ * o no consta», de la SOCIEDAD que interviene) pasaba a firme en 678 casos porque el vendedor
+ * persona física «no tenía activo esencial».
+ */
+export const NO_APLICA = 'NO_APLICA';
+
 function comparar(op: string, valor: unknown, esperado: unknown): Ternario {
   if (valor === undefined) return null;
+  if (valor === NO_APLICA) return false;
   const lista = Array.isArray(esperado) ? esperado : [esperado];
   switch (op) {
     case 'EQ': return valor === esperado;
@@ -178,7 +219,36 @@ function comparar(op: string, valor: unknown, esperado: unknown): Ternario {
 
 export type Cond = {
   fact: string; operador: string; valor: unknown; scopeRolCodigo: string | null; grupo: number;
+  /** Para qué tipo de interviniente o de bien existe el dato (`atributo_defs_global`
+   *  `sujetoTipoCodigo`/`objetoTipoCodigo`): el estado civil, de persona física. En uno de otro
+   *  tipo el dato vale NO_APLICA. Nulo = existe para todos. */
+  paraTipo?: string | null;
 };
+
+/**
+ * Datos que dependen de OTRO dato del mismo interviniente: sólo existen si éste tiene uno de
+ * esos valores. No está en el catálogo (no hay columna para expresarlo), así que se declara
+ * aquí, corto y a la vista. Si crece, sube a `atributo_defs_global`.
+ */
+const DEPENDE_DE: Record<string, { fact: string; valores: unknown[] }> = {
+  'SUJETO.REGIMEN_ECONOMICO': { fact: 'ESTADO_CIVIL', valores: ['CASADO'] },
+  'SUJETO.REGIMEN_ECONOMICO_MATRIMONIAL': { fact: 'ESTADO_CIVIL', valores: ['CASADO'] },
+  'SUJETO.REGIMEN_ES_CAPITULADO': { fact: 'ESTADO_CIVIL', valores: ['CASADO'] },
+  'SUJETO.CONYUGE_NO_SEPARADO': { fact: 'ESTADO_CIVIL', valores: ['CASADO'] },
+};
+
+/**
+ * Datos del estado civil y familiar de una PARTE del negocio. Los del representante no
+ * cuentan en una condición sin rol («algún interviniente casado en gananciales»): el que
+ * comparece por otro no es quien vende ni quien compra.
+ */
+const DE_LA_PARTE = new Set([
+  'SUJETO.ESTADO_CIVIL', 'SUJETO.REGIMEN_ECONOMICO', 'SUJETO.REGIMEN_ECONOMICO_MATRIMONIAL',
+  'SUJETO.REGIMEN_ES_CAPITULADO', 'SUJETO.CONYUGE_NO_SEPARADO', 'SUJETO.VECINDAD_CIVIL',
+  'SUJETO.PAREJA_ESTABLE', 'SUJETO.PAREJA_ESTABLE_INSCRITA',
+]);
+const ROL_REPRESENTANTE = 'REPRESENTANTE';
+const RAICES_TIPO = new Set(['SUJETO', 'OBJETO']);
 
 /**
  * Evalúa las condiciones de una regla contra los hechos. Devuelve el ternario y los hechos
@@ -196,6 +266,8 @@ export function evaluar(
    * el motor le pasa el recorrido por la jerarquía.
    */
   esUnRol: (rol: string | null | undefined, exigido: string) => boolean = (rol, exigido) => rol === exigido,
+  /** La jerarquía de tipos de interviniente y de bien, para saber si un dato existe para él. */
+  esUnTipo: (tipo: string | null | undefined, exigido: string) => boolean = (tipo, exigido) => tipo === exigido,
 ): { valor: Ternario; faltan: string[]; presumidos: string[] } {
   if (condiciones.length === 0) return { valor: true, faltan: [], presumidos: [] };
   // Tercera fuente de valor, después del dato: lo que el escenario base presume. Solo
@@ -229,13 +301,25 @@ export function evaluar(
         // Sujetos y objetos: basta que UNO haga match. Con `scopeRolCodigo` se acota a
         // los que tienen ese rol -«casado, pero el VENDEDOR»-.
         const cands = ambito === 'SUJETO'
-          ? (hechos.sujetos ?? []).filter((s) => !c.scopeRolCodigo || esUnRol(s.rol, c.scopeRolCodigo))
+          ? (hechos.sujetos ?? []).filter((s) => c.scopeRolCodigo
+            ? esUnRol(s.rol, c.scopeRolCodigo)
+            : !(DE_LA_PARTE.has(c.fact) && esUnRol(s.rol, ROL_REPRESENTANTE)))
           : (hechos.objetos ?? []);
         // Sin intervinientes u objetos, la presunción hace de interviniente u objeto virtual.
         // El tipo de bien o de interviniente no es un atributo: vive en `tipo`, no en
         // `hechos`. Una condición sobre OBJETO.TIPO / SUJETO.TIPO (reglas propias de una
         // notaría) lo lee de ahí.
-        const leer = (x: { tipo?: string | null; hechos: Record<string, unknown> }) => (nombre === 'TIPO' ? x.tipo ?? undefined : x.hechos[nombre]);
+        const leer = (x: { tipo?: string | null; hechos: Record<string, unknown> }): unknown => {
+          if (nombre === 'TIPO') return x.tipo ?? undefined;
+          const v = x.hechos[nombre];
+          if (v !== undefined) return v;
+          // El dato no está: ¿es que no existe para éste? Por su tipo, o por el dato del que depende.
+          if (c.paraTipo && !RAICES_TIPO.has(c.paraTipo) && x.tipo && !esUnTipo(x.tipo, c.paraTipo)) return NO_APLICA;
+          const dep = DEPENDE_DE[c.fact];
+          const base = dep ? x.hechos[dep.fact] : undefined;
+          if (dep && base !== undefined && base !== null && base !== NO_APLICA && !dep.valores.includes(base)) return NO_APLICA;
+          return undefined;
+        };
         if (cands.length === 0) v = comparar(c.operador, conPresuncion(c.fact, undefined), c.valor);
         else v = cands.map((x) => comparar(c.operador, conPresuncion(c.fact, leer(x)), c.valor))
           .reduce<Ternario>((a, b) => o(a, b), false);
@@ -381,6 +465,30 @@ export async function resolverRequisitos(
     };
   /** `VIVIENDA` cumple una regla que pide `URBANO`, `INMUEBLE` u `OBJETO`. */
   const esUn = sube(padres);
+  /**
+   * Las opciones de la pregunta «¿qué tipo es?». Antes eran SÓLO los tipos que pedían las
+   * reglas en duda, y entonces la pregunta podía no tener respuesta: un aumento de capital
+   * (1936) de una SL preguntaba el tipo de interviniente con una única opción, «SA» (sesión
+   * «Redactor - sociedades», 8-oct-2026). Ahora: esos tipos, sus HERMANOS (SA → también SL) y
+   * los tipos de primer nivel (persona física, persona jurídica…). Con cualquiera de ellos la
+   * jerarquía decide: un hermano descarta la regla; un ancestro la deja en duda.
+   */
+  const hijosDe = new Map<string | null, string[]>();
+  for (const t of [...tiposObj, ...tiposSuj]) {
+    const l = hijosDe.get(t.parentCodigo) ?? [];
+    l.push(t.codigo);
+    hijosDe.set(t.parentCodigo, l);
+  }
+  const opcionesDeTipo = (pedidos: string[], raiz: 'SUJETO' | 'OBJETO'): string[] => {
+    const out = new Set<string>();
+    for (const t of pedidos) {
+      out.add(t);
+      for (const h of hijosDe.get(padres.get(t) ?? null) ?? []) out.add(h);
+    }
+    for (const h of hijosDe.get(raiz) ?? []) out.add(h);
+    out.delete(raiz);
+    return [...out].sort();
+  };
   /** Y un `VENDEDOR` cumple una regla escrita para `DISPONENTE`. Mismo recorrido, otro mapa. */
   const esUnRol = sube(padresRol);
 
@@ -475,6 +583,8 @@ export async function resolverRequisitos(
     const conds: Cond[] = r.condiciones.map((c) => ({
       fact: `${c.atributoDef.ambito}.${c.atributoDef.codigo}`,
       operador: c.operador, valor: c.valor, scopeRolCodigo: c.scopeRolCodigo, grupo: c.grupo,
+      paraTipo: c.atributoDef.ambito === 'SUJETO' ? c.atributoDef.sujetoTipoCodigo ?? null
+        : c.atributoDef.ambito === 'OBJETO' ? c.atributoDef.objetoTipoCodigo ?? null : null,
     }));
     // Medio de pago y causa van APARTE y se combinan con AND: `conds` se agrupan con OR entre
     // grupos, y meterlas como un grupo más las convertiría en alternativas en vez de requisitos.
@@ -482,8 +592,15 @@ export async function resolverRequisitos(
       ...(r.condMedioPago ? [{ fact: FACT_MEDIO_PAGO, operador: 'INCLUYE', valor: r.condMedioPago, scopeRolCodigo: null, grupo: 0 }] : []),
       ...(r.condCausa ? [{ fact: FACT_CAUSA, operador: 'EQ', valor: r.condCausa, scopeRolCodigo: null, grupo: 0 }] : []),
     ];
-    const porCuerpo = evaluar(conds, hechos, ambitoDe, presunciones, esUnRol);
-    const porEjes = evaluar(ejes, hechos, ambitoDe, presunciones, esUnRol);
+    const labelDe = new Map(r.condiciones.map((c) => [`${c.atributoDef.ambito}.${c.atributoDef.codigo}`, c.atributoDef.label]));
+    const grupos = new Map<number, string[]>();
+    for (const c of conds) (grupos.get(c.grupo) ?? grupos.set(c.grupo, []).get(c.grupo)!).push(condicionTexto(c, labelDe.get(c.fact) ?? c.fact));
+    const condicionesTexto: string[] = [];
+    if (grupos.size) condicionesTexto.push([...grupos.values()].map((g) => g.join(' y ')).join(' O '));
+    if (r.condMedioPago) condicionesTexto.push(`Medio de pago [${FACT_MEDIO_PAGO}] incluye ${r.condMedioPago}`);
+    if (r.condCausa) condicionesTexto.push(`Causa o modalidad del acto [${FACT_CAUSA}] = ${r.condCausa}`);
+    const porCuerpo = evaluar(conds, hechos, ambitoDe, presunciones, esUnRol, esUn);
+    const porEjes = evaluar(ejes, hechos, ambitoDe, presunciones, esUnRol, esUn);
     const valorCond = y(porCuerpo.valor, porEjes.valor);
     const porCondicion = {
       valor: valorCond,
@@ -545,6 +662,11 @@ export async function resolverRequisitos(
       porPresuncion: valor === null ? [] : [...new Set([...porCondicion.presumidos, ...presumidosTipo])],
       roles: [...new Set(r.roles.map((x) => x.rolCodigo).filter(Boolean) as string[])],
       hechosQueDecide: [...new Set([...conds.map((c) => c.fact), ...ejes.map((c) => c.fact), ...(acotaPorObjeto ? [FACT_TIPO_OBJETO] : []), ...(tiposSujeto.length ? [FACT_TIPO_SUJETO] : [])])],
+      condicionesTexto: [
+        ...condicionesTexto,
+        ...(acotaPorObjeto ? [`El bien es de tipo [${FACT_TIPO_OBJETO}] ${tiposRegla.join(' o ')}`] : []),
+        ...(tiposSujeto.length ? [`Algún interviniente es de tipo [${FACT_TIPO_SUJETO}] ${tiposSujeto.join(' o ')}`] : []),
+      ],
       instancias: expandir(r.scopeGeneracion, r.roles, r.objetos, hechos, esUn, esUnRol),
     };
 
@@ -591,7 +713,7 @@ export async function resolverRequisitos(
           fuentePreferente: null,
           bloquea: [],
         };
-        p.opciones = [...new Set([...(p.opciones as string[]), ...tiposSujeto])].sort();
+        p.opciones = opcionesDeTipo([...new Set([...(p.opciones as string[]), ...tiposSujeto])], 'SUJETO');
         p.bloquea.push(r.codigo);
         preguntas.set(FACT_TIPO_SUJETO, p);
       }
@@ -606,7 +728,7 @@ export async function resolverRequisitos(
           fuentePreferente: null,
           bloquea: [],
         };
-        p.opciones = [...new Set([...(p.opciones as string[]), ...tiposRegla])].sort();
+        p.opciones = opcionesDeTipo([...new Set([...(p.opciones as string[]), ...tiposRegla])], 'OBJETO');
         p.bloquea.push(r.codigo);
         preguntas.set(FACT_TIPO_OBJETO, p);
       }
