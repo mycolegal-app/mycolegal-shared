@@ -93,10 +93,16 @@ viejo**: es de datos, no de la unificación.
       identificador del dato entre corchetes.
 
 ### F2 — Evaluador IA compartido (requisitos-core)
-- [ ] F2.1 `evaluarRequisitos({ resultado del motor, contexto, llm })` → por requisito:
+- [x] F2.1 `evaluarRequisitos({ resultado del motor, contexto, llm })` → por requisito:
       `{ aplica: SI|NO|NS (sólo en «puede aplicar»), cumplido: SI|NO|NS, evidencia, fuente, confianza }`.
       Lotes de ~40, salida JSON validada; lo que no cuadra se descarta (como `normalizarExtraccion`).
-- [ ] F2.2 Huella del contexto (D6) y reevaluación sólo si cambia.
+- [x] F2.2 Huella del contexto (D6) y reevaluación sólo si cambia.
+      **Hecho (8-oct)** en `requisitos-core/src/evaluador.ts`: `evaluarCaso` = motor → IA (datos +
+      cumplimiento) → motor con los datos → IA sobre lo nuevo (2 vueltas máx.). La IA devuelve
+      DATOS con cita (no veredictos de aplicabilidad: D1); toda cita se verifica contra la fuente
+      y la que no está se tira; un SI sin prueba baja a NS; los datos de la IA no pisan los
+      conocidos y los de confianza baja no entran. Prompt aprobado por Carles el 8-oct
+      (`PROMPT_EVALUAR_REQUISITOS`). 43 tests en verde (6 del evaluador, con modelo de mentira).
 - [ ] F2.3 Prompt `requisitos.evaluar` y tarea de modelo en Admin.
 
 ### F3 — Revisor

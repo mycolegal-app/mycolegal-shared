@@ -29,6 +29,11 @@
       "types": "./src/menciones.ts",
       "import": "./src/menciones.ts",
       "default": "./src/menciones.ts"
+    },
+    "./evaluador": {
+      "types": "./src/evaluador.ts",
+      "import": "./src/evaluador.ts",
+      "default": "./src/evaluador.ts"
     }
   },
   "files": [

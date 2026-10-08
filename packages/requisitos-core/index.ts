@@ -38,3 +38,28 @@ export {
 export { decidirCapa, enCapaQueManda, capaDeFila, ORIGEN_GOLDEN, ORIGENES_UNIVERSAL, type Capa, type CapaResuelta } from './src/capa';
 
 export { esMencion, MODOS_MENCION, type ReglaMencionable } from './src/menciones';
+
+export {
+  evaluarCaso,
+  evaluarRequisitos,
+  anadirDatos,
+  numerarFuentes,
+  normalizarRespuesta,
+  citaEnFuente,
+  huellaContexto,
+  cabeceraDelMensaje,
+  loteDelMensaje,
+  PROMPT_EVALUAR_REQUISITOS,
+  type ModoEvaluacion,
+  type FuenteCaso,
+  type ContextoEvaluacion,
+  type RequisitoAEvaluar,
+  type EvaluacionRequisito,
+  type EvaluacionDelCaso,
+  type DatoLeido,
+  type Prueba,
+  type Veredicto,
+  type Confianza,
+  type Llm,
+  type OpcionesEvaluacion,
+} from './src/evaluador';
