@@ -487,11 +487,16 @@ export async function resolverRequisitos(
     l.push(t.codigo);
     hijosDe.set(t.parentCodigo, l);
   }
+  const MAX_HERMANOS = 6;
   const opcionesDeTipo = (pedidos: string[], raiz: 'SUJETO' | 'OBJETO'): string[] => {
     const out = new Set<string>();
     for (const t of pedidos) {
       out.add(t);
-      for (const h of hijosDe.get(padres.get(t) ?? null) ?? []) out.add(h);
+      // Los hermanos sólo si son pocos: SA → SL sí; las catorce clases de persona jurídica
+      // hermanas de SOCIEDAD_CAPITAL, no (salían como una pared de botones, 8-oct-2026). Sin
+      // ellos sigue habiendo respuesta: un tipo de primer nivel distinto descarta la regla.
+      const hermanos = hijosDe.get(padres.get(t) ?? null) ?? [];
+      if (hermanos.length <= MAX_HERMANOS) for (const h of hermanos) out.add(h);
     }
     for (const h of hijosDe.get(raiz) ?? []) out.add(h);
     out.delete(raiz);

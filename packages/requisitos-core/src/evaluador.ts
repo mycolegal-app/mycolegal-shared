@@ -64,6 +64,10 @@ export interface RequisitoAEvaluar {
   exige: string | null;
   condicionesTexto: string[];
   fundamento: string[];
+  /** Los datos que le faltan al motor para decidirlo (sólo en «puede aplicar»). Se le piden
+   *  al modelo por su nombre: con las condiciones en texto se saltaba algunos —el medio de
+   *  pago, la propiedad horizontal— aunque la fuente los dijera (8-oct-2026). */
+  faltan?: string[];
 }
 
 export type Confianza = 'alta' | 'media' | 'baja';
@@ -182,10 +186,33 @@ export function loteDelMensaje(reqs: RequisitoAEvaluar[], n: number, de: number)
       ? 'APLICA'
       : `PUEDE APLICAR — aplica si: ${r.condicionesTexto.join('; y además ') || '(condición no expresada)'}`;
     partes.push('', `[${r.codigo}] ${r.titulo}`, `  Clase: ${clase}`, `  Motor: ${motor}`);
+    if (r.situacion === 'PUEDE_APLICAR' && r.faltan?.length) partes.push(`  Datos que le faltan al motor (búscalos y devuélvelos si las fuentes los dicen): ${r.faltan.map((f) => `[${f}]`).join(', ')}`);
     if (r.exige) partes.push(`  Exige: ${r.exige}`);
     if (r.fundamento.length) partes.push(`  Fundamento: ${r.fundamento.join('; ')}`);
   }
   return partes.join('\n');
+}
+
+/** Código reservado de la llamada de SÓLO DATOS: viaja como un requisito más para reutilizar
+ *  el mismo formato de respuesta y el mismo filtro. */
+export const CODIGO_DATOS = '_DATOS';
+
+/**
+ * La llamada de SÓLO DATOS: la lista de lo que le falta al motor, con sus opciones. Pedirlos
+ * requisito a requisito los dispersaba —el modelo repetía el tipo del vendedor en diez requisitos
+ * y se saltaba el medio de pago aunque la fuente dijera «transferencia» (8-oct-2026)—; de una vez
+ * y por su nombre, como la lectura de hechos del Revisor, sale mejor y más barato.
+ */
+export function mensajeDeDatos(faltan: { fact: string; label: string; opciones: string[] | null; bloquea: number }[]): string {
+  return [
+    '',
+    '## TAREA DE ESTA LLAMADA: SÓLO DATOS',
+    'No evalúes ningún requisito. Para cada dato de esta lista que las FUENTES digan, devuélvelo',
+    `(con su rol si es de un interviniente, uno por interviniente). Responde con UNA evaluación de código "${CODIGO_DATOS}",`,
+    'cumplido "NS", evidencia vacía y todos los datos en "datos". Los que las fuentes no digan, no los pongas.',
+    '',
+    ...faltan.map((f) => `- [${f.fact}] ${f.label}${f.opciones?.length ? `: ${f.opciones.join(' | ')}` : ''}  (decide ${f.bloquea} requisito${f.bloquea === 1 ? '' : 's'})`),
+  ].join('\n');
 }
 
 // ── la respuesta ─────────────────────────────────────────────────────────────
@@ -450,14 +477,45 @@ export async function evaluarCaso(args: {
 } & OpcionesEvaluacion): Promise<EvaluacionDelCaso> {
   const aEvaluar = (r: Resultado) => [
     ...r.firmes.map((x) => args.describir(x, 'APLICA')),
-    ...r.condicionados.map((x) => args.describir(x, 'PUEDE_APLICAR')),
+    ...r.condicionados.map((x) => ({ ...args.describir(x, 'PUEDE_APLICAR'), faltan: x.faltan })),
   ];
   let hechos = args.hechos;
   let resultado = await args.resolver(hechos);
+  const errores: string[] = [];
+  let llamadas = 0;
+
+  // 0. Los DATOS que le faltan al motor, de una vez y por su nombre; el motor decide con ellos
+  //    antes de evaluar nada. Sólo si hay fuentes y preguntas.
+  const datosLeidos: DatoLeido[] = [];
+  let huellaDatos = '';
+  if (resultado.preguntas.length && args.contexto.fuentes.length) {
+    const pseudo: RequisitoAEvaluar = { codigo: CODIGO_DATOS, situacion: 'PUEDE_APLICAR', titulo: '', clase: '', aporta: null, tratamiento: null, obligatorio: false, exige: null, condicionesTexto: [], fundamento: [] };
+    const hCtx = huellaContexto(args.contexto);
+    huellaDatos = huellaTexto([hCtx, ...resultado.preguntas.map((p) => p.fact)].join('\u0001'));
+    const previa = (args.previas ?? []).find((e) => e.codigo === CODIGO_DATOS && e.huella === huellaDatos);
+    if (previa) datosLeidos.push(...previa.datos);
+    else {
+      try {
+        llamadas++;
+        const texto = await args.llm(args.sistema ?? PROMPT_EVALUAR_REQUISITOS, cabeceraDelMensaje(args.contexto) + '\n' + mensajeDeDatos(
+          resultado.preguntas.map((p) => ({ fact: p.fact, label: p.label, opciones: Array.isArray(p.opciones) ? (p.opciones as unknown[]).map(String) : null, bloquea: p.bloquea.length })),
+        ));
+        const [e] = normalizarRespuesta(texto, [pseudo], args.contexto.fuentes, () => huellaDatos, args.contexto.catalogo);
+        if (e) datosLeidos.push(...e.datos);
+      } catch (err) {
+        errores.push(`datos: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+    if (datosLeidos.length) {
+      hechos = anadirDatos(hechos, datosLeidos, args.esUnTipo);
+      resultado = await args.resolver(hechos);
+    }
+  }
+
   const primera = await evaluarRequisitos(aEvaluar(resultado), args.contexto, args);
   const evaluadas = new Map(primera.evaluaciones.map((e) => [e.codigo, e]));
-  const errores = [...primera.errores];
-  let llamadas = primera.llamadas;
+  errores.push(...primera.errores);
+  llamadas += primera.llamadas;
   let reutilizadas = primera.reutilizadas;
 
   const datos = primera.evaluaciones.flatMap((e) => e.datos);
@@ -478,9 +536,15 @@ export async function evaluarCaso(args: {
   }
   // Sólo las de requisitos que siguen vivos: un descartado no tiene cumplimiento.
   const vivos = new Set([...resultado.firmes, ...resultado.condicionados].map((r) => r.codigo));
+  // La lectura de datos viaja como una evaluación más (código `_DATOS`): así se guarda con su
+  // huella y se reutiliza, y sus datos vuelven a entrar al resolver.
+  const deDatos: EvaluacionRequisito[] = datosLeidos.length
+    ? [{ codigo: CODIGO_DATOS, cumplido: 'NS', evidencia: [], falta: null, datos: datosLeidos, citasDescartadas: 0,
+        huella: huellaDatos }]
+    : [];
   return {
     resultado, hechos,
-    evaluaciones: [...evaluadas.values()].filter((e) => vivos.has(e.codigo)),
+    evaluaciones: [...deDatos, ...[...evaluadas.values()].filter((e) => vivos.has(e.codigo))],
     errores, llamadas, reutilizadas, huella: huellaContexto(args.contexto),
   };
 }

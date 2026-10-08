@@ -50,6 +50,8 @@ export {
   cabeceraDelMensaje,
   loteDelMensaje,
   PROMPT_EVALUAR_REQUISITOS,
+  CODIGO_DATOS,
+  mensajeDeDatos,
   type ModoEvaluacion,
   type FuenteCaso,
   type ContextoEvaluacion,
