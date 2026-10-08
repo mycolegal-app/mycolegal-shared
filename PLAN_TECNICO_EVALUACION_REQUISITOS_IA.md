@@ -88,7 +88,8 @@ viejo**: es de datos, no de la unificación.
       «Redactor - sociedades»): 1936 (aumento de capital) de una SL pregunta «Tipo de
       interviniente» con opciones `["SA"]` — una SL no tiene respuesta. Las opciones deben ser
       los tipos reales del catálogo (con su jerarquía) y el motor descartar por is-a.
-      **Hecho:** opciones = tipos pedidos + sus hermanos + los de primer nivel.
+      **Hecho (0.3.1):** opciones = tipos pedidos + «Ninguno de estos» (`NINGUNO_DE_ESTOS`), decisión de
+      Carles; la 0.3.0 ofrecía los hermanos, que llenaban el panel de opciones que ninguna regla pide.
 - [x] F1.4 (para F2) `condicionesTexto` en cada requisito: las condiciones en palabras con el
       identificador del dato entre corchetes.
 
@@ -118,9 +119,11 @@ descartados 62 → 81, 84 evaluados (20 cumplen, 14 no, 50 NS), 31 s. Requiere e
 - [x] F4.1 Hechos con varios intervinientes CON ROL (no uno sintético) desde el chat y los documentos.
 - [x] F4.2 Evaluación persistida por tarea; se dispara tras cada turno del chat, cada adjunto y cada
       respuesta del panel (en segundo plano, con huella).
-- [ ] F4.3 Panel y lista de validación muestran el veredicto IA (y lo proponen como casilla).
+- [x] F4.3 Panel y lista de validación muestran el veredicto IA (y lo proponen como casilla).
 
-Estado F4 (8-oct): reaplicado en `f1c1884` tras publicar; falta engancharlo al disparador común y
+Estado F4 (8-oct): HECHA y probada de punta a punta en LOCAL (e2e `04-evaluacion-requisitos`):
+aportar un documento → disparador → evaluación → propuesta en el panel → Confirmar → lista. 0.3.1
+añade la lectura de datos aparte (pendientes 70 → 41 en el trabajo del e2e). Historia: reaplicado en `f1c1884` tras publicar; falta engancharlo al disparador común y
 el panel (los dos de la sesión «mycolegal-auth-ab», avisada). Historia: hecho y probado con modelo real (trabajo 0501 sólo chat: 57 s, pendientes
 16 → 13), commiteado en Redactor `c1764a1` y **REVERTIDO** en `c9c8003` porque Redactor no compilaba
 contra los paquetes publicados y otra sesión tenía que reconstruirlo. Pendiente tras publicar
