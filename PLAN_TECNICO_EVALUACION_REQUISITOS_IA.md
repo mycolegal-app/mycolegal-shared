@@ -106,15 +106,27 @@ viejo**: es de datos, no de la unificación.
 - [ ] F2.3 Prompt `requisitos.evaluar` y tarea de modelo en Admin.
 
 ### F3 — Revisor
-- [ ] F3.1 El análisis evalúa TODOS los requisitos del motor con la escritura + antecedentes:
+- [x] F3.1 El análisis evalúa TODOS los requisitos del motor con la escritura + antecedentes:
       documentos y checklist salen del evaluador; «puede aplicar» resuelto con evidencia.
-- [ ] F3.2 Pantalla y PDF: veredicto IA, evidencia y discrepancias marcadas.
+- [x] F3.2 Pantalla y PDF: veredicto IA, evidencia y discrepancias marcadas.
+
+Resultado F3 (8-oct, consultor `4ccf900`, `cba5eba`): compraventa real 0501 → en duda 61 → 41,
+descartados 62 → 81, 84 evaluados (20 cumplen, 14 no, 50 NS), 31 s. Requiere el vocabulario cerrado
+(la IA inventaba roles/tipos) y que un tipo más concreto refine al conocido (shared `cf2443f`).
 
 ### F4 — Redactor
-- [ ] F4.1 Hechos con varios intervinientes CON ROL (no uno sintético) desde el chat y los documentos.
+- [x] F4.1 Hechos con varios intervinientes CON ROL (no uno sintético) desde el chat y los documentos.
 - [ ] F4.2 Evaluación persistida por tarea; se dispara tras cada turno del chat, cada adjunto y cada
       respuesta del panel (en segundo plano, con huella).
 - [ ] F4.3 Panel y lista de validación muestran el veredicto IA (y lo proponen como casilla).
+
+Estado F4 (8-oct): hecho y probado con modelo real (trabajo 0501 sólo chat: 57 s, pendientes
+16 → 13), commiteado en Redactor `c1764a1` y **REVERTIDO** en `c9c8003` porque Redactor no compilaba
+contra los paquetes publicados y otra sesión tenía que reconstruirlo. Pendiente tras publicar
+requisitos-core 0.3.x + sharedlib: `git revert c9c8003`; enganchar `requisitos: evaluarRequisitosTarea`
+en `TRABAJOS` de `expediente-cambiado.ts` (disparador común, sesión «mycolegal-auth-ab»); el panel
+(de esa sesión) pinta la casilla propuesta con su prueba y «Confirmar». F4.1 se resolvió con la
+opción `rolComodin` del motor (shared `e1ecdd7`) y los datos de la IA, que traen su rol.
 
 ## Fuera de alcance
 - Notaría (expedientes) consume el motor por `api/inter/requisitos-documentales/expediente` del
