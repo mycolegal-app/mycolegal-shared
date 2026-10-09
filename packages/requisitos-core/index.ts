@@ -34,7 +34,28 @@ export {
   type RepositorioRequisitos,
   type ReglaGolden,
   type NodoTipo,
+  type FilaEscenario,
+  type FilaTransversal,
+  type AjustePresuncion,
 } from './src/puerto';
+
+// Escenarios base (0.3.3): cuál toca y qué presume, con lo heredado de GLOBAL, familia y subfamilia.
+export {
+  escenarioPara,
+  escenariosDelActo,
+  elegirEscenario,
+  componerTransversales,
+  aplicarAjustes,
+  presuncionesDe,
+  distanciaEsUn,
+  casoGeneral,
+  escenarioDeFila,
+  type Escenario,
+  type EscenarioResuelto,
+  type Presuncion,
+  type ComoSeEligio,
+  type OpcionesEscenario,
+} from './src/escenario';
 
 export { decidirCapa, enCapaQueManda, capaDeFila, ORIGEN_GOLDEN, ORIGENES_UNIVERSAL, type Capa, type CapaResuelta } from './src/capa';
 

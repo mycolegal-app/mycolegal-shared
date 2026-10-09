@@ -25,7 +25,7 @@
 // sharedlib cuando sólo DocFilling la declara y la usa—, y el coste no es el
 // disco: un cambio incompatible en el motor podría romper el `npm install` de
 // trece apps que no lo tocan.
-import type { RepositorioRequisitos, ReglaGolden, NodoTipo } from '@mycolegal-app/requisitos-core';
+import type { RepositorioRequisitos, ReglaGolden, NodoTipo, FilaEscenario, FilaTransversal, AjustePresuncion } from '@mycolegal-app/requisitos-core';
 import { ORIGEN_GOLDEN } from '@mycolegal-app/requisitos-core';
 
 // Se declara aquí y no se importa: `requisitos-core` lo exporta desde la versión de las dos
@@ -56,6 +56,11 @@ export interface ClienteGolden {
   objetoTipoGlobal: { findMany(args: any): Promise<any[]> };
   sujetoTipoGlobal: { findMany(args: any): Promise<any[]> };
   rolSujetoGlobal: { findMany(args: any): Promise<any[]> };
+  /** Escenarios base (requisitos-core 0.3.3). OPCIONALES: si el espejo de la app no los tiene,
+   *  el acto va sin escenario, como antes. */
+  actoEscenarioBase?: { findMany(args: any): Promise<any[]> };
+  presuncionTransversalGlobal?: { findMany(args: any): Promise<any[]> };
+  actoPresuncionOverride?: { findMany(args: any): Promise<any[]> };
   /* eslint-enable @typescript-eslint/no-explicit-any */
 }
 
@@ -153,6 +158,56 @@ export function crearRepositorioRequisitos(client: ClienteGolden): RepositorioRe
         select: { codigo: true },
       }) as { codigo: string }[];
       return new Set(filas.map((f) => f.codigo));
+    },
+
+    // ── Escenarios base (9-oct-2026) ─────────────────────────────────────────
+    // Lo que el Redactor no tenía: sin esto llamaba al motor sin presunciones y en una
+    // compraventa preguntaba 71 cosas en vez de 6. La composición está en requisitos-core
+    // (`escenarioPara`); aquí sólo se leen las filas, en el orden que es parte del dato.
+
+    async escenariosDeActo(actoCodigo) {
+      if (!client.actoEscenarioBase) return [];
+      const filas = await client.actoEscenarioBase.findMany({
+        where: { actoCodigo },
+        include: { presunciones: { orderBy: { orden: 'asc' } } },
+        orderBy: [{ porDefecto: 'desc' }, { codigo: 'asc' }],
+      }) as {
+        actoCodigo: string; codigo: string; nombre: string; porDefecto: boolean; objetoTipoCodigo: string | null;
+        esquemasDocFilling: unknown; estado: string; revisadoPor: string | null; condiciones: unknown;
+        presunciones: { fact: string; modo: string; valor: unknown; tema: string | null; situacion: string | null; porQue: string | null }[];
+      }[];
+      return filas.map((f): FilaEscenario => ({
+        actoCodigo: f.actoCodigo, codigo: f.codigo, nombre: f.nombre, porDefecto: f.porDefecto,
+        objetoTipoCodigo: f.objetoTipoCodigo,
+        esquemasDocFilling: Array.isArray(f.esquemasDocFilling) ? (f.esquemasDocFilling as unknown[]).map(String) : [],
+        estado: f.estado, revisadoPor: f.revisadoPor,
+        condiciones: Array.isArray(f.condiciones) ? (f.condiciones as FilaEscenario['condiciones']) : [],
+        presunciones: f.presunciones.map((p) => ({ fact: p.fact, modo: p.modo, valor: p.valor, tema: p.tema, situacion: p.situacion, porQue: p.porQue })),
+      }));
+    },
+
+    async presuncionesTransversales(actoCodigo) {
+      if (!client.presuncionTransversalGlobal) return [];
+      const [acto] = await client.legalActGlobal.findMany({
+        where: { codigo: actoCodigo }, select: { familiaCodigo: true, subfamiliaCodigo: true }, take: 1,
+      }) as { familiaCodigo: string | null; subfamiliaCodigo: string | null }[];
+      const or: Record<string, unknown>[] = [{ ambito: 'TODOS' }];
+      if (acto?.familiaCodigo) or.push({ ambito: 'FAMILIA', familiaCodigo: acto.familiaCodigo });
+      if (acto?.subfamiliaCodigo) or.push({ ambito: 'SUBFAMILIA', subfamiliaCodigo: acto.subfamiliaCodigo });
+      const filas = await client.presuncionTransversalGlobal.findMany({
+        where: { OR: or },
+        select: { ambito: true, fichero: true, fact: true, modo: true, valor: true, objetoTipoCodigo: true, ccaaCodigo: true, tema: true, situacion: true, porQue: true },
+      });
+      return filas as FilaTransversal[];
+    },
+
+    async ajustesDePresuncion(orgId, actoCodigo) {
+      if (!client.actoPresuncionOverride) return [];
+      const filas = await client.actoPresuncionOverride.findMany({
+        where: { orgId, actoCodigo },
+        select: { id: true, escenarioCodigo: true, fact: true, modo: true, valor: true, motivo: true },
+      });
+      return filas as AjustePresuncion[];
     },
   };
 }

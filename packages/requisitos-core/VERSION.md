@@ -1,6 +1,22 @@
 # @mycolegal-app/requisitos-core
 
-## Sin publicar (próxima: 0.3.2)
+## Sin publicar (próxima: 0.3.3)
+
+- **Escenarios base en el paquete** (`escenarioPara`, `escenariosDelActo`, `presuncionesDe`, y las
+  piezas puras `elegirEscenario`, `componerTransversales`, `aplicarAjustes`). Hasta ahora el motor
+  sólo sabía APLICAR presunciones; elegir el escenario y heredar las presunciones transversales
+  (GLOBAL < familia < subfamilia < escenario < notaría) existía sólo en Consultor, y el Redactor
+  llamaba al motor sin ninguna: en una compraventa, **69 preguntas en vez de 4** (más las 7 que el
+  caso pregunta siempre). Subido tal cual: **472 de 472** combinaciones acto × comunidad dan el
+  mismo escenario que Consultor en LOCAL. Nuevo: elegir **por esquema DocFilling**
+  (`{ esquema }`, `como: 'POR_ESQUEMA'`), que es lo que sabe el Redactor.
+- **El puerto gana tres métodos OPCIONALES**: `escenariosDeActo`, `presuncionesTransversales` y
+  `ajustesDePresuncion`. Un repositorio que no los tenga sigue funcionando y el acto va sin
+  escenario, como hasta ahora: no rompe a nadie. El adaptador de `sharedlib` los implementa si el
+  cliente Prisma de la app tiene los modelos (`actoEscenarioBase`, `presuncionTransversalGlobal`,
+  `actoPresuncionOverride`).
+
+## 0.3.2 — 8-oct-2026
 
 - **Datos que se deducen del rol** (`DEDUCIDO_DEL_ROL`). `SUJETO.DISPONE_DE_SUS_BIENES` ya no
   hay que preguntarlo cuando el interviniente tiene rol: lo que cuelga de DISPONENTE (vendedor,

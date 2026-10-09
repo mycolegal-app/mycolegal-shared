@@ -142,4 +142,58 @@ export interface RepositorioRequisitos {
    *  no una deducción por filas: un acto puede tener reglas retiradas o ser un STUB curado
    *  sin reglas. Decide la capa en modo `auto`. */
   actosConGolden(actoCodigos: string[]): Promise<Set<string>>;
+
+  // ── Escenarios base (0.3.3, 9-oct-2026) ─────────────────────────────────────
+  // OPCIONALES: un repositorio que no los tenga sigue funcionando y el acto va sin escenario,
+  // como hasta ahora. Ver `escenario.ts`.
+
+  /** Los escenarios del acto (`acto_escenario_base`) con sus presunciones (`acto_presuncion`)
+   *  ordenadas por `orden`; el por defecto primero. */
+  escenariosDeActo?(actoCodigo: string): Promise<FilaEscenario[]>;
+
+  /** Las presunciones transversales que alcanzan al acto (`presuncion_transversal_global`):
+   *  ámbito `TODOS`, su FAMILIA y su SUBFAMILIA. */
+  presuncionesTransversales?(actoCodigo: string): Promise<FilaTransversal[]>;
+
+  /** Lo que una notaría presume o pregunta siempre en el acto (`acto_presuncion_override`). */
+  ajustesDePresuncion?(orgId: string, actoCodigo: string): Promise<AjustePresuncion[]>;
+}
+
+/** Un escenario base tal como se guarda. `presunciones[].modo`: PRESUMIR | PREGUNTAR. */
+export interface FilaEscenario {
+  actoCodigo: string;
+  codigo: string;
+  nombre: string;
+  porDefecto: boolean;
+  objetoTipoCodigo: string | null;
+  esquemasDocFilling: string[];
+  estado: string;
+  revisadoPor: string | null;
+  condiciones: { texto: string; temas: string[] }[];
+  presunciones: { fact: string; modo: string; valor: unknown; tema: string | null; situacion: string | null; porQue: string | null }[];
+}
+
+/** Una presunción transversal. `ambito`: TODOS | FAMILIA | SUBFAMILIA; `fichero`: GLOBAL, F05, 05A…;
+ *  `ccaaCodigo` y `objetoTipoCodigo` vacíos = sin acotar. */
+export interface FilaTransversal {
+  ambito: string;
+  fichero: string;
+  fact: string;
+  modo: string;
+  valor: unknown;
+  objetoTipoCodigo: string;
+  ccaaCodigo: string;
+  tema: string | null;
+  situacion: string | null;
+  porQue: string | null;
+}
+
+/** Un ajuste de la notaría. `escenarioCodigo` `*` = todos los casos del acto. */
+export interface AjustePresuncion {
+  id: string;
+  escenarioCodigo: string;
+  fact: string;
+  modo: string;
+  valor: unknown;
+  motivo: string | null;
 }

@@ -34,6 +34,11 @@
       "types": "./src/evaluador.ts",
       "import": "./src/evaluador.ts",
       "default": "./src/evaluador.ts"
+    },
+    "./escenario": {
+      "types": "./src/escenario.ts",
+      "import": "./src/escenario.ts",
+      "default": "./src/escenario.ts"
     }
   },
   "files": [

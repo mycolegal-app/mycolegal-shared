@@ -1,5 +1,13 @@
 # mycolegal-sharedlib — Changelog
 
+## (siguiente) — el adaptador de requisitos sirve los escenarios base (2026-10-09)
+
+`requisitos-repo.ts` implementa los tres métodos opcionales del puerto de `requisitos-core` 0.3.3:
+`escenariosDeActo`, `presuncionesTransversales` y `ajustesDePresuncion`. Los modelos del cliente
+(`actoEscenarioBase`, `presuncionTransversalGlobal`, `actoPresuncionOverride`) son OPCIONALES en
+`ClienteGolden`: una app cuyo espejo de Prisma no los tenga sigue compilando y va sin escenario.
+Para que el Redactor (o Notaría) los use, su espejo tiene que declarar esos modelos.
+
 ## (siguiente) — el adaptador de requisitos sirve las transversales (2026-10-08)
 
 `requisitos-repo.ts` para `requisitos-core` 0.3.0: `reglasDeActo` devuelve también las reglas
