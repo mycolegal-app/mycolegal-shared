@@ -1,6 +1,13 @@
 # PLAN TÉCNICO — Un solo motor de requisitos y evaluación continua por IA
 
-> Estado (8-oct-2026): F0–F3 hechas; F4 hecha salvo el panel (sesión «mycolegal-auth-ab»).
+> ✅ **COMPLETADO el 9-oct-2026** → `completed/`. F0–F4 hechas y verificadas: Consultor delega en requisitos-core
+> 0.3.3 (`src/lib/requisitos/motor.ts` es una capa fina que reexporta el paquete; equivalencia 2.471/2.471); F2.3 hecha
+> (prompts `requisitos.evaluar` y `revisor.evaluacion` con sus tareas de modelo); F4 enganchada al disparador común de
+> Redactor y al panel con «Confirmar» (e2e `04-evaluacion-requisitos`). El paso a TEST/PROD lo decide Carles. Fuera
+> del plan: `test:motor-requisitos` de Consultor falla en 0501-R08 por datos (va con C6 de
+> `consultor/PLAN_TECNICO_REQUISITOS_DOCUMENTALES_V03.md`).
+>
+> *Estado anterior (8-oct-2026):* F0–F3 hechas; F4 hecha salvo el panel (sesión «mycolegal-auth-ab»).
 > PUBLICADOS requisitos-core 0.3.0 y sharedlib 0.12.23 (Carles lo pidió). Nada desplegado. Fases en LOCAL; TEST lo decide Carles.
 > Repos: `mycolegal-shared` (requisitos-core, sharedlib), `mycolegal-consultor` (Revisor),
 > `mycolegal-redactor`. Dueño: sesión «mycolegal-auth-a3».
@@ -104,7 +111,7 @@ viejo**: es de datos, no de la unificación.
       y la que no está se tira; un SI sin prueba baja a NS; los datos de la IA no pisan los
       conocidos y los de confianza baja no entran. Prompt aprobado por Carles el 8-oct
       (`PROMPT_EVALUAR_REQUISITOS`). 43 tests en verde (6 del evaluador, con modelo de mentira).
-- [ ] F2.3 Prompt `requisitos.evaluar` y tarea de modelo en Admin.
+- [x] F2.3 Prompt `requisitos.evaluar` y tarea de modelo en Admin. *(Redactor `src/lib/ai.ts`; Revisor `revisor.evaluacion`.)*
 
 ### F3 — Revisor
 - [x] F3.1 El análisis evalúa TODOS los requisitos del motor con la escritura + antecedentes:
