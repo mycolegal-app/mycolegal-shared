@@ -111,21 +111,21 @@ export interface ParsedField {
   declareType: string;
   /** For DECLARE: bracketed AI extraction hint, captured from `:[…]`. Surfaced by the wizard as the AI instruction body. */
   declareInstruction: string;
-  /** For DECLARE: IU2007 path from `:IUI(...)`, normalised to `DOCS_NOT/DOC_NOT/SUJS/SUJ[1]/PER/NOM` (dots → `/`, no leading/trailing `/`). For DECLARE ARRAY: path of the repeated element (`DOCS_NOT/DOC_NOT/SUJS/SUJ`). */
-  iuiPath: string;
+  /** For DECLARE / DECLARE ARRAY: lleva algún `:IUI(...)`, que está RETIRADO (W913): el IUI vive
+   *  ahora en el catálogo universal y el campo enlaza con él por `:REQ` (plan REQ_CATALOGO_IUI,
+   *  DC8). El parser lo sigue pelando para que no ensucie el resto del DECLARE. */
+  iuiObsoleto: boolean;
   /** For INPUT/INPUT_FINAL: default value if =value suffix specified */
   inputDefault: string;
   langCode: string;
   tagsList: string[];
   summaryText: string;
   isArray: boolean;
-  /** For DECLARE ARRAY: subfield specs (name, type, instruction, and `iuiPath` — relative to the array element — when the subfield declares `:IUI(...)`). */
+  /** For DECLARE ARRAY: subfield specs (name, type, instruction). */
   arraySubfields: Record<string, string>[];
   forFieldName: string;
   countField: string;
   allowUndeclaredNames: string[];
-  /** For DECLARE ARRAY: a `:IUI(...)` inside the `:[…]` bracket list, which can't be applied (subfield paths only come from `NAME(SUB:IUI(ruta), …)`). Surfaced via W057. */
-  iuiIgnored: boolean;
   /** For DECLARE: leftover tail when the parser fell back to name-only (e.g. ';INPUT(' typo). Surfaced via W055. */
   malformedResidue: string;
   /** For DECLARE / DECLARE ARRAY: `:REQ(…)`, el enlace con el catálogo universal (ver `req-doc.ts`). */
@@ -156,7 +156,7 @@ function createParsedField(partial: Partial<ParsedField> & Pick<ParsedField, "ra
     declareValue: "",
     declareType: "",
     declareInstruction: "",
-    iuiPath: "",
+    iuiObsoleto: false,
     inputDefault: "",
     langCode: "",
     tagsList: [],
@@ -166,7 +166,6 @@ function createParsedField(partial: Partial<ParsedField> & Pick<ParsedField, "ra
     forFieldName: "",
     countField: "",
     allowUndeclaredNames: [],
-    iuiIgnored: false,
     malformedResidue: "",
     req: [],
     doc: [],
@@ -329,12 +328,6 @@ function _splitTopLevelCommas(body: string): string[] {
   return parts;
 }
 
-function _normalizeIuiPath(raw: string): string {
-  let path = _maybeUnquote(raw).trim().replace(/\./g, "/");
-  path = path.replace(/\s*\/\s*/g, "/");
-  return path.replace(/^\/+|\/+$/g, "");
-}
-
 function _peelIui(
   text: string,
   peelAll = false,
@@ -372,9 +365,8 @@ function _findTopLevelIui(
 }
 
 // Mirrors Python `_parse_array_subfields`: comma split respecting
-// `[...]` and `(...)`; each entry {name, type, instruction} plus
-// `iuiPath` (relative to the array element, no prefix baked in)
-// when the subfield declares `:IUI(...)`.
+// `[...]` and `(...)`; each entry {name, type, instruction}. A
+// subfield `:IUI(...)` (retired, W913) is peeled and dropped.
 function _parseArraySubfields(
   body: string,
   reqDoc?: { porSubcampo: Record<string, { req: ReqDecl[]; doc: string[] }>; errores: string[] },
@@ -402,7 +394,7 @@ function _parseArraySubfields(
     if (!raw.trim()) continue;
     // `:REQ(…)` / `:DOC(…)` del subcampo, antes que nada (ver `req-doc.ts`).
     const rd = pelarReqDoc(raw.trim());
-    const peel = _peelIui(rd.texto.trim());
+    const peel = _peelIui(rd.texto.trim(), true);
     const part = peel.text.trim();
     const m = part.match(/^([\w\u00C0-\u024F]+)(?:\s+AS\s+([\w\u00C0-\u024F]+))?(?:\s*:\[([^\]]*)\])?/i);
     if (!m) continue;
@@ -411,7 +403,6 @@ function _parseArraySubfields(
       type: (m[2] || "TEXT").toUpperCase(),
       instruction: m[3] || "",
     };
-    if (peel.body !== null) entry.iuiPath = _normalizeIuiPath(peel.body);
     if (reqDoc) {
       if (rd.req.length || rd.doc.length) reqDoc.porSubcampo[entry.name] = { req: rd.req, doc: rd.doc };
       reqDoc.errores.push(...rd.errores);
@@ -612,9 +603,9 @@ export function parseFields(text: string): ParsedField[] {
         // `:IUI(path)` — IU2007 mapping for the CTN XML. Peeled
         // off first (any position among the suffixes, INPUT form
         // included) so the rest of the parse never sees it.
-        const iuiPeel = _peelIui(reqDoc.texto);
+        const iuiPeel = _peelIui(reqDoc.texto, true);
         const declContent = iuiPeel.text;
-        if (iuiPeel.body !== null) pf.iuiPath = _normalizeIuiPath(iuiPeel.body);
+        if (iuiPeel.body !== null) pf.iuiObsoleto = true;
         // Allow optional `AS TYPE` before `:INPUT(...)`, e.g.
         //   DECLARE FOO AS BOOL:INPUT(prompt|opts)
         // The captured type is preserved on the node so the
@@ -872,7 +863,7 @@ export function parseFields(text: string): ParsedField[] {
         pf.reqDocErrores = reqDocArray.errores;
         const topIui = _findTopLevelIui(rest);
         if (topIui) {
-          pf.iuiPath = _normalizeIuiPath(topIui.body);
+          pf.iuiObsoleto = true;
           rest = (rest.slice(0, topIui.start) + rest.slice(topIui.end)).trim();
         }
         const nameMatch = rest.match(/^([\w\u00C0-\u024F]+)/);
@@ -891,14 +882,16 @@ export function parseFields(text: string): ParsedField[] {
             }
             if (depth === 0) {
               const porSub = { porSubcampo: pf.arraySubfieldsReqDoc, errores: pf.reqDocErrores };
-              pf.arraySubfields = _parseArraySubfields(tail.slice(sfOpen[0].length, i - 1), porSub);
+              const lista = tail.slice(sfOpen[0].length, i - 1);
+              if (/:IUI\(/i.test(lista)) pf.iuiObsoleto = true;
+              pf.arraySubfields = _parseArraySubfields(lista, porSub);
               tail = tail.slice(i);
             }
           }
           // Any `:IUI` left (e.g. inside `:[…]`) can't be applied.
           const stray = _peelIui(tail, true);
           tail = stray.text;
-          if (stray.body !== null) pf.iuiIgnored = true;
+          if (stray.body !== null) pf.iuiObsoleto = true;
           // Optional AS TYPE / :[instr] / =value tail
           tail = tail.trim();
           const asTail = tail.match(/^AS\s+([\w\u00C0-\u024F]+)(.*)$/i);

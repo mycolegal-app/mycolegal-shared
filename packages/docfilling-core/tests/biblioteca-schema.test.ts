@@ -65,7 +65,7 @@ it.skipIf(!RAIZ)('esquema de campos sobre la biblioteca real', () => {
       if (c.soloCondicional) soloCondicionales++;
       if (c.instruccion) conInstruccion++;
       if (c.opciones.length) conOpciones++;
-      if (c.iuiPath) conIui++;
+      if (c.req.length) conIui++;
       if (c.esArray) arrays++;
       if (c.subcampos.length) conSubcampos++;
     }
@@ -78,7 +78,7 @@ it.skipIf(!RAIZ)('esquema de campos sobre la biblioteca real', () => {
   log(`por tipo: ${[...porTipo.entries()].sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k}=${v}`).join(' · ')}`);
   log(`por categoría: ${[...porCategoria.entries()].sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k}=${v}`).join(' · ')}`);
   log(`soloCondicional: ${soloCondicionales} (${pct(soloCondicionales)}) — no dejan la tarea incompleta`);
-  log(`con instrucción para la IA: ${conInstruccion} (${pct(conInstruccion)}) · con opciones: ${conOpciones} · con ruta IUI: ${conIui}`);
+  log(`con instrucción para la IA: ${conInstruccion} (${pct(conInstruccion)}) · con opciones: ${conOpciones} · con :REQ: ${conIui}`);
   log(`arrays: ${arrays} · de ellos con subcampos declarados: ${conSubcampos}`);
   log(`acciones humanas declaradas: ${accionesHumanas}`);
   writeFileSync(process.env.DOCFILLING_INFORME!, L.join('\n') + '\n');

@@ -1,53 +1,30 @@
-// F1.6 — mapeos IUI y generación del XML del Índice Único.
+// F1.6 — generación del XML del Índice Único (y retirada de :IUI / MAP_IUI).
 //
 // Los casos salen de `test_filler_iui.py` del SaaS (276 líneas), que es el
 // biblioteca que ya existía para esto, más los de `iui_generator.py`.
 import { describe, it, expect } from 'vitest';
-import { mapaIui, mapaIuiDetallado, generarIui, valorUtil, IUI_NAMESPACE } from '../index';
+import { generarIui, valorUtil, IUI_NAMESPACE, parseFields, validateText } from '../index';
 
-const PLANTILLA = [
-  '{{MAP_IUI:FECHA:DOCS_NOT/DOC_NOT/FEC_DOC}}',
-  '{{DECLARE PRECIO:[Precio]:IUI(DOCS_NOT/DOC_NOT/OPES/OPE[1]/IMP)}}',
-  '{{DECLARE ARRAY VENDEDORES(NOMBRE:IUI(PER/NOM), DNI AS TEXT):IUI(DOCS_NOT/DOC_NOT/SUJS/SUJ)}}',
-].join('\n');
-
-describe('mapaIui', () => {
-  it('reúne las dos formas del lenguaje', () => {
-    expect(mapaIui(PLANTILLA)).toEqual({
-      FECHA: 'DOCS_NOT/DOC_NOT/FEC_DOC',
-      PRECIO: 'DOCS_NOT/DOC_NOT/OPES/OPE[1]/IMP',
-      VENDEDORES: {
-        path: 'DOCS_NOT/DOC_NOT/SUJS/SUJ',
-        subcampos: { NOMBRE: 'PER/NOM', DNI: 'DNI' },
-      },
-    });
+// `mapaIui` / `mapaIuiDetallado` se retiraron con `:IUI` y `MAP_IUI` (W913, plan
+// REQ_CATALOGO_IUI): el IUI vive en el catálogo. Aquí queda el constructor del XML.
+describe(':IUI y MAP_IUI retirados', () => {
+  it('el DECLARE se sigue leyendo entero, y avisa W913', () => {
+    const t = '{{DECLARE PRECIO AS NUM:[Precio]:IUI(DOCS_NOT/DOC_NOT/OPES/OPE[1]/IMP)=0}}';
+    const [f] = parseFields(t);
+    expect(f.name).toBe('PRECIO');
+    expect(f.declareInstruction).toBe('Precio');
+    expect(f.declareValue).toBe('0');
+    expect(f.iuiObsoleto).toBe(true);
+    expect(validateText(t).diagnostics.map((d) => d.code)).toContain('W913');
   });
 
-  it('un subcampo sin :IUI cuelga por su propio nombre', () => {
-    const m = mapaIui('{{DECLARE ARRAY L(A, B AS TEXT):IUI(X/Y)}}');
-    expect(m.L).toEqual({ path: 'X/Y', subcampos: { A: 'A', B: 'B' } });
-  });
-
-  it('un array SIN ruta propia no mapea, aunque sus subcampos la tengan', () => {
-    expect(mapaIui('{{DECLARE ARRAY L(NOMBRE:IUI(PER/NOM)):[l]}}')).toEqual({});
-  });
-
-  it('en conflicto gana el DECLARE, y se avisa', () => {
-    const { mapeos, conflictos } = mapaIuiDetallado([
-      '{{MAP_IUI:PRECIO:DOCS_NOT/DOC_NOT/OPES/OPE[2]/IMP}}',
-      '{{DECLARE PRECIO:[Precio]:IUI(DOCS_NOT/DOC_NOT/OPES/OPE[1]/IMP)}}',
-    ].join('\n'));
-    expect(mapeos.PRECIO).toBe('DOCS_NOT/DOC_NOT/OPES/OPE[1]/IMP');
-    expect(conflictos).toHaveLength(1);
-    expect(conflictos[0].campo).toBe('PRECIO');
-  });
-
-  it('la misma ruta por las dos vías NO es conflicto, ni con barra de más', () => {
-    const { conflictos } = mapaIuiDetallado([
-      '{{MAP_IUI:PRECIO:/DOCS_NOT/DOC_NOT/OPES/OPE[1]/IMP}}',
-      '{{DECLARE PRECIO:[Precio]:IUI(DOCS_NOT/DOC_NOT/OPES/OPE[1]/IMP)}}',
-    ].join('\n'));
-    expect(conflictos).toEqual([]);
+  it('también en arrays (lista y subcampos) y en MAP_IUI', () => {
+    const arr = '{{DECLARE ARRAY V(NOMBRE:IUI(PER/NOM), DNI AS TEXT):IUI(DOCS_NOT/DOC_NOT/SUJS/SUJ)}}';
+    const [f] = parseFields(arr);
+    expect(f.arraySubfields.map((x) => x.name)).toEqual(['NOMBRE', 'DNI']);
+    expect(f.iuiObsoleto).toBe(true);
+    expect(validateText('{{DECLARE ARRAY L(NOMBRE:IUI(PER/NOM))}}').diagnostics.map((d) => d.code)).toContain('W913');
+    expect(validateText('{{MAP_IUI:FECHA:DOCS_NOT/DOC_NOT/FEC_DOC}}').diagnostics.map((d) => d.code)).toContain('W913');
   });
 });
 

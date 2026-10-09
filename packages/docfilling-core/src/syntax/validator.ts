@@ -671,86 +671,6 @@ function checkDeclareSyntax(
 }
 
 // =============================================================================
-// Rule: :IUI(path) on DECLARE (W057 / W058 / W059)
-// =============================================================================
-
-// FASE 32 / A9 — mirrors Python `_check_iui_paths`.
-// Array convention: the array `:IUI` points at the repeated element
-// (`…/SUJS/SUJ`); subfields hang from it by name (`…/SUJ[n]/NOMBRE`)
-// unless they declare a relative path (`NOMBRE:IUI(PER/NOM)`).
-//   W057 — array `:IUI` that can't be applied (subfield paths without
-//          an array element path, or `:IUI` inside `:[…]`)
-//   W058 — IUI path with fewer than two segments (not for relative
-//          subfield paths)
-//   W059 — same IUI path on two different variables; for subfields,
-//          same resolved relative path twice within one array
-function checkIuiPaths(
-  fields: ParsedField[],
-  result: ValidationResult,
-): void {
-  const seenPaths = new Map<string, ParsedField>();
-  for (const f of fields) {
-    const isArray = f.fieldType === FieldType.DECLARE_ARRAY;
-    if (f.fieldType !== FieldType.DECLARE && !isArray) continue;
-    let hasIui: boolean;
-    if (isArray) {
-      if (f.iuiIgnored) {
-        result.diagnostics.push(
-          diag(f.line, f.col, f.raw.length, Severity.WARNING, "W057",
-            `DECLARE ARRAY ${f.name}: :IUI(...) dentro de :[…] no se admite — declara la ruta del subcampo como NOMBRE(SUB:IUI(ruta), …); se ignora`),
-        );
-      }
-      const subWithIui = f.arraySubfields.filter((sf) => sf.iuiPath).map((sf) => sf.name);
-      if (subWithIui.length > 0 && !f.iuiPath) {
-        result.diagnostics.push(
-          diag(f.line, f.col, f.raw.length, Severity.WARNING, "W057",
-            `DECLARE ARRAY ${f.name}: los subcampos ${subWithIui.join(", ")} tienen :IUI(...) pero el array no declara la ruta de su elemento; se ignoran`),
-        );
-      }
-      if (f.iuiPath) {
-        const seenSub = new Map<string, string>();
-        for (const sf of f.arraySubfields) {
-          const rel = sf.iuiPath || sf.name;
-          const key = rel.toUpperCase();
-          const prev = seenSub.get(key);
-          if (prev !== undefined) {
-            result.diagnostics.push(
-              diag(f.line, f.col, f.raw.length, Severity.WARNING, "W059",
-                `DECLARE ARRAY ${f.name}: el subcampo ${sf.name} usa la ruta IUI '${rel}', que ya usa ${prev}`),
-            );
-          } else {
-            seenSub.set(key, sf.name);
-          }
-        }
-      }
-      hasIui = !!f.iuiPath;
-    } else {
-      hasIui = f.content.toUpperCase().replace(/ /g, "").includes(":IUI(");
-    }
-    if (!hasIui) continue;
-    const kind = isArray ? "DECLARE ARRAY" : "DECLARE";
-    const segments = f.iuiPath.split("/").filter((seg) => seg.trim().length > 0);
-    if (segments.length < 2) {
-      result.diagnostics.push(
-        diag(f.line, f.col, f.raw.length, Severity.WARNING, "W058",
-          `${kind} ${f.name}: la ruta :IUI(${f.iuiPath}) debe tener al menos dos segmentos (p. ej. DOCS_NOT/DOC_NOT/SUJS/SUJ[1]/PER/NOM)`),
-      );
-    }
-    if (!f.iuiPath) continue;
-    const key = f.iuiPath.toUpperCase();
-    const first = seenPaths.get(key);
-    if (first === undefined) {
-      seenPaths.set(key, f);
-    } else if (first.name.toUpperCase() !== f.name.toUpperCase()) {
-      result.diagnostics.push(
-        diag(f.line, f.col, f.raw.length, Severity.WARNING, "W059",
-          `${kind} ${f.name}: la ruta IUI '${f.iuiPath}' ya está asignada a ${first.name} (línea ${first.line})`),
-      );
-    }
-  }
-}
-
-// =============================================================================
 // Rule: W056 — uses without explicit DECLARE
 // =============================================================================
 
@@ -1480,7 +1400,6 @@ export function validateText(
   checkAutoSyntax(fields, fieldNames, result);
   checkDuplicateDefinitions(fields, result);
   checkDeclareSyntax(fields, result);
-  checkIuiPaths(fields, result);
   checkUndeclaredUses(fields, result, resolver, extraDeclared);
   checkMalformedDirectives(fields, result);
   checkTagsSummarySyntax(fields, result);

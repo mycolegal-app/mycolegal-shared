@@ -1,71 +1,21 @@
-// IUI/CTN: de los mapeos de la plantilla al XML del Índice Único Informatizado.
+// IUI/CTN: construcción del XML del Índice Único Informatizado a partir de rutas y valores.
 //
-// Port de `app/core/xml/iui_generator.py` (385 líneas) — F1.6.
+// ⚠️ EN TRANSICIÓN (plan REQ_CATALOGO_IUI, 9-oct-2026).
 //
-// DE DÓNDE SALEN LOS MAPEOS
+// Los mapeos ya NO salen de la plantilla: `:IUI(…)` y `{{MAP_IUI:…}}` están retirados (W913),
+// y con ellos `mapaIui`/`mapaIuiDetallado`. El IUI vive ahora en el catálogo universal (cada
+// hecho o dato lleva su ruta y sus códigos) y el campo enlaza con él por `:REQ`. Cuando se
+// retiraron, ningún esquema ni párrafo de `_PROD` los usaba.
 //
-// La plantilla dice a qué ruta del esquema CTN va cada campo, de dos maneras:
+// Lo que queda aquí es el CONSTRUCTOR: dado `campo → ruta` y los valores, arma el árbol y lo
+// serializa, sin dependencias. F5 del plan lo sustituye por un modelo (sujetos con `ID_SUJ`,
+// objetos con `ID_OBJ` y una operación cuyas clases los citan, en el orden del XSD), porque en
+// el XML la operación no contiene a los sujetos: los cita.
 //
-//   {{MAP_IUI:NOMBRE_COMPRADOR:DOCS_NOT/DOC_NOT/SUJS/SUJ[1]/NOM}}
-//   {{DECLARE DNI_V AS TEXT:IUI(DOCS_NOT/DOC_NOT/SUJS/SUJ[2]/DNI)}}
-//
-// La segunda es la buena —el mapeo viaja con la declaración del campo— y es la
-// que §4.3 del plan da por construida. `MAP_IUI` es la forma antigua y se sigue
-// admitiendo.
-//
-// SIN LIBRERÍA XML, Y A PROPÓSITO
-//
-// El Python usa `lxml`. Aquí no hace falta: el documento es un árbol de
-// elementos con etiqueta, hijos ordenados y texto en las hojas —ni atributos,
-// ni mixed content, ni CDATA—, así que se construye y se serializa a mano. Este
-// paquete no tiene NINGUNA dependencia de ejecución y conviene que siga así:
-// lo van a consumir el módulo de MycoLegal, el editor y el SaaS.
-//
-// LO QUE NO SE PORTA: LA VALIDACIÓN CONTRA EL XSD
-//
-// `_validate_xml` y `_load_xsd_schema` usan `etree.XMLSchema` de `lxml`, y en
-// TypeScript no hay validador de XSD sin arrastrar una dependencia pesada.
-// Además los XSD del CTN no viven aquí, sino con el conector (§4.3 y
-// `reference_iui_ctn_docs`). La validación es trabajo de la frontera, que es
-// quien tiene los esquemas; el motor construye el XML y nada más. En el Python
-// tampoco era una puerta: registraba avisos y seguía.
-//
-// LOS ARRAYS, Y QUÉ ES LO QUE SIGUE ABIERTO (A5)
-//
-// Un `DECLARE ARRAY` con `:IUI(...)` mapea a la ruta del elemento REPETIDO, y
-// cada subcampo cuelga de él por su propio `:IUI(...)` o, si no lo lleva, por su
-// nombre. `ParsedField.arraySubfields` ya trae la ruta de cada subcampo, así que
-// esto se porta completo. (Ojo: el `Subcampo` de `esquemaDeCampos` **no** la
-// lleva — es otra estructura, para el formulario.)
-//
-// Un array **sin** `:IUI` en el array, aunque sus subcampos lo tengan, NO
-// produce mapeo: sin la ruta del elemento repetido no hay dónde colgarlos. Es
-// lo que hace el Python, y tiene su caso de prueba.
-//
-// Lo que sigue abierto (**A5**) no es la sintaxis, que funciona en los dos
-// motores, sino la CONVENCIÓN: qué rutas CTN usar para los subcampos y para los
-// nombres de variables de la póliza entera. Eso se decide con Micó, Doku y
-// Javier, no aquí.
+// Sin librería XML a propósito: el documento es un árbol de elementos con texto en las hojas,
+// y este paquete no tiene ninguna dependencia de ejecución. La validación contra el XSD es de
+// la frontera y de los tests (los XSD están en el catálogo, `content/req-docs/iui/xsd`).
 
-// ⚠️ DOS COSAS MEDIDAS SOBRE EL BIBLIOTECA REAL EL 3-OCT-2026, Y LAS DOS IMPORTAN
-//
-// 1. **Nadie usa esto todavía.** De los 105 esquemas maestros y los 1.696
-//    párrafos de `_PROD`, **ninguno** lleva `MAP_IUI` ni `:IUI(`. El único
-//    fichero real con mapeos es `IUI_0501_COMPRAVENTA_MAP.md`, y está en
-//    `_PROD_old` —retirado—; el resto de coincidencias son manuales. Así que
-//    este módulo está portado y probado, pero **sin datos que lo ejerciten**:
-//    los mapeos hay que escribirlos, y es parte de lo que A5 tiene que decidir.
-//
-// 2. **Las dos formas normalizan distinto, y es un defecto del lenguaje.**
-//    `:IUI(Operacion.Compraventa.PrecioTotal)` se normaliza a
-//    `Operacion/Compraventa/PrecioTotal`, pero `{{MAP_IUI:P:Operacion.Compraventa.PrecioTotal}}`
-//    se deja tal cual. La misma ruta escrita de las dos maneras produce dos
-//    árboles distintos. Se mantiene la conducta del Python —no se arregla a
-//    ciegas— porque el único fichero que lo usaba escribe rutas con puntos y en
-//    un vocabulario que NO es IU2007 (`Operacion.*` en vez de `DOCS_NOT/...`):
-//    cuál es la convención buena es justo la decisión A5.
-
-import { parseFields, FieldType } from '../syntax/parser';
 
 /** El espacio de nombres del esquema INTI IU2007. */
 export const IUI_NAMESPACE = 'http://inti.notariado.org/XML/IU2007';
@@ -76,13 +26,6 @@ export interface MapeoArray {
   path: string;
   /** Subcampo → ruta relativa al elemento. Sin entrada, cuelga por su nombre. */
   subcampos?: Record<string, string>;
-}
-
-/** Un campo mapeado dos veces con rutas distintas. */
-export interface ConflictoIui {
-  campo: string;
-  porMapIui: string | MapeoArray;
-  porDeclare: string | MapeoArray;
 }
 
 /** Campo → ruta CTN, o mapeo de array. */
@@ -100,7 +43,6 @@ export interface OpcionesIui {
 }
 
 const SEGMENTO_INDEXADO = /^([A-Z_]+)\[(\d+)\]$/;
-const MAP_IUI_DIRECTIVA = /^MAP_IUI:\s*([^:]+?)\s*:\s*(.+)$/i;
 
 // ─────────────────────────────── el árbol ───────────────────────────────
 
@@ -228,69 +170,6 @@ function expandirArray(mapeo: MapeoArray, valor: unknown): Array<[string, string
 }
 
 // ────────────────────────────── la superficie ──────────────────────────
-
-/**
- * Los mapeos IUI que declara una plantilla, por las dos formas del lenguaje.
- *
- * Gana el `:IUI(...)` del `DECLARE` sobre un `MAP_IUI` del mismo campo: el
- * mapeo que viaja con la declaración es el que mantiene quien edita el campo.
- */
-export function mapaIui(texto: string): MapeosIui {
-  return mapaIuiDetallado(texto).mapeos;
-}
-
-/**
- * Igual que `mapaIui`, y además los conflictos.
- *
- * El Python los manda al log. Aquí se DEVUELVEN: una librería no decide por su
- * consumidor dónde se avisa, y quien llama puede convertirlos en diagnóstico
- * del editor o en una incidencia.
- */
-export function mapaIuiDetallado(texto: string): { mapeos: MapeosIui; conflictos: ConflictoIui[] } {
-  const mapeos: MapeosIui = {};
-  const conflictos: ConflictoIui[] = [];
-
-  for (const f of parseFields(texto)) {
-    if (f.fieldType !== FieldType.MAP_IUI) continue;
-    // El parser deja la ruta sin extraer: viene dentro del contenido.
-    const m = f.content.match(MAP_IUI_DIRECTIVA);
-    if (m) mapeos[m[1].trim()] = m[2].trim();
-  }
-
-  for (const f of parseFields(texto)) {
-    if (f.fieldType !== FieldType.DECLARE && f.fieldType !== FieldType.DECLARE_ARRAY) continue;
-    // Sin ruta en el propio DECLARE no hay mapeo, ni aunque la lleven los
-    // subcampos: falta el elemento repetido del que colgarlos.
-    if (!f.iuiPath || !f.name) continue;
-
-    let mapeo: string | MapeoArray;
-    if (f.fieldType === FieldType.DECLARE_ARRAY) {
-      const subcampos: Record<string, string> = {};
-      for (const sf of f.arraySubfields) {
-        const nombre = sf.name;
-        if (!nombre) continue;
-        subcampos[nombre] = sf.iuiPath || nombre;
-      }
-      mapeo = { path: f.iuiPath, subcampos };
-    } else {
-      mapeo = f.iuiPath;
-    }
-
-    const previo = mapeos[f.name];
-    // Mismo campo por las dos vías: gana el DECLARE —el mapeo que viaja con la
-    // declaración es el que mantiene quien edita el campo—, pero se avisa. Dos
-    // rutas iguales salvo las barras de los extremos NO son un conflicto.
-    const mismaRuta =
-      typeof previo === 'string' && typeof mapeo === 'string' &&
-      previo.replace(/^\/+|\/+$/g, '') === mapeo.replace(/^\/+|\/+$/g, '');
-    if (previo !== undefined && !mismaRuta) {
-      conflictos.push({ campo: f.name, porMapIui: previo, porDeclare: mapeo });
-    }
-    mapeos[f.name] = mapeo;
-  }
-
-  return { mapeos, conflictos };
-}
 
 /**
  * Construye el XML IUI a partir de los mapeos y los valores.

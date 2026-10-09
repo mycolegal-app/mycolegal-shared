@@ -30,8 +30,8 @@ describe('listas deducidas', () => {
     const e = await esquema('{{DECLARE ARRAY G(NUM:[número de plaza])}}{{FOR EACH ITEM IN G}}{{ITEM.NUM}} {{ITEM.FINCA}}{{ENDFOR}}');
     const g = e.campos.find((c) => c.nombre === 'G');
     expect(g?.subcampos).toEqual([
-      { nombre: 'NUM', tipo: 'TEXT', instruccion: 'número de plaza', iuiPath: null, req: [], doc: [] },
-      { nombre: 'FINCA', tipo: 'TEXT', instruccion: null, iuiPath: null, req: [], doc: [] },
+      { nombre: 'NUM', tipo: 'TEXT', instruccion: 'número de plaza', req: [], doc: [] },
+      { nombre: 'FINCA', tipo: 'TEXT', instruccion: null, req: [], doc: [] },
     ]);
   });
 

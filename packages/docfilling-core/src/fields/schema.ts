@@ -1,5 +1,5 @@
 // Esquema de campos de una plantilla: qué pide, de qué tipo, con qué opciones,
-// **quién lo rellena** y a qué dato IUI corresponde.
+// **quién lo rellena** y con qué hecho o dato del catálogo enlaza (`:REQ`).
 //
 // Port de `field_schema._parse` del SaaS (lo que allí sirve
 // `GET /api/v1/templates/{id}/fields`, la tarea A3 de FASE 32). Es la pieza que
@@ -32,9 +32,6 @@ export interface Subcampo {
   nombre: string;
   tipo: string;
   instruccion: string | null;
-  /** Ruta relativa al elemento del array (`PER/NOM`). `null` si el array no
-   *  declara la suya. */
-  iuiPath: string | null;
   /** `:REQ(…)` del subcampo. El rol, si el subcampo no lo trae, lo hereda de la lista. */
   req: ReqDecl[];
   /** `:DOC(…)` del subcampo. */
@@ -60,7 +57,6 @@ export interface Campo {
   /** No deja la tarea `incomplete` aunque falte: sólo gobierna un IF, o es un
    *  DECLARE auxiliar. Mismo criterio que el procesado. */
   soloCondicional: boolean;
-  iuiPath: string | null;
   /** `:REQ(…)`: a qué hechos o datos del catálogo universal equivale (ver `req.ts`). */
   req: ReqDecl[];
   /** `:DOC(…)`: de qué tipos de documento del catálogo sale la respuesta. */
@@ -170,7 +166,6 @@ export function esquemaDeCampos(
       esArray: Boolean(f.isArray),
       subcampos: f.isArray ? subcamposDe(f) : [],
       soloCondicional: soloCondicionales.has(nombre),
-      iuiPath: f.iuiPath || null,
       req: [...(reqDocDe.get(nombre)?.req ?? [])],
       doc: [...(reqDocDe.get(nombre)?.doc ?? [])],
     });
@@ -190,7 +185,7 @@ export function esquemaDeCampos(
       c = {
         nombre: l.nombre, quien: QUIEN.IA, categoria: FieldType.DECLARE_ARRAY, tipo: 'TEXT',
         etiqueta: etiquetar(l.nombre), opciones: [], instruccion: instrucciones[l.nombre] || null,
-        porDefecto: null, esArray: true, subcampos: [], soloCondicional: false, iuiPath: null,
+        porDefecto: null, esArray: true, subcampos: [], soloCondicional: false,
         req: [], doc: [],
       };
       campos.push(c);
@@ -204,7 +199,6 @@ export function esquemaDeCampos(
       c.subcampos.push({
         nombre, tipo,
         instruccion: anidada && anidada.subcampos.size ? `Lista de: ${[...anidada.subcampos.keys()].join(', ')}` : null,
-        iuiPath: null,
         req: [], doc: [],
       });
     }
@@ -231,8 +225,6 @@ function subcamposDe(f: ParsedField): Subcampo[] {
       nombre,
       tipo: tipoCanonico(sub.type),
       instruccion: sub.instruction || sub.description || null,
-      // La ruta por subcampo sale del mapa IUI del array, que es F1.6.
-      iuiPath: null,
       req: (propio?.req ?? []).map((r) => (r.rol || !rolDeLista ? r : { ...r, rol: rolDeLista })),
       doc: [...(propio?.doc ?? [])],
     };

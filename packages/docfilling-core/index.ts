@@ -122,8 +122,8 @@ export type { EnlaceDeCampo, EnlacesDeEsquema } from './src/biblioteca/enlaces';
 
 // F1.6 — IUI/CTN: mapeos de la plantilla y generación del XML del Índice Único.
 // La validación contra el XSD NO está aquí a propósito: ver `src/iui/generar.ts`.
-export { mapaIui, mapaIuiDetallado, generarIui, valorUtil, IUI_NAMESPACE } from './src/iui/generar';
-export type { MapeosIui, MapeoArray, ConflictoIui, OpcionesIui } from './src/iui/generar';
+export { generarIui, valorUtil, IUI_NAMESPACE } from './src/iui/generar';
+export type { MapeosIui, MapeoArray, OpcionesIui } from './src/iui/generar';
 export type { AnalisisBiblioteca, Documento, CondicionSospechosa, OpcionesAnalisis, DeclaracionDivergente } from './src/biblioteca/analizar';
 export type { ParrafoRepository, ResultadoExpansion, OpcionesExpansion } from './src/compose/expand-includes';
 export { listasDeLaPlantilla, marcarListasParaSonda, type ListaDeducida, type ResultadoListas } from './src/fields/listas';

@@ -230,104 +230,122 @@
   {
     "name": "IUI — valid :IUI on scalar DECLARE",
     "template": "{{DECLARE PRECIO AS NUM:[Precio total de la compraventa]:IUI(DOCS_NOT/DOC_NOT/OPES/OPE[1]/IMP)}}Precio: {{PRECIO}}",
-    "diagnostics": []
+    "diagnostics": [
+      [1, 1, "W913", "warning"]
+    ]
   },
   {
     "name": "IUI — dotted path from the operator dictionary is accepted",
     "template": "{{DECLARE COD_MUN:[Código del municipio]:IUI(DOCS_NOT.DOC_NOT.IDE_DOC.COD_MUN)}}{{COD_MUN}}",
-    "diagnostics": []
+    "diagnostics": [
+      [1, 1, "W913", "warning"]
+    ]
   },
   {
     "name": "W058 — IUI path with a single segment",
     "template": "{{DECLARE NOMBRE:[Nombre del comprador]:IUI(NOM)}}{{NOMBRE}}",
     "diagnostics": [
-      [1, 1, "W058", "warning"]
+      [1, 1, "W913", "warning"]
     ]
   },
   {
     "name": "W058 — empty :IUI()",
     "template": "{{DECLARE NOMBRE:[Nombre del comprador]:IUI()}}{{NOMBRE}}",
     "diagnostics": [
-      [1, 1, "W058", "warning"]
+      [1, 1, "W913", "warning"]
     ]
   },
   {
     "name": "W059 — same IUI path on two variables (slashes/dots normalised)",
     "template": "{{DECLARE NOMBRE_A:[Nombre]:IUI(DOCS_NOT/DOC_NOT/SUJS/SUJ[1]/NOM)}}\n{{DECLARE NOMBRE_B:[Nombre]:IUI(/DOCS_NOT.DOC_NOT.SUJS.SUJ[1].NOM/)}}\n{{NOMBRE_A}} {{NOMBRE_B}}",
     "diagnostics": [
-      [2, 1, "W059", "warning"]
+      [1, 1, "W913", "warning"],
+      [2, 1, "W913", "warning"]
     ]
   },
   {
     "name": "IUI — DECLARE ARRAY with element path and subfield relative paths",
     "template": "{{DECLARE ARRAY COMPRADORES(NOMBRE:IUI(PER/NOM), DNI:IUI(PER.DOC_IDE.NUM_DOC_IDE), PORCENTAJE AS NUM):[Compradores de la finca]:IUI(DOCS_NOT/DOC_NOT/SUJS/SUJ)}}",
-    "diagnostics": []
+    "diagnostics": [
+      [1, 1, "W913", "warning"]
+    ]
   },
   {
     "name": "IUI — DECLARE ARRAY bracket form with dotted element path",
     "template": "{{DECLARE ARRAY COMPRADORES:IUI(DOCS_NOT.DOC_NOT.SUJS.SUJ):[NOMBRE, DNI]}}",
-    "diagnostics": []
+    "diagnostics": [
+      [1, 1, "W913", "warning"]
+    ]
   },
   {
     "name": "W057 — subfield :IUI without array element path",
     "template": "{{DECLARE ARRAY COMPRADORES(NOMBRE:IUI(PER/NOM), DNI):[Compradores de la finca]}}",
     "diagnostics": [
-      [1, 1, "W057", "warning"]
+      [1, 1, "W913", "warning"]
     ]
   },
   {
     "name": "W057 — :IUI inside the :[…] bracket list",
     "template": "{{DECLARE ARRAY COMPRADORES:[NOMBRE:IUI(PER/NOM), DNI]:IUI(DOCS_NOT/DOC_NOT/SUJS/SUJ)}}",
     "diagnostics": [
-      [1, 1, "W057", "warning"]
+      [1, 1, "W913", "warning"]
     ]
   },
   {
     "name": "W058 — DECLARE ARRAY element path with one segment",
     "template": "{{DECLARE ARRAY COMPRADORES(NOMBRE, DNI):[Compradores]:IUI(SUJ)}}",
     "diagnostics": [
-      [1, 1, "W058", "warning"]
+      [1, 1, "W913", "warning"]
     ]
   },
   {
     "name": "W059 — two arrays with the same element path",
     "template": "{{DECLARE ARRAY COMPRADORES(NOMBRE):[Compradores]:IUI(DOCS_NOT/DOC_NOT/SUJS/SUJ)}}\n{{DECLARE ARRAY VENDEDORES(NOMBRE):[Vendedores]:IUI(DOCS_NOT.DOC_NOT.SUJS.SUJ)}}",
     "diagnostics": [
-      [2, 1, "W059", "warning"]
+      [1, 1, "W913", "warning"],
+      [2, 1, "W913", "warning"]
     ]
   },
   {
     "name": "W059 — two subfields resolve to the same relative path",
     "template": "{{DECLARE ARRAY COMPRADORES(NOMBRE:IUI(PER/NOM), NOMBRE_COMPLETO:IUI(PER.NOM)):[Compradores]:IUI(DOCS_NOT/DOC_NOT/SUJS/SUJ)}}",
     "diagnostics": [
-      [1, 1, "W059", "warning"]
+      [1, 1, "W913", "warning"]
     ]
   },
   {
     "name": "W059 — subfield by name collides with an explicit relative path",
     "template": "{{DECLARE ARRAY COMPRADORES(NOM, NOMBRE:IUI(NOM)):[Compradores]:IUI(DOCS_NOT/DOC_NOT/SUJS/SUJ)}}",
     "diagnostics": [
-      [1, 1, "W059", "warning"]
+      [1, 1, "W913", "warning"]
     ]
   },
   {
     "name": "IUI — combined with :OPTIONS and :[instr], IUI first",
     "template": "{{DECLARE ESTADO:IUI(DOCS_NOT/DOC_NOT/INMS/INM[1]/EST):OPTIONS(Libre, Ocupado):[Estado de ocupación]=Libre}}{{ESTADO}}",
-    "diagnostics": []
+    "diagnostics": [
+      [1, 1, "W913", "warning"]
+    ]
   },
   {
     "name": "IUI — combined with :OPTIONS and :[instr], IUI in the middle",
     "template": "{{DECLARE ESTADO:OPTIONS(Libre, Ocupado):IUI(DOCS_NOT/DOC_NOT/INMS/INM[1]/EST):[Estado de ocupación]:DEFAULT(Libre)}}{{ESTADO}}",
-    "diagnostics": []
+    "diagnostics": [
+      [1, 1, "W913", "warning"]
+    ]
   },
   {
     "name": "IUI — combined with :[instr] and :OPTIONS, IUI last",
     "template": "{{DECLARE ESTADO AS TEXT:[Estado de ocupación]:OPTIONS(Libre, Ocupado):IUI(DOCS_NOT/DOC_NOT/INMS/INM[1]/EST)}}{{ESTADO}}",
-    "diagnostics": []
+    "diagnostics": [
+      [1, 1, "W913", "warning"]
+    ]
   },
   {
     "name": "IUI — on INPUT-form DECLARE",
     "template": "{{DECLARE CONFIRMA AS BOOL:INPUT(¿Confirma la operación?|Sí,No):IUI(DOCS_NOT/DOC_NOT/OPES/OPE[1]/CNF)}}{{IF CONFIRMA}}ok{{ENDIF}}",
-    "diagnostics": []
+    "diagnostics": [
+      [1, 1, "W913", "warning"]
+    ]
   }
 ]

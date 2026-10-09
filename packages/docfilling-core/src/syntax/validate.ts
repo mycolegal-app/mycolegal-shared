@@ -20,6 +20,7 @@ import {
   checkForEachBalance,
   checkIncludeConRuta,
   checkInputConOptions,
+  checkIuiObsoleto,
   checkReqCatalogo,
   checkReqDocSintaxis,
   checkSetDirectives,
@@ -57,6 +58,7 @@ export function validateText(
     ...checkEndIfNoCanonico(fields),
     ...checkPageBreakHeredado(fields),
     ...checkReqDocSintaxis(fields),
+    ...checkIuiObsoleto(fields),
     ...(opciones.catalogo ? checkReqCatalogo(fields, opciones.catalogo) : []),
   );
 

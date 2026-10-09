@@ -78,8 +78,8 @@ describe('esquemaDeCampos', () => {
     const c = campo('{{DECLARE ARRAY SUJS(NOM:[nombre completo], DNI AS TEXT:[el DNI])}}', 'SUJS');
     expect(c?.esArray).toBe(true);
     expect(c?.subcampos).toEqual([
-      { nombre: 'NOM', tipo: 'TEXT', instruccion: 'nombre completo', iuiPath: null, req: [], doc: [] },
-      { nombre: 'DNI', tipo: 'TEXT', instruccion: 'el DNI', iuiPath: null, req: [], doc: [] },
+      { nombre: 'NOM', tipo: 'TEXT', instruccion: 'nombre completo', req: [], doc: [] },
+      { nombre: 'DNI', tipo: 'TEXT', instruccion: 'el DNI', req: [], doc: [] },
     ]);
   });
 
@@ -88,14 +88,6 @@ describe('esquemaDeCampos', () => {
     expect(c?.esArray).toBe(true);
     expect(c?.subcampos).toEqual([]);
     expect(c?.instruccion).toBe('NOMBRE, DNI, DOMICILIO');
-  });
-
-  it('recoge la ruta IUI declarada en el DECLARE', () => {
-    const c = campo(
-      '{{DECLARE PRECIO AS NUM:[el precio]:IUI(DOCS_NOT/DOC_NOT/OPES/OPE[1]/IMP)}}',
-      'PRECIO',
-    );
-    expect(c?.iuiPath).toBe('DOCS_NOT/DOC_NOT/OPES/OPE[1]/IMP');
   });
 
   it('no repite un campo que aparece varias veces', () => {

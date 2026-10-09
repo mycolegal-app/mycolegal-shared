@@ -471,3 +471,26 @@ export function checkReqCatalogo(fields: ParsedField[], catalogo: CatalogoReq): 
   }
   return out;
 }
+
+/**
+ * `W913` — `:IUI(…)` o `{{MAP_IUI:…}}`, retirados.
+ *
+ * El IUI ya no se declara en el esquema: vive en el catálogo universal (cada hecho o dato
+ * sabe su ruta y sus códigos en el XML del CTN), y el campo enlaza con él por `:REQ`. Plan
+ * REQ_CATALOGO_IUI, DC8. Cuando se retiraron, ningún esquema ni párrafo de `_PROD` los usaba
+ * (105 esquemas, 1.696 párrafos); el único mapeo (`IUI_0501_COMPRAVENTA_MAP.md`, en
+ * `_PROD_old`) tenía rutas que no existen en el XSD.
+ *
+ * Es aviso: el texto de la escritura sale igual, pero esa ruta ya no la usa nadie.
+ */
+export function checkIuiObsoleto(fields: ParsedField[]): Diagnostic[] {
+  const out: Diagnostic[] = [];
+  for (const f of fields) {
+    const mapIui = f.fieldType === FieldType.MAP_IUI;
+    if (!mapIui && !f.iuiObsoleto) continue;
+    out.push(diag(f.line, f.col, f.raw.length, Severity.WARNING, 'W913',
+      `${mapIui ? 'MAP_IUI' : `:IUI(…) en ${f.name}`} está retirado: el IUI vive en el catálogo universal. ` +
+      'Enlaza el campo con su hecho o dato con :REQ(AMBITO.CODIGO) y la ruta del XML la pone el catálogo.'));
+  }
+  return out;
+}

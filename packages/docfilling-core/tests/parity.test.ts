@@ -6,6 +6,12 @@
 // convivan. Si uno falla, el motor TS se ha desviado del de referencia, y lo que
 // se arregla es el TS — nunca el caso.
 //
+// EXCEPCIÓN DOCUMENTADA (9-oct-2026, DR12 del plan REQ_CATALOGO_IUI): los 17 casos de
+// validación que llevan `:IUI(…)` esperan ahora W913 (retirado) en vez de W057/W058/W059.
+// `:IUI` se retiró a propósito —el IUI vive en el catálogo universal— y el caso viejo
+// describía un comportamiento que ya no se quiere. Se cambió sólo el bloque `diagnostics`
+// de esos 17, comprobando que la única diferencia era esa.
+//
 // FORMATO DE LOS FICHEROS (es el del Python, no se toca):
 //   · compose-cases.json   → sin `kind`: compose(template, fields) === expected
 //                            kind "applyFieldSuffix": applyFieldSuffix(input, suffix)
