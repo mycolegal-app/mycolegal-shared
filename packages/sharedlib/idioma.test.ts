@@ -66,6 +66,14 @@ for (const corto of ['ok', 'gracias', 'i a Catalunya?', '1234/2025', 'sí']) {
 }
 
 // …y entonces manda la conversación.
+// Con los puntos cerca, manda el idioma configurado del usuario; con un idioma claro, no.
+assert.equal(decidirIdiomaRespuesta({ pregunta: 'la primera', preferido: 'CAT' }), 'ca');
+assert.equal(decidirIdiomaRespuesta({ pregunta: 'la primera', preferido: 'CAST' }), 'es');
+assert.equal(decidirIdiomaRespuesta({ pregunta: 'Es necesario el certificado?', preferido: 'CAT' }), 'es');
+assert.equal(decidirIdiomaRespuesta({ pregunta: 'Quins documents necessito per a una compravenda?', preferido: 'CAST' }), 'ca');
+assert.equal(decidirIdiomaRespuesta({ pregunta: '¿Qué documentos necesito para una compraventa?', preferido: 'CAT' }), 'es');
+// …y la conversación sigue pesando más que una palabra suelta.
+assert.equal(decidirIdiomaRespuesta({ pregunta: 'La primera', anteriores: ['declaración de obra nueva por antigüedad'], preferido: 'CAT' }), 'es');
 // Una palabra suelta en una conversación en castellano no la pasa a catalán (8-oct-2026).
 assert.equal(
   decidirIdiomaRespuesta({ pregunta: 'La primera', anteriores: ['declaración de obra nueva por antigüedad'] }),

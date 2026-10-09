@@ -127,27 +127,46 @@ export function idiomaDePreferencia(valor?: string | null): Idioma | null {
 }
 
 /**
+ * Lo que dice una detección, con el idioma del usuario como desempate: si el preferido queda
+ * CERCA del primero (dentro de la ventaja que exige `detectarIdioma` para dar uno por seguro),
+ * gana el preferido. «Es necesario el certificado?» de un usuario en catalán no es castellano
+ * claro; «Quins documents necessito…?» de uno en castellano sí es catalán claro.
+ */
+function conPreferido(d: Deteccion, preferido: Idioma | null): Idioma | null {
+  const [primero] = (Object.entries(d.puntos) as [Idioma, number][]).sort((a, b) => b[1] - a[1]);
+  const suyo = preferido ? d.puntos[preferido] ?? 0 : 0;
+  if (preferido && primero && suyo > 0 && suyo >= primero[1] * (1 - MIN_VENTAJA)) return preferido;
+  return d.idioma;
+}
+
+/**
  * Idioma en que se contesta este mensaje. `anteriores` son las preguntas previas del usuario
- * en la conversación (las más recientes al final).
+ * en la conversación (las más recientes al final); `preferido`, el idioma que tiene
+ * configurado (interfaz o `language_code` de Telegram), que desempata cuando los puntos están
+ * cerca y decide cuando no hay nada que detectar.
  */
 export function decidirIdiomaRespuesta(p: {
   pregunta: string;
   anteriores?: string[];
   preferido?: string | null;
 }): Idioma {
+  const preferido = idiomaDePreferencia(p.preferido);
   const propia = detectarIdioma(p.pregunta);
   const contexto = (p.anteriores ?? []).slice(-3).join('\n');
   // Con conversación detrás, un mensaje que gana por la mínima (una palabra suelta: «La
   // primera», 8-oct-2026, salía catalán en una conversación en castellano) no cambia el
   // idioma: decide la conversación. Sin conversación, vale lo que diga el mensaje.
-  const fuerte = (propia.puntos[propia.idioma ?? 'es'] ?? 0) >= MIN_PUNTOS;
-  if (propia.idioma && (fuerte || !contexto.trim())) return propia.idioma;
+  const maximo = Math.max(0, ...Object.values(propia.puntos));
+  if (!contexto.trim() || maximo >= MIN_PUNTOS) {
+    const i = conPreferido(propia, preferido);
+    if (i) return i;
+  }
 
   if (contexto.trim()) {
-    const conv = detectarIdioma(`${contexto}\n${p.pregunta}`);
-    if (conv.idioma) return conv.idioma;
+    const conv = conPreferido(detectarIdioma(`${contexto}\n${p.pregunta}`), preferido);
+    if (conv) return conv;
   }
-  return idiomaDePreferencia(p.preferido) ?? 'es';
+  return preferido ?? 'es';
 }
 
 const NOMBRE: Record<Idioma, string> = {
