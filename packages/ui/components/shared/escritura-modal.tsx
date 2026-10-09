@@ -83,10 +83,14 @@ export interface EscrituraModalProps {
   apiBase?: string;
   tareaId: string;
   titulo?: string;
+  /** Cómo se pinta la escritura. Por defecto, texto preformateado con los huecos resaltados;
+   *  una app con vista en papel (Redactor, papel notarial) pasa la suya, para que el borrador
+   *  se vea igual que la vista previa. `hueco` es el que está en curso en el navegador. */
+  cuerpo?: (p: { markdown: string; hueco: HuecoEscritura | null }) => React.ReactNode;
 }
 
 export function EscrituraModal({
-  abierto, onCerrar, apiBase = "/api/generacion", tareaId, titulo,
+  abierto, onCerrar, apiBase = "/api/generacion", tareaId, titulo, cuerpo,
 }: EscrituraModalProps) {
   const { t } = useI18n();
   const [prev, setPrev] = useState<PrevisualizacionEscritura | null>(null);
@@ -259,7 +263,9 @@ export function EscrituraModal({
           {prev && prev.faltantes.length > 0 && (
             <AlertBanner type="warning" message={t("ui.escrituraModal.faltanParrafos", { n: prev.faltantes.length })} />
           )}
-          {prev && <Escritura markdown={prev.markdown} resaltado={hueco} />}
+          {prev && (cuerpo
+            ? cuerpo({ markdown: prev.markdown, hueco })
+            : <Escritura markdown={prev.markdown} resaltado={hueco} />)}
         </div>
 
         {/* ── la cinta del motor (M2): sólo aquí y en los informes ───────── */}
