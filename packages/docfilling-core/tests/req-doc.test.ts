@@ -28,7 +28,7 @@ describe(':REQ / :DOC en el DECLARE', () => {
     expect(f.declareInstruction).toBe('Extraer el tipo de finca');
     expect(f.malformedResidue).toBe('');
     expect(f.req).toEqual([{
-      ref: 'OBJETO.SUELO_URBANO_IIVTNU', ambito: 'OBJETO', codigo: 'SUELO_URBANO_IIVTNU', rol: null,
+      ref: 'OBJETO.SUELO_URBANO_IIVTNU', ambito: 'OBJETO', codigo: 'SUELO_URBANO_IIVTNU', campo: null, rol: null,
       mapa: [['Urbana', 'TRUE'], ['Rústica', 'FALSE']],
       texto: 'OBJETO.SUELO_URBANO_IIVTNU; Urbana=TRUE; Rústica=FALSE',
     }]);
@@ -119,9 +119,9 @@ describe(':REQ / :DOC en el DECLARE', () => {
   });
 
   it('PRECIO_VENTA: un dato, sin mapa ni catálogo', () => {
-    const f = uno('{{DECLARE PRECIO_VENTA AS NUM:[Extrae el precio de venta global]:REQ(ACTO.CUANTIA)}}');
-    expect(f.req[0].codigo).toBe('CUANTIA');
-    expect(implicaciones(f.req, '125000,50')).toEqual([{ ref: 'ACTO.CUANTIA', rol: null, valor: '125000,50' }]);
+    const f = uno('{{DECLARE PRECIO_VENTA AS NUM:[Extrae el precio de venta global]:REQ(ACTO.PRECIO)}}');
+    expect(f.req[0].codigo).toBe('PRECIO');
+    expect(implicaciones(f.req, '125000,50')).toEqual([{ ref: 'ACTO.PRECIO', rol: null, valor: '125000,50' }]);
   });
 
   it('DECLARE ARRAY: :REQ en cada subcampo y el rol en la lista', () => {
@@ -143,9 +143,9 @@ describe(':REQ / :DOC en el DECLARE', () => {
   });
 
   it('el esquema de campos toma :REQ/:DOC de la declaración aunque el campo se pinte antes', () => {
-    const t = 'Precio: {{PRECIO_VENTA}}\n{{DECLARE PRECIO_VENTA AS NUM:REQ(ACTO.CUANTIA):DOC(REQ_CONTRATO_ARRAS)}}';
+    const t = 'Precio: {{PRECIO_VENTA}}\n{{DECLARE PRECIO_VENTA AS NUM:REQ(ACTO.PRECIO):DOC(REQ_CONTRATO_ARRAS)}}';
     const c = esquemaDeCampos(t).campos.find((x) => x.nombre === 'PRECIO_VENTA')!;
-    expect(c.req.map((r) => r.ref)).toEqual(['ACTO.CUANTIA']);
+    expect(c.req.map((r) => r.ref)).toEqual(['ACTO.PRECIO']);
     expect(c.doc).toEqual(['REQ_CONTRATO_ARRAS']);
   });
 });
@@ -252,7 +252,7 @@ describe('biblioteca: declaraciones divergentes (F2.4) y enlaces de un esquema (
       '{{DECLARE TIPO_FINCA:OPTIONS(Urbana,Rústica):REQ(OBJETO.SUELO_URBANO_IIVTNU; Urbana=TRUE; Rústica=FALSE):DOC(REQ_NOTA_SIMPLE)}}',
       '{{DECLARE LIMITACION:INPUT(¿Incluir la advertencia?|Sí,No)=No}}',
       '{{DECLARE HUERFANA AS BOOL:[Analiza la nota simple]}}',
-      '{{DECLARE PRECIO AS NUM:REQ(ACTO.CUANTIA)}}',
+      '{{DECLARE PRECIO AS NUM:REQ(ACTO.PRECIO)}}',
       '{{IF TIPO_FINCA == "Urbana" AND HUERFANA}}urbana{{ENDIF}}{{IF LIMITACION == "Sí"}}aviso{{ENDIF}}',
       'Precio: {{PRECIO}} euros. {{FECHA}}',
     ].join('\n');
@@ -308,5 +308,37 @@ describe('F2.6: peso de las condiciones', () => {
 
   it('un IF sin cerrar no rompe la cuenta', () => {
     expect(pesoDeCondiciones('{{IF A}}abc').get('A')?.caracteres).toBe(3);
+  });
+});
+
+describe(':REQ de tres segmentos: un componente de una LISTA o una DIRECCION', () => {
+  const catalogo = catalogoDesdeJson(
+    JSON.parse(readFileSync(new URL('./fixtures/catalogo_req.prueba.json', import.meta.url), 'utf8')),
+  );
+  const conCatalogo = (t: string) => validateText(t, undefined, undefined, { catalogo }).diagnostics
+    .filter((d) => /^W90[7-9]|^W912|^E906/.test(d.code)).map((d) => d.code);
+
+  it('se lee con su componente, y en los subcampos de un ARRAY', () => {
+    const t = '{{DECLARE ARRAY PAGOS:REQ(ACTO.PAGOS) (IMPORTE AS NUM:REQ(ACTO.PAGOS.CUANTIA), ' +
+      'MEDIO:REQ(ACTO.PAGOS.MEDIO; Transferencia=TRANSFERENCIA))}}';
+    const [f] = parseFields(t);
+    expect(f.req[0]).toMatchObject({ ref: 'ACTO.PAGOS', codigo: 'PAGOS', campo: null });
+    expect(f.arraySubfieldsReqDoc.IMPORTE.req[0]).toMatchObject({ ref: 'ACTO.PAGOS.CUANTIA', codigo: 'PAGOS', campo: 'CUANTIA' });
+    expect(conCatalogo(t)).toEqual([]);
+  });
+
+  it('el puerto presenta el componente como un atributo, con su tipo y sus opciones', () => {
+    expect(catalogo.atributo('ACTO.PAGOS.MEDIO')).toMatchObject({ ref: 'ACTO.PAGOS.MEDIO', tipoDato: 'ENUM', clase: 'DATO' });
+    expect(catalogo.atributo('SUJETO.DOMICILIO.VIA')?.iui?.ruta).toBe('VIA');
+    expect(catalogo.atributo('ACTO.PAGOS.NO_EXISTE')).toBeUndefined();
+  });
+
+  it('W907 si el componente no existe; W908 si el valor no está en sus opciones', () => {
+    expect(conCatalogo('{{DECLARE X:REQ(ACTO.PAGOS.NO_EXISTE)}}')).toEqual(['W907']);
+    expect(conCatalogo('{{DECLARE X:OPTIONS(Bizum):REQ(ACTO.PAGOS.MEDIO; Bizum=BIZUM)}}')).toEqual(['W908']);
+  });
+
+  it('cuatro segmentos no son válidos (E906)', () => {
+    expect(conCatalogo('{{DECLARE X:REQ(ACTO.PAGOS.MEDIO.OTRO)}}')).toEqual(['E906']);
   });
 });

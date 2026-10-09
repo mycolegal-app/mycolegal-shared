@@ -17,6 +17,21 @@ export interface IuiAtributo {
   valores?: Record<string, string>;
   /** Nombre de una regla de `reglasDeducidas`: el código no sale de una tabla. */
   deducido?: string;
+  /** La ruta según el tipo de objeto (se elige subiendo por la jerarquía): `{URBANO: 'FIN_URB/…', RUSTICA: 'FIN_RUS/…'}`.
+   *  Con esto no va `ruta`. */
+  rutaPorTipo?: Record<string, string>;
+  /** Domicilio en el extranjero: la ruta alternativa (`PER/DOM/DOM_EXT`). */
+  rutaExtranjero?: string;
+  /** El código de cada valor sale de otra lista del catálogo (`mediosPago`). */
+  desdeCatalogo?: string;
+}
+
+/** Un componente de un dato compuesto (LISTA o DIRECCION). */
+export interface CampoAtributo {
+  codigo: string;
+  tipoDato: string;
+  opciones?: string[] | null;
+  iui?: IuiAtributo | null;
 }
 
 /** Un hecho o un dato del catálogo. */
@@ -35,6 +50,8 @@ export interface AtributoCatalogo {
   iui?: IuiAtributo | null;
   /** Cuántas reglas lo consultan (0 en los datos). */
   usoEnReglas?: number;
+  /** LISTA y DIRECCION: sus componentes. Un `:REQ(AMBITO.CODIGO.CAMPO)` apunta a uno. */
+  campos?: CampoAtributo[] | null;
 }
 
 export interface DocumentoCatalogo {
@@ -63,6 +80,7 @@ export interface CatalogoReqJson {
   roles: RolCatalogo[];
   actos?: Array<{ codigo: string; iuiClases?: string[][] | null }>;
   reglasDeducidas?: string[];
+  mediosPago?: Array<{ codigo: string; nombre?: string; parent?: string | null; iui?: string | null }>;
 }
 
 /** El puerto sobre el JSON del build del catálogo (o sobre listas montadas por la app). */
@@ -71,7 +89,19 @@ export function catalogoDesdeJson(json: Pick<CatalogoReqJson, 'atributos' | 'doc
   const documentos = new Map(json.documentos.map((d) => [d.codigo.toUpperCase(), d]));
   const roles = new Map(json.roles.map((r) => [r.codigo.toUpperCase(), r]));
   return {
-    atributo: (ref) => atributos.get(ref.toUpperCase()),
+    // `AMBITO.CODIGO.CAMPO`: el componente, presentado como un atributo más (con su tipo, sus
+    // opciones y su iui), para que quien lo consulta no tenga que distinguir.
+    atributo: (ref) => {
+      const r = ref.toUpperCase();
+      const directo = atributos.get(r);
+      if (directo) return directo;
+      const corte = r.lastIndexOf('.');
+      if (r.indexOf('.') === corte) return undefined;
+      const padre = atributos.get(r.slice(0, corte));
+      const c = padre?.campos?.find((x) => x.codigo.toUpperCase() === r.slice(corte + 1));
+      if (!padre || !c) return undefined;
+      return { ...padre, ref: r, tipoDato: c.tipoDato, opciones: c.opciones ?? null, iui: c.iui ?? null, campos: null };
+    },
     documento: (codigo) => documentos.get(codigo.toUpperCase()),
     rol: (codigo) => roles.get(codigo.toUpperCase()),
   };

@@ -103,7 +103,7 @@ export { pesoDeCondiciones, puntuacion, PUNTOS_POR_CONDICION_TUMBADA } from './s
 export type { PesoCondicion } from './src/fields/peso';
 export { catalogoDesdeJson } from './src/ports/catalogo';
 export type {
-  CatalogoReq, CatalogoReqJson, AtributoCatalogo, DocumentoCatalogo, RolCatalogo, IuiAtributo, ClaseAtributo,
+  CatalogoReq, CatalogoReqJson, AtributoCatalogo, DocumentoCatalogo, RolCatalogo, IuiAtributo, ClaseAtributo, CampoAtributo,
 } from './src/ports/catalogo';
 export type { OpcionesValidacion } from './src/syntax/validate';
 // F1.3 (residuo) — `{{LANG=xx}}`: el idioma de la PLANTILLA, que decide en qué

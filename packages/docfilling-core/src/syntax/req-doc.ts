@@ -8,7 +8,10 @@
 //   hecho o dato del catálogo equivale el campo. Puede haber varios: cuando un valor del campo
 //   fija varios hechos a la vez, cada hecho lleva el suyo. `@*` = algún interviniente; sin rol,
 //   el hecho es del acto o del objeto. En una lista (`DECLARE ARRAY`), `:REQ(@ROL)` sin hecho
-//   da el papel a todos sus subcampos.
+//   da el papel a todos sus subcampos. Un tercer segmento apunta a un COMPONENTE de un dato
+//   compuesto del catálogo (una LISTA o una DIRECCION con `campos`): `:REQ(ACTO.PAGOS.CUANTIA)`,
+//   `:REQ(SUJETO.DOMICILIO.VIA)`. Es lo que necesita un esquema cuyos pagos o domicilios son
+//   campos sueltos o subcampos de un ARRAY.
 // - `:DOC(<tipo> [| <tipo>]…)` dice de qué documentos del catálogo sale la respuesta
 //   (cualquiera de los listados).
 //
@@ -19,12 +22,14 @@
 
 /** Un `:REQ(…)` ya analizado. */
 export interface ReqDecl {
-  /** `AMBITO.CODIGO` tal cual se escribió (en mayúsculas). `null` en `:REQ(@ROL)` de una lista. */
+  /** `AMBITO.CODIGO[.CAMPO]` tal cual se escribió (en mayúsculas). `null` en `:REQ(@ROL)` de una lista. */
   ref: string | null;
   /** `SUJETO` | `OBJETO` | `ACTO` | … (lo que va antes del punto). */
   ambito: string | null;
-  /** Lo que va después del punto, sin prefijo: la clave de `atributo_defs_global.codigo`. */
+  /** El segundo segmento, sin prefijo: la clave de `atributo_defs_global.codigo`. */
   codigo: string | null;
+  /** El tercer segmento, si lo hay: el componente del dato compuesto (`CUANTIA` de `ACTO.PAGOS`). */
+  campo: string | null;
   /** Rol del catálogo (`VENDEDOR`), `'*'` (algún interviniente) o `null` (acto u objeto). */
   rol: string | null;
   /** Pares `[valor del campo, valor del catálogo]`, sin comillas. `null` = sin mapa: los
@@ -41,7 +46,7 @@ export interface ReqDoc {
   errores: string[];
 }
 
-const REF = /^([A-Z][A-Z0-9_]*)\.([A-Z0-9_]+)$/;
+const REF = /^([A-Z][A-Z0-9_]*)\.([A-Z0-9_]+)(?:\.([A-Z0-9_]+))?$/;
 const ROL = /^(\*|[A-Z][A-Z0-9_]*)$/;
 
 /** Cierre del paréntesis que abre en `abre`, contando anidados y saltando comillas.
@@ -113,12 +118,14 @@ export function leerReq(cuerpo: string): ReqDecl | null {
   let ref: string | null = null;
   let ambito: string | null = null;
   let codigo: string | null = null;
+  let campo: string | null = null;
   if (refTexto) {
     const m = REF.exec(refTexto.toUpperCase());
     if (!m) return null;
     ref = refTexto.toUpperCase();
     ambito = m[1];
     codigo = m[2];
+    campo = m[3] ?? null;
   }
   let rol: string | null = null;
   if (rolTexto !== undefined) {
@@ -136,7 +143,7 @@ export function leerReq(cuerpo: string): ReqDecl | null {
     if (i <= 0 || i === par.length - 1) return null;
     (mapa ??= []).push([sinComillas(par.slice(0, i)), sinComillas(par.slice(i + 1))]);
   }
-  return { ref, ambito, codigo, rol, mapa, texto: cuerpo.trim() };
+  return { ref, ambito, codigo, campo, rol, mapa, texto: cuerpo.trim() };
 }
 
 /** Lee el cuerpo de un `:DOC(…)`: tipos separados por `|`. `null` si queda alguno vacío. */

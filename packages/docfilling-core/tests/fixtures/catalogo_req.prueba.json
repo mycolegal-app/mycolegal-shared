@@ -1,22 +1,220 @@
 {
   "version": "0.0.0-prueba",
   "atributos": [
-    {"ref": "OBJETO.SUELO_URBANO_IIVTNU", "ambito": "OBJETO", "tipo": "INMUEBLE", "clase": "HECHO", "tipoDato": "BOOL", "pregunta": "¿El suelo es urbano a efectos de plusvalía?", "iui": null, "usoEnReglas": 3},
-    {"ref": "OBJETO.ES_VPO", "ambito": "OBJETO", "tipo": "VIVIENDA", "clase": "HECHO", "tipoDato": "BOOL", "pregunta": "¿Es una vivienda de protección oficial?", "iui": null, "usoEnReglas": 2},
-    {"ref": "SUJETO.TIPO", "ambito": "SUJETO", "tipo": null, "clase": "HECHO", "tipoDato": "ENUM", "opciones": ["PERSONA_FISICA", "PERSONA_JURIDICA"], "pregunta": "Tipo de interviniente", "iui": {"ruta": "TIP_PER", "deducido": "TIP_PER"}, "usoEnReglas": 40},
-    {"ref": "SUJETO.ESTADO_CIVIL", "ambito": "SUJETO", "tipo": "PERSONA_FISICA", "clase": "HECHO", "tipoDato": "ENUM", "opciones": ["SOLTERO", "CASADO", "SEPARADO_JUDICIALMENTE", "SEPARADO_DE_HECHO", "DIVORCIADO", "VIUDO"], "pregunta": "Estado civil", "iui": {"ruta": "PER/ESTADO_CIVIL", "valores": {"SOLTERO": "1", "CASADO": "2", "SEPARADO_JUDICIALMENTE": "3", "SEPARADO_DE_HECHO": "2", "DIVORCIADO": "4", "VIUDO": "5"}}, "usoEnReglas": 15},
-    {"ref": "SUJETO.NOMBRE", "ambito": "SUJETO", "tipo": null, "clase": "DATO", "tipoDato": "TEXTO", "pregunta": "Nombre", "iui": {"ruta": "PER/NOM"}, "usoEnReglas": 0},
-    {"ref": "ACTO.CUANTIA", "ambito": "ACTO", "tipo": null, "clase": "DATO", "tipoDato": "NUMERO", "pregunta": "Precio o cuantía de la operación", "iui": {"ruta": "CUAS_OPE/CUA_OPE"}, "usoEnReglas": 0}
+    {
+      "ref": "OBJETO.SUELO_URBANO_IIVTNU",
+      "ambito": "OBJETO",
+      "tipo": "INMUEBLE",
+      "clase": "HECHO",
+      "tipoDato": "BOOL",
+      "pregunta": "¿El suelo es urbano a efectos de plusvalía?",
+      "iui": null,
+      "usoEnReglas": 3
+    },
+    {
+      "ref": "OBJETO.ES_VPO",
+      "ambito": "OBJETO",
+      "tipo": "VIVIENDA",
+      "clase": "HECHO",
+      "tipoDato": "BOOL",
+      "pregunta": "¿Es una vivienda de protección oficial?",
+      "iui": null,
+      "usoEnReglas": 2
+    },
+    {
+      "ref": "SUJETO.TIPO",
+      "ambito": "SUJETO",
+      "tipo": null,
+      "clase": "HECHO",
+      "tipoDato": "ENUM",
+      "opciones": [
+        "PERSONA_FISICA",
+        "PERSONA_JURIDICA"
+      ],
+      "pregunta": "Tipo de interviniente",
+      "iui": {
+        "ruta": "TIP_PER",
+        "deducido": "TIP_PER"
+      },
+      "usoEnReglas": 40
+    },
+    {
+      "ref": "SUJETO.ESTADO_CIVIL",
+      "ambito": "SUJETO",
+      "tipo": "PERSONA_FISICA",
+      "clase": "HECHO",
+      "tipoDato": "ENUM",
+      "opciones": [
+        "SOLTERO",
+        "CASADO",
+        "SEPARADO_JUDICIALMENTE",
+        "SEPARADO_DE_HECHO",
+        "DIVORCIADO",
+        "VIUDO"
+      ],
+      "pregunta": "Estado civil",
+      "iui": {
+        "ruta": "PER/ESTADO_CIVIL",
+        "valores": {
+          "SOLTERO": "1",
+          "CASADO": "2",
+          "SEPARADO_JUDICIALMENTE": "3",
+          "SEPARADO_DE_HECHO": "2",
+          "DIVORCIADO": "4",
+          "VIUDO": "5"
+        }
+      },
+      "usoEnReglas": 15
+    },
+    {
+      "ref": "SUJETO.NOMBRE",
+      "ambito": "SUJETO",
+      "tipo": null,
+      "clase": "DATO",
+      "tipoDato": "TEXTO",
+      "pregunta": "Nombre",
+      "iui": {
+        "ruta": "PER/NOM"
+      },
+      "usoEnReglas": 0
+    },
+    {
+      "ref": "ACTO.PRECIO",
+      "ambito": "ACTO",
+      "tipo": null,
+      "clase": "HECHO",
+      "tipoDato": "NUMERO",
+      "pregunta": "Precio de la operación",
+      "iui": {
+        "ruta": "CUAS_OPE/CUA_OPE"
+      },
+      "usoEnReglas": 4
+    },
+    {
+      "ref": "ACTO.PAGOS",
+      "ambito": "ACTO",
+      "tipo": null,
+      "clase": "DATO",
+      "tipoDato": "LISTA",
+      "pregunta": "Pagos",
+      "iui": {
+        "ruta": "PAG"
+      },
+      "usoEnReglas": 0,
+      "campos": [
+        {
+          "codigo": "MEDIO",
+          "tipoDato": "ENUM",
+          "opciones": [
+            "EFECTIVO",
+            "TRANSFERENCIA",
+            "CHEQUE_BANCARIO_PORTADOR"
+          ],
+          "iui": {
+            "ruta": "MED_PAG",
+            "desdeCatalogo": "mediosPago"
+          }
+        },
+        {
+          "codigo": "CUANTIA",
+          "tipoDato": "NUMERO",
+          "iui": {
+            "ruta": "CUA_PAG"
+          }
+        }
+      ]
+    },
+    {
+      "ref": "SUJETO.DOMICILIO",
+      "ambito": "SUJETO",
+      "tipo": null,
+      "clase": "DATO",
+      "tipoDato": "DIRECCION",
+      "pregunta": "Domicilio",
+      "iui": {
+        "ruta": "PER/DOM/DOM_ESP",
+        "rutaExtranjero": "PER/DOM/DOM_EXT"
+      },
+      "usoEnReglas": 0,
+      "campos": [
+        {
+          "codigo": "VIA",
+          "tipoDato": "TEXTO",
+          "iui": {
+            "ruta": "VIA"
+          }
+        },
+        {
+          "codigo": "NUMERO",
+          "tipoDato": "TEXTO",
+          "iui": {
+            "ruta": "NUM_VIA"
+          }
+        }
+      ]
+    }
   ],
   "documentos": [
-    {"codigo": "REQ_NOTA_SIMPLE", "nombre": "Nota simple registral", "modoCumplimiento": "APORTACION"},
-    {"codigo": "REQ_DNI", "nombre": "DNI", "modoCumplimiento": "APORTACION"}
+    {
+      "codigo": "REQ_NOTA_SIMPLE",
+      "nombre": "Nota simple registral",
+      "modoCumplimiento": "APORTACION"
+    },
+    {
+      "codigo": "REQ_DNI",
+      "nombre": "DNI",
+      "modoCumplimiento": "APORTACION"
+    }
   ],
   "roles": [
-    {"codigo": "DISPONENTE", "nombre": "Disponente", "parent": null},
-    {"codigo": "VENDEDOR", "nombre": "Vendedor", "parent": "DISPONENTE"},
-    {"codigo": "COMPRADOR", "nombre": "Comprador", "parent": "ADQUIRENTE"}
+    {
+      "codigo": "DISPONENTE",
+      "nombre": "Disponente",
+      "parent": null
+    },
+    {
+      "codigo": "VENDEDOR",
+      "nombre": "Vendedor",
+      "parent": "DISPONENTE"
+    },
+    {
+      "codigo": "COMPRADOR",
+      "nombre": "Comprador",
+      "parent": "ADQUIRENTE"
+    }
   ],
-  "actos": [{"codigo": "0501", "iuiClases": [["VENDEDOR"], ["COMPRADOR"]]}],
-  "reglasDeducidas": ["TIP_PER", "TIPO_VECINDAD_APLICA", "REG_ECO_DEC", "PRE_REP"]
+  "actos": [
+    {
+      "codigo": "0501",
+      "iuiClases": [
+        [
+          "VENDEDOR"
+        ],
+        [
+          "COMPRADOR"
+        ]
+      ]
+    }
+  ],
+  "reglasDeducidas": [
+    "TIP_PER",
+    "TIPO_VECINDAD_APLICA",
+    "REG_ECO_DEC",
+    "PRE_REP",
+    "CLA_FIN_URB"
+  ],
+  "mediosPago": [
+    {
+      "codigo": "EFECTIVO",
+      "nombre": "Efectivo metálico",
+      "parent": "MEDIO_PAGO",
+      "iui": "1"
+    },
+    {
+      "codigo": "TRANSFERENCIA",
+      "nombre": "Transferencia",
+      "parent": "MEDIO_PAGO",
+      "iui": "5"
+    }
+  ]
 }
