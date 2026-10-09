@@ -99,6 +99,8 @@ export { pelarReqDoc, leerReq, leerDoc, quitarReqDoc } from './src/syntax/req-do
 export type { ReqDecl, ReqDoc } from './src/syntax/req-doc';
 export { normalizarValor, implicaciones, inversa, tieneVuelta } from './src/fields/req';
 export type { Implicacion, HechoConOpciones } from './src/fields/req';
+export { pesoDeCondiciones, puntuacion, PUNTOS_POR_CONDICION_TUMBADA } from './src/fields/peso';
+export type { PesoCondicion } from './src/fields/peso';
 export { catalogoDesdeJson } from './src/ports/catalogo';
 export type {
   CatalogoReq, CatalogoReqJson, AtributoCatalogo, DocumentoCatalogo, RolCatalogo, IuiAtributo, ClaseAtributo,

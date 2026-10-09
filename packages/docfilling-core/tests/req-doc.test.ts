@@ -282,3 +282,31 @@ describe('enlaces: las constantes del autor no son condiciones', () => {
     expect(e.resumen.condiciones).toBe(0);
   });
 });
+
+import { pesoDeCondiciones, puntuacion } from '../src/fields/peso';
+
+describe('F2.6: peso de las condiciones', () => {
+  it('cuenta el texto visible del bloque más externo y las condiciones que tumba', () => {
+    const t = [
+      '{{IF CCAA == "Cataluña"}}Texto catalán.',
+      '{{IF BONIF_A}}Bonificación A.{{ENDIF}}',
+      '{{IF BONIF_B}}Bonificación B.{{ELSE}}Sin B.{{ENDIF}}',
+      '{{IF CCAA == "Cataluña" AND BONIF_A}}Repetido.{{ENDIF}}',
+      '{{ENDIF}}',
+      '{{IF_VPO}}{{DECLARE X=1}}Es VPO.{{ENDIF_VPO}}',
+    ].join('');
+    const p = pesoDeCondiciones(t);
+    const dentroCcaa = 'Texto catalán.Bonificación A.Bonificación B.Sin B.Repetido.'.length;
+    expect(p.get('CCAA')).toEqual({ caracteres: dentroCcaa, bloques: 1, tumba: ['BONIF_A', 'BONIF_B'] });
+    // BONIF_A gobierna dos bloques hermanos; ninguno dentro de otro suyo.
+    expect(p.get('BONIF_A')?.bloques).toBe(2);
+    expect(p.get('BONIF_A')?.caracteres).toBe('Bonificación A.'.length + 'Repetido.'.length);
+    // Las directivas no cuentan como texto, y la forma IF_X también vale.
+    expect(p.get('VPO')?.caracteres).toBe('Es VPO.'.length);
+    expect(puntuacion(p.get('CCAA'))).toBeGreaterThan(puntuacion(p.get('BONIF_B')));
+  });
+
+  it('un IF sin cerrar no rompe la cuenta', () => {
+    expect(pesoDeCondiciones('{{IF A}}abc').get('A')?.caracteres).toBe(3);
+  });
+});

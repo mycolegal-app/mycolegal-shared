@@ -8,3 +8,5 @@ export { inferirTipoDeNombre } from './inferir-tipo';
 export type { TipoInferido } from './inferir-tipo';
 export { normalizarValor, implicaciones, inversa, tieneVuelta } from './req';
 export type { Implicacion, HechoConOpciones } from './req';
+export { pesoDeCondiciones, puntuacion, PUNTOS_POR_CONDICION_TUMBADA } from './peso';
+export type { PesoCondicion } from './peso';
