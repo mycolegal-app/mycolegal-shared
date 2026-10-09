@@ -45,6 +45,16 @@ export interface Pregunta {
   fuentePreferente: string | null;
   /** Qué requisitos desbloquea contestarla. Ordenar por esto pone primero lo que más rinde. */
   bloquea: string[];
+  /**
+   * Papeles para los que falta el hecho, según el `scopeRolCodigo` de las condiciones que
+   * bloquean («el VENDEDOR casado» → `VENDEDOR`). Vacío = sin acotar a ningún papel.
+   */
+  roles: string[];
+  /**
+   * Sólo con `preguntasPorRol`: el papel de ESTA pregunta (`null` = sin acotar). Entonces hay
+   * una pregunta por (hecho, papel) y `bloquea` es lo que desbloquea contestarla para ése.
+   */
+  rol?: string | null;
 }
 
 export interface RequisitoResuelto {
@@ -283,8 +293,8 @@ export function evaluar(
   esUnRol: (rol: string | null | undefined, exigido: string) => boolean = (rol, exigido) => rol === exigido,
   /** La jerarquía de tipos de interviniente y de bien, para saber si un dato existe para él. */
   esUnTipo: (tipo: string | null | undefined, exigido: string) => boolean = (tipo, exigido) => tipo === exigido,
-): { valor: Ternario; faltan: string[]; presumidos: string[] } {
-  if (condiciones.length === 0) return { valor: true, faltan: [], presumidos: [] };
+): { valor: Ternario; faltan: string[]; presumidos: string[]; faltanPorRol: string[] } {
+  if (condiciones.length === 0) return { valor: true, faltan: [], presumidos: [], faltanPorRol: [] };
   // Tercera fuente de valor, después del dato: lo que el escenario base presume. Solo
   // entra donde el dato falta, y se deja rastro de dónde entró.
   const presumidos = new Set<string>();
@@ -303,6 +313,9 @@ export function evaluar(
   }
 
   const faltan = new Set<string>();
+  // Lo mismo, con el papel al que acota la condición (`fact@ROL`, `fact@` sin acotar): un
+  // estado civil puede faltar para el vendedor y estar contestado para el comprador.
+  const faltanPorRol = new Set<string>();
   let total: Ternario = false;             // OR entre grupos: el neutro es FALSE
   for (const grupo of porGrupo.values()) {
     let acum: Ternario = true;             // AND dentro del grupo: el neutro es TRUE
@@ -342,13 +355,21 @@ export function evaluar(
         else v = cands.map((x) => comparar(c.operador, conPresuncion(c.fact, leer(x)), c.valor))
           .reduce<Ternario>((a, b) => o(a, b), false);
       }
-      if (v === null) faltan.add(c.fact);
+      if (v === null) {
+        faltan.add(c.fact);
+        faltanPorRol.add(`${c.fact}@${c.scopeRolCodigo ?? ''}`);
+      }
       acum = y(acum, v);
     }
     total = o(total, acum);
   }
   // Si el conjunto resuelve a TRUE o FALSE, lo que faltó por el camino ya no bloquea.
-  return { valor: total, faltan: total === null ? [...faltan] : [], presumidos: [...presumidos] };
+  return {
+    valor: total,
+    faltan: total === null ? [...faltan] : [],
+    presumidos: [...presumidos],
+    faltanPorRol: total === null ? [...faltanPorRol] : [],
+  };
 }
 
 /**
@@ -452,6 +473,13 @@ export interface OpcionesMotor {
    * rol —los que lee la IA— siguen acotando como siempre.
    */
   rolComodin?: boolean;
+  /**
+   * Una pregunta por (hecho, papel) en vez de una por hecho: `ESTADO_CIVIL` del VENDEDOR y del
+   * COMPRADOR son dos preguntas, cada una con su `bloquea`. Para quien guarda los hechos por
+   * papel (Redactor con `:REQ(…@ROL)`, plan REQ_CATALOGO_IUI). Por defecto, una por hecho, como
+   * siempre, con los papeles en `roles`.
+   */
+  preguntasPorRol?: boolean;
 }
 
 export async function resolverRequisitos(
@@ -462,6 +490,7 @@ export async function resolverRequisitos(
 ): Promise<Resultado> {
   const ccaa = opciones.ccaaCodigo ?? '';
   const presunciones = opciones.presunciones ?? {};
+  const porRol = Boolean(opciones.preguntasPorRol);
   // La jerarquía is-a de los tipos de objeto y sujeto. Sin ella, una regla que pide
   // INMUEBLE no encuentra una VIVIENDA, y los requisitos MÁS BÁSICOS -la nota simple, la
   // referencia catastral- generan CERO instancias. Se ve solo al contar instancias, no al
@@ -651,6 +680,7 @@ export async function resolverRequisitos(
       valor: valorCond,
       faltan: valorCond === null ? [...porCuerpo.faltan, ...porEjes.faltan] : [],
       presumidos: [...porCuerpo.presumidos, ...porEjes.presumidos],
+      faltanPorRol: valorCond === null ? porCuerpo.faltanPorRol : [],
     };
     const tiposRegla = r.objetos.map((o) => o.objetoTipoCodigo);
     // Una transversal que pide un tipo que el acto no declara SIEMPRE acota: la tarjeta ITV
@@ -722,16 +752,23 @@ export async function resolverRequisitos(
       for (const c of r.condiciones) {
         const fact = `${c.atributoDef.ambito}.${c.atributoDef.codigo}`;
         if (!faltan.includes(fact)) continue;
-        const p = preguntas.get(fact) ?? {
+        const rol = c.scopeRolCodigo ?? null;
+        // Esta condición en concreto (su hecho con su papel) es la que falta.
+        if (!porCondicion.faltanPorRol.includes(`${fact}@${rol ?? ''}`)) continue;
+        const clave = porRol ? `${fact}@${rol ?? ''}` : fact;
+        const p = preguntas.get(clave) ?? {
           fact,
           label: c.atributoDef.label,
           tipoDato: c.atributoDef.tipoDato,
           opciones: c.atributoDef.opciones,
           fuentePreferente: c.atributoDef.fuentePreferente,
           bloquea: [],
+          roles: [],
+          ...(porRol ? { rol } : {}),
         };
-        p.bloquea.push(r.codigo);
-        preguntas.set(fact, p);
+        if (!p.bloquea.includes(r.codigo)) p.bloquea.push(r.codigo);
+        if (rol && !p.roles.includes(rol)) p.roles.push(rol);
+        preguntas.set(clave, p);
       }
       // Medio de pago y causa no tienen `AtributoDef` propio en todas las bases: la pregunta se
       // compone aquí con los valores que de verdad distinguen algo en este acto.
@@ -744,6 +781,7 @@ export async function resolverRequisitos(
           opciones: [] as string[],
           fuentePreferente: null,
           bloquea: [],
+          roles: [],
         };
         if (Array.isArray(p.opciones)) p.opciones = [...new Set([...(p.opciones as string[]), e.valor as string])].sort();
         if (!p.bloquea.includes(r.codigo)) p.bloquea.push(r.codigo);
@@ -757,6 +795,7 @@ export async function resolverRequisitos(
           opciones: [] as string[],
           fuentePreferente: null,
           bloquea: [],
+          roles: [],
         };
         p.opciones = opcionesDeTipo([...(p.opciones as string[]).filter((x) => x !== TIPO_NINGUNO), ...tiposSujeto]);
         p.bloquea.push(r.codigo);
@@ -772,6 +811,7 @@ export async function resolverRequisitos(
           opciones: [] as string[],
           fuentePreferente: null,
           bloquea: [],
+          roles: [],
         };
         p.opciones = opcionesDeTipo([...(p.opciones as string[]).filter((x) => x !== TIPO_NINGUNO), ...tiposRegla]);
         p.bloquea.push(r.codigo);
