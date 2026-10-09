@@ -99,6 +99,11 @@ export { pelarReqDoc, leerReq, leerDoc, quitarReqDoc } from './src/syntax/req-do
 export type { ReqDecl, ReqDoc } from './src/syntax/req-doc';
 export { normalizarValor, implicaciones, inversa, tieneVuelta } from './src/fields/req';
 export type { Implicacion, HechoConOpciones } from './src/fields/req';
+export { catalogoDesdeJson } from './src/ports/catalogo';
+export type {
+  CatalogoReq, CatalogoReqJson, AtributoCatalogo, DocumentoCatalogo, RolCatalogo, IuiAtributo, ClaseAtributo,
+} from './src/ports/catalogo';
+export type { OpcionesValidacion } from './src/syntax/validate';
 // F1.3 (residuo) — `{{LANG=xx}}`: el idioma de la PLANTILLA, que decide en qué
 // idioma salen las fechas del motor.
 export { idiomaDePlantilla, IDIOMA_POR_DEFECTO } from './src/syntax/template-lang';
@@ -110,11 +115,13 @@ export { expandirIncludes, repositorioDeMapa, normalizarNombre } from './src/com
 // Análisis de la biblioteca completa (F1.9b): huérfanos, vacíos y condiciones
 // sin declaración alcanzable — los tres defectos que no dan diagnóstico.
 export { analizarBiblioteca } from './src/biblioteca/analizar';
+export { enlacesDeEsquema } from './src/biblioteca/enlaces';
+export type { EnlaceDeCampo, EnlacesDeEsquema } from './src/biblioteca/enlaces';
 
 // F1.6 — IUI/CTN: mapeos de la plantilla y generación del XML del Índice Único.
 // La validación contra el XSD NO está aquí a propósito: ver `src/iui/generar.ts`.
 export { mapaIui, mapaIuiDetallado, generarIui, valorUtil, IUI_NAMESPACE } from './src/iui/generar';
 export type { MapeosIui, MapeoArray, ConflictoIui, OpcionesIui } from './src/iui/generar';
-export type { AnalisisBiblioteca, Documento, CondicionSospechosa, OpcionesAnalisis } from './src/biblioteca/analizar';
+export type { AnalisisBiblioteca, Documento, CondicionSospechosa, OpcionesAnalisis, DeclaracionDivergente } from './src/biblioteca/analizar';
 export type { ParrafoRepository, ResultadoExpansion, OpcionesExpansion } from './src/compose/expand-includes';
 export { listasDeLaPlantilla, marcarListasParaSonda, type ListaDeducida, type ResultadoListas } from './src/fields/listas';

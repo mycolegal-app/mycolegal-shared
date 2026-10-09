@@ -778,7 +778,9 @@ function composeSuffix(inner: string, outer: string): string {
   return inner + outer;
 }
 
-function extractIfFieldRefs(content: string): string[] {
+// ⚠️ Exportada a mano (plan REQ_CATALOGO_IUI, F2.4/F2.5): es la lectura buena de las
+// variables de un IF (`IF A AND B` = A y B), y la necesitan los campos y la biblioteca.
+export function extractIfFieldRefs(content: string): string[] {
   const trimmed = content.trim();
   const upper = trimmed.toUpperCase();
   if (upper === "ENDIF" || upper === "ELSE") return [];

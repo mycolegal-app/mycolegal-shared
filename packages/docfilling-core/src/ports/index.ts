@@ -7,3 +7,7 @@
 export type { ParrafoRepository } from '../compose/expand-includes';
 export { repositorioDeMapa, normalizarNombre } from '../compose/expand-includes';
 export type { IncludeResolver } from '../syntax/validator';
+export { catalogoDesdeJson } from './catalogo';
+export type {
+  CatalogoReq, CatalogoReqJson, AtributoCatalogo, DocumentoCatalogo, RolCatalogo, IuiAtributo, ClaseAtributo,
+} from './catalogo';

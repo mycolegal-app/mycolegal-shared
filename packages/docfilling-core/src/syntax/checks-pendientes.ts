@@ -31,8 +31,11 @@ import { FieldType, type ParsedField } from './parser';
 import { Severity, type Diagnostic } from './validator';
 
 // Los tipos y sus sinónimos viven en `declare-types.ts`.
-import { tipoAceptado, TIPOS_CANONICOS } from './declare-types';
+import { tipoAceptado, tipoCanonico, TIPOS_CANONICOS } from './declare-types';
 import { esPageBreakHeredado, PAGEBREAK_DIRECTIVA } from './page-break';
+import type { ReqDecl } from './req-doc';
+import type { CatalogoReq } from '../ports/catalogo';
+import { normalizarValor } from '../fields/req';
 
 /** @deprecated Usa `TIPOS_CANONICOS` de `declare-types.ts`. */
 export const DECLARE_TYPES = TIPOS_CANONICOS;
@@ -385,6 +388,85 @@ export function checkReqDocSintaxis(fields: ParsedField[]): Diagnostic[] {
         `'${malo.length > 80 ? malo.slice(0, 77) + '…' : malo}' no se puede leer. ` +
         'La forma es :REQ(AMBITO.CODIGO[@ROL][; valor del campo=valor del catálogo]…) ' +
         'y :DOC(TIPO[ | TIPO]…); sin eso el campo no queda enlazado con el catálogo.'));
+    }
+  }
+  return out;
+}
+
+/**
+ * Los `:REQ(…)` y `:DOC(…)` contra el catálogo universal. Sólo con catálogo: sin él no hay
+ * nada que comparar y no se emite nada.
+ *
+ * - **W907** `:REQ` a un hecho o dato que no existe. Suele ser un renombrado del catálogo: el
+ *   campo deja de responder al hecho y Redactor vuelve a preguntarlo aparte.
+ * - **W908** valor del mapa que no está en las opciones del campo o en las del hecho (o, sin
+ *   mapa, una opción del campo que el hecho no tiene). Ese valor no implica nada.
+ * - **W909** `@ROL` que no es un rol del catálogo.
+ * - **W912** `:DOC` a un tipo de documento que no existe: la condición esperaría a un
+ *   documento que nadie puede aportar.
+ *
+ * Son avisos y no errores: el texto de la escritura sale igual, lo que se pierde es el enlace.
+ */
+export function checkReqCatalogo(fields: ParsedField[], catalogo: CatalogoReq): Diagnostic[] {
+  const out: Diagnostic[] = [];
+  for (const f of fields) {
+    if (f.fieldType !== FieldType.DECLARE && f.fieldType !== FieldType.DECLARE_ARRAY) continue;
+    const kind = f.fieldType === FieldType.DECLARE_ARRAY ? 'DECLARE ARRAY' : 'DECLARE';
+    const avisar = (code: string, msg: string) =>
+      out.push(diag(f.line, f.col, f.raw.length, Severity.WARNING, code, `${kind} ${f.name}: ${msg}`));
+
+    const opcionesCampo = f.inputOptions.length ? f.inputOptions : f.extractionOptions;
+    const esBool = tipoCanonico(f.declareType) === 'BOOL';
+    const enlaces: Array<{ donde: string; req: ReqDecl[]; doc: string[]; opciones: string[]; bool: boolean }> = [
+      { donde: '', req: f.req, doc: f.doc, opciones: opcionesCampo, bool: esBool },
+      ...f.arraySubfields.map((s) => ({
+        donde: ` (subcampo ${s.name})`,
+        req: f.arraySubfieldsReqDoc[s.name]?.req ?? [],
+        doc: f.arraySubfieldsReqDoc[s.name]?.doc ?? [],
+        opciones: [] as string[],
+        bool: tipoCanonico(s.type) === 'BOOL',
+      })),
+    ];
+
+    for (const e of enlaces) {
+      for (const r of e.req) {
+        if (r.rol && r.rol !== '*' && !catalogo.rol(r.rol)) {
+          avisar('W909', `@${r.rol}${e.donde} no es un rol del catálogo.`);
+        }
+        if (!r.ref) continue;
+        const hecho = catalogo.atributo(r.ref);
+        if (!hecho) {
+          avisar('W907', `:REQ(${r.ref})${e.donde} apunta a un hecho o dato que no existe en el catálogo.`);
+          continue;
+        }
+        const delHecho = hecho.tipoDato === 'BOOL'
+          ? ['TRUE', 'FALSE']
+          : hecho.tipoDato === 'ENUM' && hecho.opciones?.length ? hecho.opciones.map(normalizarValor) : null;
+        const delCampo = e.bool ? ['TRUE', 'FALSE'] : e.opciones.length ? e.opciones.map(normalizarValor) : null;
+        if (r.mapa) {
+          for (const [campo, cat] of r.mapa) {
+            if (delCampo && !delCampo.includes(normalizarValor(campo))) {
+              avisar('W908', `:REQ(${r.ref})${e.donde}: '${campo}' no es un valor del campo ` +
+                `(${e.bool ? 'TRUE/FALSE' : e.opciones.join(', ')}).`);
+            }
+            if (delHecho && !delHecho.includes(normalizarValor(cat))) {
+              avisar('W908', `:REQ(${r.ref})${e.donde}: '${cat}' no es un valor de ${r.ref} ` +
+                `(${hecho.tipoDato === 'BOOL' ? 'TRUE/FALSE' : (hecho.opciones ?? []).join(', ')}).`);
+            }
+          }
+        } else if (delCampo && delHecho) {
+          const sobran = (e.bool ? ['TRUE', 'FALSE'] : e.opciones).filter((o) => !delHecho.includes(normalizarValor(o)));
+          if (sobran.length) {
+            avisar('W908', `:REQ(${r.ref})${e.donde} sin mapa, y ${sobran.map((s) => `'${s}'`).join(', ')} ` +
+              `no ${sobran.length === 1 ? 'es valor' : 'son valores'} de ${r.ref}: hace falta un mapa (valor=valor).`);
+          }
+        }
+      }
+      for (const d of e.doc) {
+        if (!catalogo.documento(d)) {
+          avisar('W912', `:DOC(${d})${e.donde} no es un tipo de documento del catálogo.`);
+        }
+      }
     }
   }
   return out;

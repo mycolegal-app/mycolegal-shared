@@ -8,6 +8,8 @@
 
 /** `{{IF …}}`, `{{IF_X}}`, `{{ELSE}}`, `{{ELSE_X}}`, `{{ENDIF}}`, `{{ENDIF_X}}`, `{{END IF}}`,
  *  `{{END_IF}}`: la palabra va AL PRINCIPIO del cuerpo. */
+import { extractIfFieldRefs } from '../syntax/validator';
+
 const ES_CONDICIONAL = /^(?:IF|ELSE|ENDIF|END[\s_]+IF)(?:[\s_]|$)/i;
 
 /** Quita el sufijo `:HELP(fichero)` del cuerpo de un campo. */
@@ -53,13 +55,17 @@ export function camposSoloCondicionales(
   }
 
   // 2) Los que aparecen en condicionales.
+  // Con la lectura del validador (`extractIfFieldRefs`): `{{IF A AND B == "x"}}` son dos
+  // variables, A y B. La de antes partía por `==` y se quedaba con «A AND B» como un solo
+  // nombre, que no existe: A y B no contaban como condición (F2.5 del plan
+  // REQ_CATALOGO_IUI; medido sobre `_PROD` el 9-oct-2026).
   const condicionales = new Set<string>();
-  for (const m of plantilla.matchAll(/\{\{IF_([^}]+)\}\}/g)) {
-    if (!esConocido(m[1])) condicionales.add(m[1]);
-  }
-  for (const m of plantilla.matchAll(/\{\{IF\s+([^}]+)\}\}/g)) {
-    const nombre = m[1].split('==')[0].split('!=')[0].trim();
-    if (!esConocido(nombre)) condicionales.add(nombre);
+  for (const m of plantilla.matchAll(/\{\{(IF[_\s][^}]+)\}\}/g)) {
+    for (const ref of extractIfFieldRefs(m[1])) {
+      // `SYSTEM:X` lo resuelve el motor; `COUNT` es la función de `IF COUNT(LISTA) > 1`.
+      if (/^SYSTEM:/i.test(ref) || ref.toUpperCase() === 'COUNT') continue;
+      if (!esConocido(ref)) condicionales.add(ref);
+    }
   }
 
   // 3) Los DECLARE: auxiliares por definición, siempre conditional-only.

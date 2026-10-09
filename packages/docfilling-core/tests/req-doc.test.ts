@@ -188,3 +188,97 @@ describe('normalizarValor', () => {
     expect(normalizarValor('persona_fisica')).toBe(normalizarValor('Persona Física'));
   });
 });
+
+import { readFileSync } from 'node:fs';
+import { catalogoDesdeJson } from '../src/ports/catalogo';
+
+describe(':REQ / :DOC contra el catálogo (W907, W908, W909, W912)', () => {
+  const catalogo = catalogoDesdeJson(
+    JSON.parse(readFileSync(new URL('./fixtures/catalogo_req.prueba.json', import.meta.url), 'utf8')),
+  );
+  const conCatalogo = (t: string) => validateText(t, undefined, undefined, { catalogo }).diagnostics
+    .filter((d) => /^W90[7-9]|^W912/.test(d.code)).map((d) => d.code);
+
+  it('sin catálogo no se emite ninguno', () => {
+    expect(codigos('{{DECLARE X:REQ(OBJETO.NO_EXISTE):DOC(REQ_NO_EXISTE)}}').filter((c) => /^W9(0[7-9]|12)/.test(c))).toEqual([]);
+  });
+
+  it('los ejemplos bien escritos no avisan', () => {
+    expect(conCatalogo('{{DECLARE TIPO_FINCA:OPTIONS(Urbana,Rústica):REQ(OBJETO.SUELO_URBANO_IIVTNU; Urbana=TRUE; Rústica=FALSE):DOC(REQ_NOTA_SIMPLE)}}')).toEqual([]);
+    expect(conCatalogo('{{DECLARE ESTRUCTURA_VENDEDORA:OPTIONS(Matrimonio,Sociedad):REQ(SUJETO.TIPO@VENDEDOR; Matrimonio=PERSONA_FISICA; Sociedad=PERSONA_JURIDICA):REQ(SUJETO.ESTADO_CIVIL@VENDEDOR; Matrimonio=CASADO)}}')).toEqual([]);
+    expect(conCatalogo('{{DECLARE FINCA_ES_VPO AS BOOL:REQ(OBJETO.ES_VPO)}}')).toEqual([]);
+    expect(conCatalogo('{{DECLARE ALERTA:OPTIONS(Sí,No):REQ(OBJETO.ES_VPO; Sí=TRUE)}}')).toEqual([]);
+  });
+
+  it('W907: hecho que no existe', () => {
+    expect(conCatalogo('{{DECLARE X:REQ(OBJETO.NO_EXISTE)}}')).toEqual(['W907']);
+  });
+
+  it('W908: valor del mapa fuera del campo o del hecho, y sin mapa con opciones que no casan', () => {
+    expect(conCatalogo('{{DECLARE X:OPTIONS(Urbana,Rústica):REQ(OBJETO.SUELO_URBANO_IIVTNU; Urbano=TRUE)}}')).toEqual(['W908']);
+    expect(conCatalogo('{{DECLARE X:OPTIONS(A,B):REQ(SUJETO.ESTADO_CIVIL; A=CASADA)}}')).toEqual(['W908']);
+    expect(conCatalogo('{{DECLARE X:OPTIONS(Soltero,Pareja estable):REQ(SUJETO.ESTADO_CIVIL)}}')).toEqual(['W908']);
+  });
+
+  it('W909: rol desconocido; @* no avisa', () => {
+    expect(conCatalogo('{{DECLARE X:REQ(SUJETO.NOMBRE@VENDEDORA)}}')).toEqual(['W909']);
+    expect(conCatalogo('{{DECLARE X:REQ(SUJETO.NOMBRE@*)}}')).toEqual([]);
+  });
+
+  it('W912: tipo de documento desconocido, también en subcampos', () => {
+    expect(conCatalogo('{{DECLARE ARRAY C:REQ(@COMPRADOR) (NOMBRE:REQ(SUJETO.NOMBRE):DOC(REQ_PASAPORTE_X))}}')).toEqual(['W912']);
+  });
+});
+
+import { analizarBiblioteca } from '../src/biblioteca/analizar';
+import { enlacesDeEsquema } from '../src/biblioteca/enlaces';
+
+describe('biblioteca: declaraciones divergentes (F2.4) y enlaces de un esquema (W910/W911)', () => {
+  it('el mismo campo con distinto :REQ, :DOC o valor por defecto en dos VAR', async () => {
+    const a = await analizarBiblioteca([
+      { nombre: 'VAR_A', texto: '{{DECLARE LIMITACION_DEFENSA:INPUT(¿Incluir la advertencia?|Sí,No)=Sí}}' },
+      { nombre: 'VAR_B', texto: '{{DECLARE LIMITACION_DEFENSA:INPUT(¿Incluir la advertencia?|Sí,No)=No}}' },
+      { nombre: 'VAR_C', texto: '{{DECLARE TIPO_FINCA:OPTIONS(Urbana,Rústica):REQ(OBJETO.SUELO_URBANO_IIVTNU; Urbana=TRUE; Rústica=FALSE)}}' },
+      { nombre: 'VAR_D', texto: '{{DECLARE TIPO_FINCA:OPTIONS(Urbana,Rústica):REQ(OBJETO.SUELO_URBANO_IIVTNU; Rústica=FALSE; urbana=true)}}' },
+      { nombre: 'VAR_E', texto: '{{DECLARE ES_VPO AS BOOL:REQ(OBJETO.ES_VPO):DOC(REQ_NOTA_SIMPLE)}}' },
+      { nombre: 'VAR_F', texto: '{{DECLARE ES_VPO AS BOOL:REQ(OBJETO.ES_VPO)}}' },
+    ]);
+    // El orden del mapa y las mayúsculas no cuentan: TIPO_FINCA no diverge.
+    expect(a.declaracionesDivergentes.map((d) => d.nombre)).toEqual(['ES_VPO', 'LIMITACION_DEFENSA']);
+  });
+
+  it('cuenta condiciones y datos, y marca las condiciones sin pregunta ni fuente', () => {
+    const t = [
+      '{{DECLARE TIPO_FINCA:OPTIONS(Urbana,Rústica):REQ(OBJETO.SUELO_URBANO_IIVTNU; Urbana=TRUE; Rústica=FALSE):DOC(REQ_NOTA_SIMPLE)}}',
+      '{{DECLARE LIMITACION:INPUT(¿Incluir la advertencia?|Sí,No)=No}}',
+      '{{DECLARE HUERFANA AS BOOL:[Analiza la nota simple]}}',
+      '{{DECLARE PRECIO AS NUM:REQ(ACTO.CUANTIA)}}',
+      '{{IF TIPO_FINCA == "Urbana" AND HUERFANA}}urbana{{ENDIF}}{{IF LIMITACION == "Sí"}}aviso{{ENDIF}}',
+      'Precio: {{PRECIO}} euros. {{FECHA}}',
+    ].join('\n');
+    const e = enlacesDeEsquema(t);
+    expect(e.resumen).toEqual({
+      condiciones: 3, datos: 1, condicionesConReq: 1, condicionesConDoc: 1, condicionesConInput: 1,
+      datosConReq: 1, sinPregunta: 1, sinFuente: 1,
+    });
+    expect(e.campos.filter((c) => c.sinPregunta).map((c) => c.nombre)).toEqual(['HUERFANA']);
+  });
+});
+
+import { camposSoloCondicionales } from '../src/fields/conditional-only';
+
+describe('F2.5: las variables de un IF se leen una a una', () => {
+  const ctx = { camposDeSistema: new Set<string>(['COMUNIDAD_AUTONOMA']), camposPredefinidos: new Set<string>() };
+  it('IF A AND B, IN (…), COUNT(…) y SYSTEM:', () => {
+    const t = `{{IF A AND NOT B == "x"}}.{{ENDIF}}{{IF C IN ('1. uno', '2. dos')}}.{{ENDIF}}` +
+      '{{IF COUNT(FINCAS) > 1}}.{{ENDIF}}{{IF SYSTEM:COMUNIDAD_AUTONOMA == "Cataluña"}}.{{ENDIF}}';
+    expect([...camposSoloCondicionales(t, ctx)].sort()).toEqual(['A', 'B', 'C', 'FINCAS']);
+  });
+});
+
+describe('enlaces: las constantes del autor no son condiciones', () => {
+  it('DECLARE X=v y SET no cuentan', () => {
+    const e = enlacesDeEsquema('{{DECLARE ES_PH=TRUE}}{{SET MODO=a}}{{IF ES_PH}}.{{ENDIF}}{{IF MODO == "a"}}.{{ENDIF}}');
+    expect(e.resumen.condiciones).toBe(0);
+  });
+});

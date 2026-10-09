@@ -54,6 +54,12 @@ const ERRORES_CONOCIDOS: Record<string, string> = {
   E040: 'FOR EACH / ENDFOR descompensado',
   E061: 'ENDFOR sin FOR EACH',
   E901: 'INCLUDE con ruta — sólo los 2 dejados a propósito, ver abajo',
+  // 9-oct-2026, sesión «Catálogo»: los arreglos están en `_DEV_AI` (cola de revisión) y
+  // desaparecen de aquí cuando se promocionen a `_PROD`.
+  E031: '39 `{{INCLUDE: VAR_X.md}}` con extensión en los enrutadores fiscales de Canarias y Cantabria; el motor ' +
+    'corta en el punto y resuelve `VAR_X`, así que no se pierde texto. Arreglo en `_DEV_AI`',
+  E090: '4 en PARR_EXP_IV_DIVISION_HORIZONTAL: LINDEROS es una lista anidada (`ITEM.LINDEROS.FRENTE`), uno de ' +
+    'los 15 ARRAY mal declarados de F5.24 (PLAN_TECNICO_CALIDAD_MOTOR)',
 };
 
 /** Los E9xx que están en la biblioteca A PROPÓSITO, con su motivo. Si aparece uno

@@ -23,6 +23,7 @@ import { parseFields, FieldType } from '../syntax/parser';
 import { camposSoloCondicionales } from '../fields/conditional-only';
 import { getSystemFields } from '../compose/engine';
 import { expandirIncludes, normalizarNombre, type ParrafoRepository } from './../compose/expand-includes';
+import { normalizarValor } from '../fields/req';
 
 /** Un documento de la biblioteca: su nombre y su markdown. */
 export interface Documento {
@@ -37,6 +38,14 @@ export interface CondicionSospechosa {
   usadaEn: string[];
   /** Quién la declara — todos huérfanos, que es el problema. */
   declaradaEnHuerfanos: string[];
+}
+
+/** Un mismo campo declarado en varios ficheros de forma distinta (F2.4 del plan
+ *  REQ_CATALOGO_IUI): según qué VAR alcance el esquema, el campo enlaza con un hecho u
+ *  otro, espera a otro documento o arranca con otro valor. */
+export interface DeclaracionDivergente {
+  nombre: string;
+  declaraciones: Array<{ documento: string; req: string; doc: string; porDefecto: string | null }>;
 }
 
 export interface AnalisisBiblioteca {
@@ -56,6 +65,8 @@ export interface AnalisisBiblioteca {
   nombresRepetidos: string[];
   /** Avisos sobre la propia medición: por qué una cifra puede no ser de fiar. */
   advertencias: string[];
+  /** Campos declarados en varios ficheros con distinto `:REQ`, `:DOC` o valor por defecto. */
+  declaracionesDivergentes: DeclaracionDivergente[];
 }
 
 export interface OpcionesAnalisis {
@@ -99,15 +110,35 @@ export async function analizarBiblioteca(
     camposPredefinidos: new Set<string>(),
   };
 
-  // Quién referencia a quién.
+  // Quién referencia a quién, y cómo declara cada fichero sus campos.
   const referenciados = new Set<string>();
+  const formasDe = new Map<string, DeclaracionDivergente['declaraciones']>();
   for (const d of todos) {
     for (const f of parseFields(d.texto)) {
       if (f.fieldType === FieldType.INCLUDE && f.includeTarget) {
         referenciados.add(normalizarNombre(f.includeTarget));
       }
+      if ((f.fieldType === FieldType.DECLARE || f.fieldType === FieldType.DECLARE_ARRAY) && f.name) {
+        const l = formasDe.get(f.name) ?? [];
+        l.push({
+          documento: normalizarNombre(d.nombre),
+          req: f.req
+            .map((r) => `${r.ref ?? ''}@${r.rol ?? ''}` +
+              (r.mapa ? `;${r.mapa.map(([a, b]) => `${normalizarValor(a)}=${normalizarValor(b)}`).sort().join(';')}` : ''))
+            .sort().join(' + '),
+          doc: [...f.doc].sort().join(' | '),
+          porDefecto: f.inputDefault || f.declareValue ? normalizarValor(f.inputDefault || f.declareValue) : null,
+        });
+        formasDe.set(f.name, l);
+      }
     }
   }
+  const declaracionesDivergentes: DeclaracionDivergente[] = [];
+  for (const [nombre, declaraciones] of formasDe) {
+    const formas = new Set(declaraciones.map((x) => `${x.req}#${x.doc}#${x.porDefecto ?? ''}`));
+    if (formas.size > 1) declaracionesDivergentes.push({ nombre, declaraciones });
+  }
+  declaracionesDivergentes.sort((a, b) => a.nombre.localeCompare(b.nombre));
 
   const huerfanos = [...biblioteca.keys()]
     .filter((n) => !referenciados.has(n)).sort();
@@ -186,5 +217,6 @@ export async function analizarBiblioteca(
     faltantes,
     nombresRepetidos,
     advertencias,
+    declaracionesDivergentes,
   };
 }

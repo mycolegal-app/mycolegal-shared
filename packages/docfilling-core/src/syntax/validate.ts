@@ -20,9 +20,11 @@ import {
   checkForEachBalance,
   checkIncludeConRuta,
   checkInputConOptions,
+  checkReqCatalogo,
   checkReqDocSintaxis,
   checkSetDirectives,
 } from './checks-pendientes';
+import type { CatalogoReq } from '../ports/catalogo';
 
 /**
  * Valida un texto de plantilla o de párrafo. Mismos diagnósticos por fichero que
@@ -30,10 +32,16 @@ import {
  * párrafos (E030 INCLUDE sin resolver, E031 ciclos) o varios ficheros
  * (W050/W051), que no se pueden decidir con un texto suelto.
  */
+export interface OpcionesValidacion {
+  /** Con catálogo, se comprueban los `:REQ`/`:DOC` contra él (W907, W908, W909, W912). */
+  catalogo?: CatalogoReq;
+}
+
 export function validateText(
   text: string,
   resolver?: IncludeResolver,
   extraDeclared?: Iterable<string>,
+  opciones: OpcionesValidacion = {},
 ): ValidationResult {
   const result = validateTextGenerado(text, resolver, extraDeclared);
   const fields = parseFields(text);
@@ -49,6 +57,7 @@ export function validateText(
     ...checkEndIfNoCanonico(fields),
     ...checkPageBreakHeredado(fields),
     ...checkReqDocSintaxis(fields),
+    ...(opciones.catalogo ? checkReqCatalogo(fields, opciones.catalogo) : []),
   );
 
   // Orden estable por posición y código: el margen del editor lo necesita, y
