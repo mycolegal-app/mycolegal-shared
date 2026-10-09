@@ -66,6 +66,14 @@ for (const corto of ['ok', 'gracias', 'i a Catalunya?', '1234/2025', 'sí']) {
 }
 
 // …y entonces manda la conversación.
+// Una palabra suelta en una conversación en castellano no la pasa a catalán (8-oct-2026).
+assert.equal(
+  decidirIdiomaRespuesta({ pregunta: 'La primera', anteriores: ['declaración de obra nueva por antigüedad'] }),
+  'es',
+);
+assert.equal(decidirIdiomaRespuesta({ pregunta: 'la segona', anteriores: ['Quina escriptura necessito per a una obra nova?'] }), 'ca');
+// …pero un cambio de idioma claro sí cuenta, aunque sea corto.
+assert.equal(decidirIdiomaRespuesta({ pregunta: 'més breu', anteriores: ['¿Qué documentos necesito para una compraventa?'] }), 'ca');
 assert.equal(
   decidirIdiomaRespuesta({
     pregunta: 'i a Catalunya?',

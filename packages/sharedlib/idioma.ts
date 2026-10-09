@@ -14,7 +14,7 @@
 export type Idioma = 'es' | 'ca' | 'gl' | 'eu' | 'en' | 'pt';
 
 const PALABRAS: Record<Idioma, string> = {
-  es: `el los las del al con para por que qué cómo cuál cuáles cuándo dónde quién una uno unos unas es está están son
+  es: `el la los las del al con para por que qué cómo cuál cuáles cuándo dónde quién una uno unos unas es está están son
     pero muy también hay puedo puede pueden tengo tiene tienen sobre este esta estos estas ese esa eso lo le les se sí no
     cuando donde porque hacer hace ser debe deben entre sin según y o ya aquí ahora más hasta desde mi mis su sus
     necesito quiero cuánto cuánta escritura notario notaría herencia compraventa hipoteca usted gracias hola
@@ -136,9 +136,13 @@ export function decidirIdiomaRespuesta(p: {
   preferido?: string | null;
 }): Idioma {
   const propia = detectarIdioma(p.pregunta);
-  if (propia.idioma) return propia.idioma;
-
   const contexto = (p.anteriores ?? []).slice(-3).join('\n');
+  // Con conversación detrás, un mensaje que gana por la mínima (una palabra suelta: «La
+  // primera», 8-oct-2026, salía catalán en una conversación en castellano) no cambia el
+  // idioma: decide la conversación. Sin conversación, vale lo que diga el mensaje.
+  const fuerte = (propia.puntos[propia.idioma ?? 'es'] ?? 0) >= MIN_PUNTOS;
+  if (propia.idioma && (fuerte || !contexto.trim())) return propia.idioma;
+
   if (contexto.trim()) {
     const conv = detectarIdioma(`${contexto}\n${p.pregunta}`);
     if (conv.idioma) return conv.idioma;
