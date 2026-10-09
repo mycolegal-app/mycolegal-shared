@@ -17,6 +17,7 @@ import { METADATA_PREFIXES } from "../syntax/constants";
 import { esPageBreak } from "../syntax/page-break";
 import { esWordStyle } from "../syntax/word-style";
 import { parseComparacion, compararNumerico } from "../syntax/comparar";
+import { quitarReqDoc } from "../syntax/req-doc";
 
 export type FieldValues = Record<string, unknown>;
 
@@ -293,6 +294,8 @@ export function extractDeclareFixedValues(content: string): Record<string, strin
   // `:IUI(path)` (FASE 32 / A9) is XML-mapping metadata; drop it so
   // `{{DECLARE X="v":IUI(A/B)}}` still yields the fixed value `v`.
   content = content.replace(/:IUI\([^()]*\)/gi, "");
+  // `:REQ(…)` / `:DOC(…)` tampoco son valor: `{{DECLARE X=v:REQ(A.B)}}` da `v`.
+  content = content.replace(/\{\{DECLARE\s[^}]*\}\}/gi, (d) => quitarReqDoc(d));
   const pattern =
     /\{\{DECLARE\s+([\w\u00C0-\u024F]+)(?:\s+AS\s+[\w\u00C0-\u024F]+)?\s*=\s*(?:"([^"]*)"|(\S+))\s*\}\}/gi;
   let m: RegExpExecArray | null;

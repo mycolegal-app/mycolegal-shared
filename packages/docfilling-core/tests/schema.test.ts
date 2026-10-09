@@ -78,8 +78,8 @@ describe('esquemaDeCampos', () => {
     const c = campo('{{DECLARE ARRAY SUJS(NOM:[nombre completo], DNI AS TEXT:[el DNI])}}', 'SUJS');
     expect(c?.esArray).toBe(true);
     expect(c?.subcampos).toEqual([
-      { nombre: 'NOM', tipo: 'TEXT', instruccion: 'nombre completo', iuiPath: null },
-      { nombre: 'DNI', tipo: 'TEXT', instruccion: 'el DNI', iuiPath: null },
+      { nombre: 'NOM', tipo: 'TEXT', instruccion: 'nombre completo', iuiPath: null, req: [], doc: [] },
+      { nombre: 'DNI', tipo: 'TEXT', instruccion: 'el DNI', iuiPath: null, req: [], doc: [] },
     ]);
   });
 

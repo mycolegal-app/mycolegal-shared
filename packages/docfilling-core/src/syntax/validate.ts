@@ -20,6 +20,7 @@ import {
   checkForEachBalance,
   checkIncludeConRuta,
   checkInputConOptions,
+  checkReqDocSintaxis,
   checkSetDirectives,
 } from './checks-pendientes';
 
@@ -47,6 +48,7 @@ export function validateText(
     ...checkDosPuntosEnPalabraClave(fields),
     ...checkEndIfNoCanonico(fields),
     ...checkPageBreakHeredado(fields),
+    ...checkReqDocSintaxis(fields),
   );
 
   // Orden estable por posición y código: el margen del editor lo necesita, y

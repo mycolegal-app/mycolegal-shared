@@ -94,6 +94,11 @@ export { instruccionesDeCampo } from './src/fields/instructions';
 // preguntas en castellano del SaaS NO están aquí a propósito: ver el fichero.
 export { inferirTipoDeNombre } from './src/fields/inferir-tipo';
 export type { TipoInferido } from './src/fields/inferir-tipo';
+// `:REQ` / `:DOC`: enlace de los campos con el catálogo universal (plan REQ_CATALOGO_IUI).
+export { pelarReqDoc, leerReq, leerDoc, quitarReqDoc } from './src/syntax/req-doc';
+export type { ReqDecl, ReqDoc } from './src/syntax/req-doc';
+export { normalizarValor, implicaciones, inversa, tieneVuelta } from './src/fields/req';
+export type { Implicacion, HechoConOpciones } from './src/fields/req';
 // F1.3 (residuo) — `{{LANG=xx}}`: el idioma de la PLANTILLA, que decide en qué
 // idioma salen las fechas del motor.
 export { idiomaDePlantilla, IDIOMA_POR_DEFECTO } from './src/syntax/template-lang';

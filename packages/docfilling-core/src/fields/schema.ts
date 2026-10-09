@@ -15,6 +15,7 @@ import { tipoCanonico } from '../syntax/declare-types';
 import { camposSoloCondicionales, type ContextoCampos } from './conditional-only';
 import { instruccionesDeCampo } from './instructions';
 import { listasDeLaPlantilla } from './listas';
+import type { ReqDecl } from '../syntax/req-doc';
 
 /** Quién aporta el valor de un campo. */
 export const QUIEN = {
@@ -34,6 +35,10 @@ export interface Subcampo {
   /** Ruta relativa al elemento del array (`PER/NOM`). `null` si el array no
    *  declara la suya. */
   iuiPath: string | null;
+  /** `:REQ(…)` del subcampo. El rol, si el subcampo no lo trae, lo hereda de la lista. */
+  req: ReqDecl[];
+  /** `:DOC(…)` del subcampo. */
+  doc: string[];
 }
 
 export interface Campo {
@@ -56,6 +61,10 @@ export interface Campo {
    *  DECLARE auxiliar. Mismo criterio que el procesado. */
   soloCondicional: boolean;
   iuiPath: string | null;
+  /** `:REQ(…)`: a qué hechos o datos del catálogo universal equivale (ver `req.ts`). */
+  req: ReqDecl[];
+  /** `:DOC(…)`: de qué tipos de documento del catálogo sale la respuesta. */
+  doc: string[];
 }
 
 export interface EsquemaDePlantilla {
@@ -121,6 +130,16 @@ export function esquemaDeCampos(
   const campos: Campo[] = [];
   const vistos = new Set<string>();
 
+  // `:REQ` / `:DOC` por nombre, de la PRIMERA declaración que los trae. El campo se
+  // construye con su primera aparición, que puede ser un uso pintado anterior al
+  // DECLARE: sin esto el enlace se perdería. Las declaraciones divergentes las caza
+  // `analizarBiblioteca` (F2.4 del plan).
+  const reqDocDe = new Map<string, { req: ReqDecl[]; doc: string[] }>();
+  for (const f of analizados) {
+    if (!f.name || (!f.req?.length && !f.doc?.length)) continue;
+    if (!reqDocDe.has(f.name)) reqDocDe.set(f.name, { req: f.req, doc: f.doc });
+  }
+
   for (const f of analizados) {
     const nombre = f.name || f.content;
     // El parser clasifica `{{HUMAN_ACTION[_FASE]:…}}` como extraído; no es un
@@ -152,6 +171,8 @@ export function esquemaDeCampos(
       subcampos: f.isArray ? subcamposDe(f) : [],
       soloCondicional: soloCondicionales.has(nombre),
       iuiPath: f.iuiPath || null,
+      req: [...(reqDocDe.get(nombre)?.req ?? [])],
+      doc: [...(reqDocDe.get(nombre)?.doc ?? [])],
     });
   }
 
@@ -170,6 +191,7 @@ export function esquemaDeCampos(
         nombre: l.nombre, quien: QUIEN.IA, categoria: FieldType.DECLARE_ARRAY, tipo: 'TEXT',
         etiqueta: etiquetar(l.nombre), opciones: [], instruccion: instrucciones[l.nombre] || null,
         porDefecto: null, esArray: true, subcampos: [], soloCondicional: false, iuiPath: null,
+        req: [], doc: [],
       };
       campos.push(c);
     }
@@ -183,6 +205,7 @@ export function esquemaDeCampos(
         nombre, tipo,
         instruccion: anidada && anidada.subcampos.size ? `Lista de: ${[...anidada.subcampos.keys()].join(', ')}` : null,
         iuiPath: null,
+        req: [], doc: [],
       });
     }
   }
@@ -199,13 +222,21 @@ export function esquemaDeCampos(
 }
 
 function subcamposDe(f: ParsedField): Subcampo[] {
-  return (f.arraySubfields ?? []).map((sub) => ({
-    nombre: sub.name ?? '',
-    tipo: tipoCanonico(sub.type),
-    instruccion: sub.instruction || sub.description || null,
-    // La ruta por subcampo sale del mapa IUI del array, que es F1.6.
-    iuiPath: null,
-  }));
+  // `:REQ(@ROL)` sin hecho sobre la lista: el papel de todos sus subcampos.
+  const rolDeLista = f.req?.find((r) => r.ref === null && r.rol)?.rol ?? null;
+  return (f.arraySubfields ?? []).map((sub) => {
+    const nombre = sub.name ?? '';
+    const propio = f.arraySubfieldsReqDoc?.[nombre.toUpperCase()];
+    return {
+      nombre,
+      tipo: tipoCanonico(sub.type),
+      instruccion: sub.instruction || sub.description || null,
+      // La ruta por subcampo sale del mapa IUI del array, que es F1.6.
+      iuiPath: null,
+      req: (propio?.req ?? []).map((r) => (r.rol || !rolDeLista ? r : { ...r, rol: rolDeLista })),
+      doc: [...(propio?.doc ?? [])],
+    };
+  });
 }
 
 function accionesDe(analizados: ParsedField[]): EsquemaDePlantilla['accionesHumanas'] {

@@ -363,3 +363,29 @@ export function checkPageBreakHeredado(fields: ParsedField[]): Diagnostic[] {
   }
   return out;
 }
+
+/**
+ * `E906` — `:REQ(…)` o `:DOC(…)` que no se puede leer.
+ *
+ * Son el enlace del campo con el catálogo universal (ver `req-doc.ts`): a qué hecho o dato
+ * equivale y de qué documento sale. Mal escritos no enlazan nada, y Redactor volvería a
+ * preguntar por separado lo que el campo ya responde. Es error y no aviso porque nunca
+ * significa otra cosa: la forma es `:REQ(AMBITO.CODIGO[@ROL][; valor=valor]…)` y
+ * `:DOC(TIPO[ | TIPO]…)`.
+ *
+ * Las comprobaciones contra el catálogo (hecho que no existe, valor fuera de opciones,
+ * documento desconocido…) necesitan el catálogo y van aparte.
+ */
+export function checkReqDocSintaxis(fields: ParsedField[]): Diagnostic[] {
+  const out: Diagnostic[] = [];
+  for (const f of fields) {
+    for (const malo of f.reqDocErrores ?? []) {
+      out.push(diag(f.line, f.col, f.raw.length, Severity.ERROR, 'E906',
+        `${f.fieldType === FieldType.DECLARE_ARRAY ? 'DECLARE ARRAY' : 'DECLARE'} ${f.name}: ` +
+        `'${malo.length > 80 ? malo.slice(0, 77) + '…' : malo}' no se puede leer. ` +
+        'La forma es :REQ(AMBITO.CODIGO[@ROL][; valor del campo=valor del catálogo]…) ' +
+        'y :DOC(TIPO[ | TIPO]…); sin eso el campo no queda enlazado con el catálogo.'));
+    }
+  }
+  return out;
+}

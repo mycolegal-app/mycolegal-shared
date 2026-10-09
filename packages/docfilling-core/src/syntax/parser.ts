@@ -18,6 +18,7 @@ import {
 import { esPageBreak } from "./page-break";
 import { esWordStyle, nombreDeEstilo } from "./word-style";
 import { esSchemaAct, codigoDeSchemaAct } from "./schema-act";
+import { pelarReqDoc, type ReqDecl } from "./req-doc";
 
 // =============================================================================
 // FieldType enum
@@ -127,6 +128,14 @@ export interface ParsedField {
   iuiIgnored: boolean;
   /** For DECLARE: leftover tail when the parser fell back to name-only (e.g. ';INPUT(' typo). Surfaced via W055. */
   malformedResidue: string;
+  /** For DECLARE / DECLARE ARRAY: `:REQ(…)`, el enlace con el catálogo universal (ver `req-doc.ts`). */
+  req: ReqDecl[];
+  /** For DECLARE / DECLARE ARRAY: `:DOC(…)`, los tipos de documento de los que sale la respuesta. */
+  doc: string[];
+  /** `:REQ(…)` / `:DOC(…)` que no se han podido leer. Surfaced via E906. */
+  reqDocErrores: string[];
+  /** For DECLARE ARRAY: `:REQ` / `:DOC` de cada subcampo, por nombre (en mayúsculas). */
+  arraySubfieldsReqDoc: Record<string, { req: ReqDecl[]; doc: string[] }>;
 }
 
 function createParsedField(partial: Partial<ParsedField> & Pick<ParsedField, "raw" | "content" | "fieldType" | "offset" | "line" | "col">): ParsedField {
@@ -159,6 +168,10 @@ function createParsedField(partial: Partial<ParsedField> & Pick<ParsedField, "ra
     allowUndeclaredNames: [],
     iuiIgnored: false,
     malformedResidue: "",
+    req: [],
+    doc: [],
+    reqDocErrores: [],
+    arraySubfieldsReqDoc: {},
     ...partial,
   };
 }
@@ -362,7 +375,10 @@ function _findTopLevelIui(
 // `[...]` and `(...)`; each entry {name, type, instruction} plus
 // `iuiPath` (relative to the array element, no prefix baked in)
 // when the subfield declares `:IUI(...)`.
-function _parseArraySubfields(body: string): Record<string, string>[] {
+function _parseArraySubfields(
+  body: string,
+  reqDoc?: { porSubcampo: Record<string, { req: ReqDecl[]; doc: string[] }>; errores: string[] },
+): Record<string, string>[] {
   const parts: string[] = [];
   let depth = 0;
   let cur = "";
@@ -384,7 +400,9 @@ function _parseArraySubfields(body: string): Record<string, string>[] {
   const out: Record<string, string>[] = [];
   for (const raw of parts) {
     if (!raw.trim()) continue;
-    const peel = _peelIui(raw.trim());
+    // `:REQ(…)` / `:DOC(…)` del subcampo, antes que nada (ver `req-doc.ts`).
+    const rd = pelarReqDoc(raw.trim());
+    const peel = _peelIui(rd.texto.trim());
     const part = peel.text.trim();
     const m = part.match(/^([\w\u00C0-\u024F]+)(?:\s+AS\s+([\w\u00C0-\u024F]+))?(?:\s*:\[([^\]]*)\])?/i);
     if (!m) continue;
@@ -394,6 +412,10 @@ function _parseArraySubfields(body: string): Record<string, string>[] {
       instruction: m[3] || "",
     };
     if (peel.body !== null) entry.iuiPath = _normalizeIuiPath(peel.body);
+    if (reqDoc) {
+      if (rd.req.length || rd.doc.length) reqDoc.porSubcampo[entry.name] = { req: rd.req, doc: rd.doc };
+      reqDoc.errores.push(...rd.errores);
+    }
     out.push(entry);
   }
   return out;
@@ -580,10 +602,17 @@ export function parseFields(text: string): ParsedField[] {
         //       aligned with the document body rather than the
         //       DECLARE block at the top of an include.
         let inputDeclHandled = false;
+        // `:REQ(…)` / `:DOC(…)` — enlace con el catálogo universal. Se pelan
+        // lo primero: el `=valor` genérico de abajo se comería el `=` de su
+        // mapa (`Urbana=TRUE`) y el campo caería a W055. Ver `req-doc.ts`.
+        const reqDoc = pelarReqDoc(content);
+        pf.req = reqDoc.req;
+        pf.doc = reqDoc.doc;
+        pf.reqDocErrores = reqDoc.errores;
         // `:IUI(path)` — IU2007 mapping for the CTN XML. Peeled
         // off first (any position among the suffixes, INPUT form
         // included) so the rest of the parse never sees it.
-        const iuiPeel = _peelIui(content);
+        const iuiPeel = _peelIui(reqDoc.texto);
         const declContent = iuiPeel.text;
         if (iuiPeel.body !== null) pf.iuiPath = _normalizeIuiPath(iuiPeel.body);
         // Allow optional `AS TYPE` before `:INPUT(...)`, e.g.
@@ -834,6 +863,13 @@ export function parseFields(text: string): ParsedField[] {
         // own relative path (`NOMBRE:IUI(PER/NOM)`).
         let rest = content.replace(/^DECLARE\s+ARRAY\s+/i, "").trim();
         pf.isArray = true;
+        // `:REQ(…)` / `:DOC(…)` de la lista (fuera de `NOMBRE(…)`); los de
+        // cada subcampo los recoge `_parseArraySubfields`.
+        const reqDocArray = pelarReqDoc(rest, { soloNivelSuperior: true });
+        rest = reqDocArray.texto.trim();
+        pf.req = reqDocArray.req;
+        pf.doc = reqDocArray.doc;
+        pf.reqDocErrores = reqDocArray.errores;
         const topIui = _findTopLevelIui(rest);
         if (topIui) {
           pf.iuiPath = _normalizeIuiPath(topIui.body);
@@ -854,7 +890,8 @@ export function parseFields(text: string): ParsedField[] {
               else if (tail[i] === ")") depth--;
             }
             if (depth === 0) {
-              pf.arraySubfields = _parseArraySubfields(tail.slice(sfOpen[0].length, i - 1));
+              const porSub = { porSubcampo: pf.arraySubfieldsReqDoc, errores: pf.reqDocErrores };
+              pf.arraySubfields = _parseArraySubfields(tail.slice(sfOpen[0].length, i - 1), porSub);
               tail = tail.slice(i);
             }
           }
