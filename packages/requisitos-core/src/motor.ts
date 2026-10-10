@@ -55,6 +55,12 @@ export interface Pregunta {
    * una pregunta por (hecho, papel) y `bloquea` es lo que desbloquea contestarla para ése.
    */
   rol?: string | null;
+  /**
+   * Sólo con `preguntasPorSujeto`: el interviniente (o el bien) del que se pregunta. Hay una
+   * pregunta por (hecho, interviniente): dos vendedores, dos estados civiles.
+   */
+  sujetoId?: string;
+  objetoId?: string;
 }
 
 export interface RequisitoResuelto {
@@ -293,8 +299,8 @@ export function evaluar(
   esUnRol: (rol: string | null | undefined, exigido: string) => boolean = (rol, exigido) => rol === exigido,
   /** La jerarquía de tipos de interviniente y de bien, para saber si un dato existe para él. */
   esUnTipo: (tipo: string | null | undefined, exigido: string) => boolean = (tipo, exigido) => tipo === exigido,
-): { valor: Ternario; faltan: string[]; presumidos: string[]; faltanPorRol: string[] } {
-  if (condiciones.length === 0) return { valor: true, faltan: [], presumidos: [], faltanPorRol: [] };
+): { valor: Ternario; faltan: string[]; presumidos: string[]; faltanPorRol: string[]; faltanPorSujeto: string[] } {
+  if (condiciones.length === 0) return { valor: true, faltan: [], presumidos: [], faltanPorRol: [], faltanPorSujeto: [] };
   // Tercera fuente de valor, después del dato: lo que el escenario base presume. Solo
   // entra donde el dato falta, y se deja rastro de dónde entró.
   const presumidos = new Set<string>();
@@ -316,6 +322,8 @@ export function evaluar(
   // Lo mismo, con el papel al que acota la condición (`fact@ROL`, `fact@` sin acotar): un
   // estado civil puede faltar para el vendedor y estar contestado para el comprador.
   const faltanPorRol = new Set<string>();
+  // Y con el interviniente o el bien concreto que no lo tiene (`fact@ROL#id`).
+  const faltanPorSujeto = new Set<string>();
   let total: Ternario = false;             // OR entre grupos: el neutro es FALSE
   for (const grupo of porGrupo.values()) {
     let acum: Ternario = true;             // AND dentro del grupo: el neutro es TRUE
@@ -352,8 +360,11 @@ export function evaluar(
           return undefined;
         };
         if (cands.length === 0) v = comparar(c.operador, conPresuncion(c.fact, undefined), c.valor);
-        else v = cands.map((x) => comparar(c.operador, conPresuncion(c.fact, leer(x)), c.valor))
-          .reduce<Ternario>((a, b) => o(a, b), false);
+        else {
+          const porCand = cands.map((x) => comparar(c.operador, conPresuncion(c.fact, leer(x)), c.valor));
+          v = porCand.reduce<Ternario>((a, b) => o(a, b), false);
+          if (v === null) cands.forEach((x, i) => { if (porCand[i] === null) faltanPorSujeto.add(`${c.fact}@${c.scopeRolCodigo ?? ''}#${x.id}`); });
+        }
       }
       if (v === null) {
         faltan.add(c.fact);
@@ -369,6 +380,7 @@ export function evaluar(
     faltan: total === null ? [...faltan] : [],
     presumidos: [...presumidos],
     faltanPorRol: total === null ? [...faltanPorRol] : [],
+    faltanPorSujeto: total === null ? [...faltanPorSujeto] : [],
   };
 }
 
@@ -480,6 +492,12 @@ export interface OpcionesMotor {
    * siempre, con los papeles en `roles`.
    */
   preguntasPorRol?: boolean;
+  /**
+   * Una pregunta por (hecho, interviniente o bien) cuando el expediente los trae: con dos
+   * vendedores, el estado civil se pregunta de cada uno (`sujetoId`, `objetoId`). Donde no hay a
+   * quién preguntar (ningún interviniente con ese papel), se cae a `preguntasPorRol`.
+   */
+  preguntasPorSujeto?: boolean;
 }
 
 export async function resolverRequisitos(
@@ -491,6 +509,7 @@ export async function resolverRequisitos(
   const ccaa = opciones.ccaaCodigo ?? '';
   const presunciones = opciones.presunciones ?? {};
   const porRol = Boolean(opciones.preguntasPorRol);
+  const porInterviniente = Boolean(opciones.preguntasPorSujeto);
   // La jerarquía is-a de los tipos de objeto y sujeto. Sin ella, una regla que pide
   // INMUEBLE no encuentra una VIVIENDA, y los requisitos MÁS BÁSICOS -la nota simple, la
   // referencia catastral- generan CERO instancias. Se ve solo al contar instancias, no al
@@ -681,6 +700,7 @@ export async function resolverRequisitos(
       faltan: valorCond === null ? [...porCuerpo.faltan, ...porEjes.faltan] : [],
       presumidos: [...porCuerpo.presumidos, ...porEjes.presumidos],
       faltanPorRol: valorCond === null ? porCuerpo.faltanPorRol : [],
+      faltanPorSujeto: valorCond === null ? porCuerpo.faltanPorSujeto : [],
     };
     const tiposRegla = r.objetos.map((o) => o.objetoTipoCodigo);
     // Una transversal que pide un tipo que el acto no declara SIEMPRE acota: la tarjeta ITV
@@ -755,8 +775,7 @@ export async function resolverRequisitos(
         const rol = c.scopeRolCodigo ?? null;
         // Esta condición en concreto (su hecho con su papel) es la que falta.
         if (!porCondicion.faltanPorRol.includes(`${fact}@${rol ?? ''}`)) continue;
-        const clave = porRol ? `${fact}@${rol ?? ''}` : fact;
-        const p = preguntas.get(clave) ?? {
+        const nueva = (extra: Partial<Pregunta>): Pregunta => ({
           fact,
           label: c.atributoDef.label,
           tipoDato: c.atributoDef.tipoDato,
@@ -764,11 +783,29 @@ export async function resolverRequisitos(
           fuentePreferente: c.atributoDef.fuentePreferente,
           bloquea: [],
           roles: [],
-          ...(porRol ? { rol } : {}),
+          ...(porRol || porInterviniente ? { rol } : {}),
+          ...extra,
+        });
+        const anotar = (clave: string, p: Pregunta) => {
+          if (!p.bloquea.includes(r.codigo)) p.bloquea.push(r.codigo);
+          if (p.rol && !p.roles.includes(p.rol)) p.roles.push(p.rol);
+          else if (rol && !p.roles.includes(rol)) p.roles.push(rol);
+          preguntas.set(clave, p);
         };
-        if (!p.bloquea.includes(r.codigo)) p.bloquea.push(r.codigo);
-        if (rol && !p.roles.includes(rol)) p.roles.push(rol);
-        preguntas.set(clave, p);
+        // Por interviniente o bien: a cada uno que no lo tiene, su pregunta.
+        const prefijo = `${fact}@${rol ?? ''}#`;
+        const ids = porInterviniente ? porCondicion.faltanPorSujeto.filter((k) => k.startsWith(prefijo)).map((k) => k.slice(prefijo.length)) : [];
+        if (ids.length) {
+          const ambito = c.atributoDef.ambito;
+          for (const id of ids) {
+            const clave = `${fact}#${id}`;
+            const suj = ambito === 'SUJETO' ? (hechos.sujetos ?? []).find((x) => x.id === id) : undefined;
+            anotar(clave, preguntas.get(clave) ?? nueva(ambito === 'SUJETO' ? { sujetoId: id, rol: suj?.rol ?? null } : { objetoId: id, rol: null }));
+          }
+          continue;
+        }
+        const clave = porRol || porInterviniente ? `${fact}@${rol ?? ''}` : fact;
+        anotar(clave, preguntas.get(clave) ?? nueva({}));
       }
       // Medio de pago y causa no tienen `AtributoDef` propio en todas las bases: la pregunta se
       // compone aquí con los valores que de verdad distinguen algo en este acto.

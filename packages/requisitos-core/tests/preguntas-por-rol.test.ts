@@ -54,3 +54,38 @@ describe('preguntas por papel', () => {
     expect(sin.preguntas.find((p) => p.fact === 'SUJETO.ESTADO_CIVIL')!.roles).toEqual(['COMPRADOR']);
   });
 });
+
+// F4.2d (9-oct-2026): con `preguntasPorSujeto`, una pregunta por interviniente: dos vendedores,
+// dos estados civiles. Sin nadie con ese papel, se pregunta por papel como antes.
+describe('preguntas por interviniente', () => {
+  const dosVendedores = (v1: Record<string, unknown>, v2: Record<string, unknown>) => ({
+    sujetos: [
+      { id: 'VENDEDOR', rol: 'VENDEDOR', tipo: 'PERSONA_FISICA', hechos: v1 },
+      { id: 'VENDEDOR~2', rol: 'VENDEDOR', tipo: 'PERSONA_FISICA', hechos: v2 },
+    ],
+  });
+  const rs = (h: ReturnType<typeof dosVendedores>) =>
+    resolverRequisitos(repo({ tiposObjeto: TIPOS_OBJETO, reglas }), '0501', h, { preguntasPorRol: true, preguntasPorSujeto: true });
+
+  it('una por (hecho, interviniente), con su papel', async () => {
+    const res = await rs(dosVendedores({}, {}));
+    const ec = res.preguntas.filter((p) => p.fact === 'SUJETO.ESTADO_CIVIL').map((p) => [p.sujetoId ?? null, p.rol, p.bloquea]).sort();
+    // Los vendedores, por interviniente; el comprador no está: por papel.
+    expect(ec).toEqual([
+      [null, 'COMPRADOR', ['DECLARACION_PRIVATIVIDAD']],
+      ['VENDEDOR', 'VENDEDOR', ['CONSENTIMIENTO_CONYUGE']],
+      ['VENDEDOR~2', 'VENDEDOR', ['CONSENTIMIENTO_CONYUGE']],
+    ]);
+  });
+
+  it('contestado para uno, sólo queda la del otro', async () => {
+    const res = await rs(dosVendedores({ ESTADO_CIVIL: 'SOLTERO' }, {}));
+    expect(res.preguntas.filter((p) => p.fact === 'SUJETO.ESTADO_CIVIL' && p.sujetoId).map((p) => p.sujetoId)).toEqual(['VENDEDOR~2']);
+  });
+
+  it('si uno ya lo cumple, la regla es firme y no se pregunta del otro', async () => {
+    const res = await rs(dosVendedores({ ESTADO_CIVIL: 'CASADO' }, {}));
+    expect(res.preguntas.some((p) => p.fact === 'SUJETO.ESTADO_CIVIL' && p.rol === 'VENDEDOR')).toBe(false);
+    expect(res.firmes.map((x) => x.codigo)).toContain('CONSENTIMIENTO_CONYUGE');
+  });
+});
