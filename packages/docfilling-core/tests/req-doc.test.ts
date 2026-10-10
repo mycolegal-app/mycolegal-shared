@@ -67,6 +67,31 @@ describe(':REQ / :DOC en el DECLARE', () => {
     const tipo = { tipoDato: 'ENUM', opciones: ['PERSONA_FISICA', 'PERSONA_JURIDICA'] };
     expect(tieneVuelta(f.req[0], tipo)).toBe(false); // PERSONA_FISICA vuelve a tres valores
     expect(inversa(f.req[0], 'PERSONA_JURIDICA', { hecho: tipo })).toBeNull();
+    // Con las opciones del campo, el mapa las cubre todas: una sociedad sólo puede ser «Sociedad»;
+    // una persona física puede ser tres, y no se deduce.
+    const opciones = f.inputOptions.length ? f.inputOptions : f.extractionOptions;
+    expect(inversa(f.req[0], 'PERSONA_JURIDICA', { hecho: tipo, opcionesCampo: opciones })).toBe('Sociedad');
+    expect(inversa(f.req[0], 'PERSONA_FISICA', { hecho: tipo, opcionesCampo: opciones })).toBeNull();
+    // El estado civil sólo mapea «Matrimonio»: no cubre el campo y no se deduce nada.
+    expect(inversa(f.req[1], 'CASADO', { opcionesCampo: opciones })).toBeNull();
+  });
+
+  it('mapa que cubre el campo: «Ninguna»=FALSE y el resto =TRUE deduce «Ninguna» de FALSE', () => {
+    const f = uno('{{DECLARE EXENCION:INPUT(¿Beneficio?|Ninguna,VPO,Familia numerosa)' +
+      ':REQ(ACTO.HAY_BENEFICIO_FISCAL; Ninguna=FALSE; VPO=TRUE; "Familia numerosa"=TRUE)}}');
+    expect(inversa(f.req[0], false, { hecho: BOOL, opcionesCampo: f.inputOptions })).toBe('Ninguna');
+    expect(inversa(f.req[0], true, { hecho: BOOL, opcionesCampo: f.inputOptions })).toBeNull();
+    // Sin las opciones del campo no se sabe si las cubre: la regla de siempre (no hay vuelta).
+    expect(inversa(f.req[0], false, { hecho: BOOL })).toBeNull();
+  });
+
+  it('la misma opción para dos valores del hecho: de cualquiera de los dos se deduce', () => {
+    const f = uno('{{DECLARE ESTADO:INPUT(¿Estado?|Terminado,En construcción)' +
+      ':REQ(OBJETO.SITUACION; Terminado=SEGUNDA_MANO; Terminado=NUEVA_PROMOCION_VENTA; "En construcción"=EN_CONSTRUCCION)}}');
+    const sit = { tipoDato: 'ENUM', opciones: ['SEGUNDA_MANO', 'NUEVA_PROMOCION_VENTA', 'EN_CONSTRUCCION'] };
+    expect(inversa(f.req[0], 'NUEVA_PROMOCION_VENTA', { hecho: sit, opcionesCampo: f.inputOptions })).toBe('Terminado');
+    // Al revés, «Terminado» lleva a dos valores: implica los dos (quien los use decide que no hay uno).
+    expect(implicaciones(f.req, 'Terminado').map((i) => i.valor)).toEqual(['SEGUNDA_MANO', 'NUEVA_PROMOCION_VENTA']);
   });
 
   it('EXISTEN_CARGAS: mapa parcial — «No» dice mucho, «Sí» no dice cuál', () => {

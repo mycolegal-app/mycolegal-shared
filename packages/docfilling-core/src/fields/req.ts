@@ -5,9 +5,13 @@
 // - Con mapa, sólo implican algo los valores que aparecen: un valor del campo que no está en
 //   el mapa no dice nada del hecho.
 // - **La dirección no se declara, se deduce del mapa.** Del campo al catálogo, siempre. Del
-//   catálogo al campo, sólo cuando CADA valor del hecho vuelve a un ÚNICO valor del campo.
+//   catálogo al campo, cuando el valor del hecho vuelve a UN ÚNICO valor del campo y además:
+//     · cada valor del hecho vuelve a uno solo (`tieneVuelta`, la regla de siempre), o
+//     · el mapa cubre TODAS las opciones del campo (10-oct-2026): el campo vale seguro una de
+//       ellas, y si sólo una lleva al valor conocido, es ésa. Así «Ninguna»=FALSE y las otras
+//       siete =TRUE deduce «Ninguna» de FALSE (y de TRUE, nada).
 //   «No hay cargas» = `TIENE_HIPOTECA` falso, pero `TIENE_HIPOTECA` falso no dice que no haya
-//   cargas: ese mapa (`No=FALSE`) no tiene vuelta.
+//   cargas: ese mapa (`No=FALSE`) no cubre «Sí» ni cada valor del hecho, y no tiene vuelta.
 
 import type { ReqDecl } from '../syntax/req-doc';
 
@@ -103,27 +107,30 @@ export function tieneVuelta(r: ReqDecl, hecho?: HechoConOpciones): boolean {
 
 /**
  * Catálogo → campo: el valor del campo que se deduce de que el hecho `r.ref` valga
- * `valorCatalogo`, o `null` si el mapa no tiene vuelta o el valor no está en él.
+ * `valorCatalogo`, o `null` si no se puede deducir (ver la cabecera: vuelta del mapa entero, o
+ * mapa que cubre todas las opciones del campo con una sola que lleve a ese valor).
  *
- * `opcionesCampo`, si el campo tiene valores cerrados, para devolverlo con su forma exacta.
+ * `opcionesCampo`, si el campo tiene valores cerrados: para devolverlo con su forma exacta y para
+ * saber si el mapa las cubre todas.
  */
 export function inversa(
   r: ReqDecl,
   valorCatalogo: unknown,
   { hecho, opcionesCampo }: { hecho?: HechoConOpciones; opcionesCampo?: string[] } = {},
 ): string | null {
-  if (!tieneVuelta(r, hecho)) return null;
+  if (!r.ref) return null;
   const n = normalizarValor(valorCatalogo);
-  let candidato: string | null;
-  if (r.mapa) {
-    candidato = r.mapa.find(([, c]) => normalizarValor(c) === n)?.[0] ?? null;
-  } else {
-    candidato = String(valorCatalogo);
-  }
-  if (candidato === null) return null;
-  if (opcionesCampo?.length) {
-    const nc = normalizarValor(candidato);
+  const forma = (c: string) => {
+    if (!opcionesCampo?.length) return c;
+    const nc = normalizarValor(c);
     return opcionesCampo.find((o) => normalizarValor(o) === nc) ?? null;
-  }
-  return candidato;
+  };
+  if (!r.mapa) return forma(String(valorCatalogo));
+  const mapa = r.mapa;
+  const candidatos = [...new Set(mapa.filter(([, c]) => normalizarValor(c) === n).map(([campo]) => normalizarValor(campo)))];
+  if (candidatos.length !== 1) return null;
+  const cubreElCampo = !!opcionesCampo?.length
+    && opcionesCampo.every((o) => mapa.some(([campo]) => normalizarValor(campo) === normalizarValor(o)));
+  if (!cubreElCampo && !tieneVuelta(r, hecho)) return null;
+  return forma(mapa.find(([campo]) => normalizarValor(campo) === candidatos[0])![0]);
 }
