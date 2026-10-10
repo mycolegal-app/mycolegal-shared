@@ -299,6 +299,11 @@ export function evaluar(
   esUnRol: (rol: string | null | undefined, exigido: string) => boolean = (rol, exigido) => rol === exigido,
   /** La jerarquía de tipos de interviniente y de bien, para saber si un dato existe para él. */
   esUnTipo: (tipo: string | null | undefined, exigido: string) => boolean = (tipo, exigido) => tipo === exigido,
+  /**
+   * Evaluar para UNA instancia (10-oct-2026): en las condiciones que le alcanzan, sólo cuenta ese
+   * interviniente o ese bien; las que hablan de otros (otro papel) siguen mirando a los suyos.
+   */
+  fijar: { sujetoId?: string; objetoId?: string } = {},
 ): { valor: Ternario; faltan: string[]; presumidos: string[]; faltanPorRol: string[]; faltanPorSujeto: string[] } {
   if (condiciones.length === 0) return { valor: true, faltan: [], presumidos: [], faltanPorRol: [], faltanPorSujeto: [] };
   // Tercera fuente de valor, después del dato: lo que el escenario base presume. Solo
@@ -336,11 +341,13 @@ export function evaluar(
       } else {
         // Sujetos y objetos: basta que UNO haga match. Con `scopeRolCodigo` se acota a
         // los que tienen ese rol -«casado, pero el VENDEDOR»-.
-        const cands = ambito === 'SUJETO'
+        let cands = ambito === 'SUJETO'
           ? (hechos.sujetos ?? []).filter((s) => c.scopeRolCodigo
             ? esUnRol(s.rol, c.scopeRolCodigo)
             : !(DE_LA_PARTE.has(c.fact) && esUnRol(s.rol, ROL_REPRESENTANTE)))
           : (hechos.objetos ?? []);
+        const fijo = ambito === 'SUJETO' ? fijar.sujetoId : fijar.objetoId;
+        if (fijo && cands.some((x) => x.id === fijo)) cands = cands.filter((x) => x.id === fijo);
         // Sin intervinientes u objetos, la presunción hace de interviniente u objeto virtual.
         // El tipo de bien o de interviniente no es un atributo: vive en `tipo`, no en
         // `hechos`. Una condición sobre OBJETO.TIPO / SUJETO.TIPO (reglas propias de una
@@ -762,7 +769,11 @@ export async function resolverRequisitos(
         ...(acotaPorObjeto ? [`El bien es de tipo [${FACT_TIPO_OBJETO}] ${tiposRegla.join(' o ')}`] : []),
         ...(tiposSujeto.length ? [`Algún interviniente es de tipo [${FACT_TIPO_SUJETO}] ${tiposSujeto.join(' o ')}`] : []),
       ],
-      instancias: expandir(r.scopeGeneracion, r.roles, r.objetos, hechos, esUn, esUnRol),
+      // Cada instancia mira a su interviniente o su bien (10-oct-2026): de quien no cumple, no se pide.
+      instancias: valor === false ? [] : expandir(r.scopeGeneracion, r.roles, r.objetos, hechos, esUn, esUnRol, {
+        cumple: (fijar) => evaluar(conds, hechos, ambitoDe, presunciones, esUnRol, esUn, fijar).valor !== false,
+        tipoSujetoPresumido: tipoSujPres,
+      }),
     };
 
     if (valor === false) descartados.push(resuelto);
@@ -869,23 +880,37 @@ export async function resolverRequisitos(
  */
 function expandir(
   scope: string,
-  roles: { rolCodigo: string | null }[],
+  roles: { rolCodigo: string | null; sujetoTipoCodigo?: string | null }[],
   objetos: { objetoTipoCodigo: string }[],
   hechos: Hechos,
   esUn: (tipo: string | null | undefined, exigido: string) => boolean,
   esUnRol: (rol: string | null | undefined, exigido: string) => boolean,
+  /** Para mirar a cada uno: si su instancia cumple las condiciones, y el tipo presumido. */
+  porInstancia: { cumple?: (fijar: { sujetoId?: string; objetoId?: string }) => boolean; tipoSujetoPresumido?: string } = {},
 ): { sujetoId?: string; objetoId?: string }[] {
   const rolesOk = roles.map((r) => r.rolCodigo).filter(Boolean) as string[];
+  const tiposSujeto = [...new Set(roles.map((r) => r.sujetoTipoCodigo).filter(Boolean) as string[])];
   const tiposOk = objetos.map((o) => o.objetoTipoCodigo);
-  const sujetos = (hechos.sujetos ?? []).filter((s) => rolesOk.length === 0 || rolesOk.some((r) => esUnRol(s.rol, r)));
+  // El tipo de interviniente que pide la regla («la sociedad») también filtra a cada uno. De quien
+  // no se sabe el tipo (ni se presume) se sigue pidiendo.
+  // Mismo criterio que `aplicaPorSujeto`: un tipo conocido PADRE del pedido no descarta (la
+  // persona física puede ser apoderada; la sociedad de capital, una SL), salvo que sea presumido.
+  const tipoOk = (s: { tipo?: string | null }) => {
+    const presumido = !s.tipo && !!porInstancia.tipoSujetoPresumido;
+    const tipo = s.tipo ?? porInstancia.tipoSujetoPresumido ?? null;
+    return tiposSujeto.length === 0 || !tipo
+      || tiposSujeto.some((t) => esUn(tipo, t) || (!presumido && esUn(t, tipo)));
+  };
+  const sujetos = (hechos.sujetos ?? []).filter((s) => (rolesOk.length === 0 || rolesOk.some((r) => esUnRol(s.rol, r))) && tipoOk(s));
   // is-a, NO igualdad: la regla pide INMUEBLE y el expediente trae una VIVIENDA.
   const objs = (hechos.objetos ?? []).filter((o) => tiposOk.length === 0 || tiposOk.some((t) => esUn(o.tipo, t)));
+  const cumple = porInstancia.cumple ?? (() => true);
 
   switch (scope) {
-    case 'POR_SUJETO': return sujetos.map((s) => ({ sujetoId: s.id }));
-    case 'POR_OBJETO': return objs.map((o) => ({ objetoId: o.id }));
+    case 'POR_SUJETO': return sujetos.filter((s) => cumple({ sujetoId: s.id })).map((s) => ({ sujetoId: s.id }));
+    case 'POR_OBJETO': return objs.filter((o) => cumple({ objetoId: o.id })).map((o) => ({ objetoId: o.id }));
     case 'POR_SUJETO_Y_OBJETO':
-      return sujetos.flatMap((s) => objs.map((o) => ({ sujetoId: s.id, objetoId: o.id })));
+      return sujetos.flatMap((s) => objs.filter((o) => cumple({ sujetoId: s.id, objetoId: o.id })).map((o) => ({ sujetoId: s.id, objetoId: o.id })));
     default: return [{}];
   }
 }
