@@ -79,3 +79,16 @@ describe('el XML del IUI desde el modelo', () => {
     expect([decimalXsd('250.000,50'), decimalXsd('1200'), decimalXsd('12,5'), decimalXsd('mucho')]).toEqual(['250000.50', '1200', '12.5', null]);
   });
 });
+
+describe('las restricciones del XSD', () => {
+  it('un valor que no las cumple se descarta y se avisa: el XML sigue validando', () => {
+    const m: ModeloIui = { documento: [{ ruta: 'COD_MUN', valor: 'Sabadell' }], sujetos: [], objetos: [{ id: 1, entradas: [
+      { ruta: 'TIP_OBJ', valor: '1' }, { ruta: 'FIN_URB/FIN_URB_IDE/NUM_FIN', valor: 'e2e' }, { ruta: 'FIN_URB/FIN_URB_IDE/REF_CAT', valor: '0123456DF2902S0001AB' },
+    ] }], operaciones: [] };
+    const { xml, avisos } = serializarIui(m);
+    expect(avisos.some((a) => /«Sabadell» no vale para COD_MUN/.test(a))).toBe(true);
+    expect(avisos.some((a) => /«e2e» no vale para NUM_FIN/.test(a))).toBe(true);
+    expect(xml).not.toContain('NUM_FIN');
+    if (hayXmllint) expect(valida(xml)).toBe('ok');
+  });
+});

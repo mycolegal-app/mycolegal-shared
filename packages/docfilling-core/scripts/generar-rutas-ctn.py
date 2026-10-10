@@ -24,6 +24,8 @@ for ruta, v in d['rutas'].items():
             e['b'] = v['base']
         if v.get('enumeracion'):
             e['e'] = v['enumeracion']
+        if v.get('restricciones'):
+            e['r'] = v['restricciones']
     if v.get('eleccion'):
         e['c'] = v['eleccion']
     salida[ruta] = e
@@ -33,8 +35,8 @@ destino.write_text(
     f"// (iui/rutas.json, versión {d.get('version')}). No editar a mano.\n"
     '//\n'
     '// p = posición entre hermanos (xs:sequence), n/x = mínimo/máximo, h = hoja, b = tipo base,\n'
-    '// e = códigos admitidos, c = xs:choice al que pertenece.\n'
-    'export interface RutaCtn { p: number; n: number; x?: number; h?: 1; b?: string; e?: string[]; c?: string }\n\n'
+    '// e = códigos admitidos, r = restricciones del tipo (length, pattern, totalDigits…), c = xs:choice.\n'
+    'export interface RutaCtn { p: number; n: number; x?: number; h?: 1; b?: string; e?: string[]; r?: Record<string, string>; c?: string }\n\n'
     f'export const RUTAS_CTN: Record<string, RutaCtn> = {json.dumps(salida, ensure_ascii=False, separators=(",", ":"))};\n'
 )
 print(f'{len(salida)} rutas → {destino}')

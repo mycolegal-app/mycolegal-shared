@@ -128,7 +128,7 @@ export function serializarIui(modelo: ModeloIui, opciones: {
       if (i === segs.length - 1) {
         if (!r.h) { avisos.push(`${donde}: «${m[1]}» no lleva valor, sólo elementos`); return; }
         const v = normalizar(valor, r);
-        if (v === null) { avisos.push(`${donde}: «${valor}» no vale para ${m[1]}${r.e ? ` (admite ${r.e.join(', ')})` : r.b ? ` (${r.b})` : ''}`); return; }
+        if (v === null) { avisos.push(`${donde}: «${valor}» no vale para ${m[1]} (${formato(r)})`); return; }
         const n = hijo(actual, m[1], m[2] ? Number(m[2]) : null);
         n.texto = v;
         return;
@@ -210,16 +210,55 @@ export function serializarIui(modelo: ModeloIui, opciones: {
   return { xml: `<?xml version="1.0" encoding="UTF-8"?>\n${escribir(raiz, indentar, 0, true)}`, avisos };
 }
 
-/** El valor como lo quiere el XSD, o `null` si no vale. */
+/** Lo que pide el XSD de una hoja, en palabras, para el aviso. */
+function formato(r: RutaCtn): string {
+  if (r.e) return `admite ${r.e.join(', ')}`;
+  const q = r.r ?? {};
+  const partes = [
+    r.b === 'xs:date' ? 'fecha' : r.b && /int|decimal/i.test(r.b) ? 'número' : null,
+    q.length ? `${q.length} caracteres` : null,
+    q.maxLength ? `hasta ${q.maxLength} caracteres` : null,
+    q.pattern && !/^\[\^/.test(q.pattern) ? `patrón ${q.pattern}` : null,
+    q.totalDigits ? `hasta ${q.totalDigits} dígitos` : null,
+  ].filter(Boolean);
+  return partes.join(', ') || r.b || 'texto';
+}
+
+/** El valor como lo quiere el XSD, o `null` si no vale (código, tipo base y restricciones). */
 function normalizar(valor: string, r: RutaCtn): string | null {
-  const v = String(valor).trim();
+  // Una hoja del CTN no admite saltos de línea ni tabuladores (casi todas llevan `[^\r\n\t]*`).
+  let v = String(valor).replace(/[\r\n\t]+/g, ' ').trim();
   if (!v || /\[NO DISPONIBLE\]/.test(v)) return null;
   if (r.e) return r.e.includes(v) ? v : null;
-  if (r.b === 'xs:date') return fechaIso(v);
-  if (r.b === 'xs:decimal') return decimalXsd(v);
-  if (r.b && /^xs:(unsigned)?(int|integer|long|short|byte|positiveInteger|nonNegativeInteger)$/i.test(r.b)) {
+  const numerico = !!r.b && /^xs:(decimal|(unsigned)?(int|integer|long|short|byte)|positiveInteger|nonNegativeInteger)$/i.test(r.b);
+  if (r.b === 'xs:date') {
+    const f = fechaIso(v);
+    if (f === null) return null;
+    v = f;
+  } else if (numerico) {
     const d = decimalXsd(v);
-    return d !== null && /^-?\d+$/.test(d) ? d : null;
+    if (d === null) return null;
+    if (r.b !== 'xs:decimal' && !/^-?\d+$/.test(d)) return null;
+    v = d;
+    const frac = r.r?.fractionDigits;
+    // Más decimales de los que admite: se redondea (un importe con céntimos de más no debe caerse).
+    if (frac !== undefined && v.includes('.') && v.split('.')[1].length > Number(frac)) v = Number(v).toFixed(Number(frac));
+  }
+  const q = r.r;
+  if (!q) return v;
+  if (q.length && v.length !== Number(q.length)) return null;
+  if (q.minLength && v.length < Number(q.minLength)) return null;
+  if (q.maxLength && v.length > Number(q.maxLength)) return null;
+  if (q.totalDigits && v.replace(/[^0-9]/g, '').replace(/^0+(?=\d)/, '').length > Number(q.totalDigits)) return null;
+  if (numerico || r.b === 'xs:date') {
+    const cmp = (lim: string) => (r.b === 'xs:date' ? v.localeCompare(lim) : Number(v) - Number(lim));
+    if (q.minInclusive !== undefined && cmp(q.minInclusive) < 0) return null;
+    if (q.maxInclusive !== undefined && cmp(q.maxInclusive) > 0) return null;
+    if (q.minExclusive !== undefined && cmp(q.minExclusive) <= 0) return null;
+    if (q.maxExclusive !== undefined && cmp(q.maxExclusive) >= 0) return null;
+  }
+  if (q.pattern) {
+    try { if (!new RegExp(`^(?:${q.pattern})$`, 'u').test(v)) return null; } catch { /* un patrón XSD que JS no entiende: lo valida el XSD */ }
   }
   return v;
 }
