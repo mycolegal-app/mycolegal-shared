@@ -55,7 +55,7 @@ export type { ParsedField } from './src/syntax/parser';
 // generado: añade las tres comprobaciones que `gen-ts.py` no emite. Ver
 // `src/syntax/checks-pendientes.ts`.
 export { validateText } from './src/syntax/validate';
-export { collectAllDeclares } from './src/syntax/validator';
+export { collectAllDeclares, extractIfFieldRefs } from './src/syntax/validator';
 export { TIPOS_CANONICOS, SINONIMOS_DE_TIPO, tipoAceptado, tipoCanonico } from './src/syntax/declare-types';
 // `{{PAGEBREAK}}` (D23, renombrada por D38). La fusión necesita las grafías, el
 // patrón y el predicado para

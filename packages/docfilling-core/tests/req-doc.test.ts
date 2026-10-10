@@ -342,3 +342,20 @@ describe(':REQ de tres segmentos: un componente de una LISTA o una DIRECCION', (
     expect(conCatalogo('{{DECLARE X:REQ(ACTO.PAGOS.MEDIO.OTRO)}}')).toEqual(['E906']);
   });
 });
+
+describe(':[instrucción] y :INPUT(…) en cualquier orden (9-oct)', () => {
+  it('la instrucción delante no se come la pregunta (TIPO_FINCA_PH de _PROD)', () => {
+    const t = '{{DECLARE TIPO_FINCA_PH:[Seleccione si la finca es suelo o elemento]:INPUT(Tipo de Finca a efectos de Catastro|Suelo o Parcela,Elemento de División Horizontal)}}';
+    const f = uno(t);
+    expect(f.inputDescription).toBe('Tipo de Finca a efectos de Catastro');
+    expect(f.inputOptions).toEqual(['Suelo o Parcela', 'Elemento de División Horizontal']);
+    expect(f.declareInstruction).toBe('Seleccione si la finca es suelo o elemento');
+    expect(codigos(t)).not.toContain('W055');
+  });
+  it('y detrás tampoco se pierde', () => {
+    const f = uno('{{DECLARE X:INPUT(¿Pregunta [con corchetes]?|A,B)=A:[instr]}}');
+    expect(f.inputDescription).toBe('¿Pregunta [con corchetes]?');
+    expect(f.inputDefault).toBe('A');
+    expect(f.declareInstruction).toBe('instr');
+  });
+});

@@ -604,8 +604,28 @@ export function parseFields(text: string): ParsedField[] {
         // off first (any position among the suffixes, INPUT form
         // included) so the rest of the parse never sees it.
         const iuiPeel = _peelIui(reqDoc.texto, true);
-        const declContent = iuiPeel.text;
+        let declContent = iuiPeel.text;
         if (iuiPeel.body !== null) pf.iuiObsoleto = true;
+        // `:[instrucción]` y `:INPUT(…)` en CUALQUIER orden (9-oct-2026). La forma INPUT de abajo
+        // exige `:INPUT(` justo tras el nombre, así que `DECLARE X:[instr]:INPUT(…)` —que la
+        // biblioteca usa, p. ej. TIPO_FINCA_PH— perdía la pregunta y sus opciones (caía a W055), y
+        // `DECLARE X:INPUT(…):[instr]` perdía la instrucción. Con `:INPUT(` presente, la
+        // instrucción se pela antes (sólo fuera de paréntesis: la pregunta puede llevar corchetes).
+        if (/:INPUT(?:_FINAL)?\(/i.test(declContent)) {
+          let prof = 0;
+          for (let i = 0; i < declContent.length; i++) {
+            const ch = declContent[i];
+            if (ch === "(") prof++;
+            else if (ch === ")" && prof > 0) prof--;
+            else if (ch === ":" && prof === 0 && declContent[i + 1] === "[") {
+              const fin = declContent.indexOf("]", i + 2);
+              if (fin < 0) break;
+              pf.declareInstruction = declContent.slice(i + 2, fin).trim();
+              declContent = declContent.slice(0, i) + declContent.slice(fin + 1);
+              break;
+            }
+          }
+        }
         // Allow optional `AS TYPE` before `:INPUT(...)`, e.g.
         //   DECLARE FOO AS BOOL:INPUT(prompt|opts)
         // The captured type is preserved on the node so the

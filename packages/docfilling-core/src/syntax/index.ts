@@ -5,7 +5,7 @@ export { pelarReqDoc, leerReq, leerDoc, quitarReqDoc } from './req-doc';
 export type { ReqDecl, ReqDoc } from './req-doc';
 export { validateText } from './validate';
 export type { OpcionesValidacion } from './validate';
-export { collectAllDeclares } from './validator';
+export { collectAllDeclares, extractIfFieldRefs } from './validator';
 export type { Diagnostic, DiagnosticFix, ValidationResult, IncludeResolver } from './validator';
 export { TIPOS_CANONICOS, SINONIMOS_DE_TIPO, tipoAceptado, tipoCanonico } from './declare-types';
 export type { TipoCanonico } from './declare-types';
