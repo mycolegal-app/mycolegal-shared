@@ -1,6 +1,6 @@
 {
   "name": "@mycolegal-app/docfilling-core",
-  "version": "0.1.20",
+  "version": "0.1.21",
   "type": "module",
   "main": "./index.ts",
   "types": "./index.ts",
