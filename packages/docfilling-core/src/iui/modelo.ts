@@ -225,6 +225,14 @@ function formato(r: RutaCtn): string {
 }
 
 /** El valor como lo quiere el XSD, o `null` si no vale (código, tipo base y restricciones). */
+/** ¿El patrón XSD sólo admite dígitos? (`([0-9])+`, `[0-9]{6}`…). */
+function soloDigitos(pattern: string): boolean {
+  try {
+    const re = new RegExp(`^(?:${pattern})$`, 'u');
+    return re.test('1') || re.test('12') || re.test('123456') ? !re.test('1a') && !re.test('a') && !re.test('1 2') : false;
+  } catch { return false; }
+}
+
 function normalizar(valor: string, r: RutaCtn): string | null {
   // Una hoja del CTN no admite saltos de línea ni tabuladores (casi todas llevan `[^\r\n\t]*`).
   let v = String(valor).replace(/[\r\n\t]+/g, ' ').trim();
@@ -246,6 +254,13 @@ function normalizar(valor: string, r: RutaCtn): string | null {
   }
   const q = r.r;
   if (!q) return v;
+  // Un código sólo de dígitos (número de finca, sección): «2ª» → «2», «45.678» → «45678», y con
+  // longitud fija se completa con ceros a la izquierda («45678» → «045678»). Sólo se quitan ordinales,
+  // puntos y espacios: «123 bis» sigue sin valer (informe v2 del garaje, 10-oct-2026).
+  if (q.pattern && soloDigitos(q.pattern)) {
+    const d = v.replace(/[ºª°.\s]/g, '');
+    if (/^\d+$/.test(d)) v = q.length && d.length < Number(q.length) ? d.padStart(Number(q.length), '0') : d;
+  }
   if (q.length && v.length !== Number(q.length)) return null;
   if (q.minLength && v.length < Number(q.minLength)) return null;
   if (q.maxLength && v.length > Number(q.maxLength)) return null;

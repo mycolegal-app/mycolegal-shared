@@ -91,4 +91,16 @@ describe('las restricciones del XSD', () => {
     expect(xml).not.toContain('NUM_FIN');
     if (hayXmllint) expect(valida(xml)).toBe('ok');
   });
+  it('códigos de sólo dígitos: sin ordinales ni puntos, y con ceros a la izquierda si la longitud es fija', () => {
+    const m: ModeloIui = { documento: [], sujetos: [], objetos: [{ id: 1, entradas: [
+      { ruta: 'TIP_OBJ', valor: '1' }, { ruta: 'FIN_URB/FIN_URB_IDE/NUM_FIN', valor: '45.678' }, { ruta: 'FIN_URB/FIN_URB_IDE/SEC', valor: '2ª' },
+    ] }], operaciones: [] };
+    const { xml, avisos } = serializarIui(m);
+    expect(avisos).toEqual([]);
+    expect(xml).toContain('<NUM_FIN>045678</NUM_FIN>');
+    expect(xml).toContain('<SEC>02</SEC>');
+    // «123 bis» no es un número de finca: se sigue descartando.
+    expect(serializarIui({ ...m, objetos: [{ id: 1, entradas: [{ ruta: 'TIP_OBJ', valor: '1' }, { ruta: 'FIN_URB/FIN_URB_IDE/NUM_FIN', valor: '123 bis' }] }] }).avisos.length).toBe(1);
+    if (hayXmllint) expect(valida(xml)).toBe('ok');
+  });
 });
