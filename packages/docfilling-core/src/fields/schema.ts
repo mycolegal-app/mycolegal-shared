@@ -49,6 +49,9 @@ export interface Campo {
   /** Texto legible para el oficial. Al oficial no se le enseña
    *  `PRECIO_TOTAL_VIVIENDA_M2`. */
   etiqueta: string;
+  /** La pregunta para una persona, del `:INPUT(pregunta|…)` de su declaración; `null` si no tiene.
+   *  Es lo que se enseña en vez de la etiqueta cuando hay que preguntarlo (plan REQ_CATALOGO_IUI). */
+  pregunta: string | null;
   opciones: string[];
   instruccion: string | null;
   porDefecto: string | null;
@@ -131,6 +134,11 @@ export function esquemaDeCampos(
   // DECLARE: sin esto el enlace se perdería. Las declaraciones divergentes las caza
   // `analizarBiblioteca` (F2.4 del plan).
   const reqDocDe = new Map<string, { req: ReqDecl[]; doc: string[] }>();
+  // Y la pregunta del `:INPUT`, igual: de la primera declaración que la trae.
+  const preguntaDe = new Map<string, string>();
+  for (const f of analizados) {
+    if (f.name && f.inputDescription && !preguntaDe.has(f.name)) preguntaDe.set(f.name, f.inputDescription);
+  }
   for (const f of analizados) {
     if (!f.name || (!f.req?.length && !f.doc?.length)) continue;
     if (!reqDocDe.has(f.name)) reqDocDe.set(f.name, { req: f.req, doc: f.doc });
@@ -155,6 +163,7 @@ export function esquemaDeCampos(
       // biblioteca escribe BOOLEAN o STRING (ver `declare-types.ts`).
       tipo: tipoCanonico(f.declareType),
       etiqueta: quien === QUIEN.MOTOR ? nombre : etiquetar(nombre),
+      pregunta: preguntaDe.get(nombre) ?? null,
       // Un `DECLARE X:INPUT(desc|a,b)` guarda la lista en `inputOptions`, igual que
       // el INPUT pintado: sin esto, 363 condiciones de la biblioteca llegaban a la
       // pantalla como texto libre y a la IA sin «valores admitidos».
@@ -184,7 +193,7 @@ export function esquemaDeCampos(
     if (!c) {
       c = {
         nombre: l.nombre, quien: QUIEN.IA, categoria: FieldType.DECLARE_ARRAY, tipo: 'TEXT',
-        etiqueta: etiquetar(l.nombre), opciones: [], instruccion: instrucciones[l.nombre] || null,
+        etiqueta: etiquetar(l.nombre), pregunta: null, opciones: [], instruccion: instrucciones[l.nombre] || null,
         porDefecto: null, esArray: true, subcampos: [], soloCondicional: false,
         req: [], doc: [],
       };

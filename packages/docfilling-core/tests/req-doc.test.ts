@@ -359,3 +359,12 @@ describe(':[instrucción] y :INPUT(…) en cualquier orden (9-oct)', () => {
     expect(f.declareInstruction).toBe('instr');
   });
 });
+
+describe('Campo.pregunta: el texto del :INPUT', () => {
+  it('sale de la declaración, aunque el campo se use antes', () => {
+    const t = '{{IF TIPO_FINCA_PH == "Suelo o Parcela"}}x{{ENDIF}}\n{{DECLARE TIPO_FINCA_PH:INPUT(Tipo de Finca a efectos de Catastro|Suelo o Parcela,Elemento de División Horizontal)}}';
+    const c = esquemaDeCampos(t).campos.find((x) => x.nombre === 'TIPO_FINCA_PH')!;
+    expect(c.pregunta).toBe('Tipo de Finca a efectos de Catastro');
+    expect(c.etiqueta).toBe('Tipo finca ph');
+  });
+});
