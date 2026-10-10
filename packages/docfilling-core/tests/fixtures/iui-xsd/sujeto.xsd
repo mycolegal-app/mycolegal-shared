@@ -1,0 +1,648 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema targetNamespace="http://inti.notariado.org/XML/IU2007" xmlns="http://inti.notariado.org/XML/IU2007" xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+	<xs:annotation>
+		<xs:documentation>Definición de tipos para los sujetos</xs:documentation>
+	</xs:annotation>
+	<xs:include schemaLocation="comun.xsd"/>
+	<xs:include schemaLocation="direccion.xsd"/>
+	<xs:include schemaLocation="objeto.xsd"/>
+	<xs:include schemaLocation="operacion.xsd"/>
+	<xs:complexType name="SUJETO_INTERVINIENTEType">
+		<xs:sequence>
+			<xs:element name="ID_SUJ" type="ID_SECUENCIALType">
+				<xs:annotation>
+					<xs:documentation>Identificador del sujeto en el documento</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="COM_BIE_AFE" type="BOOLEANType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Comunidad de bienes afectada</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="COM_BIE" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Datos de la comunidad de bienes</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="NUM_NIF_COM_BIE" type="NIF_CIFType" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Número de NIF de la comunidad de bienes a la que se pertenece</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="NOM_COM_BIE" type="NOMBRE_PERSONAType" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Nombre de la comunidad de bienes</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="DIR_COM_BIE" type="DIRECCION_SUJETOType" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Dirección fiscal de la comunidad de bienes</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="CON_NO_COM" type="ID_SECUENCIALType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Cónyuge no compareciente</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="DER" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Derecho</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="CLA_DER" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Clase de derecho transmitido o constituido mediante la operación ("1" Pleno dominio, "2" Nuda Propiedad, "3" Usufructo, "4" Uso o habitación, "5" Derecho de superficie, "6" Concesión administrativa)</xs:documentation>
+							</xs:annotation>
+							<xs:simpleType>
+								<xs:restriction base="xs:string">
+									<xs:enumeration value="1"/>
+									<xs:enumeration value="2"/>
+									<xs:enumeration value="3"/>
+									<xs:enumeration value="4"/>
+									<xs:enumeration value="5"/>
+									<xs:enumeration value="6"/>
+								</xs:restriction>
+							</xs:simpleType>
+						</xs:element>
+						<xs:element name="POR_DER" type="PORCENTAJEType" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Porcentaje del derecho</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="ORIGEN_DER" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Origen del derecho transmitido o constituido mediante la operación ("1" Fecha, "2" Proviene de reparcelación, "3" Más de 30 años, "4" Procede de modificación en la que ha mediado agrupación)</xs:documentation>
+							</xs:annotation>
+							<xs:simpleType>
+								<xs:restriction base="xs:string">
+									<xs:enumeration value="1"/>
+									<xs:enumeration value="2"/>
+									<xs:enumeration value="3"/>
+									<xs:enumeration value="4"/>
+								</xs:restriction>
+							</xs:simpleType>
+						</xs:element>
+						<xs:element name="FEC_ADQUISICION" type="FECHAType" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Fecha en que se adquirió el derecho</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="NUM_ACC" type="NUMERO_ACCIONESType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Número de acciones o participaciones comprendidas en la operación</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="VAL_POR" type="IMPORTE_ECONOMICOType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Valor del porcentaje de acciones o participaciones comprendidas en la operación</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="DISPONEN_SERIE" type="BOOLEANType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Indica si las acciones disponen de serie</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="DETALLE_ACCIONES" type="DETALLE_ACCIONESType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Detalle de las acciones transmitidas/recibidas</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="FEDA_INFO" type="BOOLEANType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Indica si se ha interesado del fedatario la presentación de la declaración de inversión/liquidación exterior</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="FEDA_CUANTIA" type="IMPORTE_ECONOMICOType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Valor del importe de la inversión/liquidación efectuada (Sólo vendrá informado en caso de que el nodo FEDA_INFO = 0)</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="FEDA_APLICA_RI" type="BOOLEANType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Indica si se aplicar la operación del fichero de control del registro de inversiones</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="FEDA_INFO_RI" type="BOOLEANType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Indica si se ha interesado del fedatario la entrega del fichero de control del registro de inversiones</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="FEDA_DAT_RI" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Identificadores únicos de los ficheros de inversiones aportados por el fedatario </xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="STRINGType">
+						<xs:maxLength value="4200"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="PARENTESCO" type="PARENTESCOType" minOccurs="0" maxOccurs="50">
+				<xs:annotation>
+					<xs:documentation>Datos del parentesco de este interviniente con los sujetos relacionados en otra intervención del mismo objeto de la operación (Para actos jurídicos del grupo 07 "Donaciones")</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="PARTES_TESTAMENTARIOS" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Datos para el trámite Partes Testamentarios</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="CLASE_TESTAMENTO" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Clase del testamento (1- TESTAMENTO ABIERTO. 2- TESTAMENTO CERRADO. 3- A.P.T. OLOGRAFO. 4- A.P.T. CERRADO. 5- A.P.T. MILITAR. 6- A.P.T. MARITIMO. 7- A.P.T. SOLO ANTE TESTIGOS. 8- A.P.T. SOLO ANTE ECLESIASTICO. 9- PACTO SUCESORIO. 0- OTRAS MODALIDADES. A- MANCOMUNADO. B- ABIERTO MANCOMUNADO. C- NUNCUPATIVO. D- CAPITULOS MATRIMONIALES. E- HEREDAMIENTO PREVENTIVO. F- DONACION MORTIS CAUSA. G- CODICILO. H- CEDULA TESTAMENTARIA. I- TESTAMENTO DE HERMANDAD. J- PODER TESTATORIO. K- OTORGADO POR COMISARIO). Máximo 1 Carácter</xs:documentation>
+							</xs:annotation>
+							<xs:simpleType>
+								<xs:restriction base="STRINGType">
+									<xs:maxLength value="1"/>
+									<xs:pattern value="[0-9A-K]{1}"/>
+								</xs:restriction>
+							</xs:simpleType>
+						</xs:element>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="ERRORS" type="ERRORSType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Descripción de los errores en la validación de los datos</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="DETALLE_ACCIONESType">
+		<xs:sequence>
+			<xs:element name="SERIE" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Identificador de la serie de acciones</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="STRINGType">
+						<xs:maxLength value="100"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="NUMERACION" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Números de las acciones dentro de la serie</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:maxLength value="25000"/>
+						<xs:pattern value="([1-9][0-9]{0,17}(-[1-9][0-9]{0,17})?)?(,[1-9][0-9]{0,17}(-[1-9][0-9]{0,17})?)*"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="VAL_NOM_UNIT" type="IMPORTE_ECONOMICO_EXTENDEDType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Valor nominal por unidad</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="PRM_EMI_UNIT" type="IMPORTE_ECONOMICO_EXTENDEDType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Prima de emisión por unidad (Actos de Constitución)</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="DOCUMENTO_IDENTIDADType">
+		<xs:sequence>
+			<xs:element name="TIP_DOC_IDE" type="TIPO_DOCUMENTO_IDENTIDADType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Tipo de documento de identidad ("1" NIF, "2" NIE, "3" Pasaporte, "4" Menores de edad que carezcan de dicho número, "5" Entidad recién constituida que carece de NIF, "6" Falta de aportación del NIF o NIF aportado pero no válido, "7" Cónyuge cotitular que no interviene, "8" Documento de identificación de extranjero, "9" Documento de persona jurídica extranjera, "10" Falta de aportación de NIF o NIE, "11" Falta de aportación de NIF)</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:choice>
+				<xs:element name="CIR_AUS" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Circunstancias concretas concurrentes de la ausencia del documento de identidad</xs:documentation>
+					</xs:annotation>
+					<xs:simpleType>
+						<xs:restriction base="xs:string">
+							<xs:maxLength value="3000"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:element>
+				<xs:element name="AUS_NIF_CIF_NIE" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Circunstancias concretas concurrentes de la ausencia de NIF, CIF y/o NIE ("3" Pasaporte, "4" Menores de edad que carecen de NIF, "5" Entidad recién constituida que carece de NIF, "8" Documento de identificación de extranjero, "9" Documento de persona jurídica extranjera, "12" Tarjeta de residencia, "13" Cargo público u otros motivos [inválido], "14" Persona jurídica sin código de identificación según su propia legislación [inválido], "15" Documento de identificación distinto o ausencia de cualquiera de ellos)</xs:documentation>
+					</xs:annotation>
+					<xs:simpleType>
+						<xs:restriction base="xs:string">
+							<xs:enumeration value="3"/>
+							<xs:enumeration value="4"/>
+							<xs:enumeration value="5"/>
+							<xs:enumeration value="8"/>
+							<xs:enumeration value="9"/>
+							<xs:enumeration value="12"/>
+							<xs:enumeration value="13"/>
+							<xs:enumeration value="14"/>
+							<xs:enumeration value="15"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:element>
+			</xs:choice>
+			<xs:element name="NUM_DOC_IDE" type="NUMERO_DOCUMENTO_IDENTIDADType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Número del documento de identidad</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="NUM_DOC_IDE_RESERVADO" type="BOOLEANType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Indica si el notario es consciente de que el número del documento de identidad es reservado y ratifica que corresponde al sujeto informado, siendo correcto su uso.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:simpleType name="TIPO_DOCUMENTO_IDENTIDADType">
+		<xs:annotation>
+			<xs:documentation>Tipo de documento de identidad ("1" NIF, "2" NIE, "3" Pasaporte, "4" Menores de edad que carezcan de dicho número, "5" Entidad recién constituida que carece de NIF, "6" Falta de aportación del NIF o NIF aportado pero no válido, "7" Cónyuge cotitular que no interviene, "8" Documento de identificación de extranjero, "9" Documento de persona jurídica extranjera, "10" Falta de aportación de NIF o NIE, "11" Falta de aportación de NIF)</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="1"/>
+			<xs:enumeration value="2"/>
+			<xs:enumeration value="3"/>
+			<xs:enumeration value="4"/>
+			<xs:enumeration value="5"/>
+			<xs:enumeration value="6"/>
+			<xs:enumeration value="7"/>
+			<xs:enumeration value="8"/>
+			<xs:enumeration value="9"/>
+			<xs:enumeration value="10"/>
+			<xs:enumeration value="11"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="TIPO_DOCUMENTO_IDENTIDAD_TITULARType">
+		<xs:annotation>
+			<xs:documentation>Tipo de documento de identidad ("1" NIF, "2" NIE, "3" Pasaporte, "4" Menores de edad que carezcan de dicho número, "6" Falta de aportación del NIF o NIF aportado pero no válido, "8" Documento de identificación de extranjero, "10" Falta de aportación de NIF o NIE)</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="1"/>
+			<xs:enumeration value="2"/>
+			<xs:enumeration value="3"/>
+			<xs:enumeration value="4"/>
+			<xs:enumeration value="6"/>
+			<xs:enumeration value="8"/>
+			<xs:enumeration value="10"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="NUMERO_DOCUMENTO_IDENTIDADType">
+		<xs:restriction base="STRINGType">
+			<xs:maxLength value="25"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="NIF_CIFType">
+		<xs:restriction base="STRINGType">
+			<xs:maxLength value="9"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="NOMBRE_PERSONAType">
+		<xs:restriction base="STRINGType">
+			<xs:maxLength value="200"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="APELLIDOS_PERSONAType">
+		<xs:restriction base="STRINGType">
+			<xs:maxLength value="200"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:complexType name="SUJETOType">
+		<xs:sequence>
+			<xs:element name="SUJETO_ID" type="xs:integer">
+				<xs:annotation>
+					<xs:documentation>Identificador interno del sujeto</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="DOC_IDE" type="DOCUMENTO_IDENTIDADType">
+				<xs:annotation>
+					<xs:documentation>Documento de identidad del sujeto</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="NOM" type="NOMBRE_PERSONAType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Nombre</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="APE1_RAZ_SOC" type="APELLIDOS_PERSONAType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Primer apellido o razón social</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="APE2" type="APELLIDOS_PERSONAType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Segundo apellido</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="APE_SOL" type="APELLIDOS_PERSONAType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Apellido de soltera</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="NUM_NIF_CON" type="NIF_CIFType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Número de NIF del cónyuge</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="NAC" type="CODIGO_PAISType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Código de país, según la codificación oficial de Países y Territorios aprobada por OM 9-12-99</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="NAC_ISO" type="CODIGO_PAIS_ISOType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Código de país, según la codificación ISO 3166-1 alpha 3</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="FEC_NAC" type="FECHAType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Fecha de nacimiento</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="PRF" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Profesión</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="STRINGType">
+						<xs:maxLength value="25"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="DOM" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Datos del domicilio</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="RES_ESP" type="BOOLEANType" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Residencia en España</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:sequence>
+							<xs:element name="DOM_ESP" type="DIRECCION_SUJETOType" minOccurs="0">
+								<xs:annotation>
+									<xs:documentation>Datos del domicilio en España</xs:documentation>
+								</xs:annotation>
+							</xs:element>
+							<xs:element name="DOM_EXT" type="DIRECCION_EXTRANJERAType" minOccurs="0">
+								<xs:annotation>
+									<xs:documentation>Datos del domicilio en el Extranjero</xs:documentation>
+								</xs:annotation>
+							</xs:element>
+						</xs:sequence>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="NORM_NOM" type="NOMBRE_PERSONAType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Nombre Normalizado del Sujeto </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="NORM_APE1_RAZ_SOC" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Apellido o Razón Social Normalizada del Sujeto</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="REPRESENTACIONType">
+		<xs:annotation>
+			<xs:documentation>Representacion entre sujeto y representate</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="SUJETO_ID" type="xs:integer">
+				<xs:annotation>
+					<xs:documentation>Identificador interno del sujeto Representado</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="REPRESENTANTE_ID">
+				<xs:annotation>
+					<xs:documentation>Identificador interno del Sujeto Representante</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="CARGOType">
+		<xs:annotation>
+			<xs:documentation>Información del Cargo en una sociedad (En los actos de nombramiento, cese o renuncia de cargos)</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="CLA_CARGO" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>
+						Clase de cargo 
+						("1" Administrador, 
+						 "2" Consejo de Administración, 
+						 "3" Administración Concursal, 
+						 "4" Liquidador, 
+						 "5" Consejo de Liquidación, 
+						 "6" Presidente, 
+						 "7" Vicepresidente, 
+						 "8" Secretario, 
+						 "9" Vicesecretario, 
+						 "10" Vocal, 
+						 "11" Tesorero, 
+						 "12" Interventor, 
+						 "13" Auditor, 
+						 "14" Consejo Rector, 
+						 "15" Director Gerente, 
+						 "16" Comisión de Vigilancia, 
+						 "17" Consejo Social, 
+						 "18" Comité de Recursos, 
+						 "19" Comisión Ejecutiva, 
+						 "99" Otros)
+					</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:enumeration value="1"/>
+						<xs:enumeration value="2"/>
+						<xs:enumeration value="3"/>
+						<xs:enumeration value="4"/>
+						<xs:enumeration value="5"/>
+						<xs:enumeration value="6"/>
+						<xs:enumeration value="7"/>
+						<xs:enumeration value="8"/>
+						<xs:enumeration value="9"/>
+						<xs:enumeration value="10"/>
+						<xs:enumeration value="11"/>
+						<xs:enumeration value="12"/>
+						<xs:enumeration value="13"/>
+						<xs:enumeration value="14"/>
+						<xs:enumeration value="15"/>
+						<xs:enumeration value="16"/>
+						<xs:enumeration value="17"/>
+						<xs:enumeration value="18"/>
+						<xs:enumeration value="19"/>
+						<xs:enumeration value="99"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="TIP_CARGO" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Tipo de cargo ("1" Único, "2" Solidario, "3" Mancomunado, "4" Administrador Concursal, "5" Auxiliar delegado, "6" Presidente, "7" Vicepresidente, "8" Secretario, "9" Vicesecretario, "10" Vocal, "11" Consejero delegado, "12" Consejero delegado solidario, "13" Consejero delegado mancomunado, "14" Mediador concursal)</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:enumeration value="1"/>
+						<xs:enumeration value="2"/>
+						<xs:enumeration value="3"/>
+						<xs:enumeration value="4"/>
+						<xs:enumeration value="5"/>
+						<xs:enumeration value="6"/>
+						<xs:enumeration value="7"/>
+						<xs:enumeration value="8"/>
+						<xs:enumeration value="9"/>
+						<xs:enumeration value="10"/>
+						<xs:enumeration value="11"/>
+						<xs:enumeration value="12"/>
+						<xs:enumeration value="13"/>
+						<xs:enumeration value="14"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="OTR_CARGO" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Otro Cargo distinto de los propuestos. Descripción del cargo. (Sólo se debe informar cuando CLA_CARGO=99)</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:maxLength value="1000"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="TRUSTType">
+		<xs:sequence>
+			<xs:element name="NOM" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Nombre del Trust</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:maxLength value="200"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="PAIS_CONS" type="CODIGO_PAISType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Código de país de constitución del Trust, según la codificación oficial de Países y Territorios aprobada por OM 9-12-99</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="PAIS_CONS_ISO" type="CODIGO_PAIS_ISOType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Código de país de constitución del Trust, según la codificación ISO 3166-1 alpha 3</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="NUM_CONT" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Número de contrato</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:maxLength value="100"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="FEC_CONS" type="FECHAType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Fecha de constitución del Trust</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="COP_DOC" type="BOOLEANType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Indica si el notario ha obtenido copia de la documentación contractual del Trust con la información señalada en el art. 9.5 de RD 304/2014</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="PARENTESCOType">
+		<xs:annotation>
+			<xs:documentation>Datos del parentesco de este interviniente con los sujetos relacionados en otra intervención del mismo objeto de la operación (Para actos jurídicos del grupo 07 "Donaciones")</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="TIPO_PARENTESCO" type="TIPO_PARENTESCOType">
+				<xs:annotation>
+					<xs:documentation>Información del tipo de parentesco de este interviniente con respecto al sujeto indicado</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ID_SUJ" type="ID_SECUENCIALType">
+				<xs:annotation>
+					<xs:documentation>Identificador del sujeto en el documento con el que tiene el parentesco indicado</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:simpleType name="TIPO_PARENTESCOType">
+		<xs:annotation>
+			<xs:documentation>Tipo de parentesco del interviniente con respecto al sujeto ("1" Cónyuge, "2" Descendiente, "3" Ascendiente, "4" Colateral, "99" Otros)</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="1"/>
+			<xs:enumeration value="2"/>
+			<xs:enumeration value="3"/>
+			<xs:enumeration value="4"/>
+			<xs:enumeration value="99"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:complexType name="PARIENTESType">
+		<xs:annotation>
+			<xs:documentation>Datos de los parientes del sujeto</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="PADRE_NOMBRE" type="STR70Type" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Nombre del Padre</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="MADRE_NOMBRE" type="STR70Type" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Nombre de la Madre</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="CONYUGE" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Apellidos y Nombre del Conyuge</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="NOMBRE" type="STR70Type">
+							<xs:annotation>
+								<xs:documentation>Nombre del Cónyuge</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="APE1" type="STR60Type" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Primer Apellido del Cónyuge</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="APE2" type="STR60Type" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Segundo Apellido del Cónyuge</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:simpleType name="STR70Type">
+		<xs:restriction base="STRINGType">
+			<xs:maxLength value="60"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="STR60Type">
+		<xs:restriction base="STRINGType">
+			<xs:maxLength value="60"/>
+		</xs:restriction>
+	</xs:simpleType>
+</xs:schema>

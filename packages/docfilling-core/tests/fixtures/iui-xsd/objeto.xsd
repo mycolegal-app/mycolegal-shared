@@ -1,0 +1,379 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://inti.notariado.org/XML/IU2007" targetNamespace="http://inti.notariado.org/XML/IU2007" elementFormDefault="qualified" attributeFormDefault="unqualified">
+	<xs:annotation>
+		<xs:documentation>Definición de tipos para los objetos</xs:documentation>
+	</xs:annotation>
+	<xs:include schemaLocation="comun.xsd"/>
+	<xs:include schemaLocation="direccion.xsd"/>
+	<xs:element name="FIN_URB">
+		<xs:annotation>
+			<xs:documentation>Datos de la finca urbana</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="CLA_FIN_URB" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Clase de finca urbana ("1" Vivienda-piso libre, "2" Vivienda unifamiliar libre, "3" Vivienda-piso de protegida, "4" Vivienda unifamiliar protegida, "5" Aparcamiento, "6" Trastero, "7" Local de negocio en edificio con viviendas, "8" Local de negocio en edificio sin viviendas, "9" Oficina en edificio con viviendas, "10" Oficina en edificio sin viviendas, "11" Nave industrial, "12" Otras edificaciones, "13" Terreno o solar)</xs:documentation>
+					</xs:annotation>
+					<xs:simpleType>
+						<xs:restriction base="xs:string">
+							<xs:enumeration value="1"/>
+							<xs:enumeration value="2"/>
+							<xs:enumeration value="3"/>
+							<xs:enumeration value="4"/>
+							<xs:enumeration value="5"/>
+							<xs:enumeration value="6"/>
+							<xs:enumeration value="7"/>
+							<xs:enumeration value="8"/>
+							<xs:enumeration value="9"/>
+							<xs:enumeration value="10"/>
+							<xs:enumeration value="11"/>
+							<xs:enumeration value="12"/>
+							<xs:enumeration value="13"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:element>
+				<xs:element name="TIP_CON" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Tipo de construcción ("2" Nueva construcción en promoción para venta, "3" Nueva construcción en promoción cooperativa o comunitaria, "4" Segunda mano, "5" En construcción)</xs:documentation>
+					</xs:annotation>
+					<xs:simpleType>
+						<xs:restriction base="xs:string">
+							<xs:enumeration value="2"/>
+							<xs:enumeration value="3"/>
+							<xs:enumeration value="4"/>
+							<xs:enumeration value="5"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:element>
+				<xs:element name="SUP" type="SUPERFICIEType" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Superficie</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="SUP_PAR" type="SUPERFICIEType" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Superficie de la parcela</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="APA_ANE" type="BOOLEANType" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Aparcamiento anejo</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="TRA_ANE" type="BOOLEANType" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Trastero anejo</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="SUP_FIN_URB" type="SUP_FINType" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Datos de la superficie del inmueble</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="FIN_URB_IDE" type="IDENTIFICACION_FINCAType" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Datos de identificación de la finca</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="VAL" type="IMPORTE_ECONOMICOType" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Cuantía de la finca</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="DIR_URB" type="DIRECCION_URBANAType" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Dirección</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="FIN_RUS">
+		<xs:annotation>
+			<xs:documentation>Datos de la finca rústica</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="NAT" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Naturaleza de la finca rústica ("1" Secano, "2" Regadío, "3" Mixta)</xs:documentation>
+					</xs:annotation>
+					<xs:simpleType>
+						<xs:restriction base="xs:string">
+							<xs:enumeration value="1"/>
+							<xs:enumeration value="2"/>
+							<xs:enumeration value="3"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:element>
+				<xs:element name="SUP" type="SUPERFICIEType" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Superficie</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="FIN_RUS_IDE" type="IDENTIFICACION_FINCAType" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Datos de identificación de la finca</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="VAL" type="IMPORTE_ECONOMICOType" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Cuantía de la finca</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="DIR_RUS" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Dirección</xs:documentation>
+					</xs:annotation>
+					<xs:complexType>
+						<xs:sequence>
+							<xs:element name="COD_PRV" type="CODIGO_PROVINCIAType" minOccurs="0">
+								<xs:annotation>
+									<xs:documentation>Código INE de la provincia</xs:documentation>
+								</xs:annotation>
+							</xs:element>
+							<xs:element name="COD_MUN" type="CODIGO_MUNICIPIOType" minOccurs="0">
+								<xs:annotation>
+									<xs:documentation>Código INE del municipio</xs:documentation>
+								</xs:annotation>
+							</xs:element>
+							<xs:element name="PAR" minOccurs="0">
+								<xs:annotation>
+									<xs:documentation>Paraje</xs:documentation>
+								</xs:annotation>
+								<xs:simpleType>
+									<xs:restriction base="STRINGType">
+										<xs:maxLength value="30"/>
+									</xs:restriction>
+								</xs:simpleType>
+							</xs:element>
+							<xs:element name="POL" minOccurs="0">
+								<xs:annotation>
+									<xs:documentation>Polígono</xs:documentation>
+								</xs:annotation>
+								<xs:simpleType>
+									<xs:restriction base="xs:string">
+										<xs:maxLength value="3"/>
+										<xs:pattern value="([0-9])+"/>
+									</xs:restriction>
+								</xs:simpleType>
+							</xs:element>
+							<xs:element name="PAC" minOccurs="0">
+								<xs:annotation>
+									<xs:documentation>Parcela</xs:documentation>
+								</xs:annotation>
+								<xs:simpleType>
+									<xs:restriction base="xs:string">
+										<xs:maxLength value="5"/>
+										<xs:pattern value="([0-9])+"/>
+									</xs:restriction>
+								</xs:simpleType>
+							</xs:element>
+						</xs:sequence>
+					</xs:complexType>
+				</xs:element>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:complexType name="DES_VALType">
+		<xs:sequence>
+			<xs:element name="DES" type="DESCRIPCION_OBJETOType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Descripción</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="VAL" type="IMPORTE_ECONOMICOType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Valor</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="IDENTIFICACION_FINCAType">
+		<xs:sequence>
+			<xs:element name="VER_CAT" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Veracidad catastral ("1" Referencia identificada por el Notario, "2" Referencia dudosa, "3" Referencia de la finca de origen, "5" No consta la referencia catastral)</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:enumeration value="1"/>
+						<xs:enumeration value="2"/>
+						<xs:enumeration value="3"/>
+						<xs:enumeration value="5"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="REF_CAT" type="REFERENCIA_CATASTRALType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Referencias catastrales</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="AUS_REF_CAT" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Motivo de la ausencia de referencia catastral</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:maxLength value="3000"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="COD_REG" type="CODIGO_REGISTROType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Finca registral. Código del registro de la propiedad</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="NOM_REG" type="NOMBRE_REGISTROType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Nombre del registro de la propiedad</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="SEC" type="SECCIONType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Finca registral. Sección</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="NUM_FIN" type="NUMERO_FINCAType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Finca registral. Número de finca</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="NUM_SUB_FIN" type="NUMERO_SUBFINCAType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Finca registral. Número de subfinca</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="COD_REG_UNI_FIN" type="CODIGO_REGISTRAL_UNICO_FINCAType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Finca registral. Código Registral Único de la finca</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="OTR_NUM_REG" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Otros números de finca registral</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="COD_REG" type="CODIGO_REGISTROType" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Finca registral. Código del registro de la propiedad</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="NOM_REG" type="NOMBRE_REGISTROType" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Nombre del registro de la propiedad</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="SEC" type="SECCIONType" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Finca registral. Sección</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="NUM_FIN" type="NUMERO_FINCAType" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Finca registral. Número de finca</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="NUM_SUB_FIN" type="NUMERO_SUBFINCAType" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Finca registral. Número de subfinca</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="COD_REG_UNI_FIN" type="CODIGO_REGISTRAL_UNICO_FINCAType" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Finca registral. Código Registral Único de la finca</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="SUP_FINType">
+		<xs:annotation>
+			<xs:documentation>Datos de la superficie del inmueble</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="SUP_CON_ELE_COM" type="SUPERFICIEType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Superficie construida de la finca con elementos comunes (Es la superficie construida sin partes comunes más la parte proporcional que le corresponda según su cuota en la superficie de los elementos comunes del edificio)</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="SUP_SIN_ELE_COM" type="SUPERFICIEType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Superficie construida de la finca sin elementos comunes (Es la superficie útil, sin excluir la superficie ocupada por los elementos interiores mencionados en dicha definición e incluyendo los cerramientos exteriores al 100 por 100 o al 50 por 100, según se trate, respectivamente, de cerramientos de fachada o medianeros, o de cerramientos compartidos con otros elementos del mismo edificio)</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="SUP_UTIL" type="SUPERFICIEType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Superficie útil de la finca (Es la superficie del suelo delimitado por el perímetro definido por la cara interior de los cerramientos externos de un edificio o de un elemento de un edificio, incluyendo la mitad de la superficie del suelo de sus espacios exteriores de uso privativo cubiertos, tales como terrazas, balcones y tendederos, porches, muelles de carga, voladizos, etc., medida sobre la proyección horizontal de su cubierta.
+No se considerará superficie útil la superficie ocupada en planta por cerramientos interiores fijos, por los elementos estructurales verticales, y por las canalizaciones o conductos con sección horizontal superior a los 100 centímetros cuadrados y la superficie del suelo cuya altura libre sea inferior a 1,5 metros.
+Tampoco se considerará superficie útil la ocupada por los espacios exteriores no cubiertos.)</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="SUP_IND" type="SUPERFICIEType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Superficie de la finca sin especificar de qué tipo se trata (no conocida)</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:simpleType name="REFERENCIA_CATASTRALType">
+		<xs:restriction base="STRINGType">
+			<xs:maxLength value="20"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="SUPERFICIEType">
+		<xs:restriction base="xs:unsignedLong">
+			<xs:totalDigits value="10"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="DESCRIPCION_OBJETOType">
+		<xs:restriction base="xs:string">
+			<xs:maxLength value="3000"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="NUMERO_ACCIONESType">
+		<xs:restriction base="xs:unsignedLong">
+			<xs:totalDigits value="12"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="CODIGO_REGISTROType">
+		<xs:restriction base="xs:string">
+			<xs:minLength value="3"/>
+			<xs:maxLength value="5"/>
+			<xs:pattern value="([0-9])+"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="NOMBRE_REGISTROType">
+		<xs:restriction base="STRINGType">
+			<xs:maxLength value="100"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="SECCIONType">
+		<xs:restriction base="xs:string">
+			<xs:length value="2"/>
+			<xs:pattern value="([0-9])+"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="NUMERO_FINCAType">
+		<xs:restriction base="xs:string">
+			<xs:length value="6"/>
+			<xs:pattern value="([0-9])+"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="NUMERO_SUBFINCAType">
+		<xs:restriction base="xs:string">
+			<xs:length value="6"/>
+			<xs:pattern value="([0-9]|[A-Z])+"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="CODIGO_REGISTRAL_UNICO_FINCAType">
+		<xs:restriction base="xs:string">
+			<xs:length value="14"/>
+			<xs:pattern value="([0-9]|[A-Z])+"/>
+		</xs:restriction>
+	</xs:simpleType>
+</xs:schema>

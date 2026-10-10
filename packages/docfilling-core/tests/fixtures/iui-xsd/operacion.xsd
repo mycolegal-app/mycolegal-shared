@@ -1,0 +1,337 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema targetNamespace="http://inti.notariado.org/XML/IU2007" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://inti.notariado.org/XML/IU2007" elementFormDefault="qualified" attributeFormDefault="unqualified">
+	<xs:annotation>
+		<xs:documentation>Definición de tipos para las operaciones</xs:documentation>
+	</xs:annotation>
+	<xs:include schemaLocation="comun.xsd"/>
+	<xs:include schemaLocation="direccion.xsd"/>
+	<xs:include schemaLocation="sujeto.xsd"/>
+	<xs:element name="PAG">
+		<xs:annotation>
+			<xs:documentation>Datos del pago</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="MED_PAG" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Medio de pago de un compareciente ("1" Efectivo metálico, "2" Cheque bancario al portador, "3" Cheque bancario nominativo, "4" Cheque al portador, "5" Cheque nominativo, "6" Transmisión de bienes o derechos en pago, "7" Transferencia o domiciliación bancaria, "8" Subrogación, "9" Letras o pagarés, "10" Aplazamiento simple, "11" Negativa a justificar el medio de pago, "12" Retenido, "13" Pago aplazado,"14" Pago aplazado garantizado, "15" Pago aplazado no garantizado, "16" Ingreso de efectivo en cuenta bancaria)</xs:documentation>
+					</xs:annotation>
+					<xs:simpleType>
+						<xs:restriction base="xs:string">
+							<xs:enumeration value="1"/>
+							<xs:enumeration value="2"/>
+							<xs:enumeration value="3"/>
+							<xs:enumeration value="4"/>
+							<xs:enumeration value="5"/>
+							<xs:enumeration value="6"/>
+							<xs:enumeration value="7"/>
+							<xs:enumeration value="8"/>
+							<xs:enumeration value="9"/>
+							<xs:enumeration value="10"/>
+							<xs:enumeration value="11"/>
+							<xs:enumeration value="12"/>
+							<xs:enumeration value="13"/>
+							<xs:enumeration value="14"/>
+							<xs:enumeration value="15"/>
+							<xs:enumeration value="16"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:element>
+				<xs:element name="MOM_PAG" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Momento del pago ("1" Anterior a la firma del documento, "2" Simultáneo a la firma del documento, "3" Posterior al otorgamiento del documento)</xs:documentation>
+					</xs:annotation>
+					<xs:simpleType>
+						<xs:restriction base="xs:string">
+							<xs:enumeration value="1"/>
+							<xs:enumeration value="2"/>
+							<xs:enumeration value="3"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:element>
+				<xs:element name="CUA_PAG" type="IMPORTE_ECONOMICOType" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Cuantía del pago de un compareciente</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="PRO" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Procedencia ("0" Interior, "1" Exterior)</xs:documentation>
+					</xs:annotation>
+					<xs:simpleType>
+						<xs:restriction base="xs:string">
+							<xs:enumeration value="0"/>
+							<xs:enumeration value="1"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:element>
+				<xs:element name="JUS_MAN" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Justificado/Acreditado o manifestado ("0" Manifestado, "1" Justificado/Acreditado)</xs:documentation>
+					</xs:annotation>
+					<xs:simpleType>
+						<xs:restriction base="xs:string">
+							<xs:enumeration value="0"/>
+							<xs:enumeration value="1"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:element>
+				<xs:element name="FEC_PAG" type="FECHAType" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Fecha del pago</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="S1" type="BOOLEANType" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Presentación S1</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="IDE_PAG" type="ID_SECUENCIALType" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Identificador del pago en la operación</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="INFOS_PAG" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Informaciones adicionales referentes al pago</xs:documentation>
+					</xs:annotation>
+					<xs:complexType>
+						<xs:sequence>
+							<xs:element name="INFO_PAG" type="PREGUNTA_NIVEL1Type" minOccurs="0" maxOccurs="unbounded"/>
+						</xs:sequence>
+					</xs:complexType>
+				</xs:element>
+				<xs:element name="ERRORS" type="ERRORSType" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Descripción de los errores en la validación de los datos</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="S1">
+		<xs:annotation>
+			<xs:documentation>Presentación S1</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="ACR_S1" type="BOOLEANType" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Presentación S1</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="OBL_S1" type="BOOLEANType" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Indica la obligatoriedad de la presentación del S1</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="IDE_PAG" type="ID_SECUENCIALType" maxOccurs="unbounded">
+					<xs:annotation>
+						<xs:documentation>Identificador del pago en la operación</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="DES_INT" type="STRINGType">
+		<xs:annotation>
+			<xs:documentation>Descripción de la intervención</xs:documentation>
+		</xs:annotation>
+	</xs:element>
+	<xs:simpleType name="IMPUESTOType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="1"/>
+			<xs:enumeration value="2"/>
+			<xs:enumeration value="3"/>
+			<xs:enumeration value="4"/>
+			<xs:enumeration value="5"/>
+			<xs:enumeration value="6"/>
+			<xs:enumeration value="7"/>
+			<xs:enumeration value="8"/>
+			<xs:enumeration value="9"/>
+			<xs:enumeration value="10"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:complexType name="PREGUNTA_NIVEL1Type">
+		<xs:sequence>
+			<xs:element name="TIP_INF">
+				<xs:annotation>
+					<xs:documentation>Tipo de información ("1" Cargo en cuenta o libreta para el libramiento del/los cheque/s bancario/s,  "3" Préstamo hipotecario vinculado a la operación. Cuantía, "4" Cheque bancario al portador generado por otra operación distinta, "5" Entrega contra efectivo para el libramiento del/los cheque/s bancario/s, "6" ¿se aportan datos del LIBRADOR en TODOS los cheques?, "8" el/los librador/es fue/ron el/los siguientes otorgantes, "10" el/los librador/es fue/ron un/os tercero ajeno, "16" ¿se aportan datos del BENEFICIARIO en TODOS los cheques?, "18" el/los beneficiario/s fue/ron el/los siguientes otorgantes, " 20" el/los beneficiario/s fue/ron un/os tercero ajeno, "21" ¿Consta o no en el instrumento público la numeración de todas la/s cuenta/s de cargo?, "23" ¿Consta o no en el instrumento público la numeración de todas la/s cuenta/s de abono?, "25" ¿se aportan datos del ORDENANTE en TODAS las transferencias?, "27" el/los  ordenante/s fue/ron el/los siguientes otorgantes, "29" el/los ordenante/s fue/ron un/os tercero ajeno, "30" ¿se aportan datos del BENEFICIARIO en TODAS las transferencias?, "35" ¿El/los librador/es es/son un Gestor, Gestoría o Profesional que intermedia en la operación?, "36" ¿El/los beneficiario/s es/son un Gestor, Gestoría o Profesional que intermedia en la operación?, "37" ¿El/los ordenante/s es/son un Gestor, Gestoría o Profesional que intermedia en la operación?)</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:enumeration value="1"/>
+						<xs:enumeration value="3"/>
+						<xs:enumeration value="4"/>
+						<xs:enumeration value="5"/>
+						<xs:enumeration value="6"/>
+						<xs:enumeration value="8"/>
+						<xs:enumeration value="10"/>
+						<xs:enumeration value="16"/>
+						<xs:enumeration value="18"/>
+						<xs:enumeration value="20"/>
+						<xs:enumeration value="21"/>
+						<xs:enumeration value="23"/>
+						<xs:enumeration value="25"/>
+						<xs:enumeration value="27"/>
+						<xs:enumeration value="29"/>
+						<xs:enumeration value="30"/>
+						<xs:enumeration value="35"/>
+						<xs:enumeration value="36"/>
+						<xs:enumeration value="37"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="RESPUESTA">
+				<xs:annotation>
+					<xs:documentation>Respuesta de la pregunta</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:choice>
+						<xs:element name="CUA" type="IMPORTE_ECONOMICOType" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Cuantía</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="SI_NO" type="BOOLEANType" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Respuesta de tipo lógica SI o NO</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="OTORGANTE" minOccurs="0" maxOccurs="unbounded">
+							<xs:annotation>
+								<xs:documentation>Otorgantes que intervienen en el acto</xs:documentation>
+							</xs:annotation>
+							<xs:complexType>
+								<xs:sequence>
+									<xs:element name="ID_SUJ" type="ID_SECUENCIALType">
+										<xs:annotation>
+											<xs:documentation>Identificador del sujeto otorgante en el documento</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="CUA" type="IMPORTE_ECONOMICOType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Cuantía aportada por el otorgante</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+								</xs:sequence>
+							</xs:complexType>
+						</xs:element>
+					</xs:choice>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="INFO_PAG" minOccurs="0" maxOccurs="unbounded">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="TIP_INF">
+							<xs:annotation>
+								<xs:documentation>Tipo de información ("2" ¿Constan en el instrumento público el/los código/s de esa/s cuenta/s?, "7" Importe de los cheques sobre los que no se aporta información del librador, "9" ¿Es un Gestor, Gestoría o Profesional que intermedia en la operación?, "32" Importe que es cobrado por un tercero ajeno, "11" Importe que es pagado por un tercero ajeno, "12" Nombre/apellidos o razón social, "13" Nacionalidad, "14" Tipo de documento (NIF; NIE; CIF,…), "15" Nº de documento, "17" Importe de los cheques sobre los que no se aporta información del BENEFICIARIO, "22" Importe de las transferencias sobre los que no se aporta información de la/s cuenta/s de cargo, "24" Importe de las transferencias sobre los que no se aporta información de la/s cuenta/s de abono, "26" Importe de las transferencias sobre los que no se aporta información del ordenante, "31" Importe de las transferencias sobre los que no se aporta información del BENEFICIARIO, "34" ¿Se trata de un préstamo e-notario?, "38" Cuantia [para otorgante Gestor, Gestoría o Profesional que intermedia en la operación de 1er nivel])</xs:documentation>
+							</xs:annotation>
+							<xs:simpleType>
+								<xs:restriction base="xs:string">
+									<xs:enumeration value="2"/>
+									<xs:enumeration value="7"/>
+									<xs:enumeration value="9"/>
+									<xs:enumeration value="11"/>
+									<xs:enumeration value="12"/>
+									<xs:enumeration value="13"/>
+									<xs:enumeration value="14"/>
+									<xs:enumeration value="15"/>
+									<xs:enumeration value="17"/>
+									<xs:enumeration value="22"/>
+									<xs:enumeration value="24"/>
+									<xs:enumeration value="26"/>
+									<xs:enumeration value="31"/>
+									<xs:enumeration value="32"/>
+									<xs:enumeration value="34"/>
+									<xs:enumeration value="38"/>
+								</xs:restriction>
+							</xs:simpleType>
+						</xs:element>
+						<xs:element name="TERCERO" type="ID_SECUENCIALType" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Identificador del tercero ajeno</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="RESPUESTA">
+							<xs:annotation>
+								<xs:documentation>Respuesta de la pregunta</xs:documentation>
+							</xs:annotation>
+							<xs:complexType>
+								<xs:choice>
+									<xs:element name="CUA" type="IMPORTE_ECONOMICOType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Cuantía</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="SI_NO" type="BOOLEANType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Respuesta de tipo lógica SI o NO</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="RESP_TEXTUAL" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Respuesta de texto</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="xs:string">
+												<xs:maxLength value="500"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:element>
+									<xs:sequence minOccurs="0">
+										<xs:element name="NACIONALIDAD" type="CODIGO_PAISType" minOccurs="0">
+											<xs:annotation>
+												<xs:documentation>Código de país, según la codificación oficial de Países y Territorios aprobada por OM 9-12-99</xs:documentation>
+											</xs:annotation>
+										</xs:element>
+										<xs:element name="NACIONALIDAD_ISO" type="CODIGO_PAIS_ISOType" minOccurs="0">
+											<xs:annotation>
+												<xs:documentation>Código de país, según la codificación ISO 3166-1 alpha 3</xs:documentation>
+											</xs:annotation>
+										</xs:element>
+									</xs:sequence>
+									<xs:element name="DOC_IDE" type="DOCUMENTO_IDENTIDADType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Documento de identidad</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+								</xs:choice>
+							</xs:complexType>
+						</xs:element>
+						<xs:element name="INFO_PAG" minOccurs="0">
+							<xs:complexType>
+								<xs:sequence>
+									<xs:element name="TIP_INF">
+										<xs:annotation>
+											<xs:documentation>Tipo de información ("33" Cuantia [para otorgante Gestor, Gestoria o Profesional que intermedia en la operacion])</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="xs:string">
+												<xs:enumeration value="33"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:element>
+									<xs:element name="RESPUESTA">
+										<xs:annotation>
+											<xs:documentation>Respuesta de la pregunta</xs:documentation>
+										</xs:annotation>
+										<xs:complexType>
+											<xs:choice>
+												<xs:element name="CUA" type="IMPORTE_ECONOMICOType" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Cuantía</xs:documentation>
+													</xs:annotation>
+												</xs:element>
+											</xs:choice>
+										</xs:complexType>
+									</xs:element>
+								</xs:sequence>
+							</xs:complexType>
+						</xs:element>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+</xs:schema>

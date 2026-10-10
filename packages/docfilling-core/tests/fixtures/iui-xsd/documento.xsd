@@ -1,0 +1,3121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- edited with XMLSPY v5 rel. 4 U (http://www.xmlspy.com) by INTI S.L. (INTI S.L.) -->
+<xs:schema targetNamespace="http://inti.notariado.org/XML/IU2007" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://inti.notariado.org/XML/IU2007" elementFormDefault="qualified" attributeFormDefault="unqualified">
+	<xs:include schemaLocation="comun.xsd"/>
+	<xs:include schemaLocation="direccion.xsd"/>
+	<xs:include schemaLocation="sujeto.xsd"/>
+	<xs:include schemaLocation="objeto.xsd"/>
+	<xs:include schemaLocation="operacion.xsd"/>
+	<xs:complexType name="DOCUMENTO_NOTARIAL_IUType">
+		<xs:sequence>
+			<xs:element name="IDE_DOC" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Datos identificativos del documento</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="NUM_EXP_CI" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Número de expediente para las aplicaciones de gestión notarial</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="TIP_DOC" type="TIPO_DOCUMENTOType" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Tipo de documento ("1" Protocolo ordinario, "2" Protocolo especial de protestos, "3" Libro registro de pólizas - Sección A, "4" Libro registro de pólizas - Sección B, "5" Protocolo reservado, "6" Borrador de protocolo ordinario, "12" Libro registro de pólizas indubitadas)</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="NUM_DOC" type="NUMERO_DOCUMENTOType" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Número de protocolo o libro registro</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="NUM_DOC_BIS" type="NUMERO_DOCUMENTO_BISType" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Número de protocolo o libro registro bis</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="FEC_AUT" type="FECHAType" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Fecha de autorización</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="PAIS_AUT" type="CODIGO_PAISType" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Código de país en el que ha sido autorizado, según la codificación oficial de Países y Territorios aprobada por OM 9-12-99</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="PAIS_AUT_ISO" type="CODIGO_PAIS_ISOType" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Código de país en el que ha sido autorizado, según la codificación ISO 3166-1 alpha 3</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="COD_PRV" type="CODIGO_PROVINCIAType" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Código INE de la provincia en el que ha sido autorizado</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="COD_MUN" type="CODIGO_MUNICIPIOType" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Código INE del municipio en el que ha sido autorizado</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="COD_POB_MJ" type="CODIGO_POBLACION_MJType" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Código de población en el que ha sido autorizado, según la codificación del Ministerio de Justicia</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="NOMBRE_POB_MJ" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Nombre de la población correspondiente al COD_POB_MJ</xs:documentation>
+							</xs:annotation>
+							<xs:simpleType>
+								<xs:restriction base="xs:string">
+									<xs:maxLength value="200"/>
+									<xs:pattern value="[^\r\n\t]*"/>
+								</xs:restriction>
+							</xs:simpleType>
+						</xs:element>
+						<xs:element name="LUGAR_DESCRIPCION" type="STR200Type" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Descripción del lugar o población extranjero en el que ha sido autorizado</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="NUM_FOL" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Número de folios que contiene la escritura o póliza</xs:documentation>
+							</xs:annotation>
+							<xs:simpleType>
+								<xs:restriction base="xs:unsignedInt">
+									<xs:minInclusive value="1"/>
+									<xs:totalDigits value="4"/>
+								</xs:restriction>
+							</xs:simpleType>
+						</xs:element>
+						<xs:element name="NUM_FOL_DIG" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Número de folios que contiene la escritura o póliza digitalizada</xs:documentation>
+							</xs:annotation>
+							<xs:simpleType>
+								<xs:restriction base="xs:unsignedInt">
+									<xs:minInclusive value="1"/>
+									<xs:totalDigits value="4"/>
+								</xs:restriction>
+							</xs:simpleType>
+						</xs:element>
+						<xs:element name="CUV_SUS" type="CODIGO_NOTARIOType" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Código de últimas voluntades del Notario sustituto</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="IDIS" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Idiomas del documento</xs:documentation>
+							</xs:annotation>
+							<xs:complexType>
+								<xs:sequence>
+									<xs:element name="IDI" minOccurs="0" maxOccurs="unbounded">
+										<xs:annotation>
+											<xs:documentation>Idioma ("0" Castellano, "1" Catalán, "2" Gallego, "3" Euskera, "4" Valenciano, "5" Otros)</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="xs:string">
+												<xs:enumeration value="0"/>
+												<xs:enumeration value="1"/>
+												<xs:enumeration value="2"/>
+												<xs:enumeration value="3"/>
+												<xs:enumeration value="4"/>
+												<xs:enumeration value="5"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:element>
+								</xs:sequence>
+							</xs:complexType>
+						</xs:element>
+						<xs:element name="TUR_REP" type="BOOLEANType" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Turno de reparto del documento notarial</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="FEC_VEN" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Fecha de vencimiento ("1" Hasta 6 meses, "2" Más de 6 meses)</xs:documentation>
+							</xs:annotation>
+							<xs:simpleType>
+								<xs:restriction base="xs:string">
+									<xs:enumeration value="1"/>
+									<xs:enumeration value="2"/>
+								</xs:restriction>
+							</xs:simpleType>
+						</xs:element>
+						<xs:element name="AUT_NOT" type="BOOLEANType" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Autorización fuera del despacho notarial</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="DOC_REC" type="BOOLEANType" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Documento de rectificación</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="REC_DOC" minOccurs="0" maxOccurs="unbounded">
+							<xs:annotation>
+								<xs:documentation>Rectificación de documento</xs:documentation>
+							</xs:annotation>
+							<xs:complexType>
+								<xs:sequence>
+									<xs:element name="NOM_APE_NOT" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Nombre y apellidos del Notario anterior</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="STRINGType">
+												<xs:maxLength value="130"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:element>
+									<xs:element name="CUV" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Código de últimas voluntades del Notario anterior</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="xs:string">
+												<xs:pattern value="[0-9]{7}|A[0-9]{6}"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:element>
+									<xs:element name="DES_NOT" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Descripción de la Notaría anterior</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="STRINGType">
+												<xs:maxLength value="65"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:element>
+									<xs:element name="COD_CAT" type="CODIGO_NOTARIAType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Código de catastro de la Notaría anterior</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="NUM_DOC" type="NUMERO_DOCUMENTOType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Número de protocolo o libro registro anterior</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="TIP_DOC" type="TIPO_DOCUMENTO_RECTIFICADOType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Tipo de documento ("1" Protocolo ordinario, "2" Protocolo especial de protestos, "3" Libro registro de pólizas - Sección A, "4" Libro registro de pólizas - Sección B, "5" Protocolo reservado, "12" Libro registro de pólizas indubitadas)</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="NUM_DOC_BIS" type="NUMERO_DOCUMENTO_BISType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Número de protocolo o libro registro bis anterior</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="ANO_ANT" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Año anterior</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="xs:unsignedInt">
+												<xs:totalDigits value="4"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:element>
+								</xs:sequence>
+							</xs:complexType>
+						</xs:element>
+						<xs:element name="ES_POL" type="BOOLEANType" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>En los protocolos ordinarios indica si es una póliza</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="MAS_100000" type="BOOLEANType" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>En las pólizas indica si tienen la cuantía superior a 100000 euros</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="ERRORS" type="ERRORSType" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Descripción de los errores en la validación de los datos</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="EXS_DIL" type="BOOLEANType" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Indica si existe diligencia</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="DIL" type="DILIGENCIAType" minOccurs="0" maxOccurs="unbounded">
+							<xs:annotation>
+								<xs:documentation>Información de diligencias</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="TIP_DOC_ANTERIOR" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Tipo de documento anterior ("1" Documento notarial, "2" Documento no notarial)</xs:documentation>
+							</xs:annotation>
+							<xs:simpleType>
+								<xs:restriction base="xs:string">
+									<xs:enumeration value="1"/>
+									<xs:enumeration value="2"/>
+								</xs:restriction>
+							</xs:simpleType>
+						</xs:element>
+						<xs:element name="DESC_DOC_NO_NOTARIAL" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Descripción del documento no notarial</xs:documentation>
+							</xs:annotation>
+							<xs:simpleType>
+								<xs:restriction base="STRINGType">
+									<xs:maxLength value="150"/>
+								</xs:restriction>
+							</xs:simpleType>
+						</xs:element>
+						<xs:element name="DOC_PUB_ANT_REL" type="BOOLEANType" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Indica si existe un documento público anterior relevante (diferente a documento de rectificación)</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="CSV_MAN_TRI" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>CSV de la copia con efectos tributarios</xs:documentation>
+							</xs:annotation>
+							<xs:simpleType>
+								<xs:restriction base="STRINGType">
+									<xs:maxLength value="30"/>
+								</xs:restriction>
+							</xs:simpleType>
+						</xs:element>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="SUJS" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Datos relativos a los sujetos</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="NUM_SUJS" type="xs:unsignedInt">
+							<xs:annotation>
+								<xs:documentation>Número de sujetos que contiene el documento</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="SUJ" minOccurs="0" maxOccurs="unbounded">
+							<xs:annotation>
+								<xs:documentation>Datos del sujeto</xs:documentation>
+							</xs:annotation>
+							<xs:complexType>
+								<xs:sequence>
+									<xs:element name="IDE_SUJ">
+										<xs:annotation>
+											<xs:documentation>Identificador del sujeto en el documento</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="ID_SECUENCIALType">
+												<xs:minExclusive value="0"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:element>
+									<xs:element name="NUM_COLEGIADO_PROCURADOR" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Número de colegiado del procurador</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="STRINGType">
+												<xs:maxLength value="64"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:element>
+									<xs:element name="TIP_COM" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Tipo de comparecencia ("1" Otorgantes/Participantes, "2" Comparecientes sin carácter sustantivo, "3" Otros sujetos afectados no otorgantes/participantes)</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="xs:string">
+												<xs:enumeration value="1"/>
+												<xs:enumeration value="2"/>
+												<xs:enumeration value="3"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:element>
+									<xs:element name="CLA_INT" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Clase de intervención ("1" Testigos, "2" Intérpretes, "3" Prestadores de consentimiento, "4" Sujetos que comparecen a efectos de darse por notificados, "5" Albaceas y contadores, "6" Otros)</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="xs:string">
+												<xs:enumeration value="1"/>
+												<xs:enumeration value="2"/>
+												<xs:enumeration value="3"/>
+												<xs:enumeration value="4"/>
+												<xs:enumeration value="5"/>
+												<xs:enumeration value="6"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:element>
+									<xs:element name="TIP_AFE" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Tipo de afectado no compareciente ("1" Cónyuge no compareciente para el que se adquiere el derecho, "2" Causante, "3" Comunidad de bienes a cuya actividad que queda afecto el bien o derecho que se adquiere, "4" Otros supuestos, "5" Beneficiario de la cancelación)</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="xs:string">
+												<xs:enumeration value="1"/>
+												<xs:enumeration value="2"/>
+												<xs:enumeration value="3"/>
+												<xs:enumeration value="4"/>
+												<xs:enumeration value="5"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:element>
+									<xs:element name="TIP_PER" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Tipo de persona ("1" Persona física, "2" Persona jurídica, "3" Entidad financiera)</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="xs:string">
+												<xs:enumeration value="1"/>
+												<xs:enumeration value="2"/>
+												<xs:enumeration value="3"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:element>
+									<xs:element name="ES_TRUSTEE" type="BOOLEANType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Indica si el sujeto es Titular Fiduciario o Trustee</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="PRE_REP" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Presencia y representación ("1" Presente, "2" Representado (1 rpte.), "3" No presente por otorgamiento diferido o ausente, "4" Representado (2 rpte.), "5" Representado (3 rpte.), "6" Representado (4 rpte.), "7" Representado )</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="xs:string">
+												<xs:enumeration value="1"/>
+												<xs:enumeration value="2"/>
+												<xs:enumeration value="3"/>
+												<xs:enumeration value="4"/>
+												<xs:enumeration value="5"/>
+												<xs:enumeration value="6"/>
+												<xs:enumeration value="7"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:element>
+									<xs:choice>
+										<xs:element name="PER" minOccurs="0">
+											<xs:annotation>
+												<xs:documentation>Datos de la persona</xs:documentation>
+											</xs:annotation>
+											<xs:complexType>
+												<xs:sequence>
+													<xs:element name="DOC_IDE" type="DOCUMENTO_IDENTIDADType" minOccurs="0" maxOccurs="20">
+														<xs:annotation>
+															<xs:documentation>Datos del documento de identidad</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+													<xs:element name="NOM" type="NOMBRE_PERSONAType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Nombre</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+													<xs:element name="APE1_RAZ_SOC" type="APELLIDOS_PERSONAType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Primer apellido o razón social</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+													<xs:element name="APE2" type="APELLIDOS_PERSONAType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Segundo apellido</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+													<xs:element name="APE_SOL" type="APELLIDOS_PERSONAType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Apellido de soltera</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+													<xs:element name="GENERO" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Género del sujeto</xs:documentation>
+														</xs:annotation>
+														<xs:simpleType>
+															<xs:restriction base="xs:string">
+																<xs:enumeration value="V"/>
+																<xs:enumeration value="M"/>
+															</xs:restriction>
+														</xs:simpleType>
+													</xs:element>
+													<xs:element name="ESTADO_CIVIL" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Estado civil del sujeto ("0" No consta, "1" Soltero/a, "2" Casado, "3" Separado/a judicialmente, "4" Divorciado/a, "5" Viudo/a)</xs:documentation>
+														</xs:annotation>
+														<xs:simpleType>
+															<xs:restriction base="xs:string">
+																<xs:enumeration value="0"/>
+																<xs:enumeration value="1"/>
+																<xs:enumeration value="2"/>
+																<xs:enumeration value="3"/>
+																<xs:enumeration value="4"/>
+																<xs:enumeration value="5"/>
+															</xs:restriction>
+														</xs:simpleType>
+													</xs:element>
+													<xs:element name="PARIENTES" type="PARIENTESType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Datos de los parientes del sujeto</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+													<xs:element name="NUM_NIF_CON" type="NIF_CIFType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Número de NIF del cónyuge</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+													<xs:element name="NAC" type="CODIGO_PAISType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Código de país, según la codificación oficial de Países y Territorios aprobada por OM 9-12-99</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+													<xs:element name="NAC_ISO" type="CODIGO_PAIS_ISOType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Código de país, según la codificación ISO 3166-1 alpha 3</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+													<xs:element name="FEC_NAC" type="FECHAType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Fecha de nacimiento</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+													<xs:element name="LUGAR_NAC" type="LOCALIZACIONType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Lugar de nacimiento</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+													<xs:element name="PRF" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Profesión</xs:documentation>
+														</xs:annotation>
+														<xs:simpleType>
+															<xs:restriction base="STRINGType">
+																<xs:maxLength value="25"/>
+															</xs:restriction>
+														</xs:simpleType>
+													</xs:element>
+													<xs:element name="DOM" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Datos del domicilio</xs:documentation>
+														</xs:annotation>
+														<xs:complexType>
+															<xs:sequence>
+																<xs:element name="RES_ESP" type="BOOLEANType" minOccurs="0">
+																	<xs:annotation>
+																		<xs:documentation>Residencia en España</xs:documentation>
+																	</xs:annotation>
+																</xs:element>
+																<xs:element name="ULT_PRV" type="CODIGO_PROVINCIAType" minOccurs="0">
+																	<xs:annotation>
+																		<xs:documentation>Código INE de la última provincia donde se ha residido</xs:documentation>
+																	</xs:annotation>
+																</xs:element>
+																<xs:sequence>
+																	<xs:element name="DOM_ESP" type="DIRECCION_SUJETOType" minOccurs="0">
+																		<xs:annotation>
+																			<xs:documentation>Datos del domicilio en España</xs:documentation>
+																		</xs:annotation>
+																	</xs:element>
+																	<xs:element name="DOM_EXT" type="DIRECCION_EXTRANJERAType" minOccurs="0">
+																		<xs:annotation>
+																			<xs:documentation>Datos del domicilio en el Extranjero</xs:documentation>
+																		</xs:annotation>
+																	</xs:element>
+																</xs:sequence>
+															</xs:sequence>
+														</xs:complexType>
+													</xs:element>
+													<xs:element name="PER_FAL" type="PERIODO_FALLECIMIENTOType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Información de la fecha de fallecimiento del causante</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+													<xs:element name="COD_POS_CLASE_C" type="CODIGO_POSTALType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Código postal para sujetos clase C</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+													<xs:element name="OCP_GRUPO" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Grupo de actividad según OCP</xs:documentation>
+														</xs:annotation>
+														<xs:simpleType>
+															<xs:restriction base="STRINGType">
+																<xs:maxLength value="4"/>
+															</xs:restriction>
+														</xs:simpleType>
+													</xs:element>
+													<xs:element name="OCP_ACTIVIDAD" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Actividad según OCP</xs:documentation>
+														</xs:annotation>
+														<xs:simpleType>
+															<xs:restriction base="STRINGType">
+																<xs:maxLength value="10"/>
+															</xs:restriction>
+														</xs:simpleType>
+													</xs:element>
+													<xs:element name="PROFESION" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Información sobre la profesión del sujeto</xs:documentation>
+														</xs:annotation>
+														<xs:complexType>
+															<xs:sequence>
+																<xs:element name="PROF">
+																	<xs:annotation>
+																		<xs:documentation>Actividad del sujeto ( "1" Actividad de pesca y uso de embarcaciones, "2" Actividad de suministros informáticos y telefonía móvil o sus componentes, "3" Actividad de importación-exportación, "4" Actividad de compraventa de vehículos usados, "5" Actividad de reciclado y chatarra, "6" Actividad de joyería, obras de arte o antigüedades, "7" Actividad de remisión de fondos y cambio de moneda, "8" Actividades de juego y apuestas, "9" Actividad de importación-exportación, "10" Actividad de joyería, obras de arte o antigüedades, "11" Actividad de remisión de fondos y cambio de moneda, "12" Actividades de representación política o cargos políticos, "99" Otras, "50" No se solicita )</xs:documentation>
+																	</xs:annotation>
+																	<xs:simpleType>
+																		<xs:restriction base="xs:string">
+																			<xs:enumeration value="1"/>
+																			<xs:enumeration value="2"/>
+																			<xs:enumeration value="3"/>
+																			<xs:enumeration value="4"/>
+																			<xs:enumeration value="5"/>
+																			<xs:enumeration value="6"/>
+																			<xs:enumeration value="7"/>
+																			<xs:enumeration value="8"/>
+																			<xs:enumeration value="9"/>
+																			<xs:enumeration value="10"/>
+																			<xs:enumeration value="11"/>
+																			<xs:enumeration value="12"/>
+																			<xs:enumeration value="99"/>
+																			<xs:enumeration value="50"/>
+																		</xs:restriction>
+																	</xs:simpleType>
+																</xs:element>
+																<xs:element name="OTRA_PROF" minOccurs="0">
+																	<xs:annotation>
+																		<xs:documentation>Descripción de la actividad del sujeto cuando no figura en la lista del nodo PROF</xs:documentation>
+																	</xs:annotation>
+																	<xs:simpleType>
+																		<xs:restriction base="xs:string">
+																			<xs:maxLength value="1000"/>
+																		</xs:restriction>
+																	</xs:simpleType>
+																</xs:element>
+															</xs:sequence>
+														</xs:complexType>
+													</xs:element>
+													<xs:element name="EMAIL" type="EMAILType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Dirección de correo electrónico</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+													<xs:element name="TELEFONO" type="TELEFONOType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Número de telefono, con posibilidad de informar el prefijo</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+												</xs:sequence>
+											</xs:complexType>
+										</xs:element>
+										<xs:element name="ENT_FIN" minOccurs="0">
+											<xs:annotation>
+												<xs:documentation>Datos de la entidad financiera</xs:documentation>
+											</xs:annotation>
+											<xs:complexType>
+												<xs:sequence>
+													<xs:element name="SICA" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Código SICA de la entidad financiera</xs:documentation>
+														</xs:annotation>
+														<xs:simpleType>
+															<xs:restriction base="STRINGType">
+																<xs:length value="4"/>
+															</xs:restriction>
+														</xs:simpleType>
+													</xs:element>
+												</xs:sequence>
+											</xs:complexType>
+										</xs:element>
+									</xs:choice>
+									<xs:element name="REP" minOccurs="0" maxOccurs="100">
+										<xs:annotation>
+											<xs:documentation>Datos del representante</xs:documentation>
+										</xs:annotation>
+										<xs:complexType>
+											<xs:sequence>
+												<xs:element name="IDE_REP" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Identificador del representante en el sujeto</xs:documentation>
+													</xs:annotation>
+													<xs:simpleType>
+														<xs:restriction base="ID_SECUENCIALType">
+															<xs:minExclusive value="0"/>
+														</xs:restriction>
+													</xs:simpleType>
+												</xs:element>
+												<xs:element name="DOC_IDE_REP" type="DOCUMENTO_IDENTIDADType" minOccurs="0" maxOccurs="20">
+													<xs:annotation>
+														<xs:documentation>Datos del documento de identidad</xs:documentation>
+													</xs:annotation>
+												</xs:element>
+												<xs:element name="NOM" type="NOMBRE_PERSONAType" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Nombre</xs:documentation>
+													</xs:annotation>
+												</xs:element>
+												<xs:element name="APE1" type="APELLIDOS_PERSONAType" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Primer apellido</xs:documentation>
+													</xs:annotation>
+												</xs:element>
+												<xs:element name="APE2" type="APELLIDOS_PERSONAType" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Segundo apellido</xs:documentation>
+													</xs:annotation>
+												</xs:element>
+												<xs:element name="NAC" type="CODIGO_PAISType" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Código de país, según la codificación oficial de Países y Territorios aprobada por OM 9-12-99</xs:documentation>
+													</xs:annotation>
+												</xs:element>
+												<xs:element name="NAC_ISO" type="CODIGO_PAIS_ISOType" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Código de país, según la codificación ISO 3166-1 alpha 3</xs:documentation>
+													</xs:annotation>
+												</xs:element>
+												<xs:element name="CLA_REP" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Clase de representación ("1" Legal, "2" Orgánica, "3" Voluntaria, "4" Incompleta, "5" Verbal o no acreditada, "6" Administración concursal)</xs:documentation>
+													</xs:annotation>
+													<xs:simpleType>
+														<xs:restriction base="xs:string">
+															<xs:enumeration value="1"/>
+															<xs:enumeration value="2"/>
+															<xs:enumeration value="3"/>
+															<xs:enumeration value="4"/>
+															<xs:enumeration value="5"/>
+															<xs:enumeration value="6"/>
+														</xs:restriction>
+													</xs:simpleType>
+												</xs:element>
+												<xs:element name="TIP_REP" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Tipo de representación ejercida ("1" Mediata, "2" Inmediata)</xs:documentation>
+													</xs:annotation>
+													<xs:simpleType>
+														<xs:restriction base="xs:string">
+															<xs:enumeration value="1"/>
+															<xs:enumeration value="2"/>
+														</xs:restriction>
+													</xs:simpleType>
+												</xs:element>
+												<xs:element name="ORI_REP" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Origen de la representación mediata</xs:documentation>
+													</xs:annotation>
+													<xs:simpleType>
+														<xs:restriction base="xs:string">
+															<xs:maxLength value="3000"/>
+														</xs:restriction>
+													</xs:simpleType>
+												</xs:element>
+												<xs:element name="DNE" type="BOOLEANType" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Indica si es un documento Notarial Español</xs:documentation>
+													</xs:annotation>
+												</xs:element>
+												<xs:element name="DNE_INFO" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Información del documento notarial español</xs:documentation>
+													</xs:annotation>
+													<xs:complexType>
+														<xs:complexContent>
+															<xs:extension base="DNE_INFOType">
+																<xs:sequence>
+																	<xs:element name="OBSERVACIONES_MEDIATA" minOccurs="0">
+																		<xs:annotation>
+																			<xs:documentation>Campo de texto libre</xs:documentation>
+																		</xs:annotation>
+																		<xs:simpleType>
+																			<xs:restriction base="xs:string">
+																				<xs:maxLength value="3000"/>
+																			</xs:restriction>
+																		</xs:simpleType>
+																	</xs:element>
+																</xs:sequence>
+															</xs:extension>
+														</xs:complexContent>
+													</xs:complexType>
+												</xs:element>
+												<xs:element name="OTR_DOC" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Otro documento</xs:documentation>
+													</xs:annotation>
+													<xs:simpleType>
+														<xs:restriction base="xs:string">
+															<xs:maxLength value="3000"/>
+														</xs:restriction>
+													</xs:simpleType>
+												</xs:element>
+												<xs:sequence>
+													<xs:element name="DOM_ESP_REP" type="DIRECCION_SUJETOType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Datos del domicilio en España</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+													<xs:element name="DOM_EXT_REP" type="DIRECCION_EXTRANJERAType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Datos del domicilio en el Extranjero</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+												</xs:sequence>
+											</xs:sequence>
+										</xs:complexType>
+									</xs:element>
+									<xs:element name="PROP_MAY" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Indica la existencia del titular real o propietario mayoritario  ("1" Persona jurídica excepcionada, "2" No existe Titular real, "3" Consta en este instrumento, "4" Consta en instrumento público distinto de éste (posterior a entrada en vigor de Ley 10/2010), "5" Consta en documento privado, "6" Titularidad Real consultada en la BDTR</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="xs:string">
+												<xs:enumeration value="1"/>
+												<xs:enumeration value="2"/>
+												<xs:enumeration value="3"/>
+												<xs:enumeration value="4"/>
+												<xs:enumeration value="5"/>
+												<xs:enumeration value="6"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:element>
+									<xs:element name="PROPIETARIO" minOccurs="0" maxOccurs="4">
+										<xs:annotation>
+											<xs:documentation>Identificación del titular real o propietario mayoritario</xs:documentation>
+										</xs:annotation>
+										<xs:complexType>
+											<xs:sequence>
+												<xs:element name="DOC_IDE" minOccurs="0" maxOccurs="20">
+													<xs:annotation>
+														<xs:documentation>Datos del documento de identidad</xs:documentation>
+													</xs:annotation>
+													<xs:complexType>
+														<xs:sequence>
+															<xs:element name="TIP_DOC_IDE" type="TIPO_DOCUMENTO_IDENTIDAD_TITULARType" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Tipo de documento de identidad ("1" NIF, "2" NIE, "3" Pasaporte, "4" Menores de edad que carezcan de dicho número, "6" Falta de aportación del NIF o NIF aportado pero no válido, "8" Documento de identificación de extranjero, "10" Falta de aportación de NIF o NIE)</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:choice>
+																<xs:element name="CIR_AUS" minOccurs="0">
+																	<xs:annotation>
+																		<xs:documentation>Circunstancias concretas concurrentes de la ausencia del documento de identidad</xs:documentation>
+																	</xs:annotation>
+																	<xs:simpleType>
+																		<xs:restriction base="xs:string">
+																			<xs:maxLength value="3000"/>
+																		</xs:restriction>
+																	</xs:simpleType>
+																</xs:element>
+																<xs:sequence>
+																	<xs:element name="AUS_NIF_CIF_NIE" minOccurs="0">
+																		<xs:annotation>
+																			<xs:documentation>Circunstancias concretas concurrentes de la ausencia de NIF, CIF y/o NIE ("3" Pasaporte, "4" Menores de edad que carecen de NIF, "8" Documento de identificación de extranjero, "12" Tarjeta de residencia, "13" Cargo público u otros motivos [inválido], "15" Documento de identificación distinto o ausencia de cualquiera de ellos)</xs:documentation>
+																		</xs:annotation>
+																		<xs:simpleType>
+																			<xs:restriction base="xs:string">
+																				<xs:enumeration value="3"/>
+																				<xs:enumeration value="4"/>
+																				<xs:enumeration value="8"/>
+																				<xs:enumeration value="12"/>
+																				<xs:enumeration value="13"/>
+																				<xs:enumeration value="15"/>
+																			</xs:restriction>
+																		</xs:simpleType>
+																	</xs:element>
+																	<xs:element name="NUM_DOC_IDE" type="NUMERO_DOCUMENTO_IDENTIDADType" minOccurs="0">
+																		<xs:annotation>
+																			<xs:documentation>Número del documento de identidad</xs:documentation>
+																		</xs:annotation>
+																	</xs:element>
+																</xs:sequence>
+															</xs:choice>
+														</xs:sequence>
+													</xs:complexType>
+												</xs:element>
+												<xs:element name="NOM" type="NOMBRE_PERSONAType" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Nombre</xs:documentation>
+													</xs:annotation>
+												</xs:element>
+												<xs:element name="APE1" type="APELLIDOS_PERSONAType" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Primer apellido</xs:documentation>
+													</xs:annotation>
+												</xs:element>
+												<xs:element name="APE2" type="APELLIDOS_PERSONAType" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Segundo apellido</xs:documentation>
+													</xs:annotation>
+												</xs:element>
+												<xs:element name="NAC" type="CODIGO_PAISType" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Nacionalidad</xs:documentation>
+													</xs:annotation>
+												</xs:element>
+												<xs:element name="NAC_ISO" type="CODIGO_PAIS_ISOType" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Código de país, según la codificación ISO 3166-1 alpha 3</xs:documentation>
+													</xs:annotation>
+												</xs:element>
+											</xs:sequence>
+										</xs:complexType>
+									</xs:element>
+									<xs:element name="DOCUMENTO_PUBLICO" type="DNE_INFO_EXTType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Datos del documento público en el que se identifica el titular real de la sociedad</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="TIT_REAL_PER_JUR_EXC" type="BOOLEANType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Para las sociedades, indica si la sociedad está excepcionada de informar los datos de Titular Real o propietario mayoritario</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="TRUST" type="TRUSTType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Datos del Trust del que el sujeto es Titular Fiduciario o Trustee</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="ERRORS" type="ERRORSType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Descripción de los errores en la validación de los datos</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+								</xs:sequence>
+							</xs:complexType>
+						</xs:element>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="OBJS" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Datos relativos a los objetos</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="NUM_OBJS" type="xs:unsignedInt">
+							<xs:annotation>
+								<xs:documentation>Número de objetos que contiene el documento</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="OBJ" minOccurs="0" maxOccurs="unbounded">
+							<xs:annotation>
+								<xs:documentation>Datos del objeto</xs:documentation>
+							</xs:annotation>
+							<xs:complexType>
+								<xs:sequence>
+									<xs:element name="IDE_OBJ">
+										<xs:annotation>
+											<xs:documentation>Identificador del objeto en el documento</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="ID_SECUENCIALType">
+												<xs:minExclusive value="0"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:element>
+									<xs:element name="TIP_OBJ" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Tipo de objeto ("1" Fincas urbanas en España, "2" Fincas rústicas en España, "3" Fincas de características especiales en España, "4" Fincas situadas fuera de España, "5" Concesiones administrativas, "6" Acciones, participaciones sociales u obligaciones, "7" Otros objetos, "8" Finca rústica/urbana)</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="xs:string">
+												<xs:enumeration value="1"/>
+												<xs:enumeration value="2"/>
+												<xs:enumeration value="3"/>
+												<xs:enumeration value="4"/>
+												<xs:enumeration value="5"/>
+												<xs:enumeration value="6"/>
+												<xs:enumeration value="7"/>
+												<xs:enumeration value="8"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:element>
+									<xs:choice>
+										<xs:element ref="FIN_URB" minOccurs="0">
+											<xs:annotation>
+												<xs:documentation>Datos de la finca urbana</xs:documentation>
+											</xs:annotation>
+										</xs:element>
+										<xs:element ref="FIN_RUS" minOccurs="0">
+											<xs:annotation>
+												<xs:documentation>Datos de la finca rústica</xs:documentation>
+											</xs:annotation>
+										</xs:element>
+										<xs:element name="FIN_ESP" minOccurs="0">
+											<xs:annotation>
+												<xs:documentation>Datos de la finca de características especiales</xs:documentation>
+											</xs:annotation>
+											<xs:complexType>
+												<xs:sequence>
+													<xs:element name="SUP" type="SUPERFICIEType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Superficie</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+													<xs:element name="FIN_ESP_IDE" type="IDENTIFICACION_FINCAType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Datos de identificación de la finca</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+													<xs:element name="VAL" type="IMPORTE_ECONOMICOType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Cuantía de la finca</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+													<xs:element name="DIR_ESP" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Dirección</xs:documentation>
+														</xs:annotation>
+														<xs:complexType>
+															<xs:sequence>
+																<xs:element name="COD_MUN" type="CODIGO_MUNICIPIOType" minOccurs="0">
+																	<xs:annotation>
+																		<xs:documentation>Código INE del municipio</xs:documentation>
+																	</xs:annotation>
+																</xs:element>
+																<xs:element name="COD_PRV" type="CODIGO_PROVINCIAType" minOccurs="0">
+																	<xs:annotation>
+																		<xs:documentation>Código INE de la provincia</xs:documentation>
+																	</xs:annotation>
+																</xs:element>
+																<xs:element name="DAT_IDE" minOccurs="0">
+																	<xs:annotation>
+																		<xs:documentation>Datos identificativos</xs:documentation>
+																	</xs:annotation>
+																	<xs:simpleType>
+																		<xs:restriction base="xs:string">
+																			<xs:maxLength value="3000"/>
+																		</xs:restriction>
+																	</xs:simpleType>
+																</xs:element>
+															</xs:sequence>
+														</xs:complexType>
+													</xs:element>
+												</xs:sequence>
+											</xs:complexType>
+										</xs:element>
+										<xs:element name="FIN_EXT" minOccurs="0">
+											<xs:annotation>
+												<xs:documentation>Datos de la finca situada fuera de España</xs:documentation>
+											</xs:annotation>
+											<xs:complexType>
+												<xs:sequence>
+													<xs:element name="DES" type="DESCRIPCION_OBJETOType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Descripción</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+													<xs:element name="VAL" type="IMPORTE_ECONOMICOType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Cuantía de la finca</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+													<xs:element name="PAIS" type="CODIGO_PAISType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Código de país, según la codificación oficial de Países y Territorios aprobada por OM 9-12-99</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+													<xs:element name="PAIS_ISO" type="CODIGO_PAIS_ISOType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Código de país, según la codificación ISO 3166-1 alpha 3</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+												</xs:sequence>
+											</xs:complexType>
+										</xs:element>
+										<xs:element name="CON_ADM" type="DES_VALType" minOccurs="0">
+											<xs:annotation>
+												<xs:documentation>Concesiones administrativas</xs:documentation>
+											</xs:annotation>
+										</xs:element>
+										<xs:element name="PAR_SOC" minOccurs="0">
+											<xs:annotation>
+												<xs:documentation>Acciones, participaciones sociales u obligaciones</xs:documentation>
+											</xs:annotation>
+											<xs:complexType>
+												<xs:sequence>
+													<xs:element name="TIP_CIF" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Tipo de CIF ("1" CIF, "2" CIF pendiente de obtención, "3" Persona jurídica extranjera, "4" Código ISIN)</xs:documentation>
+														</xs:annotation>
+														<xs:simpleType>
+															<xs:restriction base="xs:string">
+																<xs:enumeration value="1"/>
+																<xs:enumeration value="2"/>
+																<xs:enumeration value="3"/>
+																<xs:enumeration value="4"/>
+															</xs:restriction>
+														</xs:simpleType>
+													</xs:element>
+													<xs:element name="NUM_DOC_IDE" type="NUMERO_DOCUMENTO_IDENTIDADType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Número del documento de identidad</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+													<xs:element name="RAZ_SOC" type="APELLIDOS_PERSONAType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Razón social</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+													<xs:element name="NAC" type="CODIGO_PAISType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Código de país, según la codificación oficial de Países y Territorios aprobada por OM 9-12-99</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+													<xs:element name="NAC_ISO" type="CODIGO_PAIS_ISOType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Código de país, según la codificación ISO 3166-1 alpha 3</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+													<xs:element name="DOM_SOC" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Domicilio de la sociedad</xs:documentation>
+														</xs:annotation>
+														<xs:complexType>
+															<xs:sequence>
+																<xs:element name="COD_PRV" type="CODIGO_PROVINCIAType" minOccurs="0">
+																	<xs:annotation>
+																		<xs:documentation>Código INE de la provincia</xs:documentation>
+																	</xs:annotation>
+																</xs:element>
+																<xs:element name="COD_MUN" type="CODIGO_MUNICIPIOType" minOccurs="0">
+																	<xs:annotation>
+																		<xs:documentation>Código INE del municipio</xs:documentation>
+																	</xs:annotation>
+																</xs:element>
+																<xs:element name="POB" type="POBLACIONType" minOccurs="0">
+																	<xs:annotation>
+																		<xs:documentation>Población</xs:documentation>
+																	</xs:annotation>
+																</xs:element>
+																<xs:element name="TIP_VIA" minOccurs="0">
+																	<xs:annotation>
+																		<xs:documentation>Tipo de vía</xs:documentation>
+																	</xs:annotation>
+																	<xs:simpleType>
+																		<xs:restriction base="STRINGType">
+																			<xs:maxLength value="25"/>
+																		</xs:restriction>
+																	</xs:simpleType>
+																</xs:element>
+																<xs:element name="VIA" type="NOMBRE_VIAType" minOccurs="0">
+																	<xs:annotation>
+																		<xs:documentation>Nombre de la vía</xs:documentation>
+																	</xs:annotation>
+																</xs:element>
+																<xs:element name="NUM_VIA" type="NUMERO_VIAType" minOccurs="0">
+																	<xs:annotation>
+																		<xs:documentation>Número de la vía</xs:documentation>
+																	</xs:annotation>
+																</xs:element>
+																<xs:element name="EST_PRV" minOccurs="0">
+																	<xs:annotation>
+																		<xs:documentation>Estado o provincia</xs:documentation>
+																	</xs:annotation>
+																	<xs:simpleType>
+																		<xs:restriction base="STRINGType">
+																			<xs:maxLength value="40"/>
+																		</xs:restriction>
+																	</xs:simpleType>
+																</xs:element>
+																<xs:element name="COD_POS" type="CODIGO_POSTALType" minOccurs="0">
+																	<xs:annotation>
+																		<xs:documentation>Código postal del domicilio social la sociedad</xs:documentation>
+																	</xs:annotation>
+																</xs:element>
+															</xs:sequence>
+														</xs:complexType>
+													</xs:element>
+													<xs:element name="NUM_ACC" type="NUMERO_ACCIONESType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Número de acciones o participaciones comprendidas en el documento</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+													<xs:element name="VAL_NOM" type="IMPORTE_ECONOMICOType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Valor nominal de las acciones o participaciones</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+													<xs:element name="EMAIL" type="EMAILType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>direccion de correo coherente</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+													<xs:element name="TELEFONO" type="TELEFONOType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Número de telefono, con posibilidad de informar el prefijo</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+													<xs:element name="CAPITAL_REPRES" type="BOOLEANType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Para las sociedades anónimas, indica si el capital aparece representado por acciones nominativas</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+													<xs:element name="IMPORTE_CAP_SOC" type="IMPORTE_ECONOMICO_EXTENDEDType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Importe del capital social</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+													<xs:element name="PRI_EMI" type="IMPORTE_ECONOMICOType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Prima de emisión de acciones</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+													<xs:element name="DISPONEN_SERIE" type="BOOLEANType" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Indica si las acciones disponen de serie</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+													<xs:element name="DETALLE_ACCIONES" type="DETALLE_ACCIONESType" minOccurs="0" maxOccurs="unbounded">
+														<xs:annotation>
+															<xs:documentation>Composición del capital social (Información sobre serie, numeración y valor nomina por unidad de las acciones)</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+												</xs:sequence>
+											</xs:complexType>
+										</xs:element>
+										<xs:element name="OTR_OBJS" minOccurs="0">
+											<xs:annotation>
+												<xs:documentation>Otros objetos</xs:documentation>
+											</xs:annotation>
+											<xs:complexType>
+												<xs:complexContent>
+													<xs:extension base="DES_VALType">
+														<xs:sequence>
+															<xs:element name="CLA_OBJ" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Clase del objeto ("1" Instalaciones técnicas o maquinaria y mobiliario, "2" Equipos o aplicaciones informáticas, "3" Elementos de transporte, "4" Obras de arte, joyas o antigüedades, "5" Créditos, "6" Cuentas, depósitos bancarios o divisas, "8" Metálico o cheque, "7" Otros objetos)</xs:documentation>
+																</xs:annotation>
+																<xs:simpleType>
+																	<xs:restriction base="xs:string">
+																		<xs:enumeration value="1"/>
+																		<xs:enumeration value="2"/>
+																		<xs:enumeration value="3"/>
+																		<xs:enumeration value="4"/>
+																		<xs:enumeration value="5"/>
+																		<xs:enumeration value="6"/>
+																		<xs:enumeration value="7"/>
+																		<xs:enumeration value="8"/>
+																	</xs:restriction>
+																</xs:simpleType>
+															</xs:element>
+														</xs:sequence>
+													</xs:extension>
+												</xs:complexContent>
+											</xs:complexType>
+										</xs:element>
+										<xs:element name="FIN_RUS_URB" minOccurs="0">
+											<xs:annotation>
+												<xs:documentation>Datos de la finca rústica/urbana</xs:documentation>
+											</xs:annotation>
+											<xs:complexType>
+												<xs:sequence>
+													<xs:element ref="FIN_URB" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Datos de la finca urbana</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+													<xs:element ref="FIN_RUS" minOccurs="0">
+														<xs:annotation>
+															<xs:documentation>Datos de la finca rústica</xs:documentation>
+														</xs:annotation>
+													</xs:element>
+												</xs:sequence>
+											</xs:complexType>
+										</xs:element>
+									</xs:choice>
+									<xs:element name="ERRORS" type="ERRORSType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Descripción de los errores en la validación de los datos</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+								</xs:sequence>
+							</xs:complexType>
+						</xs:element>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="OPES" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Datos relativos a las operaciones contenidas en el instrumento</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="NUM_OPES" type="xs:unsignedInt">
+							<xs:annotation>
+								<xs:documentation>Número de operaciones que contiene el documento</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="OPE" minOccurs="0" maxOccurs="unbounded">
+							<xs:annotation>
+								<xs:documentation>Datos de la operación</xs:documentation>
+							</xs:annotation>
+							<xs:complexType>
+								<xs:sequence>
+									<xs:element name="IDE_OPE" type="ID_SECUENCIALType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Identificador del acto jurídico en el documento</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="ACT_JUR" type="xs:string" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Código del acto jurídico</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="PRI_CLA_OTOS" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Primera clase de sujetos</xs:documentation>
+										</xs:annotation>
+										<xs:complexType>
+											<xs:sequence>
+												<xs:element name="PRI_CLA_OTO" minOccurs="0" maxOccurs="unbounded">
+													<xs:annotation>
+														<xs:documentation>Primera clase de sujeto</xs:documentation>
+													</xs:annotation>
+													<xs:complexType>
+														<xs:sequence>
+															<xs:element name="ID_SUJ" type="ID_SECUENCIALType" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Identificador del sujeto en el documento</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:element name="CARGOS" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Datos de los cargos relacionados con el sujeto en la intervención (En los actos de nombramiento, cese o renuncia de cargos)</xs:documentation>
+																</xs:annotation>
+																<xs:complexType>
+																	<xs:sequence>
+																		<xs:element name="CARGO" type="CARGOType" minOccurs="0" maxOccurs="30">
+																			<xs:annotation>
+																				<xs:documentation>Información del Cargo en una sociedad</xs:documentation>
+																			</xs:annotation>
+																		</xs:element>
+																	</xs:sequence>
+																</xs:complexType>
+															</xs:element>
+															<xs:element name="FEDA_APLICA_RI" type="BOOLEANType" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Indica si se aplicar la operación del fichero de control del registro de inversiones</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:element name="FEDA_INFO_RI" type="BOOLEANType" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Indica si se ha interesado del fedatario la entrega del fichero de control del registro de inversiones</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:element name="FEDA_DAT_RI" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Identificadores únicos de los ficheros de inversiones aportados por el fedatario </xs:documentation>
+																</xs:annotation>
+																<xs:simpleType>
+																	<xs:restriction base="STRINGType">
+																		<xs:maxLength value="4200"/>
+																	</xs:restriction>
+																</xs:simpleType>
+															</xs:element>
+															<xs:element name="PARENTESCO" type="PARENTESCOType" minOccurs="0" maxOccurs="50">
+																<xs:annotation>
+																	<xs:documentation>Datos del parentesco de este interviniente con los sujetos relacionados en otra intervención del acto jurídico (Actos del grupo 07 "Donaciones")</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:element name="PARTES_TESTAMENTARIOS" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Datos para el trámite Partes Testamentarios</xs:documentation>
+																</xs:annotation>
+																<xs:complexType>
+																	<xs:sequence>
+																		<xs:element name="CLASE_TESTAMENTO" minOccurs="0">
+																			<xs:annotation>
+																				<xs:documentation>Clase del testamento (1- TESTAMENTO ABIERTO. 2- TESTAMENTO CERRADO. 3- A.P.T. OLOGRAFO. 4- A.P.T. CERRADO. 5- A.P.T. MILITAR. 6- A.P.T. MARITIMO. 7- A.P.T. SOLO ANTE TESTIGOS. 8- A.P.T. SOLO ANTE ECLESIASTICO. 9- PACTO SUCESORIO. 0- OTRAS MODALIDADES. A- MANCOMUNADO. B- ABIERTO MANCOMUNADO. C- NUNCUPATIVO. D- CAPITULOS MATRIMONIALES. E- HEREDAMIENTO PREVENTIVO. F- DONACION MORTIS CAUSA. G- CODICILO. H- CEDULA TESTAMENTARIA. I- TESTAMENTO DE HERMANDAD. J- PODER TESTATORIO. K- OTORGADO POR COMISARIO). Máximo 1 Carácter</xs:documentation>
+																			</xs:annotation>
+																			<xs:simpleType>
+																				<xs:restriction base="STRINGType">
+																					<xs:maxLength value="1"/>
+																					<xs:pattern value="[0-9A-K]{1}"/>
+																				</xs:restriction>
+																			</xs:simpleType>
+																		</xs:element>
+																		<xs:element name="TESTAMENTO_PUPILAR" minOccurs="0">
+																			<xs:annotation>
+																				<xs:documentation>Se indica el tipo de testamento pupilar (0- NO APLICA; 1 -PUPILAR (MENORES DE 14AÑOS); EJEMPLAR (MAYORES DE 14 DISCAPACITADOS)</xs:documentation>
+																			</xs:annotation>
+																			<xs:simpleType>
+																				<xs:restriction base="STRINGType">
+																					<xs:maxLength value="1"/>
+																					<xs:enumeration value="0"/>
+																					<xs:enumeration value="1"/>
+																					<xs:enumeration value="2"/>
+																				</xs:restriction>
+																			</xs:simpleType>
+																		</xs:element>
+																	</xs:sequence>
+																</xs:complexType>
+															</xs:element>
+															<xs:element name="ERRORS" type="ERRORSType" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Descripción de los errores en la validación de los datos</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:element name="DOMICILIO_ANTERIOR" type="CODIGO_PAISType" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Código de país, según la codificación oficial de Países y Territorios aprobada por OM 9-12-99</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:element name="DOMICILIO_ANTERIOR_ISO" type="CODIGO_PAIS_ISOType" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Código de país, según la codificación ISO 3166-1 alpha 3</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:element name="DENOMINACION_ANTERIOR" type="APELLIDOS_PERSONAType" minOccurs="0"/>
+															<xs:element name="DATOS_SOCIETARIOS" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Datos anteriores al cambio de la sociedad</xs:documentation>
+																</xs:annotation>
+																<xs:complexType>
+																	<xs:sequence>
+																		<xs:element name="NUM_DOC_DENOMINACIO_ANTERIOR" type="STRINGType" minOccurs="0"/>
+																		<xs:element name="RAZON_SOCIAL_DENOMINACION_ANTERIOR" type="STRINGType" minOccurs="0"/>
+																		<xs:element name="FORMA_SOCIAL_DENOMINACION_ANTERIOR" minOccurs="0">
+																			<xs:annotation>
+																				<xs:documentation>
+																				("A", "SA - Sociedad Anónima");
+																				("B", "SL - Sociedad Limitada");
+																				("C", "SC - Sociedad Colectiva");
+																				("D", "SCOM - Sociedad Comanditaria");
+																				("F", "COOP - Sociedad Cooperativa");
+																				("G", "AIE - Agrupación de Interés económico");
+																				("U", "UTE - Unión Temporal de empresas");
+																				("V", "OTROS - Otros tipos no definidos en el resto de claves")
+																				</xs:documentation>
+																			</xs:annotation>
+																			<xs:simpleType>
+																				<xs:restriction base="xs:string">
+																					<xs:maxLength value="1"/>
+																					<xs:enumeration value="A"/>
+																					<xs:enumeration value="B"/>
+																					<xs:enumeration value="C"/>
+																					<xs:enumeration value="D"/>
+																					<xs:enumeration value="F"/>
+																					<xs:enumeration value="G"/>
+																					<xs:enumeration value="U"/>
+																					<xs:enumeration value="V"/>
+																				</xs:restriction>
+																			</xs:simpleType>
+																		</xs:element>
+																	</xs:sequence>
+																</xs:complexType>
+															</xs:element>
+														</xs:sequence>
+													</xs:complexType>
+												</xs:element>
+												<xs:element ref="DES_INT" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Descripción de la intervención</xs:documentation>
+													</xs:annotation>
+												</xs:element>
+											</xs:sequence>
+										</xs:complexType>
+									</xs:element>
+									<xs:element name="SEG_CLA_OTOS" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Segunda clase de sujetos</xs:documentation>
+										</xs:annotation>
+										<xs:complexType>
+											<xs:sequence>
+												<xs:element name="SEG_CLA_OTO" minOccurs="0" maxOccurs="unbounded">
+													<xs:annotation>
+														<xs:documentation>Segunda clase de sujeto</xs:documentation>
+													</xs:annotation>
+													<xs:complexType>
+														<xs:sequence>
+															<xs:element name="ID_SUJ" type="ID_SECUENCIALType" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Identificador del sujeto en el documento</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:element name="CARGOS" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Datos de los cargos relacionados con el sujeto en la intervención (En los actos de nombramiento, cese o renuncia de cargos)</xs:documentation>
+																</xs:annotation>
+																<xs:complexType>
+																	<xs:sequence>
+																		<xs:element name="CARGO" type="CARGOType" minOccurs="0" maxOccurs="30">
+																			<xs:annotation>
+																				<xs:documentation>Información del Cargo en una sociedad</xs:documentation>
+																			</xs:annotation>
+																		</xs:element>
+																	</xs:sequence>
+																</xs:complexType>
+															</xs:element>
+															<xs:element name="FEDA_APLICA_RI" type="BOOLEANType" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Indica si se aplicar la operación del fichero de control del registro de inversiones</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:element name="FEDA_INFO_RI" type="BOOLEANType" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Indica si se ha interesado del fedatario la entrega del fichero de control del registro de inversiones</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:element name="FEDA_DAT_RI" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Identificadores únicos de los ficheros de inversiones aportados por el fedatario </xs:documentation>
+																</xs:annotation>
+																<xs:simpleType>
+																	<xs:restriction base="STRINGType">
+																		<xs:maxLength value="4200"/>
+																	</xs:restriction>
+																</xs:simpleType>
+															</xs:element>
+															<xs:element name="PARENTESCO" type="PARENTESCOType" minOccurs="0" maxOccurs="50">
+																<xs:annotation>
+																	<xs:documentation>Datos del parentesco de este interviniente con los sujetos relacionados en otra intervención de la operación (Para actos jurídicos del grupo 07 "Donaciones")</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:element name="PARTES_TESTAMENTARIOS" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Datos para el trámite Partes Testamentarios</xs:documentation>
+																</xs:annotation>
+																<xs:complexType>
+																	<xs:sequence>
+																		<xs:element name="CLASE_TESTAMENTO" minOccurs="0">
+																			<xs:annotation>
+																				<xs:documentation>Clase del testamento (1- TESTAMENTO ABIERTO. 2- TESTAMENTO CERRADO. 3- A.P.T. OLOGRAFO. 4- A.P.T. CERRADO. 5- A.P.T. MILITAR. 6- A.P.T. MARITIMO. 7- A.P.T. SOLO ANTE TESTIGOS. 8- A.P.T. SOLO ANTE ECLESIASTICO. 9- PACTO SUCESORIO. 0- OTRAS MODALIDADES. A- MANCOMUNADO. B- ABIERTO MANCOMUNADO. C- NUNCUPATIVO. D- CAPITULOS MATRIMONIALES. E- HEREDAMIENTO PREVENTIVO. F- DONACION MORTIS CAUSA. G- CODICILO. H- CEDULA TESTAMENTARIA. I- TESTAMENTO DE HERMANDAD. J- PODER TESTATORIO. K- OTORGADO POR COMISARIO). Máximo 1 Carácter</xs:documentation>
+																			</xs:annotation>
+																			<xs:simpleType>
+																				<xs:restriction base="STRINGType">
+																					<xs:maxLength value="1"/>
+																					<xs:pattern value="[0-9A-K]{1}"/>
+																				</xs:restriction>
+																			</xs:simpleType>
+																		</xs:element>
+																		<xs:element name="TESTAMENTO_PUPILAR" minOccurs="0">
+																			<xs:annotation>
+																				<xs:documentation>Se indica el tipo de testamento pupilar (0- NO APLICA; 1 -PUPILAR (MENORES DE 14AÑOS); EJEMPLAR (MAYORES DE 14 DISCAPACITADOS)</xs:documentation>
+																			</xs:annotation>
+																			<xs:simpleType>
+																				<xs:restriction base="STRINGType">
+																					<xs:maxLength value="1"/>
+																					<xs:enumeration value="0"/>
+																					<xs:enumeration value="1"/>
+																					<xs:enumeration value="2"/>
+																				</xs:restriction>
+																			</xs:simpleType>
+																		</xs:element>
+																	</xs:sequence>
+																</xs:complexType>
+															</xs:element>
+															<xs:element name="PROFESION_APODERADO" type="PROFESION_APODERADOType" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Profesión del apoderado ("1" Procurador, "2" Abogado, "3" Graduado Social, "9" Otros)</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:element name="ERRORS" type="ERRORSType" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Descripción de los errores en la validación de los datos</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+														</xs:sequence>
+													</xs:complexType>
+												</xs:element>
+												<xs:element ref="DES_INT" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Descripción de la intervención</xs:documentation>
+													</xs:annotation>
+												</xs:element>
+											</xs:sequence>
+										</xs:complexType>
+									</xs:element>
+									<xs:element name="TER_CLA_OTOS" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Tercera clase de sujetos</xs:documentation>
+										</xs:annotation>
+										<xs:complexType>
+											<xs:sequence>
+												<xs:element name="TER_CLA_OTO" minOccurs="0" maxOccurs="unbounded">
+													<xs:annotation>
+														<xs:documentation>Tercera clase de sujeto</xs:documentation>
+													</xs:annotation>
+													<xs:complexType>
+														<xs:sequence>
+															<xs:element name="ID_SUJ" type="ID_SECUENCIALType" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Identificador del sujeto en el documento</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:element name="CARGOS" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Datos de los cargos relacionados con el sujeto en la intervención (En los actos de nombramiento, cese o renuncia de cargos)</xs:documentation>
+																</xs:annotation>
+																<xs:complexType>
+																	<xs:sequence>
+																		<xs:element name="CARGO" type="CARGOType" minOccurs="0" maxOccurs="30">
+																			<xs:annotation>
+																				<xs:documentation>Información del Cargo en una sociedad</xs:documentation>
+																			</xs:annotation>
+																		</xs:element>
+																	</xs:sequence>
+																</xs:complexType>
+															</xs:element>
+															<xs:element name="FEDA_APLICA_RI" type="BOOLEANType" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Indica si se aplicar la operación del fichero de control del registro de inversiones</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:element name="FEDA_INFO_RI" type="BOOLEANType" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Indica si se ha interesado del fedatario la entrega del fichero de control del registro de inversiones</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:element name="FEDA_DAT_RI" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Identificadores únicos de los ficheros de inversiones aportados por el fedatario </xs:documentation>
+																</xs:annotation>
+																<xs:simpleType>
+																	<xs:restriction base="STRINGType">
+																		<xs:maxLength value="4200"/>
+																	</xs:restriction>
+																</xs:simpleType>
+															</xs:element>
+															<xs:element name="PARENTESCO" type="PARENTESCOType" minOccurs="0" maxOccurs="50">
+																<xs:annotation>
+																	<xs:documentation>Datos del parentesco de este interviniente con los sujetos relacionados en otra intervención del acto jurídico (Actos del grupo 07 "Donaciones")</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:element name="PARTES_TESTAMENTARIOS" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Datos para el trámite Partes Testamentarios</xs:documentation>
+																</xs:annotation>
+																<xs:complexType>
+																	<xs:sequence>
+																		<xs:element name="CLASE_TESTAMENTO" minOccurs="0">
+																			<xs:annotation>
+																				<xs:documentation>Clase del testamento (1- TESTAMENTO ABIERTO. 2- TESTAMENTO CERRADO. 3- A.P.T. OLOGRAFO. 4- A.P.T. CERRADO. 5- A.P.T. MILITAR. 6- A.P.T. MARITIMO. 7- A.P.T. SOLO ANTE TESTIGOS. 8- A.P.T. SOLO ANTE ECLESIASTICO. 9- PACTO SUCESORIO. 0- OTRAS MODALIDADES. A- MANCOMUNADO. B- ABIERTO MANCOMUNADO. C- NUNCUPATIVO. D- CAPITULOS MATRIMONIALES. E- HEREDAMIENTO PREVENTIVO. F- DONACION MORTIS CAUSA. G- CODICILO. H- CEDULA TESTAMENTARIA. I- TESTAMENTO DE HERMANDAD. J- PODER TESTATORIO. K- OTORGADO POR COMISARIO). Máximo 1 Carácter</xs:documentation>
+																			</xs:annotation>
+																			<xs:simpleType>
+																				<xs:restriction base="STRINGType">
+																					<xs:maxLength value="1"/>
+																					<xs:pattern value="[0-9A-K]{1}"/>
+																				</xs:restriction>
+																			</xs:simpleType>
+																		</xs:element>
+																		<xs:element name="TESTAMENTO_PUPILAR" minOccurs="0">
+																			<xs:annotation>
+																				<xs:documentation>Se indica el tipo de testamento pupilar (0- NO APLICA; 1 -PUPILAR (MENORES DE 14AÑOS); EJEMPLAR (MAYORES DE 14 DISCAPACITADOS)</xs:documentation>
+																			</xs:annotation>
+																			<xs:simpleType>
+																				<xs:restriction base="STRINGType">
+																					<xs:maxLength value="1"/>
+																					<xs:enumeration value="0"/>
+																					<xs:enumeration value="1"/>
+																					<xs:enumeration value="2"/>
+																				</xs:restriction>
+																			</xs:simpleType>
+																		</xs:element>
+																	</xs:sequence>
+																</xs:complexType>
+															</xs:element>
+															<xs:element name="ERRORS" type="ERRORSType" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Descripción de los errores en la validación de los datos</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:element name="PARENTESCO_RELACION" type="BOOLEANType" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Se indica si es pariente del Menor</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+														</xs:sequence>
+													</xs:complexType>
+												</xs:element>
+												<xs:element ref="DES_INT" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Descripción de la intervención</xs:documentation>
+													</xs:annotation>
+												</xs:element>
+											</xs:sequence>
+										</xs:complexType>
+									</xs:element>
+									<xs:element name="CUA_CLA_OTOS" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Cuarta clase de sujetos</xs:documentation>
+										</xs:annotation>
+										<xs:complexType>
+											<xs:sequence>
+												<xs:element name="CUA_CLA_OTO" minOccurs="0" maxOccurs="unbounded">
+													<xs:annotation>
+														<xs:documentation>Cuarta clase de sujeto</xs:documentation>
+													</xs:annotation>
+													<xs:complexType>
+														<xs:sequence>
+															<xs:element name="ID_SUJ" type="ID_SECUENCIALType" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Identificador del sujeto en el documento</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:element name="CARGOS" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Datos de los cargos relacionados con el sujeto en la intervención (En los actos de nombramiento, cese o renuncia de cargos)</xs:documentation>
+																</xs:annotation>
+																<xs:complexType>
+																	<xs:sequence>
+																		<xs:element name="CARGO" type="CARGOType" minOccurs="0" maxOccurs="30">
+																			<xs:annotation>
+																				<xs:documentation>Información del Cargo en una sociedad</xs:documentation>
+																			</xs:annotation>
+																		</xs:element>
+																	</xs:sequence>
+																</xs:complexType>
+															</xs:element>
+															<xs:element name="FEDA_APLICA_RI" type="BOOLEANType" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Indica si se aplicar la operación del fichero de control del registro de inversiones</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:element name="FEDA_INFO_RI" type="BOOLEANType" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Indica si se ha interesado del fedatario la entrega del fichero de control del registro de inversiones</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:element name="FEDA_DAT_RI" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Identificadores únicos de los ficheros de inversiones aportados por el fedatario </xs:documentation>
+																</xs:annotation>
+																<xs:simpleType>
+																	<xs:restriction base="STRINGType">
+																		<xs:maxLength value="4200"/>
+																	</xs:restriction>
+																</xs:simpleType>
+															</xs:element>
+															<xs:element name="PARENTESCO" type="PARENTESCOType" minOccurs="0" maxOccurs="50">
+																<xs:annotation>
+																	<xs:documentation>Datos del parentesco de este interviniente con los sujetos relacionados en otra intervención del acto jurídico (Actos del grupo 07 "Donaciones")</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:element name="PARTES_TESTAMENTARIOS" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Datos para el trámite Partes Testamentarios</xs:documentation>
+																</xs:annotation>
+																<xs:complexType>
+																	<xs:sequence>
+																		<xs:element name="CLASE_TESTAMENTO" minOccurs="0">
+																			<xs:annotation>
+																				<xs:documentation>Clase del testamento (1- TESTAMENTO ABIERTO. 2- TESTAMENTO CERRADO. 3- A.P.T. OLOGRAFO. 4- A.P.T. CERRADO. 5- A.P.T. MILITAR. 6- A.P.T. MARITIMO. 7- A.P.T. SOLO ANTE TESTIGOS. 8- A.P.T. SOLO ANTE ECLESIASTICO. 9- PACTO SUCESORIO. 0- OTRAS MODALIDADES. A- MANCOMUNADO. B- ABIERTO MANCOMUNADO. C- NUNCUPATIVO. D- CAPITULOS MATRIMONIALES. E- HEREDAMIENTO PREVENTIVO. F- DONACION MORTIS CAUSA. G- CODICILO. H- CEDULA TESTAMENTARIA. I- TESTAMENTO DE HERMANDAD. J- PODER TESTATORIO. K- OTORGADO POR COMISARIO). Máximo 1 Carácter</xs:documentation>
+																			</xs:annotation>
+																			<xs:simpleType>
+																				<xs:restriction base="STRINGType">
+																					<xs:maxLength value="1"/>
+																					<xs:pattern value="[0-9A-K]{1}"/>
+																				</xs:restriction>
+																			</xs:simpleType>
+																		</xs:element>
+																		<xs:element name="TESTAMENTO_PUPILAR" minOccurs="0">
+																			<xs:annotation>
+																				<xs:documentation>Se indica el tipo de testamento pupilar (0- NO APLICA; 1 -PUPILAR (MENORES DE 14AÑOS); EJEMPLAR (MAYORES DE 14 DISCAPACITADOS)</xs:documentation>
+																			</xs:annotation>
+																			<xs:simpleType>
+																				<xs:restriction base="STRINGType">
+																					<xs:maxLength value="1"/>
+																					<xs:enumeration value="0"/>
+																					<xs:enumeration value="1"/>
+																					<xs:enumeration value="2"/>
+																				</xs:restriction>
+																			</xs:simpleType>
+																		</xs:element>
+																	</xs:sequence>
+																</xs:complexType>
+															</xs:element>
+															<xs:element name="ERRORS" type="ERRORSType" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Descripción de los errores en la validación de los datos</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+														</xs:sequence>
+													</xs:complexType>
+												</xs:element>
+												<xs:element ref="DES_INT" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Descripción de la intervención</xs:documentation>
+													</xs:annotation>
+												</xs:element>
+											</xs:sequence>
+										</xs:complexType>
+									</xs:element>
+									<xs:element name="CUAS_OPE" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Cuantías de la operación</xs:documentation>
+										</xs:annotation>
+										<xs:complexType>
+											<xs:sequence>
+												<xs:element name="CUA_OPE" type="IMPORTE_ECONOMICOType" minOccurs="0" maxOccurs="unbounded">
+													<xs:annotation>
+														<xs:documentation>Cuantía de la operación</xs:documentation>
+													</xs:annotation>
+												</xs:element>
+											</xs:sequence>
+										</xs:complexType>
+									</xs:element>
+									<xs:element name="OPES_VIN" type="BOOLEANType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Operaciones relacionadas</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="DET_OPE_VIN" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Detalle de las operaciones relacionadas</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="xs:string">
+												<xs:maxLength value="3000"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:element>
+									<xs:element name="PRE_CON" type="BOOLEANType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Precio conjunto de todos los objetos incluido en el primer objeto</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="PAG_TER" type="BOOLEANType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Indica cuándo la totalidad o parte del pago se ha ejecutado por parte de un tercero ajeno a la operación</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="CON_CUANT_ARA" type="BOOLEANType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Indica si posee cuantías arancelarias</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="BASS_ARA" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Datos de las bases arancelarias</xs:documentation>
+										</xs:annotation>
+										<xs:complexType>
+											<xs:sequence>
+												<xs:element name="BAS_ARA" minOccurs="0" maxOccurs="unbounded">
+													<xs:annotation>
+														<xs:documentation>Base arancelaria</xs:documentation>
+													</xs:annotation>
+													<xs:complexType>
+														<xs:sequence>
+															<xs:element name="BAS" type="IMPORTE_ECONOMICOType" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Base</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:element name="RED" type="BOOLEANType" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Reducción arancelaria legal</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:choice>
+																<xs:element name="VAL_RED" minOccurs="0">
+																	<xs:annotation>
+																		<xs:documentation>Valor de la reducción arancelaria legal ("1" 28,75%, "2" 52,50%, "3" 58,68%, "4" 85,75%, "5" Tasa, "6" 100%, "7" 46,56%, "8" 76,25%, "9" 90,50%, "10" 5%, "11" Reducción arancelaria Art. 5 uno G RD ley 13/2010, "12" Reducción especial Art. 5 dos C RD ley 13/2010)</xs:documentation>
+																	</xs:annotation>
+																	<xs:simpleType>
+																		<xs:restriction base="xs:string">
+																			<xs:enumeration value="1"/>
+																			<xs:enumeration value="2"/>
+																			<xs:enumeration value="3"/>
+																			<xs:enumeration value="4"/>
+																			<xs:enumeration value="5"/>
+																			<xs:enumeration value="6"/>
+																			<xs:enumeration value="7"/>
+																			<xs:enumeration value="8"/>
+																			<xs:enumeration value="9"/>
+																			<xs:enumeration value="10"/>
+																			<xs:enumeration value="11"/>
+																			<xs:enumeration value="12"/>
+																		</xs:restriction>
+																	</xs:simpleType>
+																</xs:element>
+																<xs:element name="VAL_RED_OTR" type="PORCENTAJEType" minOccurs="0">
+																	<xs:annotation>
+																		<xs:documentation>Otro valor para la reducción arancelaria legal</xs:documentation>
+																	</xs:annotation>
+																</xs:element>
+															</xs:choice>
+														</xs:sequence>
+													</xs:complexType>
+												</xs:element>
+											</xs:sequence>
+										</xs:complexType>
+									</xs:element>
+									<xs:element name="MAN_TRI" type="BOOLEANType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Indica si los impuestos de la operación tienen afectación tributaria</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="IMPS_OPE" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Datos de los impuestos</xs:documentation>
+										</xs:annotation>
+										<xs:complexType>
+											<xs:sequence>
+												<xs:element name="IMP_OPE" minOccurs="0" maxOccurs="unbounded">
+													<xs:annotation>
+														<xs:documentation>Impuesto ("1" Con ITPyAJD, "2" Con Impuesto de donaciones, "3" Con Impuesto de sucesiones, "6" Sin ITPyAJD, "7" Sin Impuesto de donaciones, "8" Sin Impuesto de sucesiones)</xs:documentation>
+													</xs:annotation>
+													<xs:simpleType>
+														<xs:restriction base="IMPUESTOType">
+															<xs:enumeration value="1"/>
+															<xs:enumeration value="2"/>
+															<xs:enumeration value="3"/>
+															<xs:enumeration value="6"/>
+															<xs:enumeration value="7"/>
+															<xs:enumeration value="8"/>
+														</xs:restriction>
+													</xs:simpleType>
+												</xs:element>
+											</xs:sequence>
+										</xs:complexType>
+									</xs:element>
+									<xs:element name="FIN" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Finalidad ("1" Adquisición de vivienda, "2" Adquisición de otro inmueble, "3" Construcción de vivienda, "4" Construcción de otra edificación, "5" Financiación de promoción empresarial inmobiliaria, "6" Financiación de otras actividades empresariales, "7" Refinanciación de deudas, "8" No consta, "9" Otras)</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="xs:string">
+												<xs:enumeration value="1"/>
+												<xs:enumeration value="2"/>
+												<xs:enumeration value="3"/>
+												<xs:enumeration value="4"/>
+												<xs:enumeration value="5"/>
+												<xs:enumeration value="6"/>
+												<xs:enumeration value="7"/>
+												<xs:enumeration value="8"/>
+												<xs:enumeration value="9"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:element>
+									<xs:element name="OTR_FIN" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Otra finalidad</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="xs:string">
+												<xs:maxLength value="3000"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:element>
+									<xs:element name="TOT_RES" type="IMPORTE_ECONOMICOType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Total responsabilidad</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="CUA_CREDITO" type="IMPORTE_ECONOMICOType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Cuantía del crédito</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="TIPO_ACTA" type="BOOLEANType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Indica si el resultado del "Acta de transparencia material LEY 5/2019" (Acto jurídico 1650) es Positivo (True) o Negativo (False)</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="ACT_JUR_EXCEPCIONADO_DOC_PUB_ANT_REL" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Motivo por el cual el acto jurídico está excepcionado de exigir informar "Documento Anterior Relevante", para aquellos actos que lo exijan y se permita su excepción. Actualmente sólo aplica a los actos realtivos a créditos inmobiliarios (1203, 1204, 1213, 1217 y 1224), y los motivos posibles son estos:
+	1 Créditos concedidos por un empleador a sus empleados, a título accesorio y sin intereses o cuya Tasa Anual Equivalente sea inferior a la del mercado, y que no se ofrezcan al público en general.
+	2 Créditos concedidos sin intereses y sin ningún otro tipo de gastos, excepto los destinados a cubrir los costes directamente relacionados con la garantía del préstamo.
+	3 Créditos concedidos en forma de facilidad de descubierto y que tengan que reembolsarse en el plazo de un mes.
+	4 Resultado de un acuerdo alcanzado ante un órgano jurisdiccional, arbitral, o en un procedimiento de conciliación o mediación.
+	5 Créditos relativos al pago aplazado, sin gastos, de una deuda existente, siempre que no se trate de contratos de préstamo garantizados por una hipoteca sobre bienes inmuebles de uso residencial.
+	6 Hipoteca inversa en que el prestamista desembolsa un importe a tanto alzado o hace pagos periódicos u otras formas de desembolso crediticio a cambio de un importe derivado de la venta futura de un bien inmueble de uso residencial o de un derecho relativo a un bien inmueble de uso residencial, y no persigue el reembolso del préstamo hasta que no se produzcan uno o varios de los acontecimientos previstos en la disposición adicional primera de la Ley 41/2007, de 7 de diciembre, salvo incumplimiento del prestatario de sus obligaciones contractuales que permita al prestamista la rescisión del contrato de préstamo.
+	7 Concesión de préstamos sobre un inmueble de uso no residencial.
+	8 Otros</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="xs:unsignedInt">
+												<xs:totalDigits value="2"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:element>
+									<xs:element name="MOT_NOV_PREST_COVID19" type="BOOLEANType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Indica si la novación del préstamo es consecuencia del COVID-19 (Aplica a los actos jurídicos "1216 - NOVACION DE PRÉSTAMO SEGÚN LEY 2/1994" y "1223 - OTRAS NOVACIONES DE PRÉSTAMO")</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="OBJS_INT" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Datos relativos a los objetos intervinientes en la operación</xs:documentation>
+										</xs:annotation>
+										<xs:complexType>
+											<xs:sequence>
+												<xs:element name="NUM_OBJS_INT" type="xs:unsignedInt">
+													<xs:annotation>
+														<xs:documentation>Número de objetos intervinientes que contiene la operación</xs:documentation>
+													</xs:annotation>
+												</xs:element>
+												<xs:element name="OBJ_INT" minOccurs="0" maxOccurs="unbounded">
+													<xs:annotation>
+														<xs:documentation>Datos del objeto interviniente</xs:documentation>
+													</xs:annotation>
+													<xs:complexType>
+														<xs:sequence>
+															<xs:element name="ID_OBJ" type="ID_SECUENCIALType">
+																<xs:annotation>
+																	<xs:documentation>Identificador del objeto en el documento</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:element name="PRI_CLA_OTOS2" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Primera clase de sujetos</xs:documentation>
+																</xs:annotation>
+																<xs:complexType>
+																	<xs:sequence>
+																		<xs:element name="PRI_CLA_OTO2" type="SUJETO_INTERVINIENTEType" minOccurs="0" maxOccurs="unbounded">
+																			<xs:annotation>
+																				<xs:documentation>Primera clase de sujeto otorgantes/participantes</xs:documentation>
+																			</xs:annotation>
+																		</xs:element>
+																		<xs:element ref="DES_INT" minOccurs="0"/>
+																	</xs:sequence>
+																</xs:complexType>
+															</xs:element>
+															<xs:element name="SEG_CLA_OTOS2" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Segunda clase de sujetos</xs:documentation>
+																</xs:annotation>
+																<xs:complexType>
+																	<xs:sequence>
+																		<xs:element name="SEG_CLA_OTO2" type="SUJETO_INTERVINIENTEType" minOccurs="0" maxOccurs="unbounded">
+																			<xs:annotation>
+																				<xs:documentation>Segunda clase de sujeto otorgantes/participantes</xs:documentation>
+																			</xs:annotation>
+																		</xs:element>
+																		<xs:element ref="DES_INT" minOccurs="0"/>
+																	</xs:sequence>
+																</xs:complexType>
+															</xs:element>
+															<xs:element name="TER_CLA_OTOS2" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Tercera clase de sujetos</xs:documentation>
+																</xs:annotation>
+																<xs:complexType>
+																	<xs:sequence>
+																		<xs:element name="TER_CLA_OTO2" type="SUJETO_INTERVINIENTEType" minOccurs="0" maxOccurs="unbounded">
+																			<xs:annotation>
+																				<xs:documentation>Tercera clase de sujeto otorgantes/participantes</xs:documentation>
+																			</xs:annotation>
+																		</xs:element>
+																		<xs:element ref="DES_INT" minOccurs="0"/>
+																	</xs:sequence>
+																</xs:complexType>
+															</xs:element>
+															<xs:element name="CUA_CLA_OTOS2" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Cuarta clase de sujetos</xs:documentation>
+																</xs:annotation>
+																<xs:complexType>
+																	<xs:sequence>
+																		<xs:element name="CUA_CLA_OTO2" type="SUJETO_INTERVINIENTEType" minOccurs="0" maxOccurs="unbounded">
+																			<xs:annotation>
+																				<xs:documentation>Cuarta clase de sujeto</xs:documentation>
+																			</xs:annotation>
+																		</xs:element>
+																		<xs:element ref="DES_INT" minOccurs="0"/>
+																	</xs:sequence>
+																</xs:complexType>
+															</xs:element>
+															<xs:element name="TIP_TIT" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Tipo de titularidad ("1" Totalidad, "2" Cuota indivisa)</xs:documentation>
+																</xs:annotation>
+																<xs:simpleType>
+																	<xs:restriction base="xs:string">
+																		<xs:enumeration value="1"/>
+																		<xs:enumeration value="2"/>
+																	</xs:restriction>
+																</xs:simpleType>
+															</xs:element>
+															<xs:element name="ALT_TIT_CAT" type="BOOLEANType" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Alteración de la titularidad catastral</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:element name="MOD_FIS_CAT" type="BOOLEANType" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Modificación física catastral</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:element name="CLA_ALT" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Clase de alteración catastral ("1" Cambio de dominio simple sin alteración del bien (art 14 a), "2" Obra nueva en construcción, "3" Obra nueva terminada, "4" Otras alteraciones catastrales, "5" Actos de naturaleza urbanística, "6" Variaciones en la composición interna o en la cuota de participación de comunidades o entidades sin personalidad jurídica. Constituciones independientes de usufructo, concesiones administrativas o derechos de superficie, así como su transmisión y extinción)</xs:documentation>
+																</xs:annotation>
+																<xs:simpleType>
+																	<xs:restriction base="xs:string">
+																		<xs:enumeration value="1"/>
+																		<xs:enumeration value="2"/>
+																		<xs:enumeration value="3"/>
+																		<xs:enumeration value="4"/>
+																		<xs:enumeration value="5"/>
+																		<xs:enumeration value="6"/>
+																	</xs:restriction>
+																</xs:simpleType>
+															</xs:element>
+															<xs:element name="TRA" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Porcentaje o cuota de transmisión</xs:documentation>
+																</xs:annotation>
+																<xs:complexType>
+																	<xs:sequence>
+																		<xs:choice>
+																			<xs:element name="POR_TRA" type="PORCENTAJEType" minOccurs="0">
+																				<xs:annotation>
+																					<xs:documentation>Porcentaje de transmisión</xs:documentation>
+																				</xs:annotation>
+																			</xs:element>
+																			<xs:element name="FRA_TRA" minOccurs="0">
+																				<xs:annotation>
+																					<xs:documentation>Fracción de transmisión</xs:documentation>
+																				</xs:annotation>
+																				<xs:simpleType>
+																					<xs:restriction base="xs:string">
+																						<xs:maxLength value="3000"/>
+																					</xs:restriction>
+																				</xs:simpleType>
+																			</xs:element>
+																		</xs:choice>
+																	</xs:sequence>
+																</xs:complexType>
+															</xs:element>
+															<xs:element name="IMPS_OBJ" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Datos de los impuestos</xs:documentation>
+																</xs:annotation>
+																<xs:complexType>
+																	<xs:sequence>
+																		<xs:element name="IMP_OBJ" minOccurs="0" maxOccurs="unbounded">
+																			<xs:annotation>
+																				<xs:documentation>Impuesto ("4" Con Impuesto sobre el valor añadido, "5" Con Plusvalía municipal, "9" Sin Impuesto sobre el valor añadido, "10" Sin Plusvalía municipal)</xs:documentation>
+																			</xs:annotation>
+																			<xs:simpleType>
+																				<xs:restriction base="IMPUESTOType">
+																					<xs:enumeration value="4"/>
+																					<xs:enumeration value="5"/>
+																					<xs:enumeration value="9"/>
+																					<xs:enumeration value="10"/>
+																				</xs:restriction>
+																			</xs:simpleType>
+																		</xs:element>
+																	</xs:sequence>
+																</xs:complexType>
+															</xs:element>
+															<xs:element name="REN_EXE" type="BOOLEANType" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Renuncia a la exención</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:element name="VIV_HAB" type="BOOLEANType" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Vivienda habitual</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:element name="VAL_TAS" type="IMPORTE_ECONOMICOType" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Valor de tasación</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:element name="TIP_TAS" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Tipo de tasación ("1" Sociedad tasadora, "2" Responsabilidad para subasta)</xs:documentation>
+																</xs:annotation>
+																<xs:simpleType>
+																	<xs:restriction base="xs:string">
+																		<xs:enumeration value="1"/>
+																		<xs:enumeration value="2"/>
+																	</xs:restriction>
+																</xs:simpleType>
+															</xs:element>
+															<xs:element name="TOTAL_PARTICIPACIONES" type="NUMERO_ACCIONESType" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Número total de acciones o participaciones que componen el capital social</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:element name="IMPORTE_CAP_SOC" type="IMPORTE_ECONOMICO_EXTENDEDType" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Importe del capital social</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:element name="RENUMERACION_PARTICIPACIONES" type="BOOLEANType" minOccurs="0"/>
+															<xs:element name="DISPONEN_SERIE" type="BOOLEANType" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Indica si las acciones disponen de serie</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:element name="DETALLE_ACCIONES" type="DETALLE_ACCIONESType" minOccurs="0" maxOccurs="unbounded">
+																<xs:annotation>
+																	<xs:documentation>Composición final del capital social</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:element name="DOM_ANTERIOR" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Datos del domicilio social anterior de la sociedad que traslada su domicilio</xs:documentation>
+																</xs:annotation>
+																<xs:complexType>
+																	<xs:sequence>
+																		<xs:element name="DOM_ANTERIOR_ESP" type="BOOLEANType">
+																			<xs:annotation>
+																				<xs:documentation>Indica si el domicilio social anterior estaba situado en España</xs:documentation>
+																			</xs:annotation>
+																		</xs:element>
+																		<xs:choice>
+																			<xs:element name="DOM_ESP" type="DIRECCION_SUJETOType">
+																				<xs:annotation>
+																					<xs:documentation>Datos del domicilio en España</xs:documentation>
+																				</xs:annotation>
+																			</xs:element>
+																			<xs:element name="DOM_EXT" type="DIRECCION_EXTRANJERAType">
+																				<xs:annotation>
+																					<xs:documentation>Datos del domicilio en el Extranjero</xs:documentation>
+																				</xs:annotation>
+																			</xs:element>
+																		</xs:choice>
+																	</xs:sequence>
+																</xs:complexType>
+															</xs:element>
+															<xs:element name="FORMA_SOCIETARIA_ESP" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Forma societaria de la sociedad en España ("1" Sociedad de Responsabilidad Limitada, "2" Sociedad Anónima, "3" Otro tipo de forma jurídica)</xs:documentation>
+																</xs:annotation>
+																<xs:simpleType>
+																	<xs:restriction base="xs:string">
+																		<xs:enumeration value="1"/>
+																		<xs:enumeration value="2"/>
+																		<xs:enumeration value="3"/>
+																	</xs:restriction>
+																</xs:simpleType>
+															</xs:element>
+															<xs:element name="VALORES_OBJETO" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Valores del Objeto</xs:documentation>
+																</xs:annotation>
+																<xs:complexType mixed="true">
+																	<xs:sequence>
+																		<xs:element name="VALOR_RELACION_ACTO" type="IMPORTE_ECONOMICOType" minOccurs="0">
+																			<xs:annotation>
+																				<xs:documentation>Valor en relación al acto
+																				</xs:documentation>
+																			</xs:annotation>
+																		</xs:element>
+																		<xs:element name="VALOR_FISCAL" type="IMPORTE_ECONOMICOType" minOccurs="0">
+																			<xs:annotation>
+																				<xs:documentation>Valor fiscal</xs:documentation>
+																			</xs:annotation>
+																		</xs:element>
+																	</xs:sequence>
+																</xs:complexType>
+															</xs:element>
+															<xs:element name="AFECTA_DL12_2024_GVA" type="BOOLEANType" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Indica si el inmueble se acoge la DL 12/2024 de la GVA (DANA)</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:element name="AFECTA_DL12_2024_GVA_DAT" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>RC informada como resultado de aplicar el DL 12/2024 de la GVA (DANA)</xs:documentation>
+																</xs:annotation>
+																<xs:simpleType>
+																	<xs:restriction base="STRINGType">
+																		<xs:maxLength value="200"/>
+																	</xs:restriction>
+																</xs:simpleType>
+															</xs:element>
+															<xs:element name="ERRORS" type="ERRORSType" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Descripción de los errores en la validación de los datos</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+														</xs:sequence>
+													</xs:complexType>
+												</xs:element>
+											</xs:sequence>
+										</xs:complexType>
+									</xs:element>
+									<xs:element ref="PAG" minOccurs="0" maxOccurs="unbounded"/>
+									<xs:element ref="S1" minOccurs="0" maxOccurs="unbounded"/>
+									<xs:element name="FONDOS_ORI_PUB" type="BOOLEANType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Indica si los fondos de la operación proceden total o parcialmente del sector público, en forma de subvenciones directas o préstamos bonificados</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="CON_OBJ" type="BOOLEANType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Indica si la operación contiene o no objeto</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="ANO_VENC_PREST" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Año vencimiento actos jurídicos de préstamo</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="xs:unsignedInt">
+												<xs:totalDigits value="4"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:element>
+									<xs:element name="APODERAMIENTO" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Datos relativos a los apoderamientos (Actos del grupo "14": Apoderamientos)</xs:documentation>
+										</xs:annotation>
+										<xs:complexType>
+											<xs:sequence>
+												<xs:element name="DATOS_CEDIDOS" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Indica si el sujeto cede sus datos para su uso posterior ("0" No, "1" Sí)</xs:documentation>
+													</xs:annotation>
+													<xs:simpleType>
+														<xs:restriction base="xs:string">
+															<xs:enumeration value="0"/>
+															<xs:enumeration value="1"/>
+														</xs:restriction>
+													</xs:simpleType>
+												</xs:element>
+												<xs:element name="POD_REV" type="BOOLEANType" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Indica si el poder otorgado es revocable (Actos del grupo "14": Apoderamientos)</xs:documentation>
+													</xs:annotation>
+												</xs:element>
+												<xs:element name="POD_REV_ALL" type="BOOLEANType" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Indica si se revocan todos los poderes (Actos del grupo "14": Apoderamientos)</xs:documentation>
+													</xs:annotation>
+												</xs:element>
+												<xs:element name="POD_REV_PAR" type="BOOLEANType" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Indica si se revoca/n parcialmente el/los poder/es. En caso de indicar 0 (False) se entenderá que se revoca/n totalmente. (Actos del grupo "14": Apoderamientos)</xs:documentation>
+													</xs:annotation>
+												</xs:element>
+												<xs:element name="CON_APODERADO_PROCURADOR" type="BOOLEANType" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Indica si el acto jurídico tiene procuradores como apoderados (Actos del grupo "14": "1403", "1404" y "1413")</xs:documentation>
+													</xs:annotation>
+												</xs:element>
+												<xs:element name="AUTORIZADO_CLIENTE" type="BOOLEANType" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Indica si el cliente ha autorizado la comunicación del Apoderamiento (Actos del grupo "14": "1403", "1404" y "1413")</xs:documentation>
+													</xs:annotation>
+												</xs:element>
+											</xs:sequence>
+										</xs:complexType>
+									</xs:element>
+									<xs:element name="INSC_PRE_TEL" type="BOOLEANType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Indica si la inscripción ha sido presentada telemáticamente</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="DOC_JUD" type="BOOLEANType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Indica si el documento corresponde a una protocolización de un documento judicial</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="IND_RIESGO" type="BOOLEANType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Indica si existe algún indicador de riesgo en la operación</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="CUA_SAT" type="IMPORTE_ECONOMICOType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Cuantía satisfecha de DEUDAS DINERARIAS NO CONTRADICHAS</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="MED_ALE_OPO_REQ" type="BOOLEANType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Indica si media alegación u oposición por parte del Requerido en DEUDAS DINERARIAS NO CONTRADICHAS</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="TIP_TIT_VAL" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Tipo de documento recuperado relacionado con títulos valores ("1" Letras de cambio, "2" Cédulas hipotecarias, "3" Pagarés, "4" Bonos, "5" Letras del Tesoro, "6" Acciones o Participaciones, "9" Otros)</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="xs:string">
+												<xs:enumeration value="1"/>
+												<xs:enumeration value="2"/>
+												<xs:enumeration value="3"/>
+												<xs:enumeration value="4"/>
+												<xs:enumeration value="5"/>
+												<xs:enumeration value="6"/>
+												<xs:enumeration value="9"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:element>
+									<xs:element name="PRE_SAL" type="IMPORTE_ECONOMICOType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Indica el precio de salida del objeto subastado</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="MATRIMONIO" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Datos relativos a los matrimonios</xs:documentation>
+										</xs:annotation>
+										<xs:complexType>
+											<xs:sequence>
+												<xs:element name="REG_ECO_DEC" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Indica el régimen económico matrimonial declarado ("1" Sociedad de gananciales, "2" Separación de bienes, "3" Régimen de Participación, "4" Régimen específico Aragón, "5" Régimen específico Baleares, "6" Régimen específico Cataluña, "7" Régimen específico Comunidad Valenciana, "8" Régimen específico Navarra, "9" Régimen específico País Vasco, "10" Otros)</xs:documentation>
+													</xs:annotation>
+													<xs:simpleType>
+														<xs:restriction base="xs:string">
+															<xs:enumeration value="1"/>
+															<xs:enumeration value="2"/>
+															<xs:enumeration value="3"/>
+															<xs:enumeration value="4"/>
+															<xs:enumeration value="5"/>
+															<xs:enumeration value="6"/>
+															<xs:enumeration value="7"/>
+															<xs:enumeration value="8"/>
+															<xs:enumeration value="9"/>
+															<xs:enumeration value="10"/>
+														</xs:restriction>
+													</xs:simpleType>
+												</xs:element>
+												<xs:element name="CAN_EXP" type="BOOLEANType" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Indica si se ha producido cancelación del expediente</xs:documentation>
+													</xs:annotation>
+												</xs:element>
+												<xs:element name="MOT_CAN_EXP" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Motivo de cancelación del expediente (Sólo se informa si CAN_EXP es true)</xs:documentation>
+													</xs:annotation>
+													<xs:simpleType>
+														<xs:restriction base="xs:string">
+															<xs:maxLength value="5000"/>
+														</xs:restriction>
+													</xs:simpleType>
+												</xs:element>
+											</xs:sequence>
+										</xs:complexType>
+									</xs:element>
+									<xs:element name="LEGITIMACION_FIRMAS_EXT" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Datos relativos al documento del que se legitiman las firmas (Acto jurídico "1621 - ACTAS DE LEGITIMACIÓN DE FIRMAS PARA EFECTO EN PAÍS EXTRANJERO")</xs:documentation>
+										</xs:annotation>
+										<xs:complexType>
+											<xs:sequence>
+												<xs:element name="DOC_PAIS_CONOCIDO" type="BOOLEANType">
+													<xs:annotation>
+														<xs:documentation>Indica si se conoce o no el país en donde debe surtir efecto el documento</xs:documentation>
+													</xs:annotation>
+												</xs:element>
+												<xs:element name="DOC_PAIS" type="CODIGO_PAISType" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Código de país en que debe surtir efecto el documento, según la codificación oficial de Países y Territorios aprobada por OM 9-12-99</xs:documentation>
+													</xs:annotation>
+												</xs:element>
+												<xs:element name="DOC_PAIS_ISO" type="CODIGO_PAIS_ISOType" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Código de país en que debe surtir efecto el documento, según la codificación ISO 3166-1 alpha 3</xs:documentation>
+													</xs:annotation>
+												</xs:element>
+												<xs:element name="DOC_CON_CUANTIA" type="BOOLEANType">
+													<xs:annotation>
+														<xs:documentation>Indica si el contenido del documento respnde a una operación económica o con cuantía</xs:documentation>
+													</xs:annotation>
+												</xs:element>
+												<xs:element name="DOC_CUANTIA" type="IMPORTE_ECONOMICOType" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Cuantía de la operación que figura en el documento</xs:documentation>
+													</xs:annotation>
+												</xs:element>
+												<xs:element name="DOC_FECHA" type="FECHAType">
+													<xs:annotation>
+														<xs:documentation>Fecha del documento cuyas firmas se legitiman”</xs:documentation>
+													</xs:annotation>
+												</xs:element>
+												<xs:element name="DOC_IDIS">
+													<xs:annotation>
+														<xs:documentation>Idiomas del documento cuyas firmas se legitiman</xs:documentation>
+													</xs:annotation>
+													<xs:complexType>
+														<xs:sequence>
+															<xs:element name="DOC_IDI" maxOccurs="40">
+																<xs:annotation>
+																	<xs:documentation>Idioma en código ISO 639-1 ("ES" Español, "EN" Inglés, "FR" Francés, "RU" Ruso, "ZH" Chino, "CA" Catalán, "GL" Gallego, "EU" Euskera, "VA" Valenciano, "DE" Alemán, "AR" Árabe, "BN" Bengalí, "BG" Búlgaro, "CS" Checo, "KO" Coreano, "DA" Danés, "SK" Eslovaco, "SL" Esloveno, "ET" Estonio, "FI" Finés/Finlandés, "EL" Griego, "HE" Hebreo, "HI" Hindi/Hindú, "NL" Holandés/Neerlandés, "HU" Húngaro, "ID" Indonesio, "GA" Irlandés/Gaélico, "IT" Italiano, "JA" Japonés, "LV" Letón, "LT" Lituano, "MT" Maltés, "PA" Panyabí, "PL" Polaco, "PT" Portugués, "RO" Rumano, "SV" Sueco, "TA" Tamil, "TR" Turco, "UR" Urdu)</xs:documentation>
+																</xs:annotation>
+																<xs:simpleType>
+																	<xs:restriction base="xs:string">
+																		<xs:enumeration value="ES"/>
+																		<xs:enumeration value="EN"/>
+																		<xs:enumeration value="FR"/>
+																		<xs:enumeration value="RU"/>
+																		<xs:enumeration value="ZH"/>
+																		<xs:enumeration value="CA"/>
+																		<xs:enumeration value="GL"/>
+																		<xs:enumeration value="EU"/>
+																		<xs:enumeration value="VA"/>
+																		<xs:enumeration value="DE"/>
+																		<xs:enumeration value="AR"/>
+																		<xs:enumeration value="BN"/>
+																		<xs:enumeration value="BG"/>
+																		<xs:enumeration value="CS"/>
+																		<xs:enumeration value="KO"/>
+																		<xs:enumeration value="DA"/>
+																		<xs:enumeration value="SK"/>
+																		<xs:enumeration value="SL"/>
+																		<xs:enumeration value="ET"/>
+																		<xs:enumeration value="FI"/>
+																		<xs:enumeration value="EL"/>
+																		<xs:enumeration value="HE"/>
+																		<xs:enumeration value="HI"/>
+																		<xs:enumeration value="NL"/>
+																		<xs:enumeration value="HU"/>
+																		<xs:enumeration value="ID"/>
+																		<xs:enumeration value="GA"/>
+																		<xs:enumeration value="IT"/>
+																		<xs:enumeration value="JA"/>
+																		<xs:enumeration value="LV"/>
+																		<xs:enumeration value="LT"/>
+																		<xs:enumeration value="MT"/>
+																		<xs:enumeration value="PA"/>
+																		<xs:enumeration value="PL"/>
+																		<xs:enumeration value="PT"/>
+																		<xs:enumeration value="RO"/>
+																		<xs:enumeration value="SV"/>
+																		<xs:enumeration value="TA"/>
+																		<xs:enumeration value="TR"/>
+																		<xs:enumeration value="UR"/>
+																	</xs:restriction>
+																</xs:simpleType>
+															</xs:element>
+														</xs:sequence>
+													</xs:complexType>
+												</xs:element>
+												<xs:element name="DOC_CONT_GRUPO">
+													<xs:annotation>
+														<xs:documentation>Grupo de operaciones en el cabría ubicar el contenido del documento ("1" Trasmisiones inmobiliarias, "2" Operaciones con activos financieros, "3" Poderes o autorizaciones, "4" Operaciones del tráfico mercantil, "9" Otros)</xs:documentation>
+													</xs:annotation>
+													<xs:simpleType>
+														<xs:restriction base="xs:string">
+															<xs:enumeration value="1"/>
+															<xs:enumeration value="2"/>
+															<xs:enumeration value="3"/>
+															<xs:enumeration value="4"/>
+															<xs:enumeration value="9"/>
+														</xs:restriction>
+													</xs:simpleType>
+												</xs:element>
+												<xs:element name="DOC_CONT_GRUPO_OTRO" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Descripción del grupo de operaciones en el cabría ubicar el contenido del documento cuando no figura en la lista del nodo DOC_CONT_GRUPO (valor seleccionado en este nodo: "9" Otros)</xs:documentation>
+													</xs:annotation>
+													<xs:simpleType>
+														<xs:restriction base="xs:string">
+															<xs:maxLength value="2000"/>
+														</xs:restriction>
+													</xs:simpleType>
+												</xs:element>
+												<xs:element name="OBSERVACIONES" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Observaciones que quiera hacer constar el notario en relación a la operación</xs:documentation>
+													</xs:annotation>
+													<xs:simpleType>
+														<xs:restriction base="xs:string">
+															<xs:maxLength value="5000"/>
+														</xs:restriction>
+													</xs:simpleType>
+												</xs:element>
+											</xs:sequence>
+										</xs:complexType>
+									</xs:element>
+									<xs:element name="PACTO_SUCESORIO" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Información sobre el pacto sucesorio</xs:documentation>
+										</xs:annotation>
+										<xs:complexType>
+											<xs:sequence>
+												<xs:element name="LEGISLACION_FORAL" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Indicamos que legislación foral aplica al pacto sucesorio (01- Aragón, 02-Cataluña, 03-Galicia,04-Islas Baleares, 05-Navarra, 06-País Vasco)</xs:documentation>
+													</xs:annotation>
+													<xs:simpleType>
+														<xs:restriction base="xs:string">
+															<xs:enumeration value="01"/>
+															<xs:enumeration value="02"/>
+															<xs:enumeration value="03"/>
+															<xs:enumeration value="04"/>
+															<xs:enumeration value="05"/>
+															<xs:enumeration value="06"/>
+														</xs:restriction>
+													</xs:simpleType>
+												</xs:element>
+												<xs:element name="TIPO_PACTO_SUCESORIO" minOccurs="0">
+													<xs:annotation>
+														<xs:documentation>Indicamos el tipo de pacto sucesorio("01"-"Pacto sucesorio de disposición  mortis causa favor del contratante o de un tercero de presente.", "02"-"Pacto sucesorio de disposición  mortis causa favor del contratante o de un tercero de para después de los días.","03"-"Pacto sucesorio de renuncia a la herencia.", "04"-"Heredamiento.", "05"-"Pacto sucesorio de atribución particular.", "06"-"Donación por causa de muerte.", 
+"07"-"Pacto sucesorio de mejora con transmisión de bienes de presente",  
+"08"-"Pacto sucesorio de mejora sin transmisión de bienes de presente","09"-"Pactos sucesorios de apartación con transmisión de bienes de presente.", "10"-"Pactos sucesorios de apartación sin transmisión de bienes de presente.","11"-"Donación universal.", "12"-"Donación con definición de legítima.", "14"-"Pacto sucesorio de institución.", "15"-"Pacto de finiquito de legítima.",
+"16"-"Pacto sucesorio con transmisión actual de bienes.", "17"-"Pacto sucesorio sin transmisión actual de bienes.", "18"-"Pacto de institución sucesoria con transmisión de bienes de presente.", "19"-"Pacto de institución sucesoria con efectos port mortem.", 
+"20"-"Pacto de renuncia de herencia.", "21"-"Donación mortis causa de bienes singulares.", "22"-"Pacto de institución sucesoria en parte con trasmisión de bienes de presente y en parte con efectos postmortem", "23"-"Pacto de atribución de usufructo")</xs:documentation>
+													</xs:annotation>
+													<xs:simpleType>
+														<xs:restriction base="xs:string">
+															<xs:enumeration value="01"/>
+															<xs:enumeration value="02"/>
+															<xs:enumeration value="03"/>
+															<xs:enumeration value="04"/>
+															<xs:enumeration value="05"/>
+															<xs:enumeration value="06"/>
+															<xs:enumeration value="07"/>
+															<xs:enumeration value="08"/>
+															<xs:enumeration value="09"/>
+															<xs:enumeration value="10"/>
+															<xs:enumeration value="11"/>
+															<xs:enumeration value="12"/>
+															<xs:enumeration value="13"/>
+															<xs:enumeration value="14"/>
+															<xs:enumeration value="15"/>
+															<xs:enumeration value="16"/>
+															<xs:enumeration value="17"/>
+															<xs:enumeration value="18"/>
+															<xs:enumeration value="19"/>
+															<xs:enumeration value="20"/>
+															<xs:enumeration value="21"/>
+															<xs:enumeration value="22"/>
+															<xs:enumeration value="23"/>
+														</xs:restriction>
+													</xs:simpleType>
+												</xs:element>
+											</xs:sequence>
+										</xs:complexType>
+									</xs:element>
+									<xs:element name="TIPO_MORATORIA" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Indicamos el tipo de moratoria: (1-Moratoria legal hipotecaria, 2-Moratoria legal no hipotecaria, 3-Moratoria sectorial, 4-Moratoria turística, 5-Moratoria transporte)</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="xs:string">
+												<xs:maxLength value="1"/>
+												<xs:enumeration value="1"/>
+												<xs:enumeration value="2"/>
+												<xs:enumeration value="3"/>
+												<xs:enumeration value="4"/>
+												<xs:enumeration value="5"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:element>
+									<xs:element name="TESTAMENTO_HILBURUKO" type="BOOLEANType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Indicamos si es un testamento Hilburuko</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="DESIGNACION_COMISARIO" type="BOOLEANType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Indicamos si es una designación de comisario</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="PODER_TESTATORIO" type="BOOLEANType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Indicamos si es un poder testatorio</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="MORATORIA_CLAU_VOL_ADIC" type="BOOLEANType" minOccurs="0"/>
+									<xs:element name="EXCEPCION_PROGENITOR" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Se informa de las causas por las que se ausenta uno de los progenitores(1-Familia monoparental,
+2-Fallecimiento de uno de los progenitores,
+3-Incapacidad temporal o permanente de uno de los progenitores,
+4-Privación o suspensión temporal de la patria potestad,
+5-Otras)</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="xs:int">
+												<xs:pattern value="1"/>
+												<xs:pattern value="2"/>
+												<xs:pattern value="3"/>
+												<xs:pattern value="4"/>
+												<xs:pattern value="5"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:element>
+									<xs:element name="DESC_EXCEPCION_PROGENITOR" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Describimos el motivo de la ausencia de uno de los progenitores</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="xs:string">
+												<xs:maxLength value="1000"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:element>
+									<xs:element name="TIPO_FACULTAD" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Se informa las facultades que se le otorgan sobre el menor(1-Obtención de documento administrativo,
+2-Trámite sanitario,
+3-Trámite escolar,
+4-Otros)</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="xs:int">
+												<xs:pattern value="1"/>
+												<xs:pattern value="2"/>
+												<xs:pattern value="3"/>
+												<xs:pattern value="4"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:element>
+									<xs:element name="DESC_TIPO_FACULTAD" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Describimos las facultades que se conceden sobre el menor</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="xs:string">
+												<xs:maxLength value="1000"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:element>
+									<xs:element name="DURACION_MAXIMA_AUXILIO" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Se indica la duración máxima del  auxilio</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="xs:string">
+												<xs:maxLength value="1000"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:element>
+									<xs:element name="FECHA_PERIODO" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Indicamos si la autorización se informara por fechas o por periodos (0-Periodos, 1-Fechas)</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="xs:string">
+												<xs:enumeration value="0"/>
+												<xs:enumeration value="1"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:element>
+									<xs:element name="AUTORIZACIONES" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Periodos Autorizados</xs:documentation>
+										</xs:annotation>
+										<xs:complexType>
+											<xs:sequence>
+												<xs:element name="DATOS_AUTORIZACION" minOccurs="0" maxOccurs="unbounded">
+													<xs:annotation>
+														<xs:documentation>Datos del periodo autorizado</xs:documentation>
+													</xs:annotation>
+													<xs:complexType>
+														<xs:sequence>
+															<xs:element name="PAIS_ISO" type="CODIGO_PAIS_ISOType" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Se informa el país del periodo de la autorización</xs:documentation>
+																</xs:annotation>
+															</xs:element>
+															<xs:element name="DIA_INICIO" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Día del inicio de la autorización</xs:documentation>
+																</xs:annotation>
+																<xs:simpleType>
+																	<xs:restriction base="xs:string">
+																		<xs:pattern value="[0-3]{1}[0-9]{1}"/>
+																	</xs:restriction>
+																</xs:simpleType>
+															</xs:element>
+															<xs:element name="MES_INICIO" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Mes del inicio de la autorización</xs:documentation>
+																</xs:annotation>
+																<xs:simpleType>
+																	<xs:restriction base="xs:string">
+																		<xs:pattern value="[0,1]{1}[0-9]{1}"/>
+																	</xs:restriction>
+																</xs:simpleType>
+															</xs:element>
+															<xs:element name="ANYO_INICIO" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Año del inicio de la autorización</xs:documentation>
+																</xs:annotation>
+																<xs:simpleType>
+																	<xs:restriction base="xs:string">
+																		<xs:pattern value="[0-9]{4}"/>
+																	</xs:restriction>
+																</xs:simpleType>
+															</xs:element>
+															<xs:element name="DIA_FIN" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Día en que se termina la autorización</xs:documentation>
+																</xs:annotation>
+																<xs:simpleType>
+																	<xs:restriction base="xs:string">
+																		<xs:pattern value="[0-3]{1}[0-9]{1}"/>
+																	</xs:restriction>
+																</xs:simpleType>
+															</xs:element>
+															<xs:element name="MES_FIN" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Mes en que se termina la autorización</xs:documentation>
+																</xs:annotation>
+																<xs:simpleType>
+																	<xs:restriction base="xs:string">
+																		<xs:pattern value="[0,1]{1}[0-9]{1}"/>
+																	</xs:restriction>
+																</xs:simpleType>
+															</xs:element>
+															<xs:element name="ANYO_FIN" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Año en que se termina la autorización</xs:documentation>
+																</xs:annotation>
+																<xs:simpleType>
+																	<xs:restriction base="xs:string">
+																		<xs:pattern value="[0-9]{4}"/>
+																	</xs:restriction>
+																</xs:simpleType>
+															</xs:element>
+															<xs:element name="RAZON_AUT_MENORES" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Indicamos la razón de la autorización: (1-Laborales, 2-Deportivas, 3-Académicas, 4-Otras)</xs:documentation>
+																</xs:annotation>
+																<xs:simpleType>
+																	<xs:restriction base="xs:string">
+																		<xs:maxLength value="1"/>
+																		<xs:enumeration value="1"/>
+																		<xs:enumeration value="2"/>
+																		<xs:enumeration value="3"/>
+																		<xs:enumeration value="4"/>
+																	</xs:restriction>
+																</xs:simpleType>
+															</xs:element>
+															<xs:element name="DESC_RAZON_AUT_MENORES" minOccurs="0">
+																<xs:annotation>
+																	<xs:documentation>Describimos el motivo de la autorización</xs:documentation>
+																</xs:annotation>
+																<xs:simpleType>
+																	<xs:restriction base="xs:string">
+																		<xs:maxLength value="1000"/>
+																	</xs:restriction>
+																</xs:simpleType>
+															</xs:element>
+														</xs:sequence>
+													</xs:complexType>
+												</xs:element>
+											</xs:sequence>
+										</xs:complexType>
+									</xs:element>
+									<xs:element name="SEPARACION_DIVORCIO" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Indicamos si se trata de una separación o un divorcio (0 - Divorcio, 1-Separación)</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="xs:string">
+												<xs:enumeration value="0"/>
+												<xs:enumeration value="1"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:element>
+									<xs:element name="FECHA_DECLARACION_TESTIGOS" type="FECHAType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Indicamos la fecha de la práctica de la declaración de testigos </xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="VALORES_FISCALES" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Valores Fiscales</xs:documentation>
+										</xs:annotation>
+										<xs:complexType>
+											<xs:sequence>
+												<xs:element name="VALOR_FISCAL" type="IMPORTE_ECONOMICOType" minOccurs="0" maxOccurs="unbounded">
+													<xs:annotation>
+														<xs:documentation>Valor Fiscal</xs:documentation>
+													</xs:annotation>
+												</xs:element>
+											</xs:sequence>
+										</xs:complexType>
+									</xs:element>
+									<xs:element name="CONS_OMI_NUM_PROT" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Datos constancia omisión</xs:documentation>
+										</xs:annotation>
+										<xs:complexType>
+											<xs:sequence>
+												<xs:element name="FEC_OMI" type="FECHAType" minOccurs="1" maxOccurs="1">
+													<xs:annotation>
+														<xs:documentation>Fecha del documento omitido</xs:documentation>
+													</xs:annotation>
+												</xs:element>
+												<xs:element name="ES_INTERVALO" type="BOOLEANType" minOccurs="1" maxOccurs="1">
+													<xs:annotation>
+														<xs:documentation>Indica si se omite solo un documento o un intervalo consecutivo</xs:documentation>
+													</xs:annotation>
+												</xs:element>
+												<xs:element name="NUM_PROT_INI" minOccurs="1"  maxOccurs="1">
+													<xs:annotation>
+														<xs:documentation>Número del primer protocolo omitido</xs:documentation>
+													</xs:annotation>
+													<xs:simpleType>
+														<xs:restriction base="xs:unsignedInt">
+															<xs:minInclusive value="1"/>
+															<xs:totalDigits value="6"/>
+														</xs:restriction>
+													</xs:simpleType>
+												</xs:element>
+												<xs:element name="NUM_PROT_FIN" minOccurs="0" maxOccurs="1">
+													<xs:annotation>
+														<xs:documentation>Número del último protocolo omitido</xs:documentation>
+													</xs:annotation>
+													<xs:simpleType>
+														<xs:restriction base="xs:unsignedInt">
+															<xs:minInclusive value="1"/>
+															<xs:totalDigits value="6"/>
+														</xs:restriction>
+													</xs:simpleType>
+												</xs:element>
+											</xs:sequence>
+										</xs:complexType>
+									</xs:element>									
+									<xs:element name="FECHA_SOLICITUD_ACTO" type="FECHAType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Indicamos la fecha en la que se realizó la solicitud</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="FECHA_REALIZACION_ACTO" type="FECHAType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Indicamos la fecha en la que se realizó el matrimonio o equivalente</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="TIPO_VECINDAD_DECLARADA" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Indicamos el tipo de declaración de vecindad: (1-Declaración, 2-Conservación</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="xs:string">
+												<xs:maxLength value="1"/>
+												<xs:enumeration value="1"/>
+												<xs:enumeration value="2"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:element>
+									<xs:element name="TIPO_VECINDAD_APLICA" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Indicamos el tipo de régimen jurídico aplicable: (1-Común, 2-Especial o foral</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="xs:string">
+												<xs:maxLength value="1"/>
+												<xs:enumeration value="1"/>
+												<xs:enumeration value="2"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:element>									
+									<xs:element name="ERRORS" type="ERRORSType" minOccurs="0">
+										<xs:annotation>
+											<xs:documentation>Descripción de los errores en la validación de los datos</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+								</xs:sequence>
+							</xs:complexType>
+						</xs:element>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:simpleType name="TIPO_DOCUMENTOType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="1"/>
+			<xs:enumeration value="2"/>
+			<xs:enumeration value="3"/>
+			<xs:enumeration value="4"/>
+			<xs:enumeration value="5"/>
+			<xs:enumeration value="6"/>
+			<xs:enumeration value="12"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="TIPO_DOCUMENTO_RECTIFICADOType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="1"/>
+			<xs:enumeration value="2"/>
+			<xs:enumeration value="3"/>
+			<xs:enumeration value="4"/>
+			<xs:enumeration value="5"/>
+			<xs:enumeration value="12"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="NUMERO_DOCUMENTOType">
+		<xs:restriction base="xs:unsignedInt">
+			<xs:totalDigits value="6"/>
+			<xs:minInclusive value="1"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="NUMERO_DOCUMENTO_BISType">
+		<xs:restriction base="xs:unsignedInt">
+			<xs:totalDigits value="3"/>
+			<xs:minInclusive value="1"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:complexType name="PERIODO_FALLECIMIENTOType">
+		<xs:sequence>
+			<xs:element name="PERIODO" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Periodo fallecimiento ("1" Anterior a 1970, "2" Posterior a 1970 y superior a 10 años, "3" Inferior a 10 años, "4" Fecha)</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:enumeration value="1"/>
+						<xs:enumeration value="2"/>
+						<xs:enumeration value="3"/>
+						<xs:enumeration value="4"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="ANYO" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Año del fallecimiento del causante</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:unsignedInt">
+						<xs:totalDigits value="4"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="FECHA" type="FECHAType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Fecha completa del fallecimiento del causante</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="LUGAR_FALLECIMIENTO" type="LOCALIZACIONType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Lugar de fallecimiento del causante</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="DILIGENCIAType">
+		<xs:sequence>
+			<xs:element name="AUTORIZADO_POR" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Indica quien ha comunicado la diligencia. 1 --> Por mí. 2 --> Comunicado por otro notario</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:integer">
+						<xs:enumeration value="1"/>
+						<xs:enumeration value="2"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="NOTARIO_DILIGENGIA" type="CODIGO_NOTARIOType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Codigo de Últimas Voluntades del notario que ha comunicado la diligencia</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="NOMBRE_NOTARIO_DILIGENCIA" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Nombre del notario que ha comunicado la diligencia</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="STRINGType">
+						<xs:maxLength value="130"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="NOTARIA_DILIGENCIA" type="CODIGO_NOTARIAType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Codigo de Catastro de la notaría que ha comunicado la diligencia</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="DESCRIPCION_NOTARIA_DILIGENCIA" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Descripción de la notaría que ha comunicado la diligencia</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="STRINGType">
+						<xs:maxLength value="65"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="FECHA" type="FECHAType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Fecha de la diligencia</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="MOTIVO" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Motivo de la diligencia</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="STRINGType">
+						<xs:maxLength value="3000"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="DNE_INFOType">
+		<xs:sequence>
+			<xs:element name="NOMBRE_NOTARIO" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Nombre del notario</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:maxLength value="130"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="CUV" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Código de últimas voluntades del Notario</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:pattern value="[0-9]{7}|A[0-9]{6}"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="FEC_AUT_DNE" type="FECHAType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Fecha del Documento</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="NUM_PROT_DNE" type="NUMERO_DOCUMENTOType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Número de protocolo o libro registro</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="NUM_PROT_BIS_DNE" type="NUMERO_DOCUMENTO_BISType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Número de protocolo o libro registro bis</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="DNE_INFO_EXTType">
+		<xs:complexContent>
+			<xs:extension base="DNE_INFOType">
+				<xs:sequence>
+					<xs:element name="TIP_DOC" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>Tipo de documento ("1" Protocolo ordinario, "3" Libro registro de pólizas - Sección A, "4" Libro registro de pólizas - Sección B)</xs:documentation>
+						</xs:annotation>
+						<xs:simpleType>
+							<xs:restriction base="xs:string">
+								<xs:enumeration value="1"/>
+								<xs:enumeration value="3"/>
+								<xs:enumeration value="4"/>
+							</xs:restriction>
+						</xs:simpleType>
+					</xs:element>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:simpleType name="PROFESION_APODERADOType">
+		<xs:annotation>
+			<xs:documentation>Profesión del apoderado ("1" Procurador, "2" Abogado, "3" Graduado Social, "9" Otros)</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="1"/>
+			<xs:enumeration value="2"/>
+			<xs:enumeration value="3"/>
+			<xs:enumeration value="9"/>
+		</xs:restriction>
+	</xs:simpleType>
+</xs:schema>

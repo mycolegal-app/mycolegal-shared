@@ -124,6 +124,11 @@ export type { EnlaceDeCampo, EnlacesDeEsquema } from './src/biblioteca/enlaces';
 // La validación contra el XSD NO está aquí a propósito: ver `src/iui/generar.ts`.
 export { generarIui, valorUtil, IUI_NAMESPACE } from './src/iui/generar';
 export type { MapeosIui, MapeoArray, OpcionesIui } from './src/iui/generar';
+// F5 (plan REQ_CATALOGO_IUI): el modelo del IUI —sujetos, objetos y operaciones que los citan— y su XML.
+export { serializarIui, fechaIso, decimalXsd } from './src/iui/modelo';
+export type { ModeloIui, SujetoIui, ObjetoIui, OperacionIui, ObjetoIntervinienteIui, EntradaIui, ResultadoIui } from './src/iui/modelo';
+export { RUTAS_CTN } from './src/iui/rutas-ctn';
+export type { RutaCtn } from './src/iui/rutas-ctn';
 export type { AnalisisBiblioteca, Documento, CondicionSospechosa, OpcionesAnalisis, DeclaracionDivergente } from './src/biblioteca/analizar';
 export type { ParrafoRepository, ResultadoExpansion, OpcionesExpansion } from './src/compose/expand-includes';
 export { listasDeLaPlantilla, marcarListasParaSonda, type ListaDeducida, type ResultadoListas } from './src/fields/listas';

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema targetNamespace="http://inti.notariado.org/XML/IU2007" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://inti.notariado.org/XML/IU2007" elementFormDefault="qualified" attributeFormDefault="unqualified">
+	<xs:include schemaLocation="comun.xsd"/>
+	<xs:include schemaLocation="direccion.xsd"/>
+	<xs:include schemaLocation="documento.xsd"/>
+	<xs:include schemaLocation="sujeto.xsd"/>
+	<xs:include schemaLocation="objeto.xsd"/>
+	<xs:include schemaLocation="operacion.xsd"/>
+	<xs:element name="DOCS_NOT">
+		<xs:annotation>
+			<xs:documentation>Documentos notariales</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="NOT" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Datos del Notario titular del documento</xs:documentation>
+					</xs:annotation>
+					<xs:complexType>
+						<xs:sequence>
+							<xs:element name="CUV" type="CODIGO_NOTARIOType" minOccurs="0">
+								<xs:annotation>
+									<xs:documentation>Código de últimas voluntades</xs:documentation>
+								</xs:annotation>
+							</xs:element>
+							<xs:element name="COD_CAT" type="CODIGO_NOTARIAType" minOccurs="0">
+								<xs:annotation>
+									<xs:documentation>Código de catastro de la Notaría</xs:documentation>
+								</xs:annotation>
+							</xs:element>
+						</xs:sequence>
+					</xs:complexType>
+				</xs:element>
+				<xs:element name="GEN_DAT" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Generador de los datos</xs:documentation>
+					</xs:annotation>
+					<xs:complexType>
+						<xs:sequence>
+							<xs:element name="NOM_PRO" type="xs:string" minOccurs="0">
+								<xs:annotation>
+									<xs:documentation>Nombre del proveedor de la aplicación</xs:documentation>
+								</xs:annotation>
+							</xs:element>
+							<xs:element name="NOM_APL" type="xs:string" minOccurs="0">
+								<xs:annotation>
+									<xs:documentation>Nombre de la aplicación</xs:documentation>
+								</xs:annotation>
+							</xs:element>
+							<xs:element name="VER_APL" type="xs:string" minOccurs="0">
+								<xs:annotation>
+									<xs:documentation>Versión de la aplicación</xs:documentation>
+								</xs:annotation>
+							</xs:element>
+						</xs:sequence>
+					</xs:complexType>
+				</xs:element>
+				<xs:element name="DOC_NOT" type="DOCUMENTO_NOTARIAL_IUType" minOccurs="0" maxOccurs="unbounded">
+					<xs:annotation>
+						<xs:documentation>Documento notarial</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+</xs:schema>

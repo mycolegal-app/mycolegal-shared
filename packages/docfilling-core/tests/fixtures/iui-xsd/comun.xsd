@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema targetNamespace="http://inti.notariado.org/XML/IU2007" xmlns="http://inti.notariado.org/XML/IU2007" xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+	<xs:annotation>
+		<xs:documentation>Definición de tipos</xs:documentation>
+	</xs:annotation>
+	<xs:complexType name="ERRORSType">
+		<xs:sequence>
+			<xs:element name="ERROR" type="xs:string" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Descripción del error</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:simpleType name="BOOLEANType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="0"/>
+			<xs:enumeration value="1"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="ID_SECUENCIALType">
+		<xs:restriction base="xs:unsignedInt"/>
+	</xs:simpleType>
+	<xs:simpleType name="STRINGType">
+		<xs:restriction base="xs:string">
+			<xs:pattern value="[^\r\n\t]*"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="CODIGO_NOTARIOType">
+		<xs:restriction base="xs:string">
+			<xs:pattern value="[0-9]{7}"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="CODIGO_NOTARIAType">
+		<xs:restriction base="xs:string">
+			<xs:pattern value="[0-9]{9}"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="IMPORTE_ECONOMICOType">
+		<xs:restriction base="xs:decimal">
+			<xs:maxExclusive value="1000000000000"/>
+			<xs:totalDigits value="14"/>
+			<xs:fractionDigits value="2"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="IMPORTE_ECONOMICO_EXTENDEDType">
+		<xs:restriction base="xs:decimal">
+			<xs:maxExclusive value="1000000000000"/>
+			<xs:totalDigits value="18"/>
+			<xs:fractionDigits value="6"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="PORCENTAJEType">
+		<xs:restriction base="xs:decimal">
+			<xs:totalDigits value="5"/>
+			<xs:fractionDigits value="2"/>
+			<xs:maxInclusive value="100.00"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="EMAILType">
+		<xs:annotation>
+			<xs:documentation>Dirección de Correo Electónico</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:maxLength value="100"/>
+			<xs:pattern value="[A-Za-z0-9çÇñÑ\._%\+\-]+@[A-Za-z0-9çÇñÑ\.\-]+\.[A-Za-z]{2,6}"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="TELEFONOType">
+		<xs:annotation>
+			<xs:documentation>Número de teléfono, acepta limitadores y extensión</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:maxLength value="19"/>
+			<xs:pattern value="(\+[0-9]{1,3}(\-|\.)?)?([0-9]{1,3}(\-|\.|\|)?[0-9]{1,3})+"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="FECHAType">
+		<xs:annotation>
+			<xs:documentation>Fecha</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:date">
+			<xs:minInclusive value="1780-01-01"/>
+			<xs:maxInclusive value="9999-12-31"/>
+		</xs:restriction>
+	</xs:simpleType>
+</xs:schema>
