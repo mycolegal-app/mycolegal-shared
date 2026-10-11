@@ -831,7 +831,10 @@ export async function resolverRequisitos(
           bloquea: [],
           roles: [],
         };
-        if (Array.isArray(p.opciones)) p.opciones = [...new Set([...(p.opciones as string[]), e.valor as string])].sort();
+        // Con la salida «ninguno de estos», como en los tipos: si no, una causa que sólo distingue
+        // una regla («Codicilo», 0201-R07) se ofrecía como ÚNICA respuesta (certificación de los
+        // esquemas base, 10-oct-2026). Contestarla descarta las reglas que piden esa causa.
+        if (Array.isArray(p.opciones)) p.opciones = opcionesDeTipo([...(p.opciones as string[]).filter((x) => x !== TIPO_NINGUNO), e.valor as string]);
         if (!p.bloquea.includes(r.codigo)) p.bloquea.push(r.codigo);
         preguntas.set(e.fact, p);
       }

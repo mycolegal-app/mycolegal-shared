@@ -109,3 +109,10 @@ describe('rol comodín (Redactor)', () => {
     expect(r.firmes.map((x) => x.codigo)).toEqual(['CONSENT']);
   });
 });
+
+describe('causa con salida «ninguno de estos» (certificación de los esquemas base)', () => {
+  it('una causa que sólo distingue una regla no se ofrece como única respuesta', async () => {
+    const r = await resolverRequisitos(repo({ ...BASE, reglas: [regla({ codigo: 'COD', condCausa: 'CODICILO' })] }), '0501', {});
+    expect(r.preguntas.find((p) => p.fact === 'ACTO.CAUSA')?.opciones).toEqual(['CODICILO', 'NINGUNO_DE_ESTOS']);
+  });
+});
