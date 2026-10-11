@@ -1341,6 +1341,35 @@
         "m-uniforme": "Gizona · lasaia",
         "m-suave": "Gizona · leuna"
       }
+    },
+    "generacionRedactor": {
+      "titulo": "Dokumentua sortu",
+      "cerrar": "Itxi",
+      "trabajando": "Redactor dokumentua prestatzen ari da…",
+      "quienFirma": "Zein notariok sinatzen du dokumentua?",
+      "propuesta": "MycoBot-ek proposatu du: berretsi edo aldatu.",
+      "quedan": "{n} falta dira",
+      "sinPreguntas": "Ez dago erantzuteko ezer: Redactor dokumentua amaitzen ari da.",
+      "vistaPrevia": "Dokumentuaren aurrebista",
+      "incorporar": "Txertatu",
+      "incorporado": "Txertatuta",
+      "descargar": "Deskargatu .docx",
+      "imprimir": "Inprimatu",
+      "reintentar": "Saiatu berriro",
+      "noDisponible": "Ezin izan zaio dokumentua Redactor-i eskatu. Saiatu berriro une batean.",
+      "sinPaquete": "Notariak ez du Redactor-en dokumentu hau duen paketea kontratatuta.",
+      "sinEsquema": "Redactor-ek ez du dokumentu honen eredurik.",
+      "generadoEl": "sortua: {f}",
+      "boton": "Sortu Redactor-ekin",
+      "documentos": "Redactor-en dokumentuak",
+      "abrir": "Ireki",
+      "incorporadoMin": "txertatuta",
+      "estado": {
+        "trabajando": "Abian",
+        "preguntas": "Informazioa falta da",
+        "listo": "Prest",
+        "error": "Errorearekin"
+      }
     }
   },
   "unidad": {

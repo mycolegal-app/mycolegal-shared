@@ -1341,6 +1341,35 @@
         "m-uniforme": "Masculina · serena",
         "m-suave": "Masculina · suave"
       }
+    },
+    "generacionRedactor": {
+      "titulo": "Xerar documento",
+      "cerrar": "Pechar",
+      "trabajando": "Redactor está preparando o documento…",
+      "quienFirma": "Que notario asina o documento?",
+      "propuesta": "MycoBot propúxoo: confírmao ou cámbiao.",
+      "quedan": "Quedan {n}",
+      "sinPreguntas": "Non queda nada por contestar: Redactor está rematando o documento.",
+      "vistaPrevia": "Vista previa do documento",
+      "incorporar": "Incorporar",
+      "incorporado": "Incorporado",
+      "descargar": "Descargar .docx",
+      "imprimir": "Imprimir",
+      "reintentar": "Tentar de novo",
+      "noDisponible": "Non se puido encargar o documento a Redactor. Téntao de novo nun momento.",
+      "sinPaquete": "A notaría non ten contratado en Redactor o paquete que inclúe este documento.",
+      "sinEsquema": "Redactor non ten o modelo deste documento.",
+      "generadoEl": "xerado o {f}",
+      "boton": "Xerar con Redactor",
+      "documentos": "Documentos de Redactor",
+      "abrir": "Abrir",
+      "incorporadoMin": "incorporado",
+      "estado": {
+        "trabajando": "En curso",
+        "preguntas": "Falta información",
+        "listo": "Listo",
+        "error": "Con erro"
+      }
     }
   },
   "unidad": {

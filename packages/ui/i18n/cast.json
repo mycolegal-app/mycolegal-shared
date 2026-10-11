@@ -1342,6 +1342,35 @@
         "m-uniforme": "Masculina · serena",
         "m-suave": "Masculina · suave"
       }
+    },
+    "generacionRedactor": {
+      "titulo": "Generar documento",
+      "cerrar": "Cerrar",
+      "trabajando": "Redactor está preparando el documento…",
+      "quienFirma": "¿Qué notario firma el documento?",
+      "propuesta": "MycoBot lo ha propuesto: confírmalo o cámbialo.",
+      "quedan": "Quedan {n}",
+      "sinPreguntas": "No queda nada por contestar: Redactor está terminando el documento.",
+      "vistaPrevia": "Vista previa del documento",
+      "incorporar": "Incorporar",
+      "incorporado": "Incorporado",
+      "descargar": "Descargar .docx",
+      "imprimir": "Imprimir",
+      "reintentar": "Reintentar",
+      "noDisponible": "No se ha podido encargar el documento a Redactor. Vuelve a intentarlo en un momento.",
+      "sinPaquete": "La notaría no tiene contratado en Redactor el paquete que incluye este documento.",
+      "sinEsquema": "Redactor no tiene el modelo de este documento.",
+      "generadoEl": "generado el {f}",
+      "boton": "Generar con Redactor",
+      "documentos": "Documentos de Redactor",
+      "abrir": "Abrir",
+      "incorporadoMin": "incorporado",
+      "estado": {
+        "trabajando": "En curso",
+        "preguntas": "Falta información",
+        "listo": "Listo",
+        "error": "Con error"
+      }
     }
   },
   "unidad": {

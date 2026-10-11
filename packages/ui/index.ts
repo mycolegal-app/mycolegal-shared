@@ -68,25 +68,21 @@ export { BotonEscuchar } from './components/shared/boton-escuchar';
 export type { BotonEscucharProps } from './components/shared/boton-escuchar';
 export { useVoz } from './hooks/use-voz';
 export type { EstadoVoz, UseVozOpts } from './hooks/use-voz';
-// La conversación de generación de Redactor (motor DocFilling), embebida (F7.8,
-// D33). Sustituyó al `DocFillingModal`, borrado con el rename a Redactor (R7).
-//
-// ⚠️ NO se llama `DocumentProducer`, como dice el plan: ese nombre ya lo ocupa
-// el productor genérico de `document_templates` que usa Tramitación. Ver la
-// cabecera de `docfilling-producer.tsx`.
-export { DocFillingProducer, NO_LO_SE } from './components/shared/docfilling-producer';
 // La cinta «Powered by DocFilling» (rename a Redactor, M2): sólo en el modal de
 // la escritura y en los informes.
 export { DocFillingCinta, AZUL_MARINO_DOCFILLING } from './components/brand/docfilling-cinta';
 // El modal de la escritura: markdown, navegador de huecos y descarga del .docx.
 export { EscrituraModal } from './components/shared/escritura-modal';
+// El modal de generación en la app de origen (DR21 de Redactor): Notaría, LegiFirma y Pólizas.
+export { GeneracionRedactorModal } from './components/shared/generacion-redactor-modal';
+export { GenerarConRedactor } from './components/shared/generar-con-redactor';
+export type { GenerarConRedactorProps } from './components/shared/generar-con-redactor';
+export type {
+  GeneracionRedactorModalProps, EncargoRedactor, DestinoIncorporar,
+} from './components/shared/generacion-redactor-modal';
 export type {
   EscrituraModalProps, PrevisualizacionEscritura, HuecoEscritura, CampoEscritura,
 } from './components/shared/escritura-modal';
-export type {
-  DocFillingProducerProps, ProducerEstado, ProducerPregunta, ProducerRequisito, ProducerAportado,
-  ProducerCampo, ProducerFirma, ProducerNotario,
-} from './components/shared/docfilling-producer';
 export { FuentesModal } from './components/shared/fuentes-modal';
 export type { FuentesModalProps, FuenteCatalogoDTO } from './components/shared/fuentes-modal';
 export { readFuentesSel, writeFuentesSel, FUENTES_CHANGED_EVENT } from './lib/biblioteca-fuentes';

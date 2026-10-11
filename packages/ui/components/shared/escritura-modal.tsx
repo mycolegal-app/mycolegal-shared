@@ -54,6 +54,8 @@ export interface CampoEscritura {
   nombre: string; etiqueta: string; tipo: string; opciones: string[];
   instruccion: string | null; quien: string; valor: string | null;
   gobierna: boolean; nivel: number; porque?: string;
+  /** Lo que la IA dejó propuesto sin aplicar («en duda»): se ofrece ya escrito. */
+  propuesta?: string;
 }
 export interface PrevisualizacionEscritura {
   markdown: string;
@@ -284,7 +286,7 @@ export function EscrituraModal({
  * oficial tiene que revisar es lo que va a salir, y un `**` convertido en
  * negrita esconde que el `**` está ahí.
  */
-function Escritura({ markdown, resaltado }: { markdown: string; resaltado: HuecoEscritura | null }) {
+export function Escritura({ markdown, resaltado }: { markdown: string; resaltado: HuecoEscritura | null }) {
   const trozos: React.ReactNode[] = [];
   let ultimo = 0;
   let k = 0;

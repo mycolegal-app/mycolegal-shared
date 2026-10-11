@@ -1342,6 +1342,35 @@
         "m-uniforme": "Masculina · serena",
         "m-suave": "Masculina · suau"
       }
+    },
+    "generacionRedactor": {
+      "titulo": "Generar document",
+      "cerrar": "Tanca",
+      "trabajando": "Redactor està preparant el document…",
+      "quienFirma": "Quin notari signa el document?",
+      "propuesta": "MycoBot ho ha proposat: confirma-ho o canvia-ho.",
+      "quedan": "En queden {n}",
+      "sinPreguntas": "No queda res per contestar: Redactor està acabant el document.",
+      "vistaPrevia": "Vista prèvia del document",
+      "incorporar": "Incorpora",
+      "incorporado": "Incorporat",
+      "descargar": "Descarrega .docx",
+      "imprimir": "Imprimeix",
+      "reintentar": "Torna-ho a provar",
+      "noDisponible": "No s'ha pogut encarregar el document a Redactor. Torna-ho a provar d'aquí a un moment.",
+      "sinPaquete": "La notaria no té contractat a Redactor el paquet que inclou aquest document.",
+      "sinEsquema": "Redactor no té el model d'aquest document.",
+      "generadoEl": "generat el {f}",
+      "boton": "Genera amb Redactor",
+      "documentos": "Documents de Redactor",
+      "abrir": "Obre",
+      "incorporadoMin": "incorporat",
+      "estado": {
+        "trabajando": "En curs",
+        "preguntas": "Falta informació",
+        "listo": "Llest",
+        "error": "Amb error"
+      }
     }
   },
   "unidad": {
