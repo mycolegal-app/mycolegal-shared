@@ -31,7 +31,6 @@ export {
   extractDeclareFixedValues,
   applyFieldSuffix,
   normalizeConditionals,
-  elseIfAnidado,
   processConditionals,
   expandForEach,
   processExitIncludes,
