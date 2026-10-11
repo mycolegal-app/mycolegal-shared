@@ -475,29 +475,7 @@ export function normalizeConditionals(content: string): string {
   content = content.replace(/\{\{ELSE[_\s]+(?:SYSTEM:)?[\w.\u00C0-\u024F]+\s*\}\}/gi, "{{ELSE}}");
   // ENDIF_NAME / ENDIF NAME → ENDIF
   content = content.replace(/\{\{ENDIF[_\s]+(?:SYSTEM:)?[\w.\u00C0-\u024F]+\s*\}\}/gi, "{{ENDIF}}");
-  return elseIfAnidado(content);
-}
-
-/**
- * `{{ELSEIF b}}` (o `ELSE IF`, `ELSE_IF`) → `{{ELSE}}{{IF b}}`, con un `{{ENDIF}}` de más al cerrar ese IF: el patrón de
- * `processConditionals` sólo conoce IF / ELSE / ENDIF. El lenguaje declara ELSEIF (el validador lo
- * trata como palabra clave y `condPrefixes` lo lista), pero nunca se implementó: con la primera
- * condición cierta salía su rama Y la del ELSEIF, y con la del ELSEIF cierta, la del ELSE
- * («**tiene construida****está construyendo**», obra nueva 0405; certificación, 10-oct-2026).
- */
-export function elseIfAnidado(content: string): string {
-  if (!/\{\{\s*ELSE[\s_]*IF\s/i.test(content)) return content;
-  const extra: number[] = [];
-  return content.replace(/\{\{\s*(IF\s+[^}]*|ELSE[\s_]*IF\s+([^}]*)|ENDIF)\s*\}\}/gi, (full: string, cuerpo: string, condElseIf?: string) => {
-    if (/^IF\s/i.test(cuerpo)) { extra.push(0); return full; }
-    if (/^ELSE[\s_]*IF\s/i.test(cuerpo)) {
-      if (!extra.length) return full;
-      extra[extra.length - 1]++;
-      return `{{ELSE}}{{IF ${condElseIf!.trim()}}}`;
-    }
-    const n = extra.pop() ?? 0;
-    return "{{ENDIF}}".repeat(1 + n);
-  });
+  return content;
 }
 
 // =============================================================================
