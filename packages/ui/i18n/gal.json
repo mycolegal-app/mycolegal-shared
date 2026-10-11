@@ -1369,7 +1369,11 @@
         "preguntas": "Falta información",
         "listo": "Listo",
         "error": "Con erro"
-      }
+      },
+      "notariaTitulo": "Faltan datos da notaría",
+      "notariaAyuda": "Gárdanse na configuración da notaría en Redactor e valen para todos os documentos.",
+      "notariaCcaa": "Comunidade autónoma da notaría",
+      "notariaGuardar": "Gardar e seguir"
     }
   },
   "unidad": {

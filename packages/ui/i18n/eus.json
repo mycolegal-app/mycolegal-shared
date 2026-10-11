@@ -1369,7 +1369,11 @@
         "preguntas": "Informazioa falta da",
         "listo": "Prest",
         "error": "Errorearekin"
-      }
+      },
+      "notariaTitulo": "Notariaren datuak falta dira",
+      "notariaAyuda": "Redactor-eko notariaren konfigurazioan gordetzen dira eta dokumentu guztietarako balio dute.",
+      "notariaCcaa": "Notariaren autonomia-erkidegoa",
+      "notariaGuardar": "Gorde eta jarraitu"
     }
   },
   "unidad": {

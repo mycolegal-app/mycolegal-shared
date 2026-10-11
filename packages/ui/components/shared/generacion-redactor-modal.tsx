@@ -57,6 +57,11 @@ interface VistaEncargo {
     pasos: PasoEncargo[];
     error?: { code: string; message: string } | null;
     firma?: { opciones: string[] } | null;
+    /** La configuración de la notaría que falta (se guarda en Redactor para siempre). */
+    notaria?: {
+      ccaa?: { codigo: string; nombre: string }[] | null;
+      datos?: { clave: string; descripcion: string }[] | null;
+    } | null;
     incorporado?: { nodeId: string; at: string } | null;
   } | null;
 }
@@ -95,6 +100,8 @@ export function GeneracionRedactorModal({
   const [borrador, setBorrador] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [incorporando, setIncorporando] = useState(false);
+  const [ccaa, setCcaa] = useState("");
+  const [datosNotaria, setDatosNotaria] = useState<Record<string, string>>({});
   const pedido = useRef(false);
   const cuerpoRef = useRef<HTMLDivElement>(null);
 
@@ -155,7 +162,7 @@ export function GeneracionRedactorModal({
   useEffect(() => {
     if (!abierto) return;
     if (estado === "listo") { void cargarPrev(); onCambio?.(); }
-    if (estado === "preguntas" && !vista?.encargo?.firma) { void cargarPrev(); setActual(0); }
+    if (estado === "preguntas" && !vista?.encargo?.firma && !vista?.encargo?.notaria) { void cargarPrev(); setActual(0); }
     // `onCambio` y `vista` fuera a propósito: sólo al CAMBIAR de estado.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [abierto, estado, cargarPrev]);
@@ -190,6 +197,18 @@ export function GeneracionRedactorModal({
       // Se recarga TODO: si el dato gobernaba un `{{IF}}`, el documento es otro.
       await cargarPrev();
       setActual(0);
+    } finally { setGuardando(false); }
+  }
+
+  async function guardarNotaria() {
+    if (!tareaId) return;
+    setGuardando(true);
+    try {
+      const r = await fetch(`${apiBase}/tareas/${tareaId}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notaria: { ccaa: ccaa || null, datos: datosNotaria } }),
+      });
+      if (r.ok) setVista((await r.json()).data as VistaEncargo);
     } finally { setGuardando(false); }
   }
 
@@ -248,6 +267,37 @@ export function GeneracionRedactorModal({
             </button>
           </div>
         </div>
+
+        {/* ── preguntas: la configuración de la notaría ───────────────────── */}
+        {estado === "preguntas" && e?.notaria && (
+          <div className="border-b border-gray-200 bg-amber-50/60 p-4">
+            <p className="font-medium text-gray-900">{t("ui.generacionRedactor.notariaTitulo")}</p>
+            <p className="mt-0.5 text-xs text-gray-600">{t("ui.generacionRedactor.notariaAyuda")}</p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              {e.notaria.ccaa && (
+                <label className="text-sm text-gray-700">
+                  {t("ui.generacionRedactor.notariaCcaa")}
+                  <select value={ccaa} onChange={(ev) => setCcaa(ev.target.value)} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm">
+                    <option value="">—</option>
+                    {e.notaria.ccaa.map((c) => <option key={c.codigo} value={c.codigo}>{c.nombre}</option>)}
+                  </select>
+                </label>
+              )}
+              {(e.notaria.datos ?? []).map((d) => (
+                <label key={d.clave} className="text-sm text-gray-700">
+                  {d.descripcion}
+                  <input value={datosNotaria[d.clave] ?? ""} onChange={(ev) => setDatosNotaria((x) => ({ ...x, [d.clave]: ev.target.value }))}
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm" />
+                </label>
+              ))}
+            </div>
+            <Button size="sm" className="mt-3"
+              disabled={guardando || (!!e.notaria.ccaa && !ccaa) || (e.notaria.datos ?? []).some((d) => !datosNotaria[d.clave]?.trim())}
+              onClick={() => void guardarNotaria()}>
+              {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : t("ui.generacionRedactor.notariaGuardar")}
+            </Button>
+          </div>
+        )}
 
         {/* ── preguntas: la firma ──────────────────────────────────────────── */}
         {estado === "preguntas" && e?.firma && (
@@ -333,7 +383,7 @@ export function GeneracionRedactorModal({
             </div>
           )}
 
-          {estado === "preguntas" && !e?.firma && prev && huecos.length === 0 && (
+          {estado === "preguntas" && !e?.firma && !e?.notaria && prev && huecos.length === 0 && (
             <AlertBanner type="info" message={t("ui.generacionRedactor.sinPreguntas")} />
           )}
 
