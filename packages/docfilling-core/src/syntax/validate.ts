@@ -15,6 +15,7 @@ import {
 import {
   checkDeclareArraySyntax,
   checkDosPuntosEnPalabraClave,
+  checkElseIf,
   checkEndIfNoCanonico,
   checkPageBreakHeredado,
   checkForEachBalance,
@@ -55,6 +56,7 @@ export function validateText(
     ...checkInputConOptions(fields),
     ...checkIncludeConRuta(fields),
     ...checkDosPuntosEnPalabraClave(fields),
+    ...checkElseIf(fields),
     ...checkEndIfNoCanonico(fields),
     ...checkPageBreakHeredado(fields),
     ...checkReqDocSintaxis(fields),

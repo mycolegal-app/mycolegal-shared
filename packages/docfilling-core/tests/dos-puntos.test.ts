@@ -32,10 +32,9 @@ describe('E902 · dos puntos en palabra clave', () => {
     expect(d[0].fix?.replacement).toBe('{{DECLARE NOMBRE_CONYUGE}}');
   });
 
-  it('también DECLARE ARRAY, SET, ELSEIF y FOR EACH', () => {
+  it('también DECLARE ARRAY, SET y FOR EACH (ELSEIF no existe: E904)', () => {
     expect(e902('{{DECLARE ARRAY: L}}')[0].fix?.replacement).toBe('{{DECLARE ARRAY L}}');
     expect(e902('{{SET: X = 1}}')[0].fix?.replacement).toBe('{{SET X = 1}}');
-    expect(e902('{{ELSEIF: Y}}')[0].fix?.replacement).toBe('{{ELSEIF Y}}');
     expect(e902('{{FOR EACH: I IN L}}')[0].fix?.replacement).toBe('{{FOR EACH I IN L}}');
   });
 

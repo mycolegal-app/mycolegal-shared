@@ -76,7 +76,7 @@ function isMetadataField(content: string): boolean {
   for (const p of METADATA_PREFIXES) {
     if (upper.startsWith(p.toUpperCase())) return true;
   }
-  const condPrefixes = ["IF_", "ENDIF_", "ELSE_", "IF ", "ENDIF", "ELSE", "ELSEIF "];
+  const condPrefixes = ["IF_", "ENDIF_", "ELSE_", "IF ", "ENDIF", "ELSE"];
   for (const p of condPrefixes) {
     const up = p.toUpperCase();
     if (upper.startsWith(up) || upper === up.trim()) return true;

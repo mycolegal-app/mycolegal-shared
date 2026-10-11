@@ -261,7 +261,6 @@ const CON_ESPACIO: ReadonlyArray<readonly [RegExp, string]> = [
   [/^DECLARE\s+ARRAY\s*:/i, 'DECLARE ARRAY'],
   [/^DECLARE\s*:/i, 'DECLARE'],
   [/^IF\s*:/i, 'IF'],
-  [/^ELSEIF\s*:/i, 'ELSEIF'],
   [/^SET\s*:/i, 'SET'],
   [/^FOR\s+EACH\s*:/i, 'FOR EACH'],
 ];
@@ -301,7 +300,7 @@ export function checkDosPuntosEnPalabraClave(fields: ParsedField[]): Diagnostic[
       const d = diag(f.line, f.col, f.raw.length, Severity.ERROR, 'E902',
         `'${canonica}' va seguido de un ESPACIO, no de dos puntos. Así escrito no es ` +
         `una directiva: el motor lo trata como un campo de datos, de modo que ` +
-        (canonica === 'IF' || canonica === 'ELSEIF'
+        (canonica === 'IF'
           ? 'el texto que debía proteger se emite SIEMPRE y además sale «[NO DISPONIBLE]». '
           : 'el campo nunca se declara y sale «[NO DISPONIBLE]». ') +
         `Escribe ${arreglo}.`);
@@ -336,6 +335,27 @@ export function checkEndIfNoCanonico(fields: ParsedField[]): Diagnostic[] {
       'unificar: la forma con espacio se aceptó por simetría con {{END FOR}}.');
     d.fix = { title: 'Migrar a {{ENDIF}}', replacement: '{{ENDIF}}' };
     out.push(d);
+  }
+  return out;
+}
+
+/**
+ * `E904` — `{{ELSEIF …}}` / `{{ELSE IF …}}`: NO EXISTE en el lenguaje.
+ *
+ * La forma canónica es `{{IF}} … {{ELSE}} … {{ENDIF}}` y nada más (SYNTAX_BOOST §4.1; §4.3 sacó
+ * `ELSEIF` como código muerto: «no lo soporta nada»). El motor no lo entiende y el daño es mudo: con
+ * la primera condición cierta se emiten su rama Y la del ELSEIF, y con la del ELSEIF cierta, la del
+ * ELSE («tiene construida****está construyendo», obra nueva 0405; certificación de los esquemas
+ * base, 10-oct-2026). Se reescribe anidando: `{{IF a}}A{{ELSE}}{{IF b}}B{{ELSE}}C{{ENDIF}}{{ENDIF}}`.
+ * Sin `fix`: el arreglo toca también el `{{ENDIF}}` del bloque, no sólo esta directiva.
+ */
+export function checkElseIf(fields: ParsedField[]): Diagnostic[] {
+  const out: Diagnostic[] = [];
+  for (const f of fields) {
+    if (!/^ELSE[\s_]*IF\b/i.test(f.content.trim())) continue;
+    out.push(diag(f.line, f.col, f.raw.length, Severity.ERROR, 'E904',
+      'ELSEIF no existe en el lenguaje: el motor emite a la vez la rama del IF y la de esta directiva. ' +
+      'Anídalo: {{IF a}}…{{ELSE}}{{IF b}}…{{ELSE}}…{{ENDIF}}{{ENDIF}} (un {{ENDIF}} más por cada ELSEIF).'));
   }
   return out;
 }
