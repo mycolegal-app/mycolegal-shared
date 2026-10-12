@@ -1,8 +1,8 @@
 // El resolutor de modelo por tarea: la caché y la reserva.
 import { describe, it, expect, vi } from 'vitest';
-import { createTaskModelResolver, type CatalogoTareas } from '../src/modelo';
+import { createTaskModelResolver, thinkingConfigDe, type CatalogoTareas } from '../src/modelo';
 
-const prismaCon = (fila: { model: string; active: boolean } | null, espia = vi.fn()): CatalogoTareas => ({
+const prismaCon = (fila: { model: string; active: boolean; thinkingBudget?: number | null } | null, espia = vi.fn()): CatalogoTareas => ({
   aiTaskModel: { findUnique: async (args) => { espia(args); return fila; } },
 });
 
@@ -96,5 +96,31 @@ describe('createPromptCatalog', () => {
       prisma: { aiPrompt: { findMany: async () => [] } }, app: 'redactor', catalogo: CATALOGO,
     });
     expect(await c.promptDe('no-existe')).toBe('');
+  });
+});
+
+describe('configDeTarea', () => {
+  it('trae el presupuesto de razonamiento de la fila', async () => {
+    const r = createTaskModelResolver({ prisma: prismaCon({ model: 'm', active: true, thinkingBudget: 0 }), app: 'redactor', fallbackModel: 'f' });
+    expect(await r.configDeTarea('t')).toEqual({ model: 'm', thinkingBudget: 0 });
+  });
+
+  it('sin fila, la reserva y sin presupuesto (decide el modelo)', async () => {
+    const r = createTaskModelResolver({ prisma: prismaCon(null), app: 'redactor', fallbackModel: 'f' });
+    expect(await r.configDeTarea('t')).toEqual({ model: 'f', thinkingBudget: null });
+  });
+
+  it('modeloDeTarea y configDeTarea comparten la caché', async () => {
+    const espia = vi.fn();
+    const r = createTaskModelResolver({ prisma: prismaCon({ model: 'm', active: true, thinkingBudget: 512 }, espia), app: 'redactor', fallbackModel: 'f' });
+    await r.configDeTarea('t'); expect(await r.modeloDeTarea('t')).toBe('m');
+    expect(espia).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('thinkingConfigDe', () => {
+  it('0 se manda (es «no razones»), null no se manda', () => {
+    expect(thinkingConfigDe({ thinkingBudget: 0 })).toEqual({ thinkingConfig: { thinkingBudget: 0 } });
+    expect(thinkingConfigDe({ thinkingBudget: null })).toEqual({});
   });
 });

@@ -25,7 +25,7 @@ export interface CatalogoTareas {
   aiTaskModel: {
     findUnique(args: {
       where: { app_taskKey: { app: string; taskKey: string } };
-    }): Promise<{ model: string; active: boolean } | null>;
+    }): Promise<{ model: string; active: boolean; thinkingBudget?: number | null } | null>;
   };
 }
 
@@ -48,28 +48,42 @@ export interface ResolutorDeModeloConfig {
   cacheMs?: number;
 }
 
+/** Lo que Admin decide de una tarea: el modelo y cuánto puede razonar antes de responder. */
+export interface ConfigDeTarea {
+  model: string;
+  /**
+   * `ai_task_models.thinkingBudget`: tokens de razonamiento. `0` = no razona; `null` = lo que
+   * decida el modelo (sin fila, o la columna vacía). Quien llama lo manda en
+   * `generationConfig.thinkingConfig` —ver `thinkingConfigDe`—: si no lo manda, Gemini 3 razona por
+   * defecto, y en Redactor eso era el grueso del tiempo (12-oct-2026: 8,8 s con 631 tokens de
+   * razonamiento frente a 1,5 s con presupuesto 0, la misma pregunta).
+   */
+  thinkingBudget: number | null;
+}
+
 export interface ResolutorDeModelo {
   /** Modelo (id de Vertex) de una tarea. */
   modeloDeTarea(taskKey: string): Promise<string>;
+  /** Modelo y presupuesto de razonamiento de una tarea. */
+  configDeTarea(taskKey: string): Promise<ConfigDeTarea>;
   /** Vacía la caché. Para los tests y para cuando Admin acaba de cambiarlo. */
   invalidar(taskKey?: string): void;
 }
 
 export function createTaskModelResolver(cfg: ResolutorDeModeloConfig): ResolutorDeModelo {
   const cacheMs = cfg.cacheMs ?? 60_000;
-  const cache = new Map<string, { valor: string; expira: number }>();
+  const cache = new Map<string, { valor: ConfigDeTarea; expira: number }>();
 
-  return {
-    async modeloDeTarea(taskKey: string): Promise<string> {
+  async function configDeTarea(taskKey: string): Promise<ConfigDeTarea> {
       const hit = cache.get(taskKey);
       if (hit && hit.expira > Date.now()) return hit.valor;
 
-      let valor = cfg.fallbackModel;
+      let valor: ConfigDeTarea = { model: cfg.fallbackModel, thinkingBudget: null };
       try {
         const row = await cfg.prisma.aiTaskModel.findUnique({
           where: { app_taskKey: { app: cfg.app, taskKey } },
         });
-        if (row?.active) valor = row.model;
+        if (row?.active) valor = { model: row.model, thinkingBudget: row.thinkingBudget ?? null };
       } catch {
         // Entorno sin BD o tabla sin migrar: se sigue con la reserva. No se
         // cachea el fallo como si fuera un acierto... pero sí se cachea el
@@ -78,10 +92,24 @@ export function createTaskModelResolver(cfg: ResolutorDeModeloConfig): Resolutor
       }
       cache.set(taskKey, { valor, expira: Date.now() + cacheMs });
       return valor;
+  }
+
+  return {
+    async modeloDeTarea(taskKey: string): Promise<string> {
+      return (await configDeTarea(taskKey)).model;
     },
+    configDeTarea,
     invalidar(taskKey?: string) {
       if (taskKey) cache.delete(taskKey);
       else cache.clear();
     },
   };
+}
+
+/**
+ * El `thinkingConfig` de `generationConfig` para un presupuesto de Admin, o nada si la tarea no lo
+ * fija (`null`: decide el modelo). Se esparce: `generationConfig: { ...thinkingConfigDe(c), … }`.
+ */
+export function thinkingConfigDe(c: Pick<ConfigDeTarea, 'thinkingBudget'>): { thinkingConfig?: { thinkingBudget: number } } {
+  return c.thinkingBudget === null || c.thinkingBudget === undefined ? {} : { thinkingConfig: { thinkingBudget: c.thinkingBudget } };
 }

@@ -140,7 +140,13 @@ export async function vertexRequest<T>(
       if (model) recordLlmCall({ model, ...vertexUsage(res.data) });
       const ms = Date.now() - t0;
       if (attempt > 1 || ms > LENTA_MS) {
-        console.warn('[vertex] llamada lenta', JSON.stringify({ model, intentos: attempt, ms, techo }));
+        // Con los tokens, para saber en qué se va el tiempo: leer (entrada), escribir (salida) o
+        // razonar antes de responder (`pensando`, que no cuenta en `tokensOut`). Ver
+        // `thinkingConfigDe` en ai-core.
+        const u = (res.data as { usageMetadata?: { thoughtsTokenCount?: number } } | null)?.usageMetadata;
+        console.warn('[vertex] llamada lenta', JSON.stringify({
+          model, intentos: attempt, ms, techo, ...vertexUsage(res.data), pensando: u?.thoughtsTokenCount ?? 0,
+        }));
       }
       return res;
     } catch (err) {

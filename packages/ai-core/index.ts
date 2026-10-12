@@ -23,6 +23,8 @@
 
 export {
   createTaskModelResolver,
+  thinkingConfigDe,
+  type ConfigDeTarea,
   type CatalogoTareas,
   type ResolutorDeModelo,
   type ResolutorDeModeloConfig,
