@@ -9,19 +9,19 @@
  *   - or the user has the `admin:users` permission granted in this app
  *   - or the user has wildcard `*` (e.g. consultor's EDITOR_CATALOGO)
  *
- * The hook fetches `/api/auth/me` once on mount; consumers use the
+ * The hook reads `/api/auth/me` once on mount (shared with the rest of the page, `lib/auth-me.ts`); consumers use the
  * boolean to gate the menu item without re-implementing this logic.
  */
 
 import { useEffect, useState } from 'react';
+import { pedirAuthMe } from '../lib/auth-me';
 
 export function useIsOrgAdmin(): boolean {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/auth/me')
-      .then((r) => (r.ok ? r.json() : null))
+    pedirAuthMe()
       .then((json) => {
         if (cancelled || !json?.data) return;
         const authRole: string | undefined = json.data.authRole;

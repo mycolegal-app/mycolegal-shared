@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { X, ChevronLeft, ChevronRight, Plus, Loader2 } from "lucide-react";
 import { cn } from "../../lib/utils";
+import { pedirAuthMe } from "../../lib/auth-me";
 
 // #558 — Bienvenida first-run. Se monta UNA vez en el app-shell de cada app
 // (como <IncidentReporter/> o <MycoBotRail/>). Es autocontenido: consulta
@@ -81,8 +82,8 @@ export function FirstRunWelcome({ appSlug, appName, logo, steps, adminUrl = "/ad
   // Decide si mostrarse a partir del estado central de onboarding.
   useEffect(() => {
     let alive = true;
-    fetch("/api/auth/me")
-      .then((r) => (r.ok ? r.json() : null))
+    // Un fallo (red o no-2xx) cae en el catch de abajo: sin datos no se muestra nada.
+    pedirAuthMe()
       .then((j) => {
         if (!alive) return;
         const me: MeResponse = j?.data ?? {};

@@ -15,6 +15,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import { pedirAuthMe } from "../lib/auth-me";
 
 export interface UsePermissionsResult {
   permissions: string[] | null;
@@ -32,8 +33,8 @@ export function usePermissions(): UsePermissionsResult {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/auth/me")
-      .then((r) => (r.ok ? r.json() : null))
+    // Compartida con el resto de la página (`lib/auth-me.ts`): una petición por carga, no una por hook.
+    pedirAuthMe()
       .then((json) => {
         if (cancelled) return;
         if (json?.data) {

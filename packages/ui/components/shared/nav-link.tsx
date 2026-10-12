@@ -14,10 +14,14 @@ import type { ComponentProps } from "react";
  * Use this instead of `next/link` for all internal navigation links.
  */
 export function NavLink(props: ComponentProps<typeof Link>) {
-  const { onClick, href, ...rest } = props;
+  const { onClick, href, prefetch, ...rest } = props;
   return (
     <Link
       href={href}
+      // Sin precarga: la navegación es una carga de página completa (abajo), así que lo que Next
+      // precargara no se usaría nunca. Con ella, cada enlace del menú visible era una petición
+      // `?_rsc=` al servidor en cada página (~90 por enlace en un e2e de Redactor, 11-oct-2026).
+      prefetch={prefetch ?? false}
       onClick={(e) => {
         if (e.metaKey || e.ctrlKey || e.shiftKey) return;
         e.preventDefault();

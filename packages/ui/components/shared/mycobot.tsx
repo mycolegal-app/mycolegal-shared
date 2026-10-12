@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { MycoBotRail } from "./mycobot-rail";
+import { pedirAuthMe } from "../../lib/auth-me";
 
 /**
  * MycoBot listo para montar en CUALQUIER app de mycolegal-app. Aparece para
@@ -24,8 +25,7 @@ export function MycoBot({ appSlug }: { appSlug?: string }) {
   const [cfg, setCfg] = useState<{ available: boolean; consultorUrl?: string }>({ available: false });
 
   useEffect(() => {
-    fetch("/api/auth/me")
-      .then((r) => (r.ok ? r.json() : null))
+    pedirAuthMe()
       .then((j) => {
         // Usuario autenticado → MycoBot disponible (ayuda de producto ungated).
         // Si además la org tiene Consultor, guardamos su URL para el deep-link

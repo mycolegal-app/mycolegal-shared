@@ -21,6 +21,7 @@ import { useIsOrgAdmin } from "../../hooks/use-is-org-admin";
 import { CreditsPurchaseModal } from "../shared/credits-purchase-modal";
 import { useI18n } from "../i18n/i18n-context";
 import { cn } from "../../lib/utils";
+import { pedirAuthMe, olvidarAuthMe } from "../../lib/auth-me";
 import {
   SidebarCollapseProvider,
   useSidebarCollapse,
@@ -54,6 +55,7 @@ function writeMeCache(d: unknown) {
 
 /** Limpia el cache del perfil. Llamar en logout/timeout. */
 export function clearMeCache() {
+  olvidarAuthMe();
   try {
     window.sessionStorage.removeItem(ME_CACHE_KEY);
   } catch {
@@ -409,12 +411,10 @@ export default function AppShell({
     if (cached) applyProfile(cached, true);
 
     const load = async () => {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 8000);
       try {
-        const r = await fetch("/api/auth/me", { signal: controller.signal });
-        if (!r.ok) throw new Error(`me ${r.status}`);
-        const json = await r.json();
+        // Compartida con el resto de la página (MycoBot, bienvenida, `useIsOrgAdmin`): una sola
+        // petición por carga, con su techo de 8 s (`lib/auth-me.ts`).
+        const json = await pedirAuthMe();
         if (cancelled) return;
         if (!json?.data) throw new Error("me: respuesta sin data");
         const d = json.data;
@@ -427,8 +427,6 @@ export default function AppShell({
         attempt += 1;
         const delay = Math.min(2000 * 2 ** (attempt - 1), 15000);
         retryTimer = setTimeout(load, delay);
-      } finally {
-        clearTimeout(timeout);
       }
     };
 
