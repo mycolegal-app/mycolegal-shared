@@ -369,8 +369,36 @@ function _composeSuffix(inner: string, outer: string): string {
   return inner + outer;
 }
 
+/**
+ * Los nombres de campo que un texto USA fuera de `AUTO` (pintados, declarados o en una condición): son los que el
+ * sufijo de un INCLUDE renombra. Sirve para saber si la pista de un `{{AUTO(PISTA):…}}` es uno de ellos.
+ */
+function camposQueRenombra(content: string): Set<string> {
+  const s = new Set<string>();
+  for (const m of content.matchAll(/\{\{([^}]+)\}\}/g)) {
+    const body = m[1].trim();
+    const upper = body.toUpperCase();
+    if (upper.startsWith("AUTO") || upper.startsWith("SYSTEM:") || upper.startsWith("@")) continue;
+    const decl = body.match(/^DECLARE\s+(?:ARRAY\s+)?([A-Za-z_][\w\u00C0-\u024F]*)/i);
+    if (decl) { s.add(decl[1].toUpperCase()); continue; }
+    const cond = body.match(/^(?:IF|ELSE)[_\s]+([\s\S]*)$/i);
+    if (cond) {
+      for (const n of cond[1].replace(/"[^"]*"|'[^']*'/g, " ").matchAll(/[A-Za-z_][\w\u00C0-\u024F]*/g)) s.add(n[0].toUpperCase());
+      continue;
+    }
+    const campo = body.match(/^([A-Za-z_][\w\u00C0-\u024F]*)\s*(?:$|[=!:#])/);
+    if (campo) s.add(campo[1].toUpperCase());
+  }
+  return s;
+}
+
 export function applyFieldSuffix(content: string, suffix: string): string {
   if (!suffix || !content) return content;
+  // La pista de una concordancia (`AUTO(COMP_PF_NOMBRE)`) sigue al campo: si el campo se renombra
+  // (`COMP_PF_NOMBRE_VEND`), la pista también; si apunta a un campo de fuera (`AUTO(FINCAS)`), no.
+  // Sin esto, la pista de un párrafo incluido con `FIELDS:_VEND` apuntaba a un campo que no existe y la
+  // concordancia decidía sólo por el contexto (certificación del 0507, 15-oct-2026).
+  const renombrados = camposQueRenombra(content);
   return content.replace(/\{\{([^}]+)\}\}/g, (full, raw: string) => {
     const body = raw.trim();
     const upper = body.toUpperCase();
@@ -389,10 +417,15 @@ export function applyFieldSuffix(content: string, suffix: string): string {
       upper.startsWith("SUMMARY:") || upper.startsWith("SCHEMA_ACT") || upper.startsWith("LANG=") ||
       upper.startsWith("LANG ") || upper.startsWith("DEPENDENCY:") ||
       upper.startsWith("MAP_IUI:") || upper.startsWith("DOCUBOT") ||
-      upper.startsWith("AUTO:") || upper.startsWith("AUTO(") ||
+      upper.startsWith("AUTO:") ||
       upper.startsWith("HUMAN_ACTION") || upper.startsWith("END_HUMAN_ACTION") ||
       upper.startsWith("EXIT_INCLUDE")
     ) return full;
+
+    // AUTO(PISTA):… → la pista, si es un campo que este texto renombra.
+    const auto = body.match(/^(AUTO\s*\(\s*)([A-Za-z_][\w\u00C0-\u024F]*)(\s*\)[\s\S]*)$/i);
+    if (auto) return renombrados.has(auto[2].toUpperCase()) ? `{{${auto[1]}${auto[2]}${suffix}${auto[3]}}}` : full;
+    if (upper.startsWith("AUTO(")) return full;
 
     // FOR EACH ITEM IN ARRAY → rename ARRAY only
     let m = body.match(/^(FOR\s+EACH\s+[\w\u00C0-\u024F]+\s+IN\s+)([\w\u00C0-\u024F]+)(\s*)$/i);

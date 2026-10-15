@@ -140,3 +140,16 @@ describe('en el análisis de la plantilla', () => {
     expect(validateText(t).diagnostics.filter((x) => x.code === 'E907')).toHaveLength(0);
   });
 });
+
+describe('sufijo de INCLUDE y pista de AUTO (15-oct-2026)', () => {
+  it('la pista sigue al campo que el texto renombra', () => {
+    const t = '{{DECLARE COMP_CONYUGE1_NOMBRE}}{{AUTO(COMP_CONYUGE1_NOMBRE):Don|Doña}} {{COMP_CONYUGE1_NOMBRE}}';
+    expect(applyFieldSuffix(t, '_VEND')).toBe('{{DECLARE COMP_CONYUGE1_NOMBRE_VEND}}{{AUTO(COMP_CONYUGE1_NOMBRE_VEND):Don|Doña}} {{COMP_CONYUGE1_NOMBRE_VEND}}');
+  });
+  it('una pista a un campo de fuera no se toca', () => {
+    expect(applyFieldSuffix('{{AUTO(FINCAS):la finca|las fincas}} {{PRECIO}}', '_B')).toBe('{{AUTO(FINCAS):la finca|las fincas}} {{PRECIO_B}}');
+  });
+  it('sin pista, como siempre', () => {
+    expect(applyFieldSuffix('{{AUTO:a|b}} {{X}}', '_B')).toBe('{{AUTO:a|b}} {{X_B}}');
+  });
+});
