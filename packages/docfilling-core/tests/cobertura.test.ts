@@ -64,4 +64,9 @@ describe('modo cobertura', () => {
     const m = marcarRamas(exp.texto);
     expect(m.ramas.map((r) => [r.parrafo, r.ordinal, r.condicion])).toEqual([['P', 0, 'X_VEND'], ['P', 1, 'Y_VEND'], ['P', 0, 'X_COMPR'], ['P', 1, 'Y_COMPR']]);
   });
+
+  it('las opciones con paréntesis dentro se leen enteras', () => {
+    const m = marcarRamas('{{DECLARE C:INPUT(¿En concurso?|No,Sí (Concurso Abierto),"Sí, cerrado")}}');
+    expect(m.preguntas[0].opciones).toEqual(['No', 'Sí (Concurso Abierto)', 'Sí, cerrado']);
+  });
 });
