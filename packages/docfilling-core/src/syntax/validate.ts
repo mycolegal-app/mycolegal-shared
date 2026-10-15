@@ -25,6 +25,7 @@ import {
   checkReqCatalogo,
   checkReqDocSintaxis,
   checkSetDirectives,
+  checkFormatos,
 } from './checks-pendientes';
 import type { CatalogoReq } from '../ports/catalogo';
 
@@ -61,6 +62,7 @@ export function validateText(
     ...checkPageBreakHeredado(fields),
     ...checkReqDocSintaxis(fields),
     ...checkIuiObsoleto(fields),
+    ...checkFormatos(fields),
     ...(opciones.catalogo ? checkReqCatalogo(fields, opciones.catalogo) : []),
   );
 

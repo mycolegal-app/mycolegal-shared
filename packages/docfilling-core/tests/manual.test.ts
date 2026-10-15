@@ -89,3 +89,28 @@ describe('manual · cierres, directivas que sobreviven y diagnósticos', () => {
     expect(validateText(t).diagnostics.some((d) => d.code === 'E902')).toBe(false);
   });
 });
+
+describe('manual · formatos de salida (§1, 14-oct-2026)', () => {
+  it.each([
+    ['{{X#thousands}}', '3210', '3.210'],
+    ['{{X#amount}}', '180000', '180.000,00'],
+    ['{{X#amount_words}}', '180000,50', 'ciento ochenta mil euros con cincuenta céntimos'],
+    ['{{X#words}}', '3', 'tres'],
+    ['{{X#percent}}', '50', '50 %'],
+    ['{{X#percent_words}}', '50', 'cincuenta por ciento'],
+    ['{{X#date}}', '2026-10-14', '14/10/2026'],
+    ['{{X#date_long}}', '2026-10-14', '14 de octubre de 2026'],
+    ['{{X#date_words}}', '2026-10-14', 'catorce de octubre de dos mil veintiséis'],
+    ['{{X#upper}}', 'Ana Pérez', 'ANA PÉREZ'],
+    ['{{X#lower}}', 'Separación de Bienes', 'separación de bienes'],
+    ['{{X#capitalize}}', 'gananciales', 'Gananciales'],
+    ['{{X#amount_words#upper}}', '180000', 'CIENTO OCHENTA MIL EUROS'],
+    ['{{X:[el precio de la compraventa]#amount}}', '180000', '180.000,00'],
+  ])('%s con %s → %s', (plantilla, valor, esperado) => {
+    expect(compose(plantilla, { X: valor })).toBe(esperado);
+  });
+
+  it('E907 para un formato que no existe', () => {
+    expect(validateText('{{PRECIO#amont}}').diagnostics.some((d) => d.code === 'E907')).toBe(true);
+  });
+});

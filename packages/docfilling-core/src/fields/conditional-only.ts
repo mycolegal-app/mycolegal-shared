@@ -50,7 +50,7 @@ export function camposSoloCondicionales(
     if (cuerpo.toUpperCase().startsWith('MAP_IUI:')) continue;
     if (cuerpo.toUpperCase().startsWith('DEPENDENCY:')) continue;
 
-    const nombre = cuerpo.split('==')[0].split('!=')[0].split(':')[0].trim();
+    const nombre = cuerpo.split('==')[0].split('!=')[0].split(':')[0].split('#')[0].trim();
     if (!esConocido(nombre)) pintados.add(nombre);
   }
 

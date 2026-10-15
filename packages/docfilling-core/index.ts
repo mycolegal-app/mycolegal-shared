@@ -81,6 +81,7 @@ export type { TipoCanonico } from './src/syntax/declare-types';
 export type { Diagnostic, DiagnosticFix, ValidationResult, IncludeResolver } from './src/syntax/validator';
 
 export * from './src/syntax/constants';
+export * from './src/format';
 
 export { includesDe } from './src/compose/includes';
 

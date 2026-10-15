@@ -136,6 +136,8 @@ export interface ParsedField {
   reqDocErrores: string[];
   /** For DECLARE ARRAY: `:REQ` / `:DOC` de cada subcampo, por nombre (en mayúsculas). */
   arraySubfieldsReqDoc: Record<string, { req: ReqDecl[]; doc: string[] }>;
+  /** Formatos de salida de una referencia, `{{PRECIO#amount}}` → `["amount"]` (ver `format/formats.ts`). */
+  formatos: string[];
 }
 
 function createParsedField(partial: Partial<ParsedField> & Pick<ParsedField, "raw" | "content" | "fieldType" | "offset" | "line" | "col">): ParsedField {
@@ -167,6 +169,7 @@ function createParsedField(partial: Partial<ParsedField> & Pick<ParsedField, "ra
     countField: "",
     allowUndeclaredNames: [],
     malformedResidue: "",
+    formatos: [],
     req: [],
     doc: [],
     reqDocErrores: [],
@@ -416,6 +419,9 @@ function _parseArraySubfields(
 // parseFields
 // =============================================================================
 
+/** Una referencia a un campo (con o sin `SYSTEM:`, con o sin `:[instrucción]`) seguida de `#formato…`. */
+const REFERENCIA_CON_FORMATO = /^(?:SYSTEM:)?[\w.\u00C0-\u024F]+(?::\[[^\]]*\])?\s*#\s*[A-Za-z_]+(?:\s*#\s*[A-Za-z_]+)*$/i;
+
 export function parseFields(text: string): ParsedField[] {
   const fields: ParsedField[] = [];
 
@@ -425,8 +431,17 @@ export function parseFields(text: string): ParsedField[] {
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
     const raw = m[0];
-    const content = m[1].trim();
+    let content = m[1].trim();
     const offset = m.index;
+    // Formatos de salida: `{{PRECIO#amount}}`, `{{SYSTEM:FECHA#date_words}}`,
+    // `{{PRECIO:[instrucción]#amount}}`. Sólo en una REFERENCIA a un campo: se clasifica y se
+    // nombra sin ellos (el campo es PRECIO, no «PRECIO#amount»).
+    let formatos: string[] = [];
+    if (REFERENCIA_CON_FORMATO.test(content)) {
+      const i = content.indexOf("#", content.lastIndexOf("]") + 1);
+      formatos = content.slice(i + 1).split("#").map((x) => x.trim().toLowerCase()).filter(Boolean);
+      content = content.slice(0, i).trim();
+    }
     const [line, col] = offsetToLineCol(text, offset);
 
     const ftype = classifyField(content);
@@ -438,6 +453,7 @@ export function parseFields(text: string): ParsedField[] {
       line,
       col,
     });
+    pf.formatos = formatos;
 
     const upper = content.toUpperCase().trim();
 

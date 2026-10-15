@@ -32,8 +32,9 @@ const BIND_BEGIN = /\x00BIND:([\wÀ-ɏ]+)\x00/y;
 
 function nombresDe(dentro: string): string[] {
   const sinLiterales = dentro.replace(/"[^"]*"|'[^']*'|“[^”]*”|«[^»]*»/g, ' ');
-  // `{{CAMPO:INPUT(...)}}` / `{{CAMPO:[...]}}`: sólo cuenta lo de antes de los dos puntos.
-  const cabeza = /^\s*IF[\s_]/i.test(sinLiterales) ? sinLiterales : sinLiterales.split(':')[0];
+  // `{{CAMPO:INPUT(...)}}` / `{{CAMPO:[...]}}`: sólo cuenta lo de antes de los dos puntos; y en
+  // `{{CAMPO#amount}}`, lo de antes del formato de salida (si no, «amount» pasaba por un campo).
+  const cabeza = /^\s*IF[\s_]/i.test(sinLiterales) ? sinLiterales : sinLiterales.split(':')[0].split('#')[0];
   return [...cabeza.matchAll(/(?:^|[^\w.@])([A-Za-z_][\wÀ-ɏ]*(?:\.[A-Za-z_][\wÀ-ɏ]*)*)(?![\w(])/g)]
     .map((m) => m[1]).filter((n) => !RESERVADAS.has(n.toUpperCase().split('.')[0]) || n.includes('.'));
 }

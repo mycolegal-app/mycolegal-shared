@@ -18,6 +18,8 @@ import { esPageBreak } from "../syntax/page-break";
 import { esWordStyle } from "../syntax/word-style";
 import { parseComparacion, compararNumerico } from "../syntax/comparar";
 import { quitarReqDoc } from "../syntax/req-doc";
+import { aplicarFormatos, partirFormatos } from "../format/formats";
+import { idiomaDePlantilla } from "../syntax/template-lang";
 
 export type FieldValues = Record<string, unknown>;
 
@@ -184,6 +186,12 @@ function tryMatchDirectiveChain(content: string, pos: number): number | null {
   const n = content.length;
   while (pos < n) {
     if (content.substring(pos, pos + 2) === "}}") return pos + 2;
+    // `{{NOMBRE:[instrucción]#formato}}`: el formato de salida cierra la cadena.
+    if (content[pos] === "#") {
+      const end = content.indexOf("}}", pos);
+      if (end < 0) return null;
+      return end + 2;
+    }
     if (content[pos] === "=") {
       const end = content.indexOf("}}", pos);
       if (end < 0) return null;
@@ -244,7 +252,9 @@ export function stripFieldSuffixes(content: string): string {
       i += 1;
       continue;
     }
-    out.push("{{" + name + "}}");
+    // El formato de salida (`#amount`) no es un sufijo de declaración: se conserva.
+    const formato = /(#[^}]*)\}\}$/.exec(content.substring(i, end));
+    out.push("{{" + name + (formato ? formato[1].trim() : "") + "}}");
     i = end;
   }
   return out.join("");
@@ -445,7 +455,7 @@ export function applyFieldSuffix(content: string, suffix: string): string {
 
     // Bare placeholder {{NAME}} (allow dots) — strip operator tail (==, !=, :)
     m = body.match(/^([A-Za-z_][\w.\u00C0-\u024F]*)([\s\S]*)$/);
-    if (m && (!m[2] || /^\s*[=!:]/.test(m[2]))) {
+    if (m && (!m[2] || /^\s*[=!:#]/.test(m[2]))) {
       return `{{${m[1]}${suffix}${m[2] || ""}}}`;
     }
 
@@ -743,6 +753,7 @@ export function expandForEach(
   content: string,
   fields: FieldValues,
   warnings?: ComposeWarning[],
+  idioma: string = DEFAULT_LOCALE,
 ): string {
   // ⚠️ PARCHE A MANO (5-oct-2026) — reescrito. Antes era una regex perezosa:
   // emparejaba el primer FOR con el primer ENDFOR (el del bucle INTERIOR), no
@@ -814,11 +825,11 @@ export function expandForEach(
       // 3) sustitución de {{ITEM.SUB}} y {{ITEM}}.
       for (const [subKey, subValue] of Object.entries(upperEl).sort((x, y) => y[0].length - x[0].length)) {
         if (subValue !== null && typeof subValue === "object") continue;
-        const subPat = new RegExp("\\{\\{\\s*" + escapeRe(itUpper) + "\\." + escapeRe(subKey) + "\\s*\\}\\}", "gi");
-        elementContent = elementContent.replace(subPat, () => String(subValue));
+        const subPat = new RegExp("\\{\\{\\s*" + escapeRe(itUpper) + "\\." + escapeRe(subKey) + "\\s*(?:#([^}]*))?\\}\\}", "gi");
+        elementContent = elementContent.replace(subPat, (_m: string, f?: string) => conFormato(subValue, f, idioma, warnings));
       }
-      const itemPat = new RegExp("\\{\\{\\s*" + escapeRe(itUpper) + "\\s*\\}\\}", "gi");
-      elementContent = elementContent.replace(itemPat, () => String(element));
+      const itemPat = new RegExp("\\{\\{\\s*" + escapeRe(itUpper) + "\\s*(?:#([^}]*))?\\}\\}", "gi");
+      elementContent = elementContent.replace(itemPat, (_m: string, f?: string) => conFormato(element, f, idioma, warnings));
       parts.push(elementContent);
     }
     // `IN LISTA|ENUM`: enumeración en prosa —«A, B y C»—. Lo usaban las
@@ -1062,20 +1073,33 @@ export function substituteCount(content: string, fields: FieldValues): string {
 // substituteFields
 // =============================================================================
 
-export function substituteFields(content: string, fields: FieldValues): string {
-  // First pass: substitute every known field
+/**
+ * El valor de un campo con los formatos de salida de su referencia (`{{PRECIO#amount}}`), en el
+ * idioma de la plantilla. Ver `src/format/formats.ts`. Un formato que no se puede aplicar deja el
+ * valor tal cual y lo avisa (W110).
+ */
+function conFormato(valor: unknown, formatos: string | undefined, idioma: string, warnings?: ComposeWarning[]): string {
+  const v = String(valor);
+  if (!formatos || !formatos.trim()) return v;
+  const r = aplicarFormatos(v, partirFormatos("#" + formatos).formatos, idioma);
+  if (r.problema) warnings?.push({ code: "W110", message: r.problema, iteration: 0 });
+  return r.texto;
+}
+
+export function substituteFields(
+  content: string,
+  fields: FieldValues,
+  idioma: string = DEFAULT_LOCALE,
+  warnings?: ComposeWarning[],
+): string {
+  // First pass: substitute every known field — {{FIELD}}, {{FIELD:[instruction]}} and, with
+  // output formats, {{FIELD#amount}} / {{FIELD:[instruction]#amount}}.
   for (const [field, value] of Object.entries(fields)) {
     if (!field) continue;
     const escaped = escapeRe(field);
-    // Pattern 1: simple {{FIELD}}
     content = content.replace(
-      new RegExp("\\{\\{\\s*" + escaped + "\\s*\\}\\}", "g"),
-      String(value),
-    );
-    // Pattern 2: {{FIELD:[instruction]}}
-    content = content.replace(
-      new RegExp("\\{\\{\\s*" + escaped + ":\\[[^\\]]+\\]\\s*\\}\\}", "g"),
-      String(value),
+      new RegExp("\\{\\{\\s*" + escaped + "\\s*(?::\\[[^\\]]+\\]\\s*)?(?:#([^}]*))?\\}\\}", "g"),
+      (_m: string, formatos?: string) => conFormato(value, formatos, idioma, warnings),
     );
   }
 
@@ -1104,9 +1128,10 @@ export function substituteFields(content: string, fields: FieldValues): string {
     // is a metadata namespace at the language level but a substitutable
     // value at compose time (the editor's wizard collects it).
     if (upper.startsWith("SYSTEM:")) {
-      const name = fieldContent.slice(7).trim();
+      const { nombre, formatos } = partirFormatos(fieldContent.slice(7));
+      const name = nombre.trim();
       const val = fields[name] ?? fields[name.toUpperCase()];
-      if (val !== undefined && val !== null && String(val) !== "") return String(val);
+      if (val !== undefined && val !== null && String(val) !== "") return conFormato(val, formatos.join("#"), idioma, warnings);
       return "[NO DISPONIBLE]";
     }
 
@@ -1133,6 +1158,9 @@ export function composeWithDiagnostics(
   const declareFixed = extractDeclareFixedValues(template);
   Object.assign(allFields, declareFixed);
 
+  // El idioma de la plantilla: lo usan los formatos de salida (`{{FECHA#date_words}}`).
+  const idioma = idiomaDePlantilla(template, locale.slice(0, 2).toLowerCase());
+
   // Step 2: Normalize {{NAME:HELP/INPUT/[instr]}} → {{NAME}}
   let content = stripFieldSuffixes(template);
 
@@ -1144,7 +1172,7 @@ export function composeWithDiagnostics(
 
   // Step 5: Expand FOR EACH first. Each iteration re-runs
   // processConditionals on its own body with item subkeys in scope.
-  content = stripBindMarks(expandForEach(content, merged, warnings));
+  content = stripBindMarks(expandForEach(content, merged, warnings, idioma));
 
   // Step 6: Resolve remaining (top-level) IF blocks
   content = processConditionals(content, merged, warnings);
@@ -1164,7 +1192,7 @@ export function composeWithDiagnostics(
   content = substituteCount(content, merged);
 
   // Step 9: Substitute field values and clean up
-  content = substituteFields(content, merged);
+  content = substituteFields(content, merged, idioma, warnings);
 
   // Step 10: Resolve {{@autonumber:...}} in document order, last so
   // the numbering reflects the final layout (after IFs prune,
@@ -1220,11 +1248,12 @@ export function composeForPreview(
 
   // Phase 3 pipeline order, mirrored from compose():
   //   suffix-strip → metadata-strip → system fields → FOR EACH → IF → COUNT
+  const idioma = idiomaDePlantilla(template, locale.slice(0, 2).toLowerCase());
   let content = stripFieldSuffixes(template);
   content = stripDirectives(content);
   const merged: FieldValues = { ...getSystemFields(locale), ...allFields };
 
-  content = stripBindMarks(expandForEach(content, merged));
+  content = stripBindMarks(expandForEach(content, merged, undefined, idioma));
   content = processConditionals(content, merged);
   // Honour {{EXIT_INCLUDE}} per inlined include scope, after IFs
   // have run (so a conditional EXIT_INCLUDE only fires when its
@@ -1266,9 +1295,11 @@ export function composeForPreview(
       return _m;
     }
     if (isMetadataField(fieldContent)) return "";
-    const val = merged[fieldContent] ?? merged[fieldContent.toUpperCase()];
+    const { nombre, formatos } = partirFormatos(fieldContent);
+    const campo = nombre.trim();
+    const val = merged[campo] ?? merged[campo.toUpperCase()];
     if (val !== undefined && val !== null && String(val) !== "") {
-      return wrapForHighlight(String(val), upper);
+      return wrapForHighlight(formatos.length ? aplicarFormatos(String(val), formatos, idioma).texto : String(val), campo.toUpperCase());
     }
     return _m;
   });

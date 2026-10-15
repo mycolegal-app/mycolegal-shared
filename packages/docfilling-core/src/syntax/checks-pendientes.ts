@@ -27,6 +27,7 @@
 // nunca choquen con su numeración —que usa W0xx–W1xx y E0xx–E1xx— las nuestras
 // viven en el rango 900+. El Python no tiene ningún W9xx/E9xx (comprobado).
 
+import { esFormato, FORMATOS } from '../format/formats';
 import { FieldType, type ParsedField } from './parser';
 import { Severity, type Diagnostic } from './validator';
 
@@ -511,6 +512,24 @@ export function checkIuiObsoleto(fields: ParsedField[]): Diagnostic[] {
     out.push(diag(f.line, f.col, f.raw.length, Severity.WARNING, 'W913',
       `${mapIui ? 'MAP_IUI' : `:IUI(…) en ${f.name}`} está retirado: el IUI vive en el catálogo universal. ` +
       'Enlaza el campo con su hecho o dato con :REQ(AMBITO.CODIGO) y la ruta del XML la pone el catálogo.'));
+  }
+  return out;
+}
+
+/**
+ * `E907` — formato de salida que no existe (`{{PRECIO#amont}}`).
+ *
+ * El motor deja el valor sin formatear y lo avisa al componer (W110), pero la escritura sale con
+ * la cifra cruda y nadie lo ve: se para aquí, al escribir la plantilla. Ver `format/formats.ts`.
+ */
+export function checkFormatos(fields: ParsedField[]): Diagnostic[] {
+  const out: Diagnostic[] = [];
+  for (const f of fields) {
+    for (const fmt of f.formatos ?? []) {
+      if (esFormato(fmt)) continue;
+      out.push(diag(f.line, f.col, f.raw.length, Severity.ERROR, 'E907',
+        `Formato de salida desconocido «${fmt}». Los que hay: ${Object.keys(FORMATOS).join(', ')}.`));
+    }
   }
   return out;
 }

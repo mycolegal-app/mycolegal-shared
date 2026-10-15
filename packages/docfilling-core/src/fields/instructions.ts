@@ -21,7 +21,7 @@ export function instruccionesDeCampo(
   // `{{CAMPO:[instrucción]}}`. Ojo: la clave puede salir como `DECLARE X`
   // cuando el campo es un DECLARE — es lo que hace el Python, y es inocuo
   // porque quien consulta lo hace por nombre de campo.
-  for (const m of plantilla.matchAll(/\{\{([^:}]+):\[([^\]]+)\]\}\}/g)) {
+  for (const m of plantilla.matchAll(/\{\{([^:}]+):\[([^\]]+)\](?:#[^}]*)?\}\}/g)) {
     const nombre = m[1].trim();
     if (!esConocido(nombre)) salida[nombre] = m[2].trim();
   }
