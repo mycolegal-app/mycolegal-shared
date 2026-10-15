@@ -92,7 +92,13 @@ export interface OpcionesExpansion {
   /** Envolver cada párrafo insertado con los centinelas de EXIT_INCLUDE.
    *  Por defecto sí (ver cabecera). */
   centinelas?: boolean;
+  /** Poner el nombre del párrafo tras su centinela de apertura (`marcaParrafo`). Sólo para el modo cobertura
+   *  (`cobertura.ts`), que lo usa para decir de qué párrafo es cada rama y lo quita antes de componer. */
+  nombrarParrafos?: boolean;
 }
+
+/** La marca con el nombre del párrafo que abre un centinela (modo cobertura). */
+export const marcaParrafo = (nombre: string): string => `\x00PARR:${nombre}\x00`;
 
 /** ¿Cae `offset` en una línea `//`? `stripDirectives` borrará esa línea entera, así
  *  que un `{{INCLUDE}}` comentado no se expande ni cuenta como faltante: es como
@@ -146,7 +152,7 @@ export async function expandirIncludes(
           // lleva el sufijo compuesto y sus campos hoja salen bien renombrados.
           if (d.includeSuffix) cuerpo = applyFieldSuffix(cuerpo, d.includeSuffix);
           cuerpo = await expandir(cuerpo, profundidad + 1, [...enCurso, nombre]);
-          reemplazo = centinelas ? `${INC_BEGIN_MARK}\n${cuerpo}${INC_END_MARK}` : cuerpo;
+          reemplazo = centinelas ? `${INC_BEGIN_MARK}${opciones.nombrarParrafos ? marcaParrafo(nombre) : ''}\n${cuerpo}${INC_END_MARK}` : cuerpo;
           // `INCLUDE X(ITEM)` / `INCLUDE X FIELDS:(ITEM)`: vinculado al elemento
           // de la vuelta (ver `vincularAlElemento` en engine.ts).
           const vinc = d.raw.match(/\(\s*([A-Za-z_][\w\u00C0-\u024F]*)\s*\)\s*\}\}\s*$/);

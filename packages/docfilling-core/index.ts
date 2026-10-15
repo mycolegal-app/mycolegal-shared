@@ -132,4 +132,8 @@ export { RUTAS_CTN } from './src/iui/rutas-ctn';
 export type { RutaCtn } from './src/iui/rutas-ctn';
 export type { AnalisisBiblioteca, Documento, CondicionSospechosa, OpcionesAnalisis, DeclaracionDivergente } from './src/biblioteca/analizar';
 export type { ParrafoRepository, ResultadoExpansion, OpcionesExpansion } from './src/compose/expand-includes';
+export { marcaParrafo } from './src/compose/expand-includes';
+// Modo cobertura (puerta P2 de la certificación): qué ramas de un esquema recorren sus casos.
+export { marcarRamas, ramasRecorridas, sinMarcasDeCobertura, ramasAlcanzables } from './src/compose/cobertura';
+export type { RamaIf, PreguntaConOpciones, TextoMarcado } from './src/compose/cobertura';
 export { listasDeLaPlantilla, marcarListasParaSonda, type ListaDeducida, type ResultadoListas } from './src/fields/listas';
