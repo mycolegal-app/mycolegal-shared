@@ -525,25 +525,11 @@ export function normalizeConditionals(content: string): string {
 // processConditionals
 // =============================================================================
 
-export function processConditionals(
-  content: string,
-  fields: FieldValues,
-  warnings?: ComposeWarning[],
-): string {
-  // Phase 4: pre-normalize legacy forms so a single regex handles all cases.
-  content = normalizeConditionals(content);
-
-  // Innermost-first body: must not contain a nested {{IF }} opening or
-  // a {{ENDIF}}. Negative lookahead at each char position lets the
-  // engine match the innermost block before any outer wrapper.
-  const standardPat = new RegExp(
-    "\\{\\{IF\\s+([^}]+)\\}\\}" +
-    "((?:(?!\\{\\{IF\\s+|\\{\\{ENDIF\\}\\}).)*?)" +
-    "(?:\\{\\{ELSE\\}\\}((?:(?!\\{\\{IF\\s+|\\{\\{ENDIF\\}\\}).)*?))?" +
-    "\\{\\{ENDIF\\}\\}",
-    "gs",
-  );
-
+/**
+ * El evaluador de condiciones del motor, fuera de `processConditionals` para poder usarlo también por partes
+ * (`condicionTriestado`). El código es el que había dentro, tal cual: un solo evaluador del lenguaje.
+ */
+function crearEvaluador(fields: FieldValues, warnings?: ComposeWarning[]) {
   // Quote- and paren-aware splitter — splits `expr` by `sep`
   // ("AND" or "OR") when it appears outside quoted strings / IN(...)
   // lists. Mirrors the validator's helper.
@@ -726,6 +712,81 @@ export function processConditionals(
     if (envueltaEnParentesis(e)) return evalExpr(e.slice(1, -1));
     return evalAtom(e);
   };
+  return { evalExpr, evalAtom, splitLogical, envueltaEnParentesis };
+}
+
+/** El campo de una comparación (`X == "a"`, `X IN (…)`, `X > 3`, `COUNT(X) > 1` o `X` a secas), en mayúsculas. */
+function campoDelAtomo(atomo: string): string | null {
+  const a = atomo.trim();
+  const m = a.match(/^COUNT\s*\(\s*([\w.\u00C0-\u024F]+)/i) ?? a.match(/^(?:SYSTEM:)?([A-Za-z_][\w.\u00C0-\u024F]*)/);
+  return m ? m[1].toUpperCase() : null;
+}
+
+/**
+ * ¿Qué vale una condición sabiendo sólo parte de los campos? Lógica de tres valores (cierto, falso, no se sabe) sobre
+ * el mismo `AND` / `OR` / `NOT` / paréntesis del motor, y cada comparación la evalúa el motor. `valor` es `null` si
+ * depende de lo que falta; `faltan`, los campos que todavía pueden cambiar el resultado (no todos los vacíos: en
+ * `CA == "Baleares" AND X`, con la comunidad en Andalucía, `X` ya no hace falta).
+ *
+ * Para quien pregunta (Redactor): la condición del justificante de fondos de la donación de dinero junta veintidós
+ * beneficios de siete comunidades, y se preguntaban todas las casillas vacías aunque la comunidad ya las descartara
+ * (certificación del 0701, 15-oct-2026).
+ */
+export function condicionTriestado(
+  condicion: string,
+  fields: FieldValues,
+  desconocido: (campo: string) => boolean,
+): { valor: boolean | null; faltan: string[] } {
+  const { evalAtom, splitLogical, envueltaEnParentesis } = crearEvaluador(fields);
+  type R = { valor: boolean | null; faltan: string[] };
+  const union = (rs: R[]) => [...new Set(rs.filter((r) => r.valor === null).flatMap((r) => r.faltan))];
+  const ev = (expr: string): R => {
+    const e = expr.trim();
+    if (!e) return { valor: false, faltan: [] };
+    const orParts = splitLogical(e, "OR");
+    if (orParts.length > 1) {
+      const rs = orParts.map(ev);
+      if (rs.some((r) => r.valor === true)) return { valor: true, faltan: [] };
+      return rs.every((r) => r.valor === false) ? { valor: false, faltan: [] } : { valor: null, faltan: union(rs) };
+    }
+    const andParts = splitLogical(e, "AND");
+    if (andParts.length > 1) {
+      const rs = andParts.map(ev);
+      if (rs.some((r) => r.valor === false)) return { valor: false, faltan: [] };
+      return rs.every((r) => r.valor === true) ? { valor: true, faltan: [] } : { valor: null, faltan: union(rs) };
+    }
+    if (/^NOT\s*\(/i.test(e) || /^NOT\s+/i.test(e)) {
+      const r = ev(e.slice(3).trim());
+      return r.valor === null ? r : { valor: !r.valor, faltan: [] };
+    }
+    if (envueltaEnParentesis(e)) return ev(e.slice(1, -1));
+    const campo = campoDelAtomo(e);
+    if (campo && desconocido(campo)) return { valor: null, faltan: [campo] };
+    return { valor: evalAtom(e), faltan: [] };
+  };
+  return ev(condicion);
+}
+
+export function processConditionals(
+  content: string,
+  fields: FieldValues,
+  warnings?: ComposeWarning[],
+): string {
+  // Phase 4: pre-normalize legacy forms so a single regex handles all cases.
+  content = normalizeConditionals(content);
+
+  // Innermost-first body: must not contain a nested {{IF }} opening or
+  // a {{ENDIF}}. Negative lookahead at each char position lets the
+  // engine match the innermost block before any outer wrapper.
+  const standardPat = new RegExp(
+    "\\{\\{IF\\s+([^}]+)\\}\\}" +
+    "((?:(?!\\{\\{IF\\s+|\\{\\{ENDIF\\}\\}).)*?)" +
+    "(?:\\{\\{ELSE\\}\\}((?:(?!\\{\\{IF\\s+|\\{\\{ENDIF\\}\\}).)*?))?" +
+    "\\{\\{ENDIF\\}\\}",
+    "gs",
+  );
+
+  const { evalExpr } = crearEvaluador(fields, warnings);
 
   const evalStandard = (
     _m: string,

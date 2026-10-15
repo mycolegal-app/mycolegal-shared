@@ -32,6 +32,7 @@ export {
   applyFieldSuffix,
   normalizeConditionals,
   processConditionals,
+  condicionTriestado,
   expandForEach,
   processExitIncludes,
   processSets,
