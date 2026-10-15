@@ -27,6 +27,10 @@ export interface RamaIf {
   conElse: boolean;
   /** Línea del texto expandido (1-based). */
   linea: number;
+  /** Su número de orden entre los IF de su párrafo (los del propio párrafo, no los de los que incluye). Un párrafo
+   *  incluido varias veces (la comparecencia, una por parte) tiene los mismos IF en cada copia: `parrafo` + `ordinal`
+   *  identifica la rama de la PLANTILLA, que es lo que se prueba. */
+  ordinal: number;
 }
 
 /** Una pregunta con opciones cerradas (`{{DECLARE X:INPUT(¿…?|a,b,c)}}`) y la rama donde está declarada. */
@@ -35,6 +39,8 @@ export interface PreguntaConOpciones {
   opciones: string[];
   parrafo: string | null;
   padre: { id: number; lado: 'T' | 'F' } | null;
+  /** Su número de orden entre las preguntas de su párrafo (como `RamaIf.ordinal`). */
+  ordinal: number;
 }
 
 export interface TextoMarcado {
@@ -73,8 +79,9 @@ export function marcarRamas(expandido: string): TextoMarcado {
   const ramas: RamaIf[] = [];
   const preguntas: PreguntaConOpciones[] = [];
   const pilaIf: { id: number; lado: 'T' | 'F' }[] = [];
-  const pilaParrafo: (string | null)[] = [];
-  const parrafoActual = () => (pilaParrafo.length ? pilaParrafo[pilaParrafo.length - 1] : null);
+  const pilaParrafo: { nombre: string | null; ifs: number; preguntas: number }[] = [{ nombre: null, ifs: 0, preguntas: 0 }];
+  const marco = () => pilaParrafo[pilaParrafo.length - 1];
+  const parrafoActual = () => marco().nombre;
   const padreActual = () => (pilaIf.length ? { ...pilaIf[pilaIf.length - 1] } : null);
   let salida = '';
   let desde = 0;
@@ -89,7 +96,7 @@ export function marcarRamas(expandido: string): TextoMarcado {
     const t = m[0];
     if (m[1] !== undefined) {
       const id = ramas.length;
-      ramas.push({ id, condicion: m[1].trim(), parrafo: parrafoActual(), padre: padreActual(), conElse: false, linea });
+      ramas.push({ id, condicion: m[1].trim(), parrafo: parrafoActual(), padre: padreActual(), conElse: false, linea, ordinal: marco().ifs++ });
       pilaIf.push({ id, lado: 'T' });
       salida += t + MARCA(id, 'T');
     } else if (t === '{{ELSE}}') {
@@ -100,16 +107,16 @@ export function marcarRamas(expandido: string): TextoMarcado {
       if (tope && !ramas[tope.id].conElse) salida += `{{ELSE}}${MARCA(tope.id, 'F')}`;
       salida += t;
     } else if (t.startsWith(INC_BEGIN_MARK)) {
-      pilaParrafo.push(m[2] ?? null);
+      pilaParrafo.push({ nombre: m[2] ?? null, ifs: 0, preguntas: 0 });
       salida += INC_BEGIN_MARK; // sin la marca del nombre: el motor no la conoce
     } else if (t === INC_END_MARK) {
-      pilaParrafo.pop();
+      if (pilaParrafo.length > 1) pilaParrafo.pop();
       salida += t;
     } else if (t.startsWith('\x00PARR:')) {
       // una marca de nombre suelta: se quita
     } else {
       const opciones = opcionesDeInput(m[4] ?? '');
-      if (opciones.length) preguntas.push({ campo: m[3].toUpperCase(), opciones, parrafo: parrafoActual(), padre: padreActual() });
+      if (opciones.length) preguntas.push({ campo: m[3].toUpperCase(), opciones, parrafo: parrafoActual(), padre: padreActual(), ordinal: marco().preguntas++ });
       salida += t;
     }
   }

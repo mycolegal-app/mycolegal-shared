@@ -28,7 +28,8 @@ describe('modo cobertura', () => {
       ['TIPO_ACTO == "DONACION"', 'PARR_FISCAL', null, false],
       ['TIPO_ACTO == "EXTINCION"', 'PARR_FISCAL', null, false],
     ]);
-    expect(m.preguntas).toEqual([{ campo: 'COMPARECE', opciones: ['Por sí', 'Por representante'], parrafo: null, padre: null }]);
+    expect(m.preguntas).toEqual([{ campo: 'COMPARECE', opciones: ['Por sí', 'Por representante'], parrafo: null, padre: null, ordinal: 0 }]);
+    expect(m.ramas.map((r) => r.ordinal)).toEqual([0, 1, 0, 1]);
     expect(m.texto).not.toContain('\x00PARR:');
   });
 
@@ -56,5 +57,11 @@ describe('modo cobertura', () => {
     expect(alc.has('2:T')).toBe(false); // la donación, en la extinción
     expect(alc.has('3:F')).toBe(false);
     expect(['0:T', '0:F', '1:T', '1:F', '2:F', '3:T'].every((k) => alc.has(k))).toBe(true);
+  });
+
+  it('las copias de un mismo párrafo tienen los mismos ordinales', async () => {
+    const exp = await expandirIncludes('{{INCLUDE P FIELDS:_VEND}}\n{{INCLUDE P FIELDS:_COMPR}}', repositorioDeMapa({ P: '{{IF X}}a{{ENDIF}}{{IF Y}}b{{ENDIF}}' }), { nombrarParrafos: true });
+    const m = marcarRamas(exp.texto);
+    expect(m.ramas.map((r) => [r.parrafo, r.ordinal, r.condicion])).toEqual([['P', 0, 'X_VEND'], ['P', 1, 'Y_VEND'], ['P', 0, 'X_COMPR'], ['P', 1, 'Y_COMPR']]);
   });
 });
