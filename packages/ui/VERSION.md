@@ -5,6 +5,27 @@
 
 ---
 
+## 3.2.38 — Manuales imprimibles / PDF (2026-10-15)
+
+Type: **revision**
+
+- `help/manual-print-view.tsx` (nuevo, #905): `ManualPrintView` pinta el manual
+  entero para imprimir o «Guardar como PDF» desde el navegador: portada (app,
+  título, audiencia, idioma, fecha), índice con anclas y todas las secciones
+  seguidas, una por página. Usa el mismo resolver del manual en pantalla; el
+  botón «Descargar en PDF / Imprimir» se habilita cuando han cargado todas las
+  secciones (no se lanza solo). Abre todos los `<details>` (también en
+  `beforeprint`) y convierte los enlaces `/manual/x#y` en anclas de la vista.
+  CSS de impresión dentro del componente, acotado con
+  `body:has([data-manual-print])`: oculta todo lo que no sea la vista y quita
+  alturas fijas y recortes del armazón de la app.
+- `help/manual-layout.tsx`: prop opcional `printHref` → botón «Imprimir / PDF» en
+  la cabecera del índice lateral. Marcas `data-manual-layout` y
+  `data-manual-content`.
+- i18n ×4: bloque `ui.manualPrint.*`.
+
+---
+
 ## 3.2.10 — Clase Sistema Registral en el catálogo del rail (2026-09-29)
 
 Type: **revision**

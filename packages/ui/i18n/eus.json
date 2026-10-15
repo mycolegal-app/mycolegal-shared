@@ -1374,6 +1374,27 @@
       "notariaAyuda": "Redactor-eko notariaren konfigurazioan gordetzen dira eta dokumentu guztietarako balio dute.",
       "notariaCcaa": "Notariaren autonomia-erkidegoa",
       "notariaGuardar": "Gorde eta jarraitu"
+    },
+    "manualPrint": {
+      "defaultTitle": "Erabiltzailearen eskuliburua",
+      "print": "PDFan deskargatu / Inprimatu",
+      "printShort": "Inprimatu / PDF",
+      "printTitle": "Eskuliburu osoa ireki inprimatzeko edo PDFan gordetzeko",
+      "back": "Itzuli eskuliburura",
+      "loading": "Eskuliburua prestatzen… ({done}/{total} atal)",
+      "ready": "Prest. Inprimatzeko leihoan, aukeratu «Gorde PDF gisa» deskargatzeko.",
+      "partial": "Prest, baina {n} atal ezin izan dira kargatu.",
+      "sectionLoading": "Atala kargatzen…",
+      "sectionError": "Ezin izan da «{section}» atala kargatu.",
+      "toc": "Aurkibidea",
+      "languageLabel": "Hizkuntza",
+      "dateLabel": "Data",
+      "languages": {
+        "CAST": "Castellano",
+        "CAT": "Català",
+        "GAL": "Galego",
+        "EUS": "Euskara"
+      }
     }
   },
   "unidad": {

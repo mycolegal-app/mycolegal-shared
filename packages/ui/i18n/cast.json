@@ -1375,6 +1375,27 @@
       "notariaAyuda": "Se guardan en la configuración de la notaría en Redactor y valen para todos los documentos.",
       "notariaCcaa": "Comunidad autónoma de la notaría",
       "notariaGuardar": "Guardar y seguir"
+    },
+    "manualPrint": {
+      "defaultTitle": "Manual de usuario",
+      "print": "Descargar en PDF / Imprimir",
+      "printShort": "Imprimir / PDF",
+      "printTitle": "Abrir el manual completo para imprimirlo o guardarlo en PDF",
+      "back": "Volver al manual",
+      "loading": "Preparando el manual… ({done}/{total} secciones)",
+      "ready": "Listo. En el diálogo de impresión, elige «Guardar como PDF» para descargarlo.",
+      "partial": "Listo, pero {n} sección(es) no se han podido cargar.",
+      "sectionLoading": "Cargando sección…",
+      "sectionError": "No se ha podido cargar la sección «{section}».",
+      "toc": "Índice",
+      "languageLabel": "Idioma",
+      "dateLabel": "Fecha",
+      "languages": {
+        "CAST": "Castellano",
+        "CAT": "Català",
+        "GAL": "Galego",
+        "EUS": "Euskara"
+      }
     }
   },
   "unidad": {

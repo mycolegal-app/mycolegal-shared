@@ -1375,6 +1375,27 @@
       "notariaAyuda": "Es desen a la configuració de la notaria a Redactor i valen per a tots els documents.",
       "notariaCcaa": "Comunitat autònoma de la notaria",
       "notariaGuardar": "Desa i continua"
+    },
+    "manualPrint": {
+      "defaultTitle": "Manual d'usuari",
+      "print": "Descarregar en PDF / Imprimir",
+      "printShort": "Imprimir / PDF",
+      "printTitle": "Obrir el manual complet per imprimir-lo o desar-lo en PDF",
+      "back": "Tornar al manual",
+      "loading": "Preparant el manual… ({done}/{total} seccions)",
+      "ready": "A punt. Al diàleg d'impressió, tria «Desa com a PDF» per descarregar-lo.",
+      "partial": "A punt, però {n} secció(ns) no s'han pogut carregar.",
+      "sectionLoading": "Carregant la secció…",
+      "sectionError": "No s'ha pogut carregar la secció «{section}».",
+      "toc": "Índex",
+      "languageLabel": "Idioma",
+      "dateLabel": "Data",
+      "languages": {
+        "CAST": "Castellano",
+        "CAT": "Català",
+        "GAL": "Galego",
+        "EUS": "Euskara"
+      }
     }
   },
   "unidad": {

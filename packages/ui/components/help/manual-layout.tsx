@@ -6,9 +6,11 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   BookOpen,
   ChevronRight,
+  Printer,
   Search,
   X,
 } from "lucide-react";
+import { useI18n } from "../i18n";
 
 export interface ManualSection {
   title: string;
@@ -21,9 +23,15 @@ interface ManualLayoutProps {
   sections: ManualSection[];
   children: React.ReactNode;
   appName?: string;
+  /**
+   * #905 — Ruta de la vista de impresión del manual (`ManualPrintView`). Si se
+   * da, la cabecera del índice lateral pinta un botón «Imprimir / PDF».
+   */
+  printHref?: string;
 }
 
-export function ManualLayout({ sections, children, appName = "Manual de Usuario" }: ManualLayoutProps) {
+export function ManualLayout({ sections, children, appName = "Manual de Usuario", printHref }: ManualLayoutProps) {
+  const { t } = useI18n();
   const pathname = usePathname();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
@@ -58,7 +66,7 @@ export function ManualLayout({ sections, children, appName = "Manual de Usuario"
     // (index) and the page chrome (topbar, breadcrumb) stay in place. The
     // 8rem delta matches the other full-height pages in the app (topbar 3.5rem
     // + breadcrumb row + main's p-6 vertical padding).
-    <div className="flex h-[calc(100vh-8rem)] min-h-0 gap-0">
+    <div data-manual-layout className="flex h-[calc(100vh-8rem)] min-h-0 gap-0">
       {/* Manual sidebar — fixed column. Only its own content scrolls when the
           index grows longer than the viewport. */}
       <aside
@@ -70,6 +78,17 @@ export function ManualLayout({ sections, children, appName = "Manual de Usuario"
             <BookOpen className="h-5 w-5 text-cyan-600" />
             <h2 className="font-semibold text-gray-900">{appName}</h2>
           </div>
+
+          {printHref && (
+            <Link
+              href={printHref}
+              title={t("ui.manualPrint.printTitle")}
+              className="mb-3 flex w-full items-center justify-center gap-1.5 rounded-md border bg-white px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100"
+            >
+              <Printer className="h-3.5 w-3.5" />
+              {t("ui.manualPrint.printShort")}
+            </Link>
+          )}
 
           {/* Search */}
           <div className="relative">
@@ -136,7 +155,7 @@ export function ManualLayout({ sections, children, appName = "Manual de Usuario"
           box. Spacing overrides live here so every manual page reads with more
           air between sections and subsections without touching each content
           file per language. */}
-      <div className="flex-1 min-w-0 min-h-0 overflow-y-auto">
+      <div data-manual-content className="flex-1 min-w-0 min-h-0 overflow-y-auto">
         <div
           className="manual-prose max-w-3xl mx-auto px-8 py-10 [&_section]:scroll-mt-6 [&_.space-y-8>*+*]:!mt-14 [&_h2]:!mt-2 [&_h2]:!mb-5 [&_h3]:!mt-1 [&_h3]:!mb-2.5 [&_section>*+*]:!mt-4"
         >

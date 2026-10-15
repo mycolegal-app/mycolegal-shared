@@ -4,3 +4,9 @@
 export { ManualLayout, type ManualSection } from "./manual-layout";
 export { createManualResolver } from "./manual-resolver";
 export { makeManualSectionPage } from "./manual-section-page";
+export {
+  ManualPrintView,
+  MANUAL_PRINT_ANCHOR_PREFIX,
+  type ManualPrintSection,
+  type ManualPrintViewProps,
+} from "./manual-print-view";
