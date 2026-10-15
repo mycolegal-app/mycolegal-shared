@@ -31,6 +31,9 @@ export interface RamaIf {
    *  incluido varias veces (la comparecencia, una por parte) tiene los mismos IF en cada copia: `parrafo` + `ordinal`
    *  identifica la rama de la PLANTILLA, que es lo que se prueba. */
   ordinal: number;
+  /** Los párrafos que la contienen, del más exterior al más interior (el último es `parrafo`). Sirve para acotar la
+   *  cobertura de un esquema a lo suyo y dejar aparte los bloques comunes (la comparecencia, la finca, el cierre). */
+  cadena: string[];
 }
 
 /** Una pregunta con opciones cerradas (`{{DECLARE X:INPUT(¿…?|a,b,c)}}`) y la rama donde está declarada. */
@@ -41,6 +44,8 @@ export interface PreguntaConOpciones {
   padre: { id: number; lado: 'T' | 'F' } | null;
   /** Su número de orden entre las preguntas de su párrafo (como `RamaIf.ordinal`). */
   ordinal: number;
+  /** Como `RamaIf.cadena`. */
+  cadena: string[];
 }
 
 export interface TextoMarcado {
@@ -95,6 +100,7 @@ export function marcarRamas(expandido: string): TextoMarcado {
   const pilaParrafo: { nombre: string | null; ifs: number; preguntas: number }[] = [{ nombre: null, ifs: 0, preguntas: 0 }];
   const marco = () => pilaParrafo[pilaParrafo.length - 1];
   const parrafoActual = () => marco().nombre;
+  const cadenaActual = () => pilaParrafo.map((p) => p.nombre).filter((n): n is string => !!n);
   const padreActual = () => (pilaIf.length ? { ...pilaIf[pilaIf.length - 1] } : null);
   let salida = '';
   let desde = 0;
@@ -109,7 +115,7 @@ export function marcarRamas(expandido: string): TextoMarcado {
     const t = m[0];
     if (m[1] !== undefined) {
       const id = ramas.length;
-      ramas.push({ id, condicion: m[1].trim(), parrafo: parrafoActual(), padre: padreActual(), conElse: false, linea, ordinal: marco().ifs++ });
+      ramas.push({ id, condicion: m[1].trim(), parrafo: parrafoActual(), padre: padreActual(), conElse: false, linea, ordinal: marco().ifs++, cadena: cadenaActual() });
       pilaIf.push({ id, lado: 'T' });
       salida += t + MARCA(id, 'T');
     } else if (t === '{{ELSE}}') {
@@ -129,7 +135,7 @@ export function marcarRamas(expandido: string): TextoMarcado {
       // una marca de nombre suelta: se quita
     } else {
       const opciones = opcionesDeInput(m[4] ?? '');
-      if (opciones.length) preguntas.push({ campo: m[3].toUpperCase(), opciones, parrafo: parrafoActual(), padre: padreActual(), ordinal: marco().preguntas++ });
+      if (opciones.length) preguntas.push({ campo: m[3].toUpperCase(), opciones, parrafo: parrafoActual(), padre: padreActual(), ordinal: marco().preguntas++, cadena: cadenaActual() });
       salida += t;
     }
   }

@@ -28,7 +28,8 @@ describe('modo cobertura', () => {
       ['TIPO_ACTO == "DONACION"', 'PARR_FISCAL', null, false],
       ['TIPO_ACTO == "EXTINCION"', 'PARR_FISCAL', null, false],
     ]);
-    expect(m.preguntas).toEqual([{ campo: 'COMPARECE', opciones: ['Por sí', 'Por representante'], parrafo: null, padre: null, ordinal: 0 }]);
+    expect(m.preguntas).toEqual([{ campo: 'COMPARECE', opciones: ['Por sí', 'Por representante'], parrafo: null, padre: null, ordinal: 0, cadena: [] }]);
+    expect(m.ramas.map((r) => r.cadena)).toEqual([[], [], ['PARR_FISCAL'], ['PARR_FISCAL']]);
     expect(m.ramas.map((r) => r.ordinal)).toEqual([0, 1, 0, 1]);
     expect(m.texto).not.toContain('\x00PARR:');
   });
