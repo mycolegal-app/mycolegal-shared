@@ -922,6 +922,15 @@ export function expandForEach(
         const subPat = new RegExp("\\{\\{\\s*" + escapeRe(itUpper) + "\\." + escapeRe(subKey) + "\\s*(?:#([^}]*))?\\}\\}", "gi");
         elementContent = elementContent.replace(subPat, (_m: string, f?: string) => conFormato(subValue, f, idioma, warnings));
       }
+      // 4) la pista de una concordancia del elemento (`AUTO(ITEM.NOMBRE)`) pasa a ser su valor, como pista literal
+      //    (`AUTO("Inés")`): la concordancia se resuelve después de componer, cuando ya no se sabe de qué elemento era.
+      elementContent = elementContent.replace(
+        new RegExp("(\\{\\{\\s*AUTO\\s*\\(\\s*)" + escapeRe(itUpper) + "\\.([\\w\\u00C0-\\u024F.]+)(\\s*\\))", "gi"),
+        (m: string, ini: string, sub: string, fin: string) => {
+          const v = upperEl[sub.toUpperCase()];
+          if (v === undefined || v === null || typeof v === "object" || String(v).trim() === "") return m;
+          return `${ini}"${String(v).replace(/["(){}|:]/g, " ").trim()}"${fin}`;
+        });
       const itemPat = new RegExp("\\{\\{\\s*" + escapeRe(itUpper) + "\\s*(?:#([^}]*))?\\}\\}", "gi");
       elementContent = elementContent.replace(itemPat, (_m: string, f?: string) => conFormato(element, f, idioma, warnings));
       parts.push(elementContent);
@@ -970,6 +979,10 @@ function vincularAlElemento(texto: string, iterador: string, nombres: Set<string
   return texto.replace(RE_BIND, (m, n: string, cuerpo: string) => {
     if (n.toUpperCase() !== it) return m;
     return cuerpo.replace(/\{\{([^{}]*)\}\}/g, (tok, dentro: string) => {
+      // La pista de una concordancia (`AUTO(COMP_PF_NOMBRE):soltero|soltera`) también es del elemento: sin esto la
+      // concordancia buscaba después el campo suelto, que en una lista es de otra persona o no existe.
+      const auto = dentro.match(/^(\s*AUTO\s*\(\s*)([A-Za-z_][\w\u00C0-\u024F]*)(\s*\)[\s\S]*)$/i);
+      if (auto && nombres.has(auto[2].toUpperCase())) return `{{${auto[1]}${it}.${auto[2]}${auto[3]}}}`;
       if (DIRECTIVAS_NO_CAMPO.test(dentro)) return tok;
       // separar literales entre comillas para no tocarlos
       const trozos = dentro.split(/("[^"]*"|'[^']*'|\u201c[^\u201d]*\u201d|\u00ab[^\u00bb]*\u00bb)/);
