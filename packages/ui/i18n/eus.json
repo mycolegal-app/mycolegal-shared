@@ -768,7 +768,12 @@
       "privacyOwner": "Zure informazioa zurea da soilik: titularraren erabilera esklusiboa.",
       "privacyNotraining": "Ez dugu IA modelorik entrenatzen zure edukiekin.",
       "privacyLink": "Ikusi Pribatutasun Politika eta DPA",
-      "helpMenuAi": "Adimen artifizialaren erabilera"
+      "helpMenuAi": "Adimen artifizialaren erabilera",
+      "helpButton": "Laguntza",
+      "helpButtonTitle": "Eskuliburua, bideo-tutorialak eta laguntza",
+      "zoomAria": "Pantailaren tamaina",
+      "zoomHint": "Pantaila handiegia edo txikiegia ikusten baduzu, aukeratu hemen tamaina. Nabigatzaile honetan gordetzen da.",
+      "zoomNormal": "arrunta"
     },
     "sidebar": {
       "goHome": "Hasierara joan",

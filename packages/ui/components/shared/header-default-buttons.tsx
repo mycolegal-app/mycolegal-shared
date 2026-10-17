@@ -1,11 +1,9 @@
 "use client";
 
-import { HelpCircle, Search } from "lucide-react";
+import { PlayCircle, Search } from "lucide-react";
 import { NavLink as Link } from "./nav-link";
 import { useI18n } from "../i18n/i18n-context";
 
-const BTN_BASE =
-  "flex h-8 w-8 items-center justify-center rounded text-white/70 hover:text-white hover:bg-white/10";
 const BTN_DISABLED =
   "flex h-8 w-8 items-center justify-center rounded text-white/30 cursor-not-allowed";
 
@@ -16,9 +14,10 @@ export function DefaultHelpButton({ manualHref = "/manual" }: { manualHref?: str
       href={manualHref}
       aria-label={t("ui.header.helpAria")}
       title={t("ui.header.helpTitle")}
-      className={BTN_BASE}
+      className="flex h-8 items-center gap-1.5 rounded-md border border-white/25 bg-white/10 px-2.5 text-xs font-medium text-white hover:bg-white/20"
     >
-      <HelpCircle className="h-4 w-4" />
+      <PlayCircle className="h-4 w-4" />
+      <span className="hidden md:inline">{t("ui.header.helpButton")}</span>
     </Link>
   );
 }

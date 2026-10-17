@@ -769,7 +769,12 @@
       "privacyOwner": "La teva informació és només teva: ús exclusiu del seu titular.",
       "privacyNotraining": "No entrenem models d'IA amb els teus continguts.",
       "privacyLink": "Veure Política de Privacitat i DPA",
-      "helpMenuAi": "Ús de la intel·ligència artificial"
+      "helpMenuAi": "Ús de la intel·ligència artificial",
+      "helpButton": "Ajuda",
+      "helpButtonTitle": "Manual, vídeos tutorials i ajuda",
+      "zoomAria": "Mida de pantalla",
+      "zoomHint": "Si veu la pantalla massa gran o petita, triï aquí la mida. Es recorda en aquest navegador.",
+      "zoomNormal": "normal"
     },
     "sidebar": {
       "goHome": "Anar a l'inici",

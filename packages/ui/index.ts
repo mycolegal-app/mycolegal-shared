@@ -22,6 +22,7 @@ export { DataTable } from './components/shared/data-table';
 export { FirstRunWelcome } from './components/shared/first-run-welcome';
 export type { WelcomeStep } from './components/shared/first-run-welcome';
 export { HelpMenu } from './components/shared/help-menu';
+export { ZoomControl } from './components/shared/zoom-control';
 export { AiUsagePanel } from './components/shared/ai-usage-panel';
 export { TutorialesPanel, ytVideoId, ytThumbnail } from './components/shared/tutoriales-panel';
 export type { TutorialItem } from './components/shared/tutoriales-panel';

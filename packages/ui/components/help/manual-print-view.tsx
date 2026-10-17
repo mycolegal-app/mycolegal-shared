@@ -15,6 +15,7 @@ import { ArrowLeft, BookOpen, Printer } from "lucide-react";
 import { NavLink as Link } from "../shared/nav-link";
 import { Button } from "../ui/button";
 import { useI18n } from "../i18n";
+import { MANUAL_PROSE_CSS } from "./manual-prose-css";
 
 /**
  * #905 — Vista de impresión de un manual: portada, índice con anclas y TODAS las
@@ -309,6 +310,7 @@ export function ManualPrintView<S extends string>({
 
   return (
     <div data-manual-print ref={rootRef} className="mx-auto max-w-3xl px-6 pb-16 text-gray-900">
+      <style>{MANUAL_PROSE_CSS}</style>
       <style>{PRINT_CSS}</style>
 
       {/* Barra (no se imprime) */}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { HelpCircle, PlayCircle, BookOpen, Sparkles, Bug, ShieldCheck, X, Check, BrainCircuit, Clapperboard } from "lucide-react";
+import { PlayCircle, BookOpen, Sparkles, Bug, ShieldCheck, X, Check, BrainCircuit, Clapperboard } from "lucide-react";
 import { AiUsagePanel } from "./ai-usage-panel";
 import { TutorialesPanel, type TutorialItem } from "./tutoriales-panel";
 import { NavLink as Link } from "./nav-link";
@@ -106,11 +106,15 @@ export function HelpMenu({ manualHref = "/manual", showIntro = true, showAsk = f
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-label={t("ui.header.helpAria")}
+        title={t("ui.header.helpButtonTitle")}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="flex h-8 w-8 items-center justify-center rounded text-white/70 hover:bg-white/10 hover:text-white"
+        // #973 — Antes un (?) gris que nadie asociaba a los vídeos. Ahora dice
+        // qué hay dentro y destaca sobre el resto de iconos de la barra.
+        className="flex h-8 items-center gap-1.5 rounded-md border border-white/25 bg-white/10 px-2.5 text-xs font-medium text-white hover:bg-white/20"
       >
-        <HelpCircle className="h-4 w-4" />
+        <PlayCircle className="h-4 w-4" />
+        <span className="hidden md:inline">{t("ui.header.helpButton")}</span>
       </button>
 
       {open && (

@@ -9,6 +9,7 @@ import { type AppInfo } from "./app-info";
 import { IdleTimeout } from "./idle-timeout";
 import { AppSwitcherBar } from "./app-switcher-bar";
 import { AppInfoButton } from "../shared/app-info-button";
+import { ZoomControl } from "../shared/zoom-control";
 import { ImpersonationBanner } from "../shared/impersonation-banner";
 import { BillingNoticeBanner, type BillingNotice } from "../shared/billing-notice-banner";
 import { LegalGate } from "../shared/legal-gate";
@@ -203,7 +204,13 @@ function AppShellInner({
             {creditBalance}
             {commandPalette ?? <DefaultSearchButton />}
             {helpButton ?? <DefaultHelpButton />}
-            <AppInfoButton appName={appName} appLogoUrl={appLogoUrl} />
+            {/* #973 — Tamaño de pantalla a la vista; la (i) de versión, discreta. */}
+            <ZoomControl />
+            <AppInfoButton
+              appName={appName}
+              appLogoUrl={appLogoUrl}
+              className="flex h-7 w-7 items-center justify-center rounded text-white/40 hover:bg-white/10 hover:text-white/80"
+            />
             {/* Org info: nombre + saldo de créditos de IA debajo (monedero único
                 de la org; se auto-oculta si la app no expone /api/credits/balance). */}
             {org?.name && <OrgBadge org={org} />}

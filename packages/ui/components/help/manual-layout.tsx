@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { useI18n } from "../i18n";
+import { MANUAL_PROSE_CSS } from "./manual-prose-css";
 
 export interface ManualSection {
   title: string;
@@ -159,6 +160,7 @@ export function ManualLayout({ sections, children, appName = "Manual de Usuario"
         <div
           className="manual-prose max-w-3xl mx-auto px-8 py-10 [&_section]:scroll-mt-6 [&_.space-y-8>*+*]:!mt-14 [&_h2]:!mt-2 [&_h2]:!mb-5 [&_h3]:!mt-1 [&_h3]:!mb-2.5 [&_section>*+*]:!mt-4"
         >
+          <style>{MANUAL_PROSE_CSS}</style>
           {children}
         </div>
       </div>
