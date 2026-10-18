@@ -439,6 +439,11 @@ export function anadirDatos(
       if (out.acto![nombre] === undefined) out.acto![nombre] = d.valor;
     } else if (ambito === 'SUJETO') {
       let s = out.sujetos!.find((x) => (x.rol ?? null) === d.rol);
+      // #977 — El TIPO de persona jurídica atribuido al REPRESENTANTE describe al
+      // representado («la SA, por medio de su apoderado»), no a quien comparece. Crear
+      // con él un interviniente nuevo inventaba una persona jurídica que nadie leyó.
+      if (!s && d.rol === 'REPRESENTANTE' && d.dato === FACT_TIPO_SUJETO && typeof d.valor === 'string'
+        && !!esUnTipo && esUnTipo(d.valor, 'PERSONA_JURIDICA')) continue;
       if (!s) { s = { id: `IA-${d.rol ?? out.sujetos!.length + 1}`, rol: d.rol, tipo: null, hechos: {} }; out.sujetos!.push(s); }
       if (d.dato === FACT_TIPO_SUJETO) { if (refina(s.tipo, d.valor)) s.tipo = d.valor; }
       else if (s.hechos[nombre] === undefined) s.hechos[nombre] = d.valor;

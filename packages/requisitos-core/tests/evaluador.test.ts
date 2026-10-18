@@ -132,4 +132,17 @@ describe('tipos más concretos', () => {
     );
     expect(h.sujetos!.map((s) => s.tipo)).toEqual(['SA', 'PERSONA_FISICA']);
   });
+
+  it('#977 — el tipo de PJ atribuido al REPRESENTANTE no crea un interviniente fantasma', () => {
+    const padre: Record<string, string> = { SA: 'PERSONA_JURIDICA', PERSONA_JURIDICA: 'SUJETO', PERSONA_FISICA: 'SUJETO' };
+    const esUn = (t: string, a: string) => { let x: string | undefined = t; while (x) { if (x === a) return true; x = padre[x]; } return false; };
+    const h = anadirDatos(
+      { sujetos: [{ id: 'a', rol: null, tipo: 'PERSONA_FISICA', hechos: {} }] },
+      [{ dato: 'SUJETO.TIPO', valor: 'SA', rol: 'REPRESENTANTE', fuente: 'F1', cita: 'x', confianza: 'alta' },
+       { dato: 'SUJETO.TIPO', valor: 'PERSONA_FISICA', rol: 'REPRESENTANTE', fuente: 'F1', cita: 'x', confianza: 'alta' }],
+      esUn,
+    );
+    // La SA no entra; un representante persona física sí (es un dato de quien comparece).
+    expect(h.sujetos!.map((s) => [s.rol, s.tipo])).toEqual([[null, 'PERSONA_FISICA'], ['REPRESENTANTE', 'PERSONA_FISICA']]);
+  });
 });
