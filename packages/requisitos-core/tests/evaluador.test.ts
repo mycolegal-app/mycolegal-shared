@@ -133,16 +133,23 @@ describe('tipos más concretos', () => {
     expect(h.sujetos!.map((s) => s.tipo)).toEqual(['SA', 'PERSONA_FISICA']);
   });
 
-  it('#977 — el tipo de PJ atribuido al REPRESENTANTE no crea un interviniente fantasma', () => {
-    const padre: Record<string, string> = { SA: 'PERSONA_JURIDICA', PERSONA_JURIDICA: 'SUJETO', PERSONA_FISICA: 'SUJETO' };
-    const esUn = (t: string, a: string) => { let x: string | undefined = t; while (x) { if (x === a) return true; x = padre[x]; } return false; };
+  it('#977 — un dato sin rol no crea un interviniente nuevo', () => {
     const h = anadirDatos(
-      { sujetos: [{ id: 'a', rol: null, tipo: 'PERSONA_FISICA', hechos: {} }] },
-      [{ dato: 'SUJETO.TIPO', valor: 'SA', rol: 'REPRESENTANTE', fuente: 'F1', cita: 'x', confianza: 'alta' },
-       { dato: 'SUJETO.TIPO', valor: 'PERSONA_FISICA', rol: 'REPRESENTANTE', fuente: 'F1', cita: 'x', confianza: 'alta' }],
-      esUn,
+      { sujetos: [{ id: 'a', rol: 'DISPONENTE', tipo: 'ENTIDAD_PUBLICA', hechos: {} }] },
+      [{ dato: 'SUJETO.TIPO', valor: 'ENTIDAD_PUBLICA', rol: null, fuente: 'F1', cita: 'x', confianza: 'alta' }],
     );
-    // La SA no entra; un representante persona física sí (es un dato de quien comparece).
-    expect(h.sujetos!.map((s) => [s.rol, s.tipo])).toEqual([[null, 'PERSONA_FISICA'], ['REPRESENTANTE', 'PERSONA_FISICA']]);
+    expect(h.sujetos).toHaveLength(1);
+  });
+
+  it('#977 — con la jerarquía de roles, el mismo interviniente no se duplica', () => {
+    const padreRol: Record<string, string> = { CESIONARIO: 'ADQUIRENTE' };
+    const esUnRol = (r: string, a: string) => { let x: string | undefined = r; while (x) { if (x === a) return true; x = padreRol[x]; } return false; };
+    const datos = [{ dato: 'SUJETO.ESTADO_CIVIL', valor: 'CASADO', rol: 'CESIONARIO', fuente: 'F1', cita: 'x', confianza: 'alta' as const }];
+    const base = { sujetos: [{ id: 'm', rol: 'ADQUIRENTE', tipo: 'SA', hechos: {} }] };
+    const conJerarquia = anadirDatos(base, datos, undefined, esUnRol);
+    expect(conJerarquia.sujetos).toHaveLength(1);
+    expect(conJerarquia.sujetos![0].hechos.ESTADO_CIVIL).toBe('CASADO');
+    // Sin jerarquía (como antes), un rol distinto es otro interviniente.
+    expect(anadirDatos(base, datos).sujetos).toHaveLength(2);
   });
 });

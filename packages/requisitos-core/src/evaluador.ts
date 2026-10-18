@@ -369,6 +369,8 @@ export interface OpcionesEvaluacion {
   previas?: EvaluacionRequisito[];
   /** Jerarquía de tipos (ver `anadirDatos`). */
   esUnTipo?: (tipo: string, ancestro: string) => boolean;
+  /** Jerarquía de roles del catálogo (ver `anadirDatos`): CESIONARIO es un ADQUIRENTE. */
+  esUnRol?: (rol: string, ancestro: string) => boolean;
 }
 
 /** Evalúa una lista de requisitos contra el contexto. Nunca lanza: un lote que falla se
@@ -422,6 +424,9 @@ export function anadirDatos(
   /** Jerarquía de tipos: un tipo MÁS CONCRETO del ya conocido lo refina (PERSONA_JURIDICA →
    *  SA). Es el mismo dato, más preciso, no otro: no pisa nada que haya dicho una persona. */
   esUnTipo?: (tipo: string, ancestro: string) => boolean,
+  /** Jerarquía de roles: el mismo interviniente puede llegar con un rol más general o más
+   *  concreto (la lectura dice DISPONENTE y el evaluador CEDENTE). Sin ella, solo igualdad. */
+  esUnRol?: (rol: string, ancestro: string) => boolean,
 ): Hechos {
   const refina = (actual: string | null | undefined, nuevo: unknown): nuevo is string =>
     typeof nuevo === 'string' && nuevo !== NO_APLICA
@@ -438,12 +443,13 @@ export function anadirDatos(
     if (ambito === 'ACTO') {
       if (out.acto![nombre] === undefined) out.acto![nombre] = d.valor;
     } else if (ambito === 'SUJETO') {
-      let s = out.sujetos!.find((x) => (x.rol ?? null) === d.rol);
-      // #977 — El TIPO de persona jurídica atribuido al REPRESENTANTE describe al
-      // representado («la SA, por medio de su apoderado»), no a quien comparece. Crear
-      // con él un interviniente nuevo inventaba una persona jurídica que nadie leyó.
-      if (!s && d.rol === 'REPRESENTANTE' && d.dato === FACT_TIPO_SUJETO && typeof d.valor === 'string'
-        && !!esUnTipo && esUnTipo(d.valor, 'PERSONA_JURIDICA')) continue;
+      let s = out.sujetos!.find((x) => (x.rol ?? null) === d.rol)
+        ?? (d.rol && esUnRol
+          ? out.sujetos!.find((x) => !!x.rol && (esUnRol(x.rol, d.rol as string) || esUnRol(d.rol as string, x.rol)))
+          : undefined);
+      // #977 — Un dato SIN rol no dice de qué interviniente es: crear uno nuevo con él
+      // inventaba intervinientes que la lectura no vio (un «sujeto fantasma»). Se ignora.
+      if (!s && !d.rol) continue;
       if (!s) { s = { id: `IA-${d.rol ?? out.sujetos!.length + 1}`, rol: d.rol, tipo: null, hechos: {} }; out.sujetos!.push(s); }
       if (d.dato === FACT_TIPO_SUJETO) { if (refina(s.tipo, d.valor)) s.tipo = d.valor; }
       else if (s.hechos[nombre] === undefined) s.hechos[nombre] = d.valor;
@@ -512,7 +518,7 @@ export async function evaluarCaso(args: {
       }
     }
     if (datosLeidos.length) {
-      hechos = anadirDatos(hechos, datosLeidos, args.esUnTipo);
+      hechos = anadirDatos(hechos, datosLeidos, args.esUnTipo, args.esUnRol);
       resultado = await args.resolver(hechos);
     }
   }
@@ -525,7 +531,7 @@ export async function evaluarCaso(args: {
 
   const datos = primera.evaluaciones.flatMap((e) => e.datos);
   if (datos.length) {
-    hechos = anadirDatos(hechos, datos, args.esUnTipo);
+    hechos = anadirDatos(hechos, datos, args.esUnTipo, args.esUnRol);
     resultado = await args.resolver(hechos);
     // Segunda vuelta: lo que ahora aplica o puede aplicar y no se evaluó, o cuya situación
     // cambió (de «puede aplicar» a «aplica» cambia su huella).

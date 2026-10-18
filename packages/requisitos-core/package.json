@@ -1,6 +1,6 @@
 {
   "name": "@mycolegal-app/requisitos-core",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "type": "module",
   "main": "./index.ts",
   "types": "./index.ts",
