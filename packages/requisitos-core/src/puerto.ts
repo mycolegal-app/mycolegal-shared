@@ -101,6 +101,12 @@ export interface ReglaGolden {
 export interface NodoTipo {
   codigo: string;
   parentCodigo: string | null;
+  /**
+   * Solo roles: el papel ACOMPAÑA a otra persona en vez de ser parte del negocio
+   * (representante, asistente, intérprete…). Lo dice el catálogo con `implicaAcompanado`;
+   * el motor no conoce los códigos.
+   */
+  acompana?: boolean;
 }
 
 /**

@@ -91,7 +91,7 @@ export const TIPOS_ROL: NodoTipo[] = [
   { codigo: 'TRANSMISARIO', parentCodigo: 'HEREDERO' },
   { codigo: 'LEGATARIO', parentCodigo: 'CAUSAHABIENTE' },
   { codigo: 'LEGITIMARIO', parentCodigo: 'CAUSAHABIENTE' },
-  { codigo: 'REPRESENTANTE', parentCodigo: null },
+  { codigo: 'REPRESENTANTE', parentCodigo: null, acompana: true },
 ];
 
 /** La jerarquía is-a que el motor necesita para que VIVIENDA cumpla INMUEBLE. */

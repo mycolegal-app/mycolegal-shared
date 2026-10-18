@@ -269,16 +269,16 @@ const DEDUCIDO_DEL_ROL: Record<string, [rolBase: string, valor: unknown][]> = {
 };
 
 /**
- * Datos del estado civil y familiar de una PARTE del negocio. Los del representante no
- * cuentan en una condición sin rol («algún interviniente casado en gananciales»): el que
- * comparece por otro no es quien vende ni quien compra.
+ * Datos del estado civil y familiar de una PARTE del negocio. Los de quien acompaña a otro
+ * (representante, asistente, intérprete: `NodoTipo.acompana`) no cuentan en una condición
+ * sin rol («algún interviniente casado en gananciales»): el que comparece por otro no es
+ * quien vende ni quien compra.
  */
 const DE_LA_PARTE = new Set([
   'SUJETO.ESTADO_CIVIL', 'SUJETO.REGIMEN_ECONOMICO', 'SUJETO.REGIMEN_ECONOMICO_MATRIMONIAL',
   'SUJETO.REGIMEN_ES_CAPITULADO', 'SUJETO.CONYUGE_NO_SEPARADO', 'SUJETO.VECINDAD_CIVIL',
   'SUJETO.PAREJA_ESTABLE', 'SUJETO.PAREJA_ESTABLE_INSCRITA',
 ]);
-const ROL_REPRESENTANTE = 'REPRESENTANTE';
 const RAICES_TIPO = new Set(['SUJETO', 'OBJETO']);
 
 /**
@@ -304,6 +304,12 @@ export function evaluar(
    * interviniente o ese bien; las que hablan de otros (otro papel) siguen mirando a los suyos.
    */
   fijar: { sujetoId?: string; objetoId?: string } = {},
+  /**
+   * ¿El rol acompaña a otra persona (representante, asistente…)? Sus datos de estado civil no
+   * cuentan en una condición sin rol. Lo decide el catálogo de roles (`NodoTipo.acompana`); sin
+   * él, nadie acompaña.
+   */
+  acompana: (rol: string | null | undefined) => boolean = () => false,
 ): { valor: Ternario; faltan: string[]; presumidos: string[]; faltanPorRol: string[]; faltanPorSujeto: string[] } {
   if (condiciones.length === 0) return { valor: true, faltan: [], presumidos: [], faltanPorRol: [], faltanPorSujeto: [] };
   // Tercera fuente de valor, después del dato: lo que el escenario base presume. Solo
@@ -344,7 +350,7 @@ export function evaluar(
         let cands = ambito === 'SUJETO'
           ? (hechos.sujetos ?? []).filter((s) => c.scopeRolCodigo
             ? esUnRol(s.rol, c.scopeRolCodigo)
-            : !(DE_LA_PARTE.has(c.fact) && esUnRol(s.rol, ROL_REPRESENTANTE)))
+            : !(DE_LA_PARTE.has(c.fact) && acompana(s.rol)))
           : (hechos.objetos ?? []);
         const fijo = ambito === 'SUJETO' ? fijar.sujetoId : fijar.objetoId;
         if (fijo && cands.some((x) => x.id === fijo)) cands = cands.filter((x) => x.id === fijo);
@@ -533,6 +539,8 @@ export async function resolverRequisitos(
   // tipo de sujeto y un rol homónimos daría un padre equivocado sin avisar de nada.
   const padresRol = new Map<string, string | null>();
   for (const t of tiposRol) padresRol.set(t.codigo, t.parentCodigo);
+  // Los roles que acompañan a otra persona, del catálogo (sin códigos fijos aquí).
+  const rolesQueAcompanan = tiposRol.filter((t) => t.acompana).map((t) => t.codigo);
   const sube = (mapa: Map<string, string | null>) =>
     (tipo: string | null | undefined, exigido: string): boolean => {
       let t: string | null | undefined = tipo;
@@ -558,8 +566,10 @@ export async function resolverRequisitos(
   const opcionesDeTipo = (pedidos: string[]): string[] => [...new Set(pedidos)].sort().concat(TIPO_NINGUNO);
   /** Y un `VENDEDOR` cumple una regla escrita para `DISPONENTE`. Mismo recorrido, otro mapa. */
   const subeRol = sube(padresRol);
+  /** ¿El rol (o uno de sus padres) acompaña a otra persona? */
+  const acompana = (rol: string | null | undefined) => !!rol && rolesQueAcompanan.some((r) => subeRol(rol, r));
   const esUnRol = opciones.rolComodin
-    ? (rol: string | null | undefined, exigido: string) => (rol ? subeRol(rol, exigido) : exigido !== ROL_REPRESENTANTE)
+    ? (rol: string | null | undefined, exigido: string) => (rol ? subeRol(rol, exigido) : !acompana(exigido))
     : subeRol;
 
   // Qué reglas alcanzan al acto: las suyas y, si lo sirve el catálogo universal, también
@@ -699,8 +709,8 @@ export async function resolverRequisitos(
     if (grupos.size) condicionesTexto.push([...grupos.values()].map((g) => g.join(' y ')).join(' O '));
     if (r.condMedioPago) condicionesTexto.push(`Medio de pago [${FACT_MEDIO_PAGO}] incluye ${r.condMedioPago}`);
     if (r.condCausa) condicionesTexto.push(`Causa o modalidad del acto [${FACT_CAUSA}] = ${r.condCausa}`);
-    const porCuerpo = evaluar(conds, hechos, ambitoDe, presunciones, esUnRol, esUn);
-    const porEjes = evaluar(ejes, hechos, ambitoDe, presunciones, esUnRol, esUn);
+    const porCuerpo = evaluar(conds, hechos, ambitoDe, presunciones, esUnRol, esUn, {}, acompana);
+    const porEjes = evaluar(ejes, hechos, ambitoDe, presunciones, esUnRol, esUn, {}, acompana);
     const valorCond = y(porCuerpo.valor, porEjes.valor);
     const porCondicion = {
       valor: valorCond,
@@ -771,7 +781,7 @@ export async function resolverRequisitos(
       ],
       // Cada instancia mira a su interviniente o su bien (10-oct-2026): de quien no cumple, no se pide.
       instancias: valor === false ? [] : expandir(r.scopeGeneracion, r.roles, r.objetos, hechos, esUn, esUnRol, {
-        cumple: (fijar) => evaluar(conds, hechos, ambitoDe, presunciones, esUnRol, esUn, fijar).valor !== false,
+        cumple: (fijar) => evaluar(conds, hechos, ambitoDe, presunciones, esUnRol, esUn, fijar, acompana).valor !== false,
         tipoSujetoPresumido: tipoSujPres,
       }),
     };
