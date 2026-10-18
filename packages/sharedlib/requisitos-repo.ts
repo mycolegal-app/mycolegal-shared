@@ -142,10 +142,17 @@ export function crearRepositorioRequisitos(client: ClienteGolden): RepositorioRe
     },
 
     async tiposDeRol() {
-      const filas = await client.rolSujetoGlobal.findMany({
-        select: { codigo: true, parentCodigo: true },
-      });
-      return filas as NodoTipo[];
+      const filas = (await client.rolSujetoGlobal.findMany({
+        select: { codigo: true, parentCodigo: true, implicaAcompanado: true },
+      })) as { codigo: string; parentCodigo: string | null; implicaAcompanado?: unknown }[];
+      // Un papel que «implica algo» para la persona a la que acompaña (representante,
+      // asistente, intérprete) no es parte del negocio: el motor lo trata así sin conocer
+      // ningún código.
+      return filas.map((f) => ({
+        codigo: f.codigo,
+        parentCodigo: f.parentCodigo,
+        acompana: !!f.implicaAcompanado && typeof f.implicaAcompanado === 'object' && Object.keys(f.implicaAcompanado as object).length > 0,
+      })) as NodoTipo[];
     },
 
     async actosConGolden(actoCodigos) {
