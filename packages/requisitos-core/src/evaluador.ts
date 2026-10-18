@@ -447,9 +447,10 @@ export function anadirDatos(
         ?? (d.rol && esUnRol
           ? out.sujetos!.find((x) => !!x.rol && (esUnRol(x.rol, d.rol as string) || esUnRol(d.rol as string, x.rol)))
           : undefined);
-      // #977 — Un dato SIN rol no dice de qué interviniente es: crear uno nuevo con él
-      // inventaba intervinientes que la lectura no vio (un «sujeto fantasma»). Se ignora.
-      if (!s && !d.rol) continue;
+      // #977 — Si la lectura ya trajo intervinientes, un dato SIN rol no dice de cuál es:
+      // crear uno nuevo con él inventaba uno que nadie vio (un «sujeto fantasma»). Sin
+      // ninguno (Redactor en actos sin papeles), sigue siendo el único y se crea como siempre.
+      if (!s && !d.rol && out.sujetos!.length > 0) continue;
       if (!s) { s = { id: `IA-${d.rol ?? out.sujetos!.length + 1}`, rol: d.rol, tipo: null, hechos: {} }; out.sujetos!.push(s); }
       if (d.dato === FACT_TIPO_SUJETO) { if (refina(s.tipo, d.valor)) s.tipo = d.valor; }
       else if (s.hechos[nombre] === undefined) s.hechos[nombre] = d.valor;

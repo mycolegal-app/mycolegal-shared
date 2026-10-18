@@ -139,6 +139,9 @@ describe('tipos más concretos', () => {
       [{ dato: 'SUJETO.TIPO', valor: 'ENTIDAD_PUBLICA', rol: null, fuente: 'F1', cita: 'x', confianza: 'alta' }],
     );
     expect(h.sujetos).toHaveLength(1);
+    // Sin intervinientes leídos (Redactor en un acto sin papeles), el dato sí crea el único.
+    const solo = anadirDatos({ sujetos: [] }, [{ dato: 'SUJETO.TIPO', valor: 'PERSONA_FISICA', rol: null, fuente: 'F1', cita: 'x', confianza: 'alta' }]);
+    expect(solo.sujetos!.map((x) => x.tipo)).toEqual(['PERSONA_FISICA']);
   });
 
   it('#977 — con la jerarquía de roles, el mismo interviniente no se duplica', () => {
