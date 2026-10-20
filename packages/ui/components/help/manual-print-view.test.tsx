@@ -33,7 +33,12 @@ const Copias = lazy(async () => {
     default: () => (
       <div>
         <h1>Copias</h1>
-        <section id="proforma">Proforma</section>
+        <section id="proforma">
+          <h2>Proforma</h2>
+          <h3 style={{ fontSize: "16px" }}>
+            Detalle de la proforma<span style={{ fontSize: "12px" }}>Solo si está contratado</span>
+          </h3>
+        </section>
         <details>
           <summary>Pregunta</summary>
           Respuesta
@@ -78,8 +83,62 @@ describe("#905 — ManualPrintView", () => {
     expect(screen.getByText("externo").getAttribute("href")).toBe("https://example.com");
     expect(screen.getByRole("link", { name: "Copias" }).getAttribute("href")).toBe("#mp-copias");
 
+    // #29 — El índice recoge los títulos (h2) y subtítulos (h3) de cada sección,
+    // con un ancla única y su número de página (en jsdom todo mide 0: misma
+    // página que la sección, que empieza tras la portada y el índice).
+    const tocH2 = screen.getByRole("link", { name: "Proforma" });
+    expect(tocH2.closest("[data-manual-print-toc]")).toBeTruthy();
+    const h2 = container.querySelector("[data-manual-print-section] h2")!;
+    expect(tocH2.getAttribute("href")).toBe(`#${h2.id}`);
+    expect(h2.id.startsWith("mp-copias-")).toBe(true);
+    // La nota en letra menor del subtítulo no pasa al índice.
+    expect(screen.getByRole("link", { name: "Detalle de la proforma" })).toBeTruthy();
+    expect(tocH2.parentElement!.textContent).toContain("4");
+
     fireEvent.click(button);
     expect(print).toHaveBeenCalledTimes(1);
     print.mockRestore();
+  });
+
+  it("#29 — con pdfEndpoint, «Descargar PDF» manda la vista autocontenida y descarga el PDF", async () => {
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      void init;
+      return { ok: true, status: 200, blob: async () => new Blob(["%PDF-1.7"], { type: "application/pdf" }) } as Response;
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const createUrl = vi.fn(() => "blob:pdf");
+    const revoke = vi.fn();
+    Object.assign(URL, { createObjectURL: createUrl, revokeObjectURL: revoke });
+    const clicks: string[] = [];
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
+      clicks.push(this.download);
+    });
+
+    render(
+      <ManualPrintView
+        sections={[{ key: "home", title: "Inicio", href: "/manual" }]}
+        resolve={() => Home}
+        appName="MycoLegal Peticiones"
+        audience="Manual de gestoría"
+        language="CAST"
+        pdfEndpoint="/api/manual/pdf"
+      />,
+    );
+    const download = screen.getByRole("button", { name: /ui.manualPrint.download/ }) as HTMLButtonElement;
+    expect(screen.getByRole("button", { name: /ui.manualPrint.printOnly/ })).toBeTruthy();
+    await waitFor(() => expect(download.disabled).toBe(false));
+
+    fireEvent.click(download);
+    await waitFor(() => expect(clicks).toEqual(["MycoLegal Peticiones - Manual de gestoría.pdf"]));
+    const call = fetchMock.mock.calls.find(([u]) => u === "/api/manual/pdf")!;
+    expect(call[1]!.method).toBe("POST");
+    const body = JSON.parse(String(call[1]!.body)) as { html: string; fileName: string };
+    expect(body.fileName).toBe("MycoLegal Peticiones - Manual de gestoría.pdf");
+    expect(body.html.startsWith("<!doctype html>")).toBe(true);
+    expect(body.html).toContain("data-manual-print-toc");
+    expect(body.html).not.toMatch(/<div[^>]*data-manual-print-toolbar/);
+
+    clickSpy.mockRestore();
+    vi.unstubAllGlobals();
   });
 });

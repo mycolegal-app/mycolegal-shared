@@ -60,8 +60,16 @@ export function IncidentDetailPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <PageTitle
-        title={incident ? t("ui.incidentDetail.titleWithNumber", { num: String(incident.number) }) : t("ui.incidentDetail.title")}
-        subtitle={t("ui.incidentDetail.subtitle")}
+        // #16 — una propuesta de mejora se rotula como tal, no «Incidencia #N».
+        title={
+          incident
+            ? t(
+                incident.kind === "improvement" ? "ui.incidentDetail.titleWithNumberImprovement" : "ui.incidentDetail.titleWithNumber",
+                { num: String(incident.number) },
+              )
+            : t("ui.incidentDetail.title")
+        }
+        subtitle={t(incident?.kind === "improvement" ? "ui.incidentDetail.subtitleImprovement" : "ui.incidentDetail.subtitle")}
       />
       <Link
         href="/incidencias"

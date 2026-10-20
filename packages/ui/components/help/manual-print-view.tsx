@@ -11,11 +11,12 @@ import {
   type ComponentType,
   type ReactNode,
 } from "react";
-import { ArrowLeft, BookOpen, Printer } from "lucide-react";
+import { ArrowLeft, BookOpen, Download, Loader2, Printer } from "lucide-react";
 import { NavLink as Link } from "../shared/nav-link";
 import { Button } from "../ui/button";
 import { useI18n } from "../i18n";
 import { MANUAL_PROSE_CSS } from "./manual-prose-css";
+import { buildManualPrintHtml, pdfFileName, saveBlob } from "./manual-print-pdf";
 
 /**
  * #905 — Vista de impresión de un manual: portada, índice con anclas y TODAS las
@@ -30,6 +31,27 @@ import { MANUAL_PROSE_CSS } from "./manual-prose-css";
  *
  * El CSS de impresión va dentro del componente y está acotado con
  * `body:has([data-manual-print])`: no toca la impresión del resto de la app.
+ *
+ * #29 (TEST) — Índice con la estructura (títulos h2/h3 de cada sección) y con el
+ * número de página de cada entrada; páginas numeradas al pie.
+ *
+ *  · Pie «n / total»: margin boxes de `@page` (`@bottom-center` con
+ *    `counter(page)`/`counter(pages)`). Chrome/Edge ≥ 131 los pintan; Firefox y
+ *    Safari los ignoran (el PDF sale sin numerar, el resto igual).
+ *  · Números del índice: `target-counter()` no lo soporta ningún navegador, así
+ *    que la paginación se HACE en cliente. La vista se maqueta en pantalla con el
+ *    ancho útil de un A4 (178 mm), se mide cada bloque y se decide dónde empieza
+ *    cada página; en esos bloques se fuerza el salto (`data-mp-break` →
+ *    `break-before: page`). Como cada página medida cabe con holgura (96 % de la
+ *    altura útil), Chrome no necesita saltos propios y su paginación coincide con
+ *    la calculada. Exacto en A4 con escala 100 %; con otro papel, márgenes o
+ *    escala, los números del índice pueden desviarse.
+ *  · Descarga directa en PDF: no hay API del navegador que genere un PDF de texto
+ *    sin pasar por el diálogo de impresión (las librerías cliente rasterizan). Si
+ *    la app da `pdfEndpoint`, «Descargar PDF» manda la vista ya paginada (HTML
+ *    autocontenido, `manual-print-pdf.ts`) a esa ruta, que la pinta a PDF con el
+ *    servicio de platform (`POST /internal/pdf`). Sin él, el botón abre el
+ *    diálogo de impresión y el usuario elige «Guardar como PDF».
  */
 
 export interface ManualPrintSection<S extends string = string> {
@@ -66,6 +88,13 @@ export interface ManualPrintViewProps<S extends string = string> {
   showSectionTitles?: boolean;
   /** Fecha de la portada. Por defecto, hoy. */
   date?: Date;
+  /**
+   * #29 — Ruta de la app que convierte la vista a PDF (`POST { html, fileName }`
+   * → `application/pdf`; p. ej. `/api/manual/pdf`, que delega en platform
+   * `POST /internal/pdf`). Con ella aparece «Descargar PDF»; sin ella, solo
+   * «Imprimir / Guardar como PDF» con el diálogo del navegador.
+   */
+  pdfEndpoint?: string;
 }
 
 const LOCALE: Record<string, string> = {
@@ -117,6 +146,222 @@ class SectionErrorBoundary extends Component<
   }
 }
 
+// ── #29 — Paginación en cliente ─────────────────────────────────────────────
+const MM = 96 / 25.4; // px CSS por mm
+/** Ancho útil de A4 con los márgenes de `@page` (210 − 16 − 16). */
+const PRINT_WIDTH_MM = 178;
+/** Alto útil de A4 con los márgenes de `@page` (297 − 18 − 20). */
+const PAGE_HEIGHT_PX = (297 - 18 - 20) * MM;
+/** Holgura: cada página calculada ocupa como mucho esto, para que Chrome no parta por su cuenta. */
+const PAGE_BUDGET_PX = PAGE_HEIGHT_PX * 0.96;
+
+export interface ManualOutlineEntry {
+  id: string;
+  text: string;
+  level: 2 | 3;
+}
+
+/** Bloques que la impresión no parte (mismo criterio que `PRINT_CSS`). */
+const ATOMIC_TAGS = new Set([
+  "P", "H1", "H2", "H3", "H4", "H5", "H6", "LI", "FIGURE", "TABLE", "PRE",
+  "BLOCKQUOTE", "DETAILS", "IMG", "DL", "HR", "SVG",
+]);
+
+function isAvoidBox(el: HTMLElement): boolean {
+  const role = el.getAttribute("role");
+  if (role === "note" || role === "alert") return true;
+  const cls = typeof el.className === "string" ? el.className : "";
+  return cls.includes("border-l-4") || (cls.includes("rounded") && /(^|\s)border(\s|$|-)/.test(cls));
+}
+
+/** Bloques «hoja» en orden de documento: los contenedores se recorren, los indivisibles no. */
+function collectBlocks(root: Element, out: HTMLElement[]): HTMLElement[] {
+  for (const child of Array.from(root.children)) {
+    if (!(child instanceof HTMLElement)) continue;
+    if (child.tagName === "STYLE" || child.tagName === "SCRIPT") continue;
+    const cs = getComputedStyle(child);
+    if (cs.display === "none" || cs.position === "absolute" || cs.position === "fixed") continue;
+    const layoutBox = /flex|grid|table/.test(cs.display);
+    const hasBlockChildren = Array.from(child.children).some((c) => {
+      const d = getComputedStyle(c).display;
+      return d !== "inline" && d !== "inline-block" && d !== "none" && d !== "contents";
+    });
+    if (ATOMIC_TAGS.has(child.tagName) || layoutBox || isAvoidBox(child) || !hasBlockChildren) out.push(child);
+    else collectBlocks(child, out);
+  }
+  return out;
+}
+
+/** Margen superior que conserva un salto forzado ante `el` (el suyo y el de los padres de los que es primer hijo). */
+function leadingMargin(el: HTMLElement, stop: Element): number {
+  let m = parseFloat(getComputedStyle(el).marginTop) || 0;
+  let cur: HTMLElement = el;
+  while (cur.parentElement && cur.parentElement !== stop && cur.parentElement.firstElementChild === cur) {
+    cur = cur.parentElement;
+    m += parseFloat(getComputedStyle(cur).marginTop) || 0;
+  }
+  return m;
+}
+
+/** Bloques que no deben quedarse solos al pie de una página (van con el siguiente). */
+const isHeading = (el: HTMLElement) => /^H[1-6]$/.test(el.tagName) || el.tagName === "THEAD";
+
+/**
+ * Un bloque que no cabe en una página lo partiría el navegador por donde quisiera
+ * y la cuenta dejaría de cuadrar. Se abre en sus partes para que los saltos los
+ * decidamos nosotros: una tabla, en sus filas (el `thead` se repite en cada
+ * página: `headerOf` guarda su alto); un contenedor apilado, en sus hijos. Lo que
+ * no se puede abrir (una imagen, una rejilla) se devuelve tal cual.
+ */
+function splitTall(el: HTMLElement, headerOf: Map<HTMLElement, number>): HTMLElement[] {
+  if (el.tagName === "TABLE") {
+    const table = el as HTMLTableElement;
+    const head = table.tHead?.getBoundingClientRect().height ?? 0;
+    const rows = Array.from(table.rows).filter((tr) => tr.parentElement?.tagName !== "THEAD");
+    if (rows.length < 2) return [el];
+    // La primera fila sigue al `thead` en su sitio; el resto puede abrir página.
+    rows.forEach((tr) => headerOf.set(tr, head));
+    if (table.tHead) return [table.tHead as HTMLElement, ...rows];
+    return rows;
+  }
+  const cs = getComputedStyle(el);
+  const stacked = !/flex|grid/.test(cs.display) || (cs.display.includes("flex") && cs.flexDirection.startsWith("column"));
+  if (!stacked) return [el];
+  const parts: HTMLElement[] = [];
+  for (const child of Array.from(el.children)) {
+    if (!(child instanceof HTMLElement)) continue;
+    const ccs = getComputedStyle(child);
+    if (ccs.display === "none" || ccs.position === "absolute" || ccs.position === "fixed") continue;
+    if (child.tagName === "STYLE" || child.tagName === "SCRIPT") continue;
+    parts.push(child);
+  }
+  return parts.length > 0 ? parts : [el];
+}
+
+/**
+ * Reparte los bloques de un contenedor (que empieza página) en páginas. Marca con
+ * `data-mp-break` el bloque que abre cada página nueva y devuelve la página de
+ * cada bloque y la última página usada.
+ *
+ * Cada página se llena como mucho hasta `PAGE_BUDGET_PX`: así el navegador nunca
+ * necesita un salto propio y su paginación es exactamente la calculada.
+ */
+function paginateBlocks(
+  container: HTMLElement,
+  startTop: number,
+  startPage: number,
+): { pageOf: Map<HTMLElement, number>; lastPage: number } {
+  const blocks = collectBlocks(container, []);
+  const pageOf = new Map<HTMLElement, number>();
+  const headerOf = new Map<HTMLElement, number>();
+  /** Primera parte de un bloque abierto → el bloque: un salto ante ella se pone en él. */
+  const openedFrom = new Map<HTMLElement, HTMLElement>();
+  let page = startPage;
+  let pageTop = startTop;
+  /** Índice del primer bloque de la página en curso. */
+  let pageStart = 0;
+  for (let i = 0; i < blocks.length; i++) {
+    const b = blocks[i];
+    const r = b.getBoundingClientRect();
+    if (r.height === 0) {
+      pageOf.set(b, page);
+      if (i === pageStart) pageStart++;
+      continue;
+    }
+    if (r.height > PAGE_BUDGET_PX) {
+      const parts = splitTall(b, headerOf);
+      if (parts.length > 1 || parts[0] !== b) {
+        pageOf.set(b, page);
+        openedFrom.set(parts[0], b);
+        blocks.splice(i, 1, ...parts);
+        i--;
+        continue;
+      }
+    }
+    if (i > pageStart && r.bottom - pageTop > PAGE_BUDGET_PX) {
+      // Salto antes de `b`; los títulos que lo preceden en la misma página se van
+      // con él (sin vaciar la página: el primer bloque de la página se queda).
+      let first = i;
+      while (first - 1 > pageStart && isHeading(blocks[first - 1])) first--;
+      let opener = blocks[first];
+      while (openedFrom.has(opener)) opener = openedFrom.get(opener)!;
+      page++;
+      const head = headerOf.get(opener);
+      pageTop =
+        head !== undefined
+          ? opener.getBoundingClientRect().top - head
+          : opener.getBoundingClientRect().top - leadingMargin(opener, container);
+      opener.setAttribute("data-mp-break", "");
+      pageStart = first;
+      if (opener !== blocks[first]) pageOf.set(opener, page);
+      for (let k = first; k < i; k++) pageOf.set(blocks[k], page);
+    }
+    pageOf.set(b, page);
+    // Un bloque indivisible más alto que una página (raro: una imagen enorme) lo
+    // corta el navegador: consume páginas enteras y lo que sigue abre página.
+    if (r.bottom - pageTop > PAGE_HEIGHT_PX) {
+      page += Math.ceil((r.bottom - pageTop) / PAGE_HEIGHT_PX) - 1;
+      const next = blocks[i + 1];
+      if (next) {
+        page++;
+        pageTop = next.getBoundingClientRect().top - leadingMargin(next, container);
+        next.setAttribute("data-mp-break", "");
+        pageStart = i + 1;
+      }
+    }
+  }
+  return { pageOf, lastPage: page };
+}
+
+/**
+ * Texto de un título para el índice, sin sus acompañantes: notas y etiquetas en
+ * letra menor («Disponible si tu organización lo tiene contratado»), iconos y lo
+ * oculto a lectores de pantalla.
+ */
+function headingText(h: HTMLElement): string {
+  const base = parseFloat(getComputedStyle(h).fontSize) || 0;
+  const parts: string[] = [];
+  const walk = (node: Node) => {
+    for (const child of Array.from(node.childNodes)) {
+      if (child.nodeType === Node.TEXT_NODE) {
+        parts.push(child.textContent ?? "");
+      } else if (child instanceof HTMLElement) {
+        if (child.getAttribute("aria-hidden") === "true") continue;
+        const size = parseFloat(getComputedStyle(child).fontSize) || 0;
+        if (base > 0 && size > 0 && size < base * 0.9) continue;
+        walk(child);
+      }
+    }
+  };
+  walk(h);
+  return parts.join("").replace(/\s+/g, " ").trim();
+}
+
+function headingPage(h: HTMLElement, pageOf: Map<HTMLElement, number>, fallback: number): number {
+  let cur: HTMLElement | null = h;
+  while (cur) {
+    const p = pageOf.get(cur);
+    if (p !== undefined) return p;
+    cur = cur.parentElement;
+  }
+  return fallback;
+}
+
+async function waitForAssets(root: HTMLElement): Promise<void> {
+  const imgs = Array.from(root.querySelectorAll("img")).filter((img) => !img.complete);
+  await Promise.all(
+    imgs.map(
+      (img) =>
+        new Promise<void>((res) => {
+          img.addEventListener("load", () => res(), { once: true });
+          img.addEventListener("error", () => res(), { once: true });
+        }),
+    ),
+  );
+  const fonts = (document as Document & { fonts?: { ready?: Promise<unknown> } }).fonts;
+  if (fonts?.ready) await fonts.ready.catch(() => undefined);
+}
+
 function openAllDetails(root: HTMLElement | null) {
   root?.querySelectorAll("details").forEach((d) => {
     d.open = true;
@@ -164,7 +409,11 @@ function rewriteInternalLinks(
 
 const PRINT_CSS = `
 @media print {
-  @page { size: A4; margin: 18mm 16mm 20mm 16mm; }
+  @page {
+    size: A4; margin: 18mm 16mm 20mm 16mm;
+    @bottom-center { content: counter(page) " / " counter(pages); font-size: 9pt; color: #6b7280; }
+  }
+  @page :first { @bottom-center { content: none; } }
   html:has([data-manual-print]),
   body:has([data-manual-print]) {
     height: auto !important; min-height: 0 !important;
@@ -185,17 +434,17 @@ const PRINT_CSS = `
     border: 0 !important; box-shadow: none !important; transform: none !important;
     background: transparent !important;
   }
-  [data-manual-print] { max-width: none !important; margin: 0 !important; padding: 0 !important; color: #111827; }
+  [data-manual-print] { width: auto !important; max-width: none !important; margin: 0 !important; padding: 0 !important; color: #111827; }
+  [data-manual-print] [data-mp-break] { break-before: page; }
+  /* El índice es un <nav>: varias apps ocultan todo nav/aside/header al imprimir
+     (globals.css de Tramitación: \`nav { display: none !important }\`). */
+  [data-manual-print] [data-manual-print-toc] { display: block !important; padding-top: 0 !important; }
   [data-manual-print] * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   [data-manual-print-toolbar] { display: none !important; }
   [data-manual-print-cover] { min-height: 230mm; break-after: page; }
   [data-manual-print-section] {
     break-before: page; border-top: 0 !important; margin-top: 0 !important; padding-top: 0 !important;
   }
-  [data-manual-print] .overflow-x-auto,
-  [data-manual-print] .overflow-y-auto,
-  [data-manual-print] .overflow-auto,
-  [data-manual-print] .overflow-hidden { overflow: visible !important; }
   [data-manual-print] h1, [data-manual-print] h2,
   [data-manual-print] h3, [data-manual-print] h4 { break-after: avoid; }
   [data-manual-print] table, [data-manual-print] pre, [data-manual-print] blockquote,
@@ -210,8 +459,29 @@ const PRINT_CSS = `
   [data-manual-print] details > summary::-webkit-details-marker { display: none; }
   [data-manual-print] a { color: inherit !important; text-decoration: none !important; }
 }
+/* Sin recortes ni barras de desplazamiento, también en pantalla: lo que se mide
+   para numerar el índice tiene que ser lo mismo que se imprime (un overflow
+   distinto cambia el colapso de márgenes y, con él, las alturas). */
+[data-manual-print] .overflow-x-auto,
+[data-manual-print] .overflow-y-auto,
+[data-manual-print] .overflow-auto,
+[data-manual-print] .overflow-hidden { overflow: visible !important; }
+[data-manual-print-toc] [data-mp-leader] { border-bottom: 1px dotted #9ca3af; transform: translateY(-0.3em); }
 [data-manual-print] a[data-manual-print-unlinked] { color: inherit; text-decoration: none; cursor: text; }
 `;
+
+/** Línea del índice: título enlazado, puntos guía y número de página (fuera del enlace). */
+function TocLine({ anchor, title, page, className }: { anchor: string; title: string; page?: number; className?: string }) {
+  return (
+    <div className="flex items-baseline gap-2">
+      <a href={`#${anchor}`} data-manual-print-anchor={anchor} className={`hover:underline ${className ?? ""}`}>
+        {title}
+      </a>
+      <span data-mp-leader aria-hidden="true" className="min-w-4 flex-1" />
+      <span className="w-8 shrink-0 text-right tabular-nums text-gray-600">{page ?? ""}</span>
+    </div>
+  );
+}
 
 export function ManualPrintView<S extends string>({
   sections,
@@ -223,11 +493,15 @@ export function ManualPrintView<S extends string>({
   backHref,
   showSectionTitles = false,
   date,
+  pdfEndpoint,
 }: ManualPrintViewProps<S>) {
   const { t, language: ctxLanguage } = useI18n();
   const lang = language ?? ctxLanguage;
   const rootRef = useRef<HTMLDivElement>(null);
   const [settled, setSettled] = useState<Record<string, "ok" | "error">>({});
+  // #29 — Estructura (h2/h3) de cada sección y página de cada entrada del índice.
+  const [outline, setOutline] = useState<Record<string, ManualOutlineEntry[]> | null>(null);
+  const [pages, setPages] = useState<Record<string, number> | null>(null);
 
   const markLoaded = useCallback((key: string, status: "ok" | "error") => {
     setSettled((prev) => (prev[key] === status ? prev : { ...prev, [key]: status }));
@@ -245,12 +519,68 @@ export function ManualPrintView<S extends string>({
   const ready = doneCount === sections.length;
   const failedCount = sections.filter((s) => settled[s.key] === "error").length;
 
-  // Con todo cargado: abrir los <details> y convertir los enlaces internos.
+  // Con todo cargado: abrir los <details>, convertir los enlaces internos y
+  // sacar la estructura (títulos y subtítulos) de cada sección para el índice.
   useEffect(() => {
     if (!ready || !rootRef.current) return;
-    openAllDetails(rootRef.current);
-    rewriteInternalLinks(rootRef.current, sections);
+    const root = rootRef.current;
+    openAllDetails(root);
+    rewriteInternalLinks(root, sections);
+    const next: Record<string, ManualOutlineEntry[]> = {};
+    for (const s of sections) {
+      const sec = root.querySelector<HTMLElement>(`#${cssEscape(sectionAnchor(s.key))}`);
+      if (!sec) continue;
+      next[s.key] = Array.from(sec.querySelectorAll<HTMLElement>("h2, h3"))
+        .map((h, i) => {
+          // Los ids de las secciones de contenido (`alta`, `enviar`…) se repiten
+          // entre páginas del manual: el título lleva el suyo propio y único.
+          if (!h.id) h.id = `${sectionAnchor(s.key)}-t${i}`;
+          return { id: h.id, text: headingText(h), level: (h.tagName === "H2" ? 2 : 3) as 2 | 3 };
+        })
+        .filter((e) => e.text);
+    }
+    setPages(null);
+    setOutline(next);
   }, [ready, sections]);
+
+  // Con el índice ya pintado con su estructura: paginar y numerar.
+  useEffect(() => {
+    if (!outline || !rootRef.current) return;
+    const root = rootRef.current;
+    let cancelled = false;
+    void (async () => {
+      await waitForAssets(root);
+      if (cancelled) return;
+      root.querySelectorAll("[data-mp-break]").forEach((el) => el.removeAttribute("data-mp-break"));
+      const result: Record<string, number> = {};
+      // Página 1: portada. El índice empieza en la 2.
+      let last = 1;
+      const toc = root.querySelector<HTMLElement>("[data-manual-print-toc]");
+      if (toc) {
+        const tocTop = toc.getBoundingClientRect().top + (parseFloat(getComputedStyle(toc).paddingTop) || 0);
+        last = paginateBlocks(toc, tocTop, 2).lastPage;
+      }
+      for (const s of sections) {
+        const sec = root.querySelector<HTMLElement>(`#${cssEscape(sectionAnchor(s.key))}`);
+        if (!sec) continue;
+        const cs = getComputedStyle(sec);
+        const top = sec.getBoundingClientRect().top + (parseFloat(cs.borderTopWidth) || 0) + (parseFloat(cs.paddingTop) || 0);
+        const start = last + 1;
+        const { pageOf, lastPage } = paginateBlocks(sec, top, start);
+        result[sectionAnchor(s.key)] = start;
+        for (const e of outline[s.key] ?? []) {
+          const h = document.getElementById(e.id);
+          if (h) result[e.id] = headingPage(h, pageOf, start);
+        }
+        last = lastPage;
+      }
+      if (!cancelled) setPages(result);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [outline, sections]);
+  const paginated = ready && pages !== null;
 
   // También justo antes de imprimir (Ctrl+P sin pasar por el botón).
   useEffect(() => {
@@ -288,6 +618,30 @@ export function ManualPrintView<S extends string>({
     window.print();
   };
 
+  // #29 — Descarga directa: el PDF lo pinta el servidor con esta misma vista.
+  const [pdfState, setPdfState] = useState<"idle" | "working" | "error">("idle");
+  const handleDownload = async () => {
+    const root = rootRef.current;
+    if (!root || !pdfEndpoint) return;
+    openAllDetails(root);
+    setPdfState("working");
+    try {
+      const fileName = pdfFileName(appName, audience ?? title ?? t("ui.manualPrint.defaultTitle"));
+      const html = await buildManualPrintHtml(root, fileName.replace(/\.pdf$/, ""));
+      const res = await fetch(pdfEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ html, fileName }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      saveBlob(await res.blob(), fileName);
+      setPdfState("idle");
+    } catch {
+      setPdfState("error");
+    }
+  };
+
   const dateLabel = useMemo(() => {
     const d = date ?? new Date();
     try {
@@ -309,7 +663,8 @@ export function ManualPrintView<S extends string>({
   }
 
   return (
-    <div data-manual-print ref={rootRef} className="mx-auto max-w-3xl px-6 pb-16 text-gray-900">
+    // #29 — En pantalla, el ancho útil de un A4: lo que se mide es lo que se imprime.
+    <div data-manual-print ref={rootRef} className="mx-auto pb-16 text-gray-900" style={{ width: `${PRINT_WIDTH_MM}mm` }}>
       <style>{MANUAL_PROSE_CSS}</style>
       <style>{PRINT_CSS}</style>
 
@@ -328,16 +683,42 @@ export function ManualPrintView<S extends string>({
           </Link>
         )}
         <div className="flex-1 text-sm text-gray-500" aria-live="polite">
-          {ready
+          {pdfState === "working"
+            ? t("ui.manualPrint.downloading")
+            : pdfState === "error"
+            ? t("ui.manualPrint.downloadError")
+            : ready && !paginated
+            ? t("ui.manualPrint.paginating")
+            : ready
             ? failedCount > 0
               ? t("ui.manualPrint.partial", { n: failedCount })
-              : t("ui.manualPrint.ready")
+              : t(pdfEndpoint ? "ui.manualPrint.readyDownload" : "ui.manualPrint.ready")
             : t("ui.manualPrint.loading", { done: doneCount, total: sections.length })}
         </div>
-        <Button type="button" variant="primary" size="sm" onClick={handlePrint} disabled={!ready} className="gap-2">
-          <Printer className="h-4 w-4" />
-          {t("ui.manualPrint.print")}
-        </Button>
+        {pdfEndpoint ? (
+          <>
+            <Button type="button" variant="primary-outline" size="sm" onClick={handlePrint} disabled={!paginated} className="gap-2">
+              <Printer className="h-4 w-4" />
+              {t("ui.manualPrint.printOnly")}
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={() => void handleDownload()}
+              disabled={!paginated || pdfState === "working"}
+              className="gap-2"
+            >
+              {pdfState === "working" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+              {t("ui.manualPrint.download")}
+            </Button>
+          </>
+        ) : (
+          <Button type="button" variant="primary" size="sm" onClick={handlePrint} disabled={!paginated} className="gap-2">
+            <Printer className="h-4 w-4" />
+            {t("ui.manualPrint.print")}
+          </Button>
+        )}
       </div>
 
       {/* Portada */}
@@ -368,13 +749,21 @@ export function ManualPrintView<S extends string>({
               <ol className="space-y-1.5">
                 {g.items.map((s) => (
                   <li key={s.key}>
-                    <a
-                      href={`#${sectionAnchor(s.key)}`}
-                      data-manual-print-anchor={sectionAnchor(s.key)}
-                      className="text-mc-action-700 hover:underline"
-                    >
-                      {s.title}
-                    </a>
+                    <TocLine
+                      anchor={sectionAnchor(s.key)}
+                      title={s.title}
+                      page={pages?.[sectionAnchor(s.key)]}
+                      className="font-medium text-mc-action-700"
+                    />
+                    {(outline?.[s.key]?.length ?? 0) > 0 && (
+                      <ol className="mt-1 space-y-1">
+                        {outline![s.key].map((e) => (
+                          <li key={e.id} className={e.level === 2 ? "pl-4 text-sm" : "pl-8 text-xs"}>
+                            <TocLine anchor={e.id} title={e.text} page={pages?.[e.id]} className="text-gray-700" />
+                          </li>
+                        ))}
+                      </ol>
+                    )}
                   </li>
                 ))}
               </ol>

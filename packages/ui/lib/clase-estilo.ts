@@ -36,6 +36,7 @@ import {
   ShieldCheck,
   Library,
   FileQuestion,
+  Receipt,
   type LucideIcon,
 } from "lucide-react";
 
@@ -121,6 +122,15 @@ export const CLASE_ESTILO: Record<string, ClaseEstilo> = {
     acento: "after:bg-violet-600",
     Icon: BookOpen,
     iconColor: "text-teal-600",
+  },
+  // #1002 — doctrina de la Administración tributaria (consultas DGT/ATC,
+  // circulares fiscales). Espejo de la leyenda del Consultor.
+  DOCTRINA_TRIBUTARIA: {
+    pastilla: "bg-yellow-100 text-yellow-800",
+    borde: "border-yellow-300",
+    acento: "after:bg-yellow-500",
+    Icon: Receipt,
+    iconColor: "text-yellow-600",
   },
   JURISPRUDENCIA: {
     pastilla: "bg-amber-100 text-amber-800",

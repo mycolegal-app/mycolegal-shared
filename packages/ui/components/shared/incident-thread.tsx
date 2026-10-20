@@ -31,6 +31,9 @@ export interface IncidentThreadIncident {
   status: string;
   closedByRole?: string | null;
   createdAt: string;
+  /** "incident" | "improvement" (#16 Cadórniga): una propuesta de mejora no se
+   *  rotula «Incidencia #N» en su propio hilo. */
+  kind?: string | null;
 }
 
 export interface IncidentThreadMessage {
@@ -417,7 +420,14 @@ export function IncidentThread({
   const isClosed = incident.status === "closed";
   const status = statusCopy(incident.status, incident.closedByRole, t);
 
-  const bodyLabel = viewerRole === "user" ? t("ui.incidentThread.bodyLabelUser") : t("ui.incidentThread.bodyLabelAdmin");
+  // #16 (Cadórniga) — «le doy a PROPONER UNA MEJORA y se envía como COMUNICAR UNA
+  // INCIDENCIA». Se guardaba bien (kind=improvement; la campana y el correo ya lo
+  // distinguían), pero al abrirla el hilo decía «Incidencia #16» y «Tu incidencia».
+  const esMejora = incident.kind === "improvement";
+  const bodyLabel =
+    viewerRole === "user"
+      ? t(esMejora ? "ui.incidentThread.bodyLabelUserImprovement" : "ui.incidentThread.bodyLabelUser")
+      : t("ui.incidentThread.bodyLabelAdmin");
 
   return (
     <div className="flex flex-col gap-4">
@@ -425,7 +435,7 @@ export function IncidentThread({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-lg font-semibold text-gray-900">
-            {t("ui.incidentThread.heading", { num: String(incident.number) })}
+            {t(esMejora ? "ui.incidentThread.headingImprovement" : "ui.incidentThread.heading", { num: String(incident.number) })}
           </h2>
           <p className="text-xs text-gray-500">
             {t("ui.incidentThread.openedOn", { date: formatDateTime(incident.createdAt) })}

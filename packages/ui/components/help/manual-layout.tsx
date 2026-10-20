@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink as Link } from "../shared/nav-link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -36,6 +36,32 @@ export function ManualLayout({ sections, children, appName = "Manual de Usuario"
   const pathname = usePathname();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+  // #29 (TEST) — «El índice debería reflejar la estructura del manual»: si una
+  // sección no declara sus apartados (`children`), se sacan de la página abierta
+  // (los `h2` de cada `<section id>` del contenido) y se listan bajo ella.
+  const [autoChildren, setAutoChildren] = useState<{ title: string; href: string }[]>([]);
+  useEffect(() => {
+    const content = document.querySelector("[data-manual-content]");
+    if (!content) return;
+    const read = () => {
+      const items: { title: string; href: string }[] = [];
+      content.querySelectorAll<HTMLElement>("section[id]").forEach((sec) => {
+        const h = sec.querySelector("h2");
+        const title = h?.textContent?.trim();
+        if (title && h!.closest("section[id]") === sec) items.push({ title, href: `${pathname}#${sec.id}` });
+      });
+      setAutoChildren((prev) =>
+        prev.length === items.length && prev.every((p, i) => p.href === items[i].href && p.title === items[i].title)
+          ? prev
+          : items,
+      );
+    };
+    read();
+    // El contenido llega con `next/dynamic`: se vuelve a leer cuando se pinta.
+    const mo = new MutationObserver(read);
+    mo.observe(content, { childList: true, subtree: true });
+    return () => mo.disconnect();
+  }, [pathname]);
 
   const filteredSections = searchQuery
     ? sections.filter(
@@ -115,6 +141,7 @@ export function ManualLayout({ sections, children, appName = "Manual de Usuario"
           {filteredSections.map((section) => {
             const isActive = pathname === section.href || pathname.startsWith(section.href + "/");
             const Icon = section.icon;
+            const children = section.children ?? (isActive ? autoChildren : undefined);
 
             return (
               <div key={section.href}>
@@ -131,9 +158,9 @@ export function ManualLayout({ sections, children, appName = "Manual de Usuario"
                 </Link>
 
                 {/* Subsections */}
-                {section.children && isActive && (
+                {children && children.length > 0 && isActive && (
                   <div className="ml-6 mt-1 space-y-0.5">
-                    {section.children.map((child) => (
+                    {children.map((child) => (
                       <button
                         key={child.href}
                         onClick={() => handleChildClick(child.href)}
