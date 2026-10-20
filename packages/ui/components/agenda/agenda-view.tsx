@@ -855,7 +855,12 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
     const titular = (meta.titular as string | null) ?? null;
     const actos = (meta.actos as string[] | undefined) ?? [];
     const asignado = (meta.asignado as string | null) ?? null;
-    const extra = kind === "expediente";
+    // #1013 — una cita con expediente vinculado, a la hora de su firma, ES la
+    // firma en la agenda (el bloque de firma ya no se pinta aparte). Se rotula
+    // con las iniciales del empleado y el titular, pero la CABECERA sigue siendo
+    // el título de la cita: es lo que la notaría escribió y lo que reclamaba.
+    const citaDeFirma = kind === "evento" && meta.esFirmaDeExpediente === true;
+    const extra = kind === "expediente" || citaDeFirma;
     // #372 — candado en las citas privadas: enmascarada (ajena) muestra solo
     // "🔒 Ocupado"; la propia lleva el candado junto a su título.
     const masked = kind === "evento" && meta.masked === true;
@@ -885,7 +890,7 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
       ? (empleados.find((e) => e.id === meta.asignadoId)?.displayName ?? null)
       : null;
     const iniciales = inicialesEmpleado(extra ? asignado : asignadoHito);
-    const cabecera = extra && actos.length > 0 ? actos.join(", ") : arg.event.title;
+    const cabecera = extra && !citaDeFirma && actos.length > 0 ? actos.join(", ") : arg.event.title;
     // #630 — firma señalada. Un signo delante basta: el bloque es estrecho y
     // una palabra entera le comería la línea al acto.
     const importante = meta.importante === true && !masked;
@@ -935,6 +940,10 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
           <div className="truncate font-semibold">⚠ {t("agendaPage.expedienteAnulado")}</div>
         )}
         {mostrarDescripcion && <div className="truncate opacity-90">{descripcion}</div>}
+        {/* #1013 — la cita que representa una firma lleva el acto que se firma. */}
+        {!compact && citaDeFirma && actos.length > 0 && (
+          <div className="truncate opacity-90">{actos.join(", ")}</div>
+        )}
         {compact && quien && <div className="truncate opacity-90">{quien}</div>}
         {compact && esSalida && lugar && <div className="truncate opacity-80">{lugar}</div>}
         {!compact && extra && titular && (
@@ -1503,22 +1512,38 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
             {/* #716 — Todo este bloque (expediente vinculado y la puerta para
                 crearlo desde la cita) lleva a pantallas que solo existen en
                 Notaría: donde no las hay, se oculta en vez de fallar. */}
+            {/* #1013 — Con expediente, el vínculo va en un RECUADRO dentro de la
+                cita: la cita conserva todos sus datos (título, descripción,
+                contacto, empleado…) y la agenda ya no la sustituye por el
+                diálogo "Mover firma". Moverla aquí mueve también la firma del
+                expediente (lo hace el servidor al guardar). */}
             {conExpedientes && form.id && form.modo === "hito" && (
-              <p className="mb-3 text-xs text-gray-500">
+              <div
+                className={
+                  form.expedienteVinculadoId
+                    ? "mb-3 rounded-md border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs text-gray-700"
+                    : "mb-3 text-xs text-gray-500"
+                }
+              >
                 {form.expedienteVinculadoId && (
                   <>
-                    {t("agendaPage.expedienteVinculado")}{" "}
+                    <span className="font-medium">{t("agendaPage.expedienteVinculado")}:</span>{" "}
+                    <span className="font-semibold">
+                      {form.expedienteVinculadoRef ?? t("agendaPage.verExpediente")}
+                    </span>
+                    {" · "}
                     <NavLink
                       href={`/expedientes/${form.expedienteVinculadoId}`}
                       className="font-medium text-cyan-700 underline underline-offset-2 hover:text-cyan-800"
                     >
-                      {form.expedienteVinculadoRef ?? t("agendaPage.verExpediente")}
+                      {t("agendaPage.abrirExpediente")}
                     </NavLink>
                     {form.expedienteVinculadoAnulado && (
                       <span className="ml-1 font-semibold text-amber-700">
                         ⚠ {t("agendaPage.expedienteAnuladoAviso")}
                       </span>
                     )}
+                    {form.expedienteVinculadoAnulado && <br />}
                   </>
                 )}
                 {/* La puerta se ofrece cuando no hay expediente y también cuando
@@ -1551,7 +1576,7 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
                     </button>
                   </>
                 )}
-              </p>
+              </div>
             )}
             {conExpedientes && form.id && form.modo === "hito" && vincAbierto && (
               <div className="mb-3">
