@@ -63,6 +63,10 @@ export function ManualLayout({ sections, children, appName = "Manual de Usuario"
     return () => mo.disconnect();
   }, [pathname]);
 
+  const activeHref = sections
+    .filter((s) => pathname === s.href || pathname.startsWith(s.href + "/"))
+    .reduce<string | null>((best, s) => (!best || s.href.length > best.length ? s.href : best), null);
+
   const filteredSections = searchQuery
     ? sections.filter(
         (s) =>
@@ -141,7 +145,9 @@ export function ManualLayout({ sections, children, appName = "Manual de Usuario"
           {filteredSections.map((section) => {
             const isActive = pathname === section.href || pathname.startsWith(section.href + "/");
             const Icon = section.icon;
-            const children = section.children ?? (isActive ? autoChildren : undefined);
+            // Los apartados leídos de la página van solo bajo la sección MÁS concreta que
+            // casa con la ruta: `/manual` también «casa» con `/manual/x` y los repetía.
+            const children = section.children ?? (isActive && section.href === activeHref ? autoChildren : undefined);
 
             return (
               <div key={section.href}>
