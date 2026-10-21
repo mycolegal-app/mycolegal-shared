@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Clock,
   Download,
+  Hourglass,
   MoreHorizontal,
   Palette,
   Printer,
@@ -165,6 +166,41 @@ function margenHorario(hhmm: string, horas: number): string {
 }
 const DIAS_SEMANA = ["dom", "lun", "mar", "mie", "jue", "vie", "sab"] as const;
 
+// M-20 (#706) — Duraciones por defecto (`${apiBase}/agenda/duraciones`).
+type DuracionesAgenda = {
+  defectos: Record<string, number>;
+  tipos: Record<string, number>;
+  /** Código IUI de 4 dígitos o familia de 2 → minutos de la firma. */
+  actos: Record<string, number>;
+  familias: { codigo: string; nombre: string }[];
+  catalogo: { codigo: string; nombre: string }[];
+};
+type DuracionesForm = { tipos: Record<string, string>; actos: { codigo: string; minutos: string }[] };
+
+/** Tipos de cita con duración propia, en el orden en que se enseñan. */
+const TIPOS_DURACION = ["firma", "consulta", "reunion", "otro", "legifirma", "polizas", "cancelaciones"] as const;
+
+/**
+ * Propuesta de la Notaría Micó (#706), por familia del catálogo: 10 minutos para
+ * testamentos, poderes y pólizas; 25 para herencias, préstamos e hipotecas (una
+ * compraventa con hipoteca toma la mayor) y el acta de transparencia; 15 el resto.
+ * Solo rellena el formulario: no pisa lo que ya haya para otros actos.
+ */
+const PROPUESTA_ACTOS: Record<string, number> = { "02": 10, "14": 10, "17": 10, "11": 25, "12": 25, "1650": 25 };
+function aplicarPropuesta(form: DuracionesForm): DuracionesForm {
+  const resto = form.actos.filter((a) => !(a.codigo.trim() in PROPUESTA_ACTOS));
+  return {
+    tipos: { ...form.tipos, firma: "15" },
+    actos: [...Object.entries(PROPUESTA_ACTOS).map(([codigo, min]) => ({ codigo, minutos: String(min) })), ...resto],
+  };
+}
+
+function nombreActo(d: DuracionesAgenda, codigo: string): string | null {
+  if (codigo.length === 2) return d.familias.find((f) => f.codigo === codigo)?.nombre ?? null;
+  if (codigo.length === 4) return d.catalogo.find((a) => a.codigo === codigo)?.nombre ?? null;
+  return null;
+}
+
 export interface AgendaViewProps {
   /**
    * Raíz de la API de la app que la monta. En Notaría es la suya; en Pólizas,
@@ -281,6 +317,65 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
       const j = await res.json();
       setColores(j.data ?? coloresForm);
       setColoresForm(null);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // M-20 (#706) — Duraciones por defecto: por tipo de cita y, en las firmas de
+  // expediente, por acto o familia de actos. Existían por dentro desde #281 pero
+  // solo se cambiaban en base de datos. Se cargan una vez; si falla, el alta
+  // sigue proponiendo media hora como siempre.
+  const [duraciones, setDuraciones] = useState<DuracionesAgenda | null>(null);
+  const [duracionesForm, setDuracionesForm] = useState<DuracionesForm | null>(null);
+  useEffect(() => {
+    fetch(`${apiBase}/agenda/duraciones`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => { if (j?.data) setDuraciones(j.data); })
+      .catch(() => {});
+  }, []);
+
+  /** Minutos por defecto de un tipo de cita: los de la notaría, o los de la plataforma. */
+  function minutosTipo(tipo: EventoForm["tipo"]): number {
+    const k = tipo.toLowerCase();
+    return duraciones?.tipos[k] ?? duraciones?.defectos[k] ?? duraciones?.defectos.default ?? 30;
+  }
+
+  function abrirDuraciones() {
+    if (!duraciones) return;
+    setDuracionesForm({
+      tipos: Object.fromEntries(TIPOS_DURACION.map((k) => [k, duraciones.tipos[k] != null ? String(duraciones.tipos[k]) : ""])),
+      actos: Object.entries(duraciones.actos)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([codigo, min]) => ({ codigo, minutos: String(min) })),
+    });
+  }
+
+  async function guardarDuraciones() {
+    if (!duracionesForm) return;
+    setSaving(true);
+    try {
+      const tipos = Object.fromEntries(
+        Object.entries(duracionesForm.tipos).map(([k, v]) => [k, v.trim() ? Number(v) : null]),
+      );
+      const actos = Object.fromEntries(
+        duracionesForm.actos
+          .filter((a) => a.codigo.trim() && a.minutos.trim())
+          .map((a) => [a.codigo.trim(), Number(a.minutos)]),
+      );
+      const res = await fetch(`${apiBase}/agenda/duraciones`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tipos, actos }),
+      });
+      const j = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(j?.error?.message ?? t("agendaPage.errGuardar"));
+      setDuraciones(j.data);
+      setDuracionesForm(null);
+      // Las firmas sin hora de fin se pintan con la duración nueva.
+      calendarRef.current?.getApi().refetchEvents();
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -468,7 +563,7 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
     const duracion =
       Number.isFinite(antes) && Number.isFinite(finAntes) && finAntes > antes
         ? finAntes - antes
-        : 30 * 60_000;
+        : minutosTipo(form.tipo) * 60_000;
     setForm({
       ...form,
       inicio: nuevoInicio,
@@ -476,7 +571,10 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
     });
   }
 
-  function abrirDialogo(modo: EventoForm["modo"], inicio: Date, fin: Date) {
+  // M-20 — sin `fin`, la cita dura lo que la notaría tenga fijado para su tipo.
+  function abrirDialogo(modo: EventoForm["modo"], inicio: Date, fin?: Date) {
+    const tipoInicial: EventoForm["tipo"] = modo === "hito" ? "REUNION" : "CONSULTA";
+    fin ??= new Date(inicio.getTime() + minutosTipo(tipoInicial) * 60_000);
     setError("");
     setExpBusqueda("");
     setExpResultados([]);
@@ -486,7 +584,7 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
       id: null,
       modo,
       titulo: "",
-      tipo: modo === "hito" ? "REUNION" : "CONSULTA",
+      tipo: tipoInicial,
       inicio: toLocalInput(inicio),
       fin: toLocalInput(fin),
       descripcion: "",
@@ -558,7 +656,7 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
     const [h, m] = horario.horaInicio.split(":").map(Number);
     const dia = new Date(inicio);
     dia.setHours(h ?? 9, m ?? 0, 0, 0);
-    abrirDialogo("hito", dia, new Date(dia.getTime() + 30 * 60_000));
+    abrirDialogo("hito", dia);
   }
 
   // Media hora de duración: el hueco por defecto de los botones de la barra,
@@ -595,7 +693,7 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
   // #372 — "+ Nueva cita": abre el diálogo directamente en modo hito (cita
   // manual), sin tener que arrastrar un hueco.
   function openNuevaCita() {
-    abrirDialogo("hito", ...proximoHueco());
+    abrirDialogo("hito", proximoHueco()[0]);
   }
 
   // #628 — "+ Nuevo bloqueo": los bloqueos se creaban solo desde el selector de
@@ -1129,6 +1227,12 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
                 icon: <Palette className="h-4 w-4" aria-hidden="true" />,
                 onClick: () => setColoresForm({ ...colores }),
               },
+              {
+                key: "duraciones",
+                label: t("agendaPage.cambiarDuraciones"),
+                icon: <Hourglass className="h-4 w-4" aria-hidden="true" />,
+                onClick: abrirDuraciones,
+              },
             ]}
           />
         </div>
@@ -1248,6 +1352,15 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
           >
             {t("agendaPage.cambiarColores")}
           </button>
+          {duraciones && (
+            <button
+              type="button"
+              onClick={abrirDuraciones}
+              className="font-medium text-cyan-700 underline underline-offset-2 hover:text-cyan-800"
+            >
+              {t("agendaPage.cambiarDuraciones")}
+            </button>
+          )}
         </div>
       )}
 
@@ -1292,6 +1405,144 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
                 <button
                   type="button"
                   onClick={guardarColores}
+                  disabled={saving}
+                  className="rounded-md bg-cyan-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-cyan-700 disabled:opacity-50"
+                >
+                  {t("common.save")}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* M-20 (#706) — Diálogo de duraciones, junto a los colores. Cada tipo
+          enseña los minutos de la plataforma como marcador: vacío = esos. */}
+      {duracionesForm && duraciones && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
+            <h3 className="mb-1 text-lg font-semibold">{t("agendaPage.duraciones.titulo")}</h3>
+            <p className="mb-3 text-xs text-gray-500">{t("agendaPage.duraciones.ayuda")}</p>
+            <div className="space-y-2">
+              {TIPOS_DURACION.map((k) => (
+                <label key={k} className="flex items-center justify-between gap-3 text-sm">
+                  <span>{t(`agendaPage.duraciones.tipo.${k}`)}</span>
+                  <span className="flex items-center gap-1.5">
+                    <input
+                      type="number"
+                      min={5}
+                      max={480}
+                      step={5}
+                      value={duracionesForm.tipos[k] ?? ""}
+                      placeholder={String(duraciones.defectos[k] ?? "")}
+                      onChange={(e) =>
+                        setDuracionesForm({ ...duracionesForm, tipos: { ...duracionesForm.tipos, [k]: e.target.value } })
+                      }
+                      className="w-20 rounded border px-2 py-1 text-right"
+                    />
+                    <span className="text-xs text-gray-500">min</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+
+            <h4 className="mb-1 mt-5 text-sm font-semibold">{t("agendaPage.duraciones.porActo")}</h4>
+            <p className="mb-2 text-xs text-gray-500">{t("agendaPage.duraciones.porActoAyuda")}</p>
+            <datalist id="agenda-duraciones-actos">
+              {duraciones.familias.map((f) => (
+                <option key={f.codigo} value={f.codigo}>{f.nombre}</option>
+              ))}
+              {duraciones.catalogo.map((a) => (
+                <option key={a.codigo} value={a.codigo}>{a.nombre}</option>
+              ))}
+            </datalist>
+            <div className="space-y-2">
+              {duracionesForm.actos.map((a, i) => {
+                const nombre = nombreActo(duraciones, a.codigo.trim());
+                const cambiar = (cambio: Partial<{ codigo: string; minutos: string }>) =>
+                  setDuracionesForm({
+                    ...duracionesForm,
+                    actos: duracionesForm.actos.map((x, j) => (j === i ? { ...x, ...cambio } : x)),
+                  });
+                return (
+                  <div key={i} className="flex items-center gap-2 text-sm">
+                    <input
+                      list="agenda-duraciones-actos"
+                      value={a.codigo}
+                      onChange={(e) => cambiar({ codigo: e.target.value.replace(/\D/g, "").slice(0, 4) })}
+                      placeholder="02 / 0201"
+                      aria-label={t("agendaPage.duraciones.codigoActo")}
+                      className="w-20 rounded border px-2 py-1 font-mono"
+                    />
+                    <span className="min-w-0 flex-1 truncate text-xs text-gray-600" title={nombre ?? ""}>
+                      {nombre ?? (a.codigo.trim() ? t("agendaPage.duraciones.codigoDesconocido") : "")}
+                    </span>
+                    <input
+                      type="number"
+                      min={5}
+                      max={480}
+                      step={5}
+                      value={a.minutos}
+                      onChange={(e) => cambiar({ minutos: e.target.value })}
+                      aria-label={t("agendaPage.duraciones.minutos")}
+                      className="w-20 rounded border px-2 py-1 text-right"
+                    />
+                    <span className="text-xs text-gray-500">min</span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setDuracionesForm({ ...duracionesForm, actos: duracionesForm.actos.filter((_, j) => j !== i) })
+                      }
+                      aria-label={t("agendaPage.duraciones.quitar")}
+                      className="px-1 text-gray-400 hover:text-red-600"
+                    >
+                      ×
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+              <button
+                type="button"
+                onClick={() =>
+                  setDuracionesForm({ ...duracionesForm, actos: [...duracionesForm.actos, { codigo: "", minutos: "" }] })
+                }
+                className="font-medium text-cyan-700 hover:underline"
+              >
+                + {t("agendaPage.duraciones.anadirActo")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setDuracionesForm(aplicarPropuesta(duracionesForm))}
+                className="font-medium text-cyan-700 hover:underline"
+                title={t("agendaPage.duraciones.propuestaAyuda")}
+              >
+                {t("agendaPage.duraciones.propuesta")}
+              </button>
+            </div>
+
+            <div className="mt-5 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() =>
+                  setDuracionesForm({ tipos: Object.fromEntries(TIPOS_DURACION.map((k) => [k, ""])), actos: [] })
+                }
+                className="text-xs text-gray-500 underline-offset-2 hover:text-gray-700 hover:underline"
+              >
+                {t("agendaPage.duraciones.restablecer")}
+              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDuracionesForm(null)}
+                  className="rounded-md border px-3 py-1.5 text-sm"
+                >
+                  {t("common.cancel")}
+                </button>
+                <button
+                  type="button"
+                  onClick={guardarDuraciones}
                   disabled={saving}
                   className="rounded-md bg-cyan-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-cyan-700 disabled:opacity-50"
                 >
@@ -1780,7 +2031,20 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
                     <label className="mb-1 block text-sm font-medium">{t("agendaPage.tipoHito")}</label>
                     <select
                       value={form.tipo}
-                      onChange={(e) => setForm({ ...form, tipo: e.target.value as EventoForm["tipo"] })}
+                      onChange={(e) => {
+                        // M-20 — si el fin sigue siendo el propuesto para el tipo
+                        // anterior, pasa a la duración del nuevo; si alguien lo
+                        // tocó, se respeta.
+                        const tipo = e.target.value as EventoForm["tipo"];
+                        const ini = new Date(form.inicio).getTime();
+                        const fin = form.fin ? new Date(form.fin).getTime() : NaN;
+                        const propuesto = Number.isFinite(ini) && fin - ini === minutosTipo(form.tipo) * 60_000;
+                        setForm({
+                          ...form,
+                          tipo,
+                          ...(propuesto ? { fin: toLocalInput(new Date(ini + minutosTipo(tipo) * 60_000)) } : {}),
+                        });
+                      }}
                       className="w-full rounded-md border px-3 py-2 text-sm"
                     >
                       <option value="CONSULTA">{t("agendaPage.tipoConsulta")}</option>
