@@ -48,6 +48,20 @@ export interface ForwardResolucionesParams {
   request: NextRequest;
 }
 
+/**
+ * Cabeceras de Consultor que viajan de vuelta al navegador en la respuesta no-SSE:
+ * Content-Type y, si viene, Content-Disposition. Sin esta última, exportar una skill
+ * (`skills/:id/export`, que responde `attachment; filename="X.myc"`) desde cualquier
+ * app que no fuera Consultor abría el JSON en el navegador en vez de descargar el
+ * `.myc`.
+ */
+export function cabecerasDeRespuesta(upstream: Headers): Record<string, string> {
+  const h: Record<string, string> = { 'Content-Type': upstream.get('content-type') || 'application/json' };
+  const disposicion = upstream.get('content-disposition');
+  if (disposicion) h['Content-Disposition'] = disposicion;
+  return h;
+}
+
 export async function forwardResoluciones(p: ForwardResolucionesParams): Promise<NextResponse> {
   const segs = p.path ?? [];
   const sub = segs.length ? `/${segs.join('/')}` : '';
@@ -114,10 +128,7 @@ export async function forwardResoluciones(p: ForwardResolucionesParams): Promise
       });
     }
     const text = await upstream.text();
-    return new NextResponse(text, {
-      status: upstream.status,
-      headers: { 'Content-Type': upstream.headers.get('content-type') || 'application/json' },
-    });
+    return new NextResponse(text, { status: upstream.status, headers: cabecerasDeRespuesta(upstream.headers) });
   } catch {
     return NextResponse.json(
       { error: { code: 'ASSISTANT_ERROR', message: 'No se pudo contactar con el asistente' } },
