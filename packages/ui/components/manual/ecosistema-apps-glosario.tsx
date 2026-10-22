@@ -37,7 +37,7 @@ const STRINGS: Record<ManualLang, Strings> = {
       "Las demás apps de la plataforma, por si en algún punto de este manual se mencionan y quieres saber qué hace cada una:",
     apps: [
       { name: "Notaría", desc: "Plataforma operativa del despacho: pre-expedientes, expedientes, protocolos, minutas, agenda y peticiones recibidas." },
-      { name: "LegiFirma", desc: "Legitimaciones de firmas, testimonios, traslados a papel (Sección 2ª) y módulo de minutación." },
+      { name: "LegiFirma", desc: "Legitimaciones de firmas, testimonios, traslados a papel (Sección 1ª del Libro Indicador) y módulo de minutación." },
       { name: "Archivo", desc: "Archivo histórico del protocolo: consulta de protocolos antiguos y emisión de copias." },
       { name: "Cancelaciones", desc: "Gestión de cancelaciones registrales (hipotecas y otros gravámenes) y sus honorarios." },
       { name: "Actas", desc: "Actas notariales, con facturación B2B agrupada para bancos." },
@@ -55,7 +55,7 @@ const STRINGS: Record<ManualLang, Strings> = {
       "Les altres apps de la plataforma, per si en algun punt d'aquest manual es mencionen i vols saber què fa cadascuna:",
     apps: [
       { name: "Notaría", desc: "Plataforma operativa del despatx: pre-expedients, expedients, protocols, minutes, agenda i peticions rebudes." },
-      { name: "LegiFirma", desc: "Legitimacions de signatures, testimonis, trasllats a paper (Secció 2a) i mòdul de minutació." },
+      { name: "LegiFirma", desc: "Legitimacions de signatures, testimonis, trasllats a paper (Secció 1a del Llibre Indicador) i mòdul de minutació." },
       { name: "Archivo", desc: "Arxiu històric del protocol: consulta de protocols antics i emissió de còpies." },
       { name: "Cancelaciones", desc: "Gestió de cancel·lacions registrals (hipoteques i altres gravàmens) i els seus honoraris." },
       { name: "Actas", desc: "Actes notarials, amb facturació B2B agrupada per a bancs." },
@@ -73,7 +73,7 @@ const STRINGS: Record<ManualLang, Strings> = {
       "Plataformaren beste appak, eskuliburu honetan aipatzen badira eta bakoitzak zer egiten duen jakin nahi baduzu:",
     apps: [
       { name: "Notaría", desc: "Notario-bulegoaren plataforma operatiboa: aurre-espedienteak, espedienteak, protokoloak, minutak, agenda eta jasotako eskaerak." },
-      { name: "LegiFirma", desc: "Sinaduren legitimazioak, lekukotzak, paperera eskualdaketak (2. Atala) eta minutazio modulua." },
+      { name: "LegiFirma", desc: "Sinaduren legitimazioak, lekukotzak, paperera eskualdaketak (Liburu Adierazleko 1. Atala) eta minutazio modulua." },
       { name: "Archivo", desc: "Protokoloaren artxibo historikoa: protokolo zaharrak kontsultatzeko eta kopiak emateko." },
       { name: "Cancelaciones", desc: "Erregistroko deuseztapenen kudeaketa (hipotekak eta beste zama batzuk) eta horien ordainsariak." },
       { name: "Actas", desc: "Notario aktak, banketxeentzako B2B fakturazio bateratuarekin." },
@@ -91,7 +91,7 @@ const STRINGS: Record<ManualLang, Strings> = {
       "As demais apps da plataforma, por se nalgún punto deste manual se mencionan e queres saber que fai cada unha:",
     apps: [
       { name: "Notaría", desc: "Plataforma operativa do despacho: pre-expedientes, expedientes, protocolos, minutas, axenda e peticións recibidas." },
-      { name: "LegiFirma", desc: "Lexitimacións de sinaturas, testemuños, traslados a papel (Sección 2ª) e módulo de minutación." },
+      { name: "LegiFirma", desc: "Lexitimacións de sinaturas, testemuños, traslados a papel (Sección 1ª do Libro Indicador) e módulo de minutación." },
       { name: "Archivo", desc: "Arquivo histórico do protocolo: consulta de protocolos antigos e emisión de copias." },
       { name: "Cancelaciones", desc: "Xestión de cancelacións rexistrais (hipotecas e outros gravames) e os seus honorarios." },
       { name: "Actas", desc: "Actas notariais, con facturación B2B agrupada para bancos." },
