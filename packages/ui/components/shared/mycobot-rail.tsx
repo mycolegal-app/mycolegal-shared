@@ -277,6 +277,11 @@ const MAX_INPUT_PX = 160;
 
 type View = "chat" | "history" | "resolucion" | "skills";
 
+/** Nombre de reserva del `.myc` exportado: mismo saneado que `exportSkill` en Consultor. */
+function nombreFicheroMyc(nombre: string): string {
+  return `${nombre.replace(/[^a-zA-Z0-9._-]+/g, "-").slice(0, 60) || "skill"}.myc`;
+}
+
 interface ViewerState {
   citas: Cita[];
   index: number;
@@ -497,8 +502,24 @@ export function MycoBotRail({
   const [skills, setSkills] = useState<{ id: string; nombre: string; descripcion: string | null; deFabrica: boolean; editable: boolean }[]>([]);
   const [activeSkillId, setActiveSkillId] = useState<string | null>(null);
   // F3.4 — formulario de skill (crear/editar/duplicar) e import de .myc. `id` presente = editar.
-  const [skillForm, setSkillForm] = useState<{ id?: string; nombre: string; descripcion: string; instruccion: string } | null>(null);
+  // `esquemaEntrada` y `pasoDeterminista` no se editan en el formulario, pero «Duplicar»
+  // los arrastra: sin ellos la copia de una skill de fábrica perdía su paso determinista.
+  const [skillForm, setSkillForm] = useState<{
+    id?: string;
+    nombre: string;
+    descripcion: string;
+    instruccion: string;
+    esquemaEntrada?: unknown;
+    pasoDeterminista?: string;
+  } | null>(null);
   const skillImportRef = useRef<HTMLInputElement>(null);
+  // Error de la última importación de un .myc (se enseña en la tienda).
+  const [skillImportError, setSkillImportError] = useState<string | null>(null);
+  // ¿La app sirve la tienda de skills? Se sabe por la respuesta de GET /skills: 404, 405
+  // o 501 = aquí no existe (Redactor, que la responde 501, o una app sin el proxy de
+  // `/api/resoluciones`, como cancelaciones-bs). Entonces no se enseñan ni el botón,
+  // ni la tienda, ni el selector. Hasta saberlo, oculto (sin parpadeo).
+  const [skillsDisponibles, setSkillsDisponibles] = useState(false);
   // En modo expandido la columna izquierda alterna entre conversaciones y skills.
   const [leftTab, setLeftTab] = useState<"conversaciones" | "skills">("conversaciones");
 
@@ -518,9 +539,17 @@ export function MycoBotRail({
   const loadSkills = useCallback(async () => {
     try {
       const r = await fetch(`${baseUrl}/skills`);
+      if (r.status === 404 || r.status === 405 || r.status === 501) {
+        setSkillsDisponibles(false);
+        setSkills([]);
+        return;
+      }
       const j = r.ok ? await r.json() : null;
       const d = j?.data ?? j;
-      if (Array.isArray(d)) setSkills(d);
+      if (Array.isArray(d)) {
+        setSkills(d);
+        setSkillsDisponibles(true);
+      }
     } catch {
       /* best-effort */
     }
@@ -531,12 +560,24 @@ export function MycoBotRail({
 
   const saveSkill = useCallback(async () => {
     if (!skillForm || !skillForm.nombre.trim() || skillForm.instruccion.trim().length < 10) return;
-    const { id, nombre, descripcion, instruccion } = skillForm;
-    // Con id → PATCH (modificar); sin id → POST (crear / duplicar).
+    const { id, nombre, descripcion, instruccion, esquemaEntrada, pasoDeterminista } = skillForm;
+    // Con id → PATCH (modificar: lo no editable se queda como está); sin id → POST
+    // (crear / duplicar: la copia lleva también el esquema de entrada y el paso
+    // determinista del original).
     const r = await fetch(id ? `${baseUrl}/skills/${id}` : `${baseUrl}/skills`, {
       method: id ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nombre, descripcion, instruccion }),
+      body: JSON.stringify(
+        id
+          ? { nombre, descripcion, instruccion }
+          : {
+              nombre,
+              descripcion,
+              instruccion,
+              ...(esquemaEntrada != null ? { esquemaEntrada } : {}),
+              ...(pasoDeterminista ? { pasoDeterminista } : {}),
+            },
+      ),
     });
     if (r.ok) {
       setSkillForm(null);
@@ -559,6 +600,9 @@ export function MycoBotRail({
           nombre: mode === "duplicate" ? `${s.nombre} (copia)` : s.nombre,
           descripcion: s.descripcion ?? "",
           instruccion: s.instruccion ?? "",
+          ...(mode === "duplicate"
+            ? { esquemaEntrada: s.esquemaEntrada ?? undefined, pasoDeterminista: s.pasoDeterminista ?? undefined }
+            : {}),
         });
         setView("skills");
       } catch {
@@ -569,31 +613,42 @@ export function MycoBotRail({
   );
 
   const deleteSkill = useCallback(
-    async (id: string) => {
+    async (id: string, nombre: string) => {
+      if (!window.confirm(t("ui.mycobot.skillDeleteConfirm", { nombre }))) return;
       const r = await fetch(`${baseUrl}/skills/${id}`, { method: "DELETE" });
       if (r.ok) {
         setActiveSkillId((cur) => (cur === id ? null : cur));
         await loadSkills();
       }
     },
-    [baseUrl, loadSkills],
+    [baseUrl, loadSkills, t],
   );
 
+  // Si la importación falla, se dice: antes no pasaba nada y el usuario no sabía si
+  // el fichero estaba mal o si había que esperar. 422 = el .myc no es válido.
   const importSkill = useCallback(
     async (file: File) => {
+      setSkillImportError(null);
+      let json: unknown;
       try {
-        const json = JSON.parse(await file.text());
+        json = JSON.parse(await file.text());
+      } catch {
+        setSkillImportError(t("ui.mycobot.skillImportInvalid"));
+        return;
+      }
+      try {
         const r = await fetch(`${baseUrl}/skills/import`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(json),
         });
         if (r.ok) await loadSkills();
+        else setSkillImportError(t(r.status === 422 ? "ui.mycobot.skillImportInvalid" : "ui.mycobot.skillImportFailed"));
       } catch {
-        /* .myc no válido: no rompemos */
+        setSkillImportError(t("ui.mycobot.skillImportFailed"));
       }
     },
-    [baseUrl, loadSkills],
+    [baseUrl, loadSkills, t],
   );
 
   // Saldo del monedero único de créditos de IA de la org (mismo canal que el
@@ -1339,6 +1394,11 @@ export function MycoBotRail({
           {t("ui.mycobot.skillImport")}
         </button>
       </div>
+      {skillImportError && (
+        <p role="alert" className="rounded-md bg-red-50 px-2 py-1 text-xs text-red-700">
+          {skillImportError}
+        </p>
+      )}
       {skills.length === 0 && <p className="text-xs text-gray-400">{t("ui.mycobot.skillsEmpty")}</p>}
       <ul className="space-y-2">
         {skills.map((s) => (
@@ -1358,8 +1418,12 @@ export function MycoBotRail({
               >
                 {t("ui.mycobot.skillUse")}
               </button>
+              {/* `download`: sin él, fuera de Consultor el navegador abría el JSON en vez
+                  de bajar el .myc. El nombre bueno lo pone la cabecera Content-Disposition
+                  (que el proxy reenvía); este es el de reserva, con el mismo saneado. */}
               <a
                 href={`${baseUrl}/skills/${s.id}/export`}
+                download={nombreFicheroMyc(s.nombre)}
                 className="rounded-md border px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
               >
                 {t("ui.mycobot.skillExport")}
@@ -1383,7 +1447,7 @@ export function MycoBotRail({
               {s.editable && (
                 <button
                   type="button"
-                  onClick={() => void deleteSkill(s.id)}
+                  onClick={() => void deleteSkill(s.id, s.nombre)}
                   className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50"
                 >
                   {t("ui.mycobot.skillDelete")}
@@ -1545,6 +1609,7 @@ export function MycoBotRail({
             >
               <History className="h-[18px] w-[18px]" />
             </button>
+            {skillsDisponibles && (
             <button
               type="button"
               onClick={() => {
@@ -1563,6 +1628,7 @@ export function MycoBotRail({
             >
               <ScrollText className="h-[18px] w-[18px]" />
             </button>
+            )}
             <button
               type="button"
               onClick={newConversation}
@@ -1605,13 +1671,15 @@ export function MycoBotRail({
                   >
                     {t("ui.mycobot.conversations")}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setLeftTab("skills")}
-                    className={`flex-1 rounded px-2 py-1 text-xs font-semibold ${leftTab === "skills" ? "bg-gray-200 text-gray-700" : "text-gray-400 hover:bg-gray-100"}`}
-                  >
-                    {t("ui.mycobot.skills")}
-                  </button>
+                  {skillsDisponibles && (
+                    <button
+                      type="button"
+                      onClick={() => setLeftTab("skills")}
+                      className={`flex-1 rounded px-2 py-1 text-xs font-semibold ${leftTab === "skills" ? "bg-gray-200 text-gray-700" : "text-gray-400 hover:bg-gray-100"}`}
+                    >
+                      {t("ui.mycobot.skills")}
+                    </button>
+                  )}
                   {leftTab === "conversaciones" && (
                     <button
                       type="button"
@@ -1624,10 +1692,10 @@ export function MycoBotRail({
                     </button>
                   )}
                 </div>
-                {leftTab === "skills" && (
+                {leftTab === "skills" && skillsDisponibles && (
                   <div className="min-h-0 flex-1 overflow-y-auto p-2">{skillsManagerEl}</div>
                 )}
-                <div className={`min-h-0 flex-1 overflow-y-auto p-2 ${leftTab === "skills" ? "hidden" : ""}`}>
+                <div className={`min-h-0 flex-1 overflow-y-auto p-2 ${leftTab === "skills" && skillsDisponibles ? "hidden" : ""}`}>
                   {historyLoading && (
                     <div className="flex items-center gap-2 px-1 py-6 text-sm text-gray-500">
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -1864,7 +1932,7 @@ export function MycoBotRail({
           )}
 
           {/* ── Tienda de skills (modo normal; en expandido va en la columna izquierda) ── */}
-          {view === "skills" && !expanded && (
+          {view === "skills" && !expanded && skillsDisponibles && (
             <div className="flex-1 overflow-y-auto p-4">
               <p className="mb-3 text-sm font-semibold text-gray-700">{t("ui.mycobot.skillsTitle")}</p>
               {skillsManagerEl}
@@ -2301,7 +2369,7 @@ export function MycoBotRail({
                 }}
                 className="border-t p-3"
               >
-                {skills.length > 0 && (
+                {skillsDisponibles && skills.length > 0 && (
                   <div className="mb-2 flex items-center gap-2 text-xs text-gray-600">
                     <Sparkles className="h-3.5 w-3.5 shrink-0 text-cyan-600" />
                     <select
