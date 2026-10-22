@@ -11,11 +11,12 @@
 export * from './pdf';
 export * from './ocr-client';
 export { extractWordText, esWord } from './word';
-export { extractXlsxText, esXlsx } from './xlsx';
+export { extractXlsxText, extractXlsx, esXlsx, XLSX_MAX_CHARS } from './xlsx';
+export type { XlsxExtraccion, XlsxHoja } from './xlsx';
 
 import { extractText as extractPdfLayer } from './pdf';
 import { extractWordText, esWord } from './word';
-import { extractXlsxText, esXlsx } from './xlsx';
+import { extractXlsx, esXlsx } from './xlsx';
 import { ocrViaPlatform } from './ocr-client';
 
 /** Config para el fallback OCR (PDF escaneado / imágenes). Los mismos valores
@@ -31,6 +32,10 @@ export interface ExtraerTextoResult {
   texto: string;
   chars: number; // caracteres no-espacio
   metodo: ExtraerMetodo;
+  /** 0.2.0 — El texto no cabía y se ha recortado (el propio texto lo dice al final). */
+  recortado?: boolean;
+  /** 0.2.0 — Avisos legibles para el usuario (recorte, fórmulas sin valor, formato…). */
+  avisos?: string[];
 }
 
 export interface ExtraerTextoOpts {
@@ -108,8 +113,14 @@ export async function extraerTexto(bytes: Uint8Array, opts: ExtraerTextoOpts = {
 
   // 0) XLSX → texto etiquetado por columna (sin OCR).
   if (esXlsx(mime, fileName)) {
-    const texto = await extractXlsxText(bytes);
-    return { texto, chars: noEspacios(texto), metodo: texto ? 'xlsx' : 'empty' };
+    const x = await extractXlsx(bytes);
+    return {
+      texto: x.texto,
+      chars: noEspacios(x.texto),
+      metodo: x.texto ? 'xlsx' : 'empty',
+      recortado: x.recortado,
+      avisos: x.avisos,
+    };
   }
 
   // 1) Word → texto embebido (sin OCR).

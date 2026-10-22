@@ -1,5 +1,32 @@
 # @mycolegal-app/text-extract — Changelog
 
+## 0.2.0 — El lector de Excel ya no tumba el libro por una celda y avisa si recorta (2026-10-22)
+
+Type: **minor**
+
+Prueba real de las skills de MycoBot (22-oct): el Excel de superficies de una promoción
+(Girona, 34 entidades) se rechazaba con «No se pudo extraer texto».
+
+- **Una celda no tumba el libro** — `cell.text` de exceljs LANZA en ciertas fórmulas y esa
+  excepción se llevaba el libro entero. Ahora se lee el valor de cada celda a mano, con
+  try/catch por celda y por hoja; lo que no se puede leer se deja vacío y se avisa.
+- **Fórmulas que valen 0** — `cell.value` de exceljs 4.4 descarta un resultado 0 (copia el
+  modelo con `if (value)`): 109 celdas vacías en el Excel de Girona, todos los coeficientes 0
+  de locales y plazas. Se lee `cell.result`.
+- **Celdas combinadas** una sola vez (en la maestra); **números** sin ruido binario
+  (80.52000000000001 → 80.52); **fechas** dd/mm/aaaa.
+- **Recorte avisado** — tope por defecto 400.000 caracteres (antes 20.000 y en silencio). Si no
+  cabe, se corta por filas enteras y se añade una línea `[AVISO DEL LECTOR DE EXCEL: …]` al
+  final del texto (la lee la IA) diciendo desde qué hoja y fila falta.
+- **.xls antiguo** (OLE2) → texto vacío con un aviso que dice que se guarde como .xlsx.
+- **API nueva** (aditiva): `extractXlsx(bytes, { maxChars })` → `{ texto, recortado, avisos,
+  hojas }`; `XLSX_MAX_CHARS`; `extraerTexto` devuelve además `recortado?` y `avisos?`.
+  `extractXlsxText` mantiene su firma.
+
+Comprobado con los Excel reales: Girona (16.232 caracteres, 0 avisos), superficies DH 4
+(4 hojas, 170.249), Churruca (71.008), plantilla DH (#592) y los de herencias de #10.
+Test: `npx tsx packages/text-extract/xlsx.test.ts`.
+
 ## 0.1.4 — El OCR ya no convierte un documento ilegible en un 500 (2026-10-03)
 
 Type: **patch**

@@ -17,10 +17,14 @@ const { texto, metodo } = await extraerTexto(bytes, {
     serviceKey: APPS_REGISTER_SECRET,
   },
 });
-// metodo ∈ 'word' | 'pdf-text-layer' | 'ocr' | 'empty'
+// metodo ∈ 'xlsx' | 'word' | 'pdf-text-layer' | 'ocr' | 'empty'
+// recortado / avisos (0.2.0): si el texto no cabía o hubo celdas sin valor
 ```
 
 Formatos:
+- **Excel** `.xlsx` / `.xlsm` → texto etiquetado por letra de columna (`Fila N: A=… | B=…`).
+  Una celda u hoja ilegible no tumba el libro; si no cabe (400.000 caracteres por defecto) se
+  recorta por filas y se avisa en el texto y en `avisos`. `.xls` antiguo → aviso de guardarlo como .xlsx.
 - **Word** `.doc` / `.docx` → texto embebido (sin OCR ni coste IA).
 - **PDF** → capa de texto (`unpdf`); si es un escaneo sin texto y se pasa `ocr`,
   cae a OCR de platform (visión de Gemini).
