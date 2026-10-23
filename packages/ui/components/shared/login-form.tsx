@@ -33,6 +33,12 @@ interface LoginFormProps {
    * /api/auth/password/expired). Used when login returns PASSWORD_EXPIRED.
    */
   expiredPasswordEndpoint?: string;
+  /**
+   * API endpoint for the AUTHENTICATED password change (defaults to
+   * /api/auth/change-password). Used from the "your password expires in N days"
+   * notice shown after a successful login: the session cookie is already set.
+   */
+  changePasswordEndpoint?: string;
   /** URL to redirect to after successful login */
   redirectTo?: string;
   /** Callback after successful login (alternative to redirectTo) */
@@ -63,6 +69,14 @@ function safeReturnTo(): string | null {
 
 type TFn = (key: string, params?: Record<string, string | number>) => string;
 
+/** Respuesta de un login correcto tal como la reenvían los proxies de las apps. */
+type LoginSuccess = {
+  data?: { mustChangePassword?: boolean; passwordExpiresInDays?: number | null; [k: string]: unknown };
+  mustChangePassword?: boolean;
+  passwordExpiresInDays?: number | null;
+  [k: string]: unknown;
+};
+
 /** Longitud mínima de contraseña (alineada con el resto de formularios de cambio). */
 const PASSWORD_MIN_LENGTH = 12;
 
@@ -80,6 +94,8 @@ const LOGIN_ERROR_KEYS: Record<string, string> = {
   APP_ACCESS_DENIED: "errAppAccess",
   APP_MAINTENANCE: "errAppMaintenance",
   PASSWORD_SAME: "errPasswordSame",
+  CURRENT_PASSWORD_INVALID: "errCurrentPassword",
+  WEAK_PASSWORD: "errWeakPassword",
   RATE_LIMITED: "errRateLimited",
   REGISTRATION_INCOMPLETE: "errRegistrationIncomplete",
 };
@@ -98,7 +114,7 @@ function resolveLoginError(t: TFn, status: number, code?: string, message?: stri
   const key = code ? LOGIN_ERROR_KEYS[code] : undefined;
   if (key) {
     if (code && PREFER_BACKEND_MESSAGE.has(code) && message && message.trim()) return message;
-    return t(`ui.login.${key}`);
+    return t(`ui.login.${key}`, { min: String(PASSWORD_MIN_LENGTH) });
   }
 
   // Código desconocido: usa el mensaje del backend salvo que sea el placeholder
@@ -118,6 +134,7 @@ export function LoginForm({
   features,
   loginEndpoint = "/api/auth/login",
   expiredPasswordEndpoint = "/api/auth/password/expired",
+  changePasswordEndpoint = "/api/auth/change-password",
   redirectTo = "/",
   onSuccess,
   versionInfo,
@@ -148,6 +165,53 @@ export function LoginForm({
   const [expiredCurrent, setExpiredCurrent] = useState("");
   const [expiredNew, setExpiredNew] = useState("");
   const [expiredConfirm, setExpiredConfirm] = useState("");
+  // El mismo formulario sirve para dos casos: la contraseña YA caducada (sin
+  // sesión, /api/auth/password/expired) y el cambio voluntario desde el aviso
+  // «caduca en N días» (con sesión, /api/auth/change-password).
+  const [pwMode, setPwMode] = useState<"expired" | "change">("expired");
+
+  // Aviso «tu contraseña caduca en N días» tras un login correcto (auth manda
+  // `passwordExpiresInDays` cuando quedan 14 o menos). No bloquea: «Más tarde»
+  // sigue al destino normal con la respuesta del login guardada aquí.
+  const [expiring, setExpiring] = useState<{ days: number; data: LoginSuccess } | null>(null);
+  // Respuesta del login que abrió el cambio voluntario: «Más tarde» desde el
+  // formulario de cambio sigue con ella (la sesión ya está abierta).
+  const [voluntaryFrom, setVoluntaryFrom] = useState<LoginSuccess | null>(null);
+
+  // Destino tras un login correcto (o tras descartar el aviso de caducidad).
+  function goToDestination(data: LoginSuccess) {
+    const forcedChange = data?.data?.mustChangePassword === true || data?.mustChangePassword === true;
+    if (onSuccess) {
+      onSuccess(data as { token: string; user: Record<string, unknown> });
+    } else if (forcedChange) {
+      window.location.href = "/change-password";
+    } else {
+      window.location.href = safeReturnTo() ?? redirectTo;
+    }
+  }
+
+  // Login correcto: si la contraseña caduca pronto, primero el aviso; si no (o si
+  // hay cambio forzado, que ya cubre la rotación), al destino.
+  function finishLogin(data: LoginSuccess) {
+    const forcedChange = data?.data?.mustChangePassword === true || data?.mustChangePassword === true;
+    const days = data?.data?.passwordExpiresInDays ?? data?.passwordExpiresInDays;
+    if (!forcedChange && typeof days === "number" && days > 0) {
+      setExpiring({ days, data });
+      return;
+    }
+    goToDestination(data);
+  }
+
+  function startVoluntaryChange() {
+    setPwMode("change");
+    setExpiredCurrent(password);
+    setExpiredNew("");
+    setExpiredConfirm("");
+    setError("");
+    setVoluntaryFrom(expiring?.data ?? null);
+    setExpiring(null);
+    setExpired(true);
+  }
 
   // Core login call, shared by the normal submit and the auto-login that runs
   // right after an expired-password change. Does NOT manage `loading` — callers
@@ -196,6 +260,7 @@ export function LoginForm({
       // cambio (actual + nueva + repetir). La contraseña actual ya la validó el
       // login, así que la pre-rellenamos con la que acaba de teclear.
       if (data.error?.code === "PASSWORD_EXPIRED") {
+        setPwMode("expired");
         setExpiredCurrent(pwd);
         setExpiredNew("");
         setExpiredConfirm("");
@@ -217,17 +282,9 @@ export function LoginForm({
     }
 
     // Admin-created-with-initial-password users must rotate before
-    // landing on the dashboard. The cookie is already set so /change-password
-    // is an authenticated page; server clears the flag on success.
-    const forcedChange = data?.data?.mustChangePassword === true || data?.mustChangePassword === true;
-
-    if (onSuccess) {
-      onSuccess(data);
-    } else if (forcedChange) {
-      window.location.href = "/change-password";
-    } else {
-      window.location.href = safeReturnTo() ?? redirectTo;
-    }
+    // landing on the dashboard (goToDestination → /change-password, cookie
+    // already set). Otherwise, the expiring-soon notice if it applies.
+    finishLogin(data);
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -266,21 +323,36 @@ export function LoginForm({
 
     setLoading(true);
     try {
-      const res = await fetch(expiredPasswordEndpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, currentPassword: expiredCurrent, newPassword: expiredNew }),
-      });
+      const res =
+        pwMode === "change"
+          ? await fetch(changePasswordEndpoint, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ currentPassword: expiredCurrent, newPassword: expiredNew }),
+            })
+          : await fetch(expiredPasswordEndpoint, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email, currentPassword: expiredCurrent, newPassword: expiredNew }),
+            });
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(resolveLoginError(t, res.status, data.error?.code, data.error?.message));
+        // El proxy autenticado reenvía el cuerpo de auth tal cual (`{ error:
+        // "<msg>", code }`); el de caducada lo normaliza a `{ error: { code, message } }`.
+        const code = data.code ?? data.error?.code;
+        const message = typeof data.error === "string" ? data.error : data.error?.message;
+        setError(resolveLoginError(t, res.status, code, message));
         return;
       }
 
-      // Éxito: entrar directamente con la nueva contraseña.
+      // Éxito: entrar directamente con la nueva contraseña. En el cambio con
+      // sesión también: auth revoca los refresh tokens al rotar, así que la
+      // sesión recién abierta moriría al caducar su access token.
       setPassword(expiredNew);
       setExpired(false);
+      setVoluntaryFrom(null);
       await performLogin(expiredNew);
     } catch {
       setError(t("ui.login.errConnection"));
@@ -307,15 +379,7 @@ export function LoginForm({
         return;
       }
 
-      const forcedChange = data?.data?.mustChangePassword === true || data?.mustChangePassword === true;
-
-      if (onSuccess) {
-        onSuccess(data);
-      } else if (forcedChange) {
-        window.location.href = "/change-password";
-      } else {
-        window.location.href = safeReturnTo() ?? redirectTo;
-      }
+      finishLogin(data);
     } catch {
       setError(t("ui.login.errConnection"));
     } finally {
@@ -487,12 +551,45 @@ export function LoginForm({
                 {t("ui.login.backToLogin")}
               </button>
             </>
-          ) : expired ? (
-            /* ── Expired-password change step ── */
+          ) : expiring ? (
+            /* ── Password expiring soon (non-blocking notice) ── */
             <>
-              <h2 className="text-2xl font-bold text-mc-slate-900">{t("ui.login.expiredTitle")}</h2>
+              <h2 className="text-2xl font-bold text-mc-slate-900">{t("ui.login.expiringTitle")}</h2>
+              <div
+                className="mt-4 rounded-lg bg-mc-warning-50 border border-mc-warning-500/30 px-4 py-3 text-sm text-mc-warning-700"
+                data-testid="password-expiring-notice"
+              >
+                {expiring.days === 1
+                  ? t("ui.login.expiringBodyOne")
+                  : t("ui.login.expiringBody", { days: String(expiring.days) })}
+              </div>
+              <p className="mt-4 text-sm text-mc-slate-500">{t("ui.login.expiringHint")}</p>
+              <div className="mt-6 space-y-3">
+                <button
+                  type="button"
+                  onClick={startVoluntaryChange}
+                  className="w-full rounded-lg bg-mc-slate-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-mc-slate-900 focus:outline-none focus:ring-2 focus:ring-mc-primary-500 focus:ring-offset-2 transition-colors"
+                >
+                  {t("ui.login.expiringChangeNow")}
+                </button>
+                <button
+                  type="button"
+                  autoFocus
+                  onClick={() => goToDestination(expiring.data)}
+                  className="w-full rounded-lg border border-mc-neutral-300 bg-white px-4 py-2.5 text-sm font-semibold text-mc-slate-700 shadow-sm hover:bg-mc-neutral-50 focus:outline-none focus:ring-2 focus:ring-mc-primary-500 focus:ring-offset-2 transition-colors"
+                >
+                  {t("ui.login.expiringLater")}
+                </button>
+              </div>
+            </>
+          ) : expired ? (
+            /* ── Password change step (expired, or voluntary from the notice) ── */
+            <>
+              <h2 className="text-2xl font-bold text-mc-slate-900">
+                {pwMode === "change" ? t("ui.login.changeTitle") : t("ui.login.expiredTitle")}
+              </h2>
               <p className="mt-2 text-sm text-mc-slate-500">
-                {t("ui.login.expiredSubtitle")}
+                {pwMode === "change" ? t("ui.login.changeSubtitle") : t("ui.login.expiredSubtitle")}
               </p>
 
               <form onSubmit={handleExpiredSubmit} className="mt-8 space-y-5">
@@ -554,17 +651,31 @@ export function LoginForm({
                   disabled={loading}
                   className="w-full rounded-lg bg-mc-slate-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-mc-slate-900 focus:outline-none focus:ring-2 focus:ring-mc-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  {loading ? t("ui.login.loggingIn") : t("ui.login.expiredSubmit")}
+                  {loading
+                    ? t("ui.login.loggingIn")
+                    : pwMode === "change"
+                      ? t("ui.login.changeSubmit")
+                      : t("ui.login.expiredSubmit")}
                 </button>
               </form>
 
-              <button
-                type="button"
-                onClick={() => { setExpired(false); setError(""); setExpiredNew(""); setExpiredConfirm(""); }}
-                className="mt-4 text-sm text-mc-slate-500 hover:text-mc-slate-700 transition-colors"
-              >
-                {t("ui.login.backToLogin")}
-              </button>
+              {pwMode === "change" && voluntaryFrom ? (
+                <button
+                  type="button"
+                  onClick={() => goToDestination(voluntaryFrom)}
+                  className="mt-4 text-sm text-mc-slate-500 hover:text-mc-slate-700 transition-colors"
+                >
+                  {t("ui.login.expiringLater")}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => { setExpired(false); setError(""); setExpiredNew(""); setExpiredConfirm(""); }}
+                  className="mt-4 text-sm text-mc-slate-500 hover:text-mc-slate-700 transition-colors"
+                >
+                  {t("ui.login.backToLogin")}
+                </button>
+              )}
             </>
           ) : (
             /* ── Login form step ── */
