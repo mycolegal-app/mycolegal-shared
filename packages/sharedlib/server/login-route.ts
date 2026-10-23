@@ -189,7 +189,15 @@ export function createLoginRoute(
     }
 
     const response = NextResponse.json({
-      data: { user, mustChangePassword: authData.mustChangePassword === true },
+      data: {
+        user,
+        mustChangePassword: authData.mustChangePassword === true,
+        // Días para que caduque la contraseña cuando quedan 14 o menos (auth lo
+        // manda null si no toca avisar). El LoginForm muestra el aviso sin
+        // bloquear el acceso.
+        passwordExpiresInDays:
+          typeof authData.passwordExpiresInDays === 'number' ? authData.passwordExpiresInDays : null,
+      },
     });
 
     const cookieBase = {

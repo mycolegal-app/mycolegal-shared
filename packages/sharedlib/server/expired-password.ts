@@ -39,6 +39,14 @@ export async function forwardExpiredPasswordChange(
   };
 
   if (!authResponse.ok) {
+    // La contraseña nueva no cumple la política: auth responde 400 «Validation
+    // error» (Zod) sin código. Se le pone uno para que el formulario lo traduzca.
+    if (authResponse.status === 400 && !data.code && Array.isArray((data as { details?: unknown }).details)) {
+      return NextResponse.json(
+        { error: { code: 'WEAK_PASSWORD', message: 'La nueva contraseña no cumple los requisitos.' } },
+        { status: 400 },
+      );
+    }
     const code = data.code || (typeof (data.error as { code?: string })?.code === 'string' ? (data.error as { code?: string }).code : undefined) || 'AUTH_FAILED';
     const message =
       typeof data.error === 'string'
