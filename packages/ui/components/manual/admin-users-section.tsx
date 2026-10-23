@@ -10,7 +10,6 @@
 import {
   AlertTriangle,
   Info,
-  Lock,
   Mail,
   Pause,
   Pencil,
@@ -42,7 +41,6 @@ interface SectionStrings {
   resend: ActionStrings;
   edit: ActionStrings;
   suspend: ActionStrings;
-  deactivate: ActionStrings;
   remove: ActionStrings;
   protectedRoleNote: (role: string) => string;
   rolesNote: (roles: string) => string;
@@ -64,15 +62,11 @@ const STRINGS: Record<ManualLang, SectionStrings> = {
     },
     edit: {
       label: "Editar rol",
-      desc: "Pulsa el icono de lápiz ✏️ para cambiar el rol de un usuario en esta aplicación. El cambio es inmediato; las sesiones activas del usuario se invalidan al siguiente refresh para que el nuevo rol surta efecto.",
+      desc: "Pulsa el icono de lápiz ✏️ para cambiar el rol de un usuario en esta aplicación. El nuevo rol se aplica la próxima vez que el usuario cargue la aplicación.",
     },
     suspend: {
       label: "Suspender",
       desc: "Pausa temporal con un mensaje personalizable que el usuario verá al intentar entrar. Útil para situaciones recuperables: investigación interna, baja larga, impago en curso. Reversible con Reactivar.",
-    },
-    deactivate: {
-      label: "Desactivar",
-      desc: "Bloquea el acceso del usuario sin mostrarle un mensaje específico. Se conservan datos, autoría e histórico. Útil para offboarding limpio (ex-empleado). Reversible con Reactivar.",
     },
     remove: {
       label: "Eliminar",
@@ -83,7 +77,7 @@ const STRINGS: Record<ManualLang, SectionStrings> = {
     rolesNote: (roles) =>
       `Los roles asignables desde el desplegable de invitación en esta aplicación son: ${roles}.`,
     permissionsNote:
-      "Las tres acciones de bloqueo (Suspender / Desactivar / Eliminar) revocan los tokens de refresco del usuario. La sesión activa puede sobrevivir unos minutos hasta que expira el access token corto, pero el usuario no podrá refrescarla.",
+      "Las acciones de bloqueo (Suspender y Eliminar) revocan los tokens de refresco del usuario. La sesión activa puede sobrevivir unos minutos hasta que expira el access token corto, pero el usuario no podrá refrescarla.",
   },
   CAT: {
     sectionTitle: "Gestió d'usuaris",
@@ -99,15 +93,11 @@ const STRINGS: Record<ManualLang, SectionStrings> = {
     },
     edit: {
       label: "Editar rol",
-      desc: "Prem la icona del llapis ✏️ per canviar el rol d'un usuari en aquesta aplicació. El canvi és immediat; les sessions actives de l'usuari s'invaliden al següent refresc perquè el nou rol tingui efecte.",
+      desc: "Prem la icona del llapis ✏️ per canviar el rol d'un usuari en aquesta aplicació. El nou rol s'aplica la propera vegada que l'usuari carregui l'aplicació.",
     },
     suspend: {
       label: "Suspendre",
       desc: "Pausa temporal amb un missatge personalitzable que l'usuari veurà en intentar entrar. Útil per a situacions recuperables: investigació interna, baixa llarga, impagament en curs. Reversible amb Reactivar.",
-    },
-    deactivate: {
-      label: "Desactivar",
-      desc: "Bloqueja l'accés de l'usuari sense mostrar-li cap missatge específic. Es conserven dades, autoria i històric. Útil per a un offboarding net (extreballador). Reversible amb Reactivar.",
     },
     remove: {
       label: "Eliminar",
@@ -118,7 +108,7 @@ const STRINGS: Record<ManualLang, SectionStrings> = {
     rolesNote: (roles) =>
       `Els rols assignables des del desplegable d'invitació en aquesta aplicació són: ${roles}.`,
     permissionsNote:
-      "Les tres accions de bloqueig (Suspendre / Desactivar / Eliminar) revoquen els tokens de refresc de l'usuari. La sessió activa pot sobreviure uns minuts fins que expira l'access token curt, però l'usuari no la podrà refrescar.",
+      "Les accions de bloqueig (Suspendre i Eliminar) revoquen els tokens de refresc de l'usuari. La sessió activa pot sobreviure uns minuts fins que expira l'access token curt, però l'usuari no la podrà refrescar.",
   },
   EUS: {
     sectionTitle: "Erabiltzaileen kudeaketa",
@@ -134,15 +124,11 @@ const STRINGS: Record<ManualLang, SectionStrings> = {
     },
     edit: {
       label: "Rola editatu",
-      desc: "Sakatu arkatzaren ikonoa ✏️ aplikazio honetan erabiltzaile baten rola aldatzeko. Aldaketa berehalakoa da; erabiltzailearen saio aktiboak hurrengo freskatzean baliogabetzen dira rol berria eragin dezan.",
+      desc: "Sakatu arkatzaren ikonoa ✏️ aplikazio honetan erabiltzaile baten rola aldatzeko. Rol berria erabiltzaileak aplikazioa kargatzen duen hurrengoan aplikatzen da.",
     },
     suspend: {
       label: "Eten",
       desc: "Aldi baterako etena, erabiltzaileak sartzen saiatzean ikusiko duen mezu pertsonalizagarri batekin. Erabilgarria berreskuragarriak diren egoeretarako: barne-ikerketa, baja luzea, ordainketa-eza. Berrezargarria Berraktibatu aukerarekin.",
-    },
-    deactivate: {
-      label: "Desaktibatu",
-      desc: "Erabiltzailearen sarbidea blokeatzen du mezu zehatzik erakutsi gabe. Datuak, egiletza eta historiala gordetzen dira. Erabilgarria offboarding garbietarako (langile ohia). Berrezargarria Berraktibatu aukerarekin.",
     },
     remove: {
       label: "Ezabatu",
@@ -153,7 +139,7 @@ const STRINGS: Record<ManualLang, SectionStrings> = {
     rolesNote: (roles) =>
       `Aplikazio honetan gonbidapenaren goitibeherakatik esleigarriak diren rolak hauek dira: ${roles}.`,
     permissionsNote:
-      "Hiru blokeatze-ekintzek (Eten / Desaktibatu / Ezabatu) erabiltzailearen freskatze-tokenak baliogabetzen dituzte. Saio aktiboak minutu batzuk iraun ditzake access token laburra iraungitzen den arte, baina erabiltzaileak ezin izango du freskatu.",
+      "Blokeatze-ekintzek (Eten eta Ezabatu) erabiltzailearen freskatze-tokenak baliogabetzen dituzte. Saio aktiboak minutu batzuk iraun ditzake access token laburra iraungitzen den arte, baina erabiltzaileak ezin izango du freskatu.",
   },
   GAL: {
     sectionTitle: "Xestión de usuarios",
@@ -169,15 +155,11 @@ const STRINGS: Record<ManualLang, SectionStrings> = {
     },
     edit: {
       label: "Editar rol",
-      desc: "Preme a icona do lapis ✏️ para cambiar o rol dun usuario nesta aplicación. O cambio é inmediato; as sesións activas do usuario invalídanse no seguinte refresco para que o novo rol teña efecto.",
+      desc: "Preme a icona do lapis ✏️ para cambiar o rol dun usuario nesta aplicación. O novo rol aplícase a próxima vez que o usuario cargue a aplicación.",
     },
     suspend: {
       label: "Suspender",
       desc: "Pausa temporal cunha mensaxe personalizable que o usuario verá ao intentar entrar. Útil para situacións recuperables: investigación interna, baixa longa, impago en curso. Reversible con Reactivar.",
-    },
-    deactivate: {
-      label: "Desactivar",
-      desc: "Bloquea o acceso do usuario sen amosarlle unha mensaxe específica. Consérvanse datos, autoría e historial. Útil para offboarding limpo (extraballador). Reversible con Reactivar.",
     },
     remove: {
       label: "Eliminar",
@@ -188,7 +170,7 @@ const STRINGS: Record<ManualLang, SectionStrings> = {
     rolesNote: (roles) =>
       `Os roles asignables dende o despregable de invitación nesta aplicación son: ${roles}.`,
     permissionsNote:
-      "As tres accións de bloqueo (Suspender / Desactivar / Eliminar) revogan os tokens de refresco do usuario. A sesión activa pode sobrevivir uns minutos ata que expira o access token curto, pero o usuario non poderá refrescala.",
+      "As accións de bloqueo (Suspender e Eliminar) revogan os tokens de refresco do usuario. A sesión activa pode sobrevivir uns minutos ata que expira o access token curto, pero o usuario non poderá refrescala.",
   },
 };
 
@@ -236,7 +218,6 @@ export function AdminUsersSection({
         <ActionRow icon={Mail} label={t.resend.label} desc={t.resend.desc} />
         <ActionRow icon={Pencil} label={t.edit.label} desc={t.edit.desc} />
         <ActionRow icon={Pause} label={t.suspend.label} desc={t.suspend.desc} tone="warning" />
-        <ActionRow icon={Lock} label={t.deactivate.label} desc={t.deactivate.desc} tone="warning" />
         <ActionRow icon={Trash2} label={t.remove.label} desc={t.remove.desc} tone="danger" />
       </div>
 

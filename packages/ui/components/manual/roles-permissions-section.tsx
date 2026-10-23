@@ -52,7 +52,7 @@ const STRINGS: Record<ManualLang, SectionStrings> = {
   CAST: {
     sectionTitle: "Roles y permisos",
     intro: (appName) =>
-      `Cada aplicación de MycoLegal define su propio catálogo de roles porque cubre un dominio distinto. Estos son los roles disponibles en ${appName} y lo que puede hacer cada uno. Para ver la lista exacta de permisos detrás de cada rol, abre el modal "Permisos por aplicación" en Administración → Usuarios y pulsa el icono (i) junto a esta app.`,
+      `Cada aplicación de MycoLegal define su propio catálogo de roles porque cubre un dominio distinto. Estos son los roles disponibles en ${appName} y lo que puede hacer cada uno. Para ver la lista exacta de permisos detrás de cada rol, en Administración → Usuarios pulsa Editar en un usuario, entra en Permisos y abre «¿Qué puede hacer este rol?».`,
     capabilitiesLabel: "Qué puede hacer:",
     orgAdminBadge: "Admin de la organización",
     defaultBadge: "Por defecto al invitar",
@@ -62,7 +62,7 @@ const STRINGS: Record<ManualLang, SectionStrings> = {
   CAT: {
     sectionTitle: "Rols i permisos",
     intro: (appName) =>
-      `Cada aplicació de MycoLegal defineix el seu propi catàleg de rols perquè cobreix un domini diferent. Aquests són els rols disponibles a ${appName} i el que pot fer cadascun. Per veure la llista exacta de permisos darrere de cada rol, obre el modal "Permisos per aplicació" a Administració → Usuaris i prem la icona (i) al costat d'aquesta app.`,
+      `Cada aplicació de MycoLegal defineix el seu propi catàleg de rols perquè cobreix un domini diferent. Aquests són els rols disponibles a ${appName} i el que pot fer cadascun. Per veure la llista exacta de permisos darrere de cada rol, a Administració → Usuaris prem Editar en un usuari, entra a Permisos i obre «Què pot fer aquest rol?».`,
     capabilitiesLabel: "Què pot fer:",
     orgAdminBadge: "Administrador de l'organització",
     defaultBadge: "Per defecte en convidar",
@@ -72,7 +72,7 @@ const STRINGS: Record<ManualLang, SectionStrings> = {
   EUS: {
     sectionTitle: "Rolak eta baimenak",
     intro: (appName) =>
-      `MycoLegal-en aplikazio bakoitzak bere rol-katalogoa definitzen du, domeinu desberdina hartzen baitu. Hauek dira ${appName}-en eskuragarri dauden rolak eta bakoitzak egin dezakeena. Rol bakoitzaren atzean dagoen baimen-zerrenda zehatza ikusteko, ireki "Aplikazio bakoitzaren baimenak" modala Administrazioa → Erabiltzaileak atalean eta sakatu (i) ikonoa app honen ondoan.`,
+      `MycoLegal-en aplikazio bakoitzak bere rol-katalogoa definitzen du, domeinu desberdina hartzen baitu. Hauek dira ${appName}-en eskuragarri dauden rolak eta bakoitzak egin dezakeena. Rol bakoitzaren atzean dagoen baimen-zerrenda zehatza ikusteko, Administrazioa → Erabiltzaileak atalean sakatu Editatu erabiltzaile batean, sartu Baimenak atalean eta ireki «Zer egin dezake rol honek?».`,
     capabilitiesLabel: "Zer egin dezake:",
     orgAdminBadge: "Erakundearen administratzailea",
     defaultBadge: "Lehenetsia gonbidatzean",
@@ -82,7 +82,7 @@ const STRINGS: Record<ManualLang, SectionStrings> = {
   GAL: {
     sectionTitle: "Roles e permisos",
     intro: (appName) =>
-      `Cada aplicación de MycoLegal define o seu propio catálogo de roles porque cobre un dominio distinto. Estes son os roles dispoñibles en ${appName} e o que pode facer cada un. Para ver a lista exacta de permisos detrás de cada rol, abre o modal "Permisos por aplicación" en Administración → Usuarios e preme a icona (i) ao lado desta app.`,
+      `Cada aplicación de MycoLegal define o seu propio catálogo de roles porque cobre un dominio distinto. Estes son os roles dispoñibles en ${appName} e o que pode facer cada un. Para ver a lista exacta de permisos detrás de cada rol, en Administración → Usuarios preme Editar nun usuario, entra en Permisos e abre «Que pode facer este rol?».`,
     capabilitiesLabel: "Que pode facer:",
     orgAdminBadge: "Administrador da organización",
     defaultBadge: "Por defecto ao convidar",
