@@ -102,12 +102,12 @@ describe('createPromptCatalog', () => {
 describe('configDeTarea', () => {
   it('trae el presupuesto de razonamiento de la fila', async () => {
     const r = createTaskModelResolver({ prisma: prismaCon({ model: 'm', active: true, thinkingBudget: 0 }), app: 'redactor', fallbackModel: 'f' });
-    expect(await r.configDeTarea('t')).toEqual({ model: 'm', thinkingBudget: 0 });
+    expect(await r.configDeTarea('t')).toEqual({ model: 'm', thinkingBudget: 0, modelContingencia: null });
   });
 
   it('sin fila, la reserva y sin presupuesto (decide el modelo)', async () => {
     const r = createTaskModelResolver({ prisma: prismaCon(null), app: 'redactor', fallbackModel: 'f' });
-    expect(await r.configDeTarea('t')).toEqual({ model: 'f', thinkingBudget: null });
+    expect(await r.configDeTarea('t')).toEqual({ model: 'f', thinkingBudget: null, modelContingencia: null });
   });
 
   it('modeloDeTarea y configDeTarea comparten la caché', async () => {
@@ -122,5 +122,23 @@ describe('thinkingConfigDe', () => {
   it('0 se manda (es «no razones»), null no se manda', () => {
     expect(thinkingConfigDe({ thinkingBudget: 0 })).toEqual({ thinkingConfig: { thinkingBudget: 0 } });
     expect(thinkingConfigDe({ thinkingBudget: null })).toEqual({});
+  });
+});
+
+describe('categorías de modelo: contingencia y regla del «pro»', () => {
+  it('devuelve la contingencia de la tarea (null si la fila no la trae)', async () => {
+    const r = createTaskModelResolver({
+      prisma: { aiTaskModel: { findUnique: async () => ({ model: 'gemini-3.8-flash', active: true, thinkingBudget: 0, modelContingencia: 'gemini-3.5-flash' }) } },
+      app: 'web', fallbackModel: 'x',
+    });
+    expect(await r.configDeTarea('web:t')).toEqual({ model: 'gemini-3.8-flash', thinkingBudget: 0, modelContingencia: 'gemini-3.5-flash' });
+    const sin = createTaskModelResolver({ prisma: prismaCon({ model: 'm', active: true }), app: 'web', fallbackModel: 'x' });
+    expect((await sin.configDeTarea('t')).modelContingencia).toBeNull();
+  });
+
+  it('un presupuesto 0 no se manda a un modelo «pro» (daría 400); a un flash sí', () => {
+    expect(thinkingConfigDe({ thinkingBudget: 0 }, 'gemini-9-pro')).toEqual({});
+    expect(thinkingConfigDe({ thinkingBudget: 0 }, 'gemini-3.8-flash')).toEqual({ thinkingConfig: { thinkingBudget: 0 } });
+    expect(thinkingConfigDe({ thinkingBudget: 2048 }, 'gemini-9-pro')).toEqual({ thinkingConfig: { thinkingBudget: 2048 } });
   });
 });

@@ -54,13 +54,16 @@ export function vertexModelUrl(model: string, verb: string, cfg: VertexModelConf
  */
 export function vertexUsage(data: unknown): { tokensIn: number; tokensOut: number } {
   const d = data as {
-    usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
+    usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number; thoughtsTokenCount?: number };
     usage?: { input_tokens?: number; output_tokens?: number };
   } | null;
   if (d?.usageMetadata) {
     return {
       tokensIn: d.usageMetadata.promptTokenCount ?? 0,
-      tokensOut: d.usageMetadata.candidatesTokenCount ?? 0,
+      // Los tokens de RAZONAMIENTO se facturan como salida (Google los cobra así) y cuentan como
+      // salida aquí (PLAN_TECNICO_CATEGORIAS_MODELO, F2b, decisión de Carles 26-oct-2026). Antes no
+      // contaban: en las tareas que razonan se cobraba bastante menos de lo que costaban.
+      tokensOut: (d.usageMetadata.candidatesTokenCount ?? 0) + (d.usageMetadata.thoughtsTokenCount ?? 0),
     };
   }
   if (d?.usage) {

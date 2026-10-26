@@ -24,6 +24,7 @@
 export {
   createTaskModelResolver,
   thinkingConfigDe,
+  esModeloPro,
   type ConfigDeTarea,
   type CatalogoTareas,
   type ResolutorDeModelo,
@@ -46,3 +47,14 @@ export {
   type PasoAgente,
   type ResultadoAgente,
 } from './src/agente';
+
+export {
+  conContingencia,
+  turnoConContingencia,
+  esFalloDeCapacidad,
+  SinCapacidadSimuladaError,
+  type PresupuestoLlamada,
+  type ArgsContingencia,
+  type ResultadoContingencia,
+  type EtiquetasContingencia,
+} from './src/contingencia';

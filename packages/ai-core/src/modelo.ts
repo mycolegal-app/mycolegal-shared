@@ -25,7 +25,7 @@ export interface CatalogoTareas {
   aiTaskModel: {
     findUnique(args: {
       where: { app_taskKey: { app: string; taskKey: string } };
-    }): Promise<{ model: string; active: boolean; thinkingBudget?: number | null } | null>;
+    }): Promise<{ model: string; active: boolean; thinkingBudget?: number | null; modelContingencia?: string | null } | null>;
   };
 }
 
@@ -59,6 +59,12 @@ export interface ConfigDeTarea {
    * razonamiento frente a 1,5 s con presupuesto 0, la misma pregunta).
    */
   thinkingBudget: number | null;
+  /**
+   * Modelo de CONTINGENCIA (PLAN_TECNICO_CATEGORIAS_MODELO): entra si el primario se queda sin
+   * capacidad (ver `conContingencia`). Lo pone Admin a través de la categoría de la tarea; null =
+   * sin contingencia (tareas con modelo fijo, o la columna aún no existe en el espejo de la app).
+   */
+  modelContingencia: string | null;
 }
 
 export interface ResolutorDeModelo {
@@ -78,12 +84,14 @@ export function createTaskModelResolver(cfg: ResolutorDeModeloConfig): Resolutor
       const hit = cache.get(taskKey);
       if (hit && hit.expira > Date.now()) return hit.valor;
 
-      let valor: ConfigDeTarea = { model: cfg.fallbackModel, thinkingBudget: null };
+      let valor: ConfigDeTarea = { model: cfg.fallbackModel, thinkingBudget: null, modelContingencia: null };
       try {
         const row = await cfg.prisma.aiTaskModel.findUnique({
           where: { app_taskKey: { app: cfg.app, taskKey } },
         });
-        if (row?.active) valor = { model: row.model, thinkingBudget: row.thinkingBudget ?? null };
+        if (row?.active) {
+          valor = { model: row.model, thinkingBudget: row.thinkingBudget ?? null, modelContingencia: row.modelContingencia ?? null };
+        }
       } catch {
         // Entorno sin BD o tabla sin migrar: se sigue con la reserva. No se
         // cachea el fallo como si fuera un acierto... pero sí se cachea el
@@ -106,10 +114,20 @@ export function createTaskModelResolver(cfg: ResolutorDeModeloConfig): Resolutor
   };
 }
 
+/** ¿Modelo «pro»? No admite ir sin razonamiento (presupuesto 0 → 400). */
+export function esModeloPro(model: string): boolean {
+  return /-pro\b/.test(model);
+}
+
 /**
  * El `thinkingConfig` de `generationConfig` para un presupuesto de Admin, o nada si la tarea no lo
- * fija (`null`: decide el modelo). Se esparce: `generationConfig: { ...thinkingConfigDe(c), … }`.
+ * fija (`null`: decide el modelo). Se esparce: `generationConfig: { ...thinkingConfigDe(c, modelo), … }`.
+ *
+ * Con el `modelo` que va a responder (el primario o la contingencia), un presupuesto 0 en un «pro»
+ * no se manda: ese modelo no admite ir sin razonamiento, y mandarlo da 400. Sin `modelo`, como antes.
  */
-export function thinkingConfigDe(c: Pick<ConfigDeTarea, 'thinkingBudget'>): { thinkingConfig?: { thinkingBudget: number } } {
-  return c.thinkingBudget === null || c.thinkingBudget === undefined ? {} : { thinkingConfig: { thinkingBudget: c.thinkingBudget } };
+export function thinkingConfigDe(c: Pick<ConfigDeTarea, 'thinkingBudget'>, modelo?: string): { thinkingConfig?: { thinkingBudget: number } } {
+  if (c.thinkingBudget === null || c.thinkingBudget === undefined) return {};
+  if (c.thinkingBudget === 0 && modelo && esModeloPro(modelo)) return {};
+  return { thinkingConfig: { thinkingBudget: c.thinkingBudget } };
 }

@@ -60,6 +60,11 @@ export interface UsoAcumulado {
   tokensOut: number;
   /** Desglose por si el llamante quiere persistirlo (p.ej. en `meta`). */
   calls: LlmCall[];
+  /**
+   * Tokens agrupados por MODELO. Es lo que se cobra (F2b de PLAN_TECNICO_CATEGORIAS_MODELO):
+   * cada modelo a su tarifa, en vez de la operación entera a la tarifa del de más tokens.
+   */
+  porModelo: LlmCall[];
 }
 
 /**
@@ -82,5 +87,12 @@ export function collectedUsage(): UsoAcumulado | undefined {
     tokensOut += c.tokensOut;
     if (c.tokensIn + c.tokensOut > dominante.tokensIn + dominante.tokensOut) dominante = c;
   }
-  return { model: dominante.model, tokensIn, tokensOut, calls: acc.calls };
+  const agrupado = new Map<string, LlmCall>();
+  for (const c of acc.calls) {
+    const a = agrupado.get(c.model) ?? { model: c.model, tokensIn: 0, tokensOut: 0 };
+    a.tokensIn += c.tokensIn;
+    a.tokensOut += c.tokensOut;
+    agrupado.set(c.model, a);
+  }
+  return { model: dominante.model, tokensIn, tokensOut, calls: acc.calls, porModelo: [...agrupado.values()] };
 }

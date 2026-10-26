@@ -24,6 +24,11 @@
       "types": "./src/agente.ts",
       "import": "./src/agente.ts",
       "default": "./src/agente.ts"
+    },
+    "./contingencia": {
+      "types": "./src/contingencia.ts",
+      "import": "./src/contingencia.ts",
+      "default": "./src/contingencia.ts"
     }
   },
   "files": [

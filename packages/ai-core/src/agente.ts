@@ -103,11 +103,12 @@ export async function conversarConHerramientas(o: OpcionesAgente): Promise<Resul
       tools: [{ functionDeclarations: o.herramientas }],
     }) as {
       candidates?: { content?: { parts?: Parte[] } }[];
-      usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
+      usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number; thoughtsTokenCount?: number };
     };
 
     tokensIn += data.usageMetadata?.promptTokenCount ?? 0;
-    tokensOut += data.usageMetadata?.candidatesTokenCount ?? 0;
+    // El razonamiento se factura como salida (F2b de PLAN_TECNICO_CATEGORIAS_MODELO).
+    tokensOut += (data.usageMetadata?.candidatesTokenCount ?? 0) + (data.usageMetadata?.thoughtsTokenCount ?? 0);
 
     const partes = data.candidates?.[0]?.content?.parts ?? [];
     const llamadas = partes.filter((p) => p.functionCall).map((p) => p.functionCall!);

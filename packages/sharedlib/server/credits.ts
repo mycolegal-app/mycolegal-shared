@@ -38,6 +38,11 @@ export interface Usage {
   /** Multiplicador del precio FIJO (acciones `fixed`); p.ej. el suplemento del
    *  Revisor cobra N veces la acción de 1 crédito. Ignorado en modo tokens. */
   quantity?: number | null;
+  /**
+   * Tokens por MODELO de la operación (F2b): en modo tokens platform cobra cada uno a la tarifa
+   * de su modelo. Lo rellena solo `withCredits`/`withUsage` con lo que anotó el transporte.
+   */
+  llamadas?: { model: string; tokensIn: number; tokensOut: number }[] | null;
 }
 
 export interface Quote {
@@ -67,11 +72,16 @@ export interface WithCreditsCtx {
  * coste). Lo que no declare se rellena con lo acumulado, que es el caso normal.
  */
 function fundirUso(declarado: Usage | undefined, recogido: UsoAcumulado | undefined): Usage {
+  // El desglose por modelo solo vale si los tokens son los del transporte: si el llamante
+  // declara los suyos, sabe algo que el transporte no y manda él (sin desglose).
+  const tokensPropios = declarado?.tokensIn != null || declarado?.tokensOut != null || declarado?.model != null;
+  const llamadas = !tokensPropios && recogido?.porModelo?.length ? recogido.porModelo : null;
   return {
     model: declarado?.model ?? recogido?.model ?? null,
     tokensIn: declarado?.tokensIn ?? recogido?.tokensIn ?? null,
     tokensOut: declarado?.tokensOut ?? recogido?.tokensOut ?? null,
     ...(declarado?.quantity != null ? { quantity: declarado.quantity } : {}),
+    ...(llamadas ? { llamadas } : {}),
   };
 }
 

@@ -64,3 +64,18 @@ describe('contabilidad ambiental de LLM', () => {
     expect(collectedUsage()).toBeUndefined();
   });
 });
+
+describe('contabilidad ambiental · desglose por modelo (F2b)', () => {
+  it('agrupa los tokens por modelo para cobrar cada uno a su tarifa', async () => {
+    const uso = await runWithUsageScope(async () => {
+      recordLlmCall({ model: 'gemini-3.5-flash-lite', tokensIn: 100000, tokensOut: 1000 });
+      recordLlmCall({ model: 'gemini-4-argon', tokensIn: 5000, tokensOut: 8000 });
+      recordLlmCall({ model: 'gemini-3.5-flash-lite', tokensIn: 50000, tokensOut: 500 });
+      return collectedUsage();
+    });
+    expect(uso?.porModelo).toEqual([
+      { model: 'gemini-3.5-flash-lite', tokensIn: 150000, tokensOut: 1500 },
+      { model: 'gemini-4-argon', tokensIn: 5000, tokensOut: 8000 },
+    ]);
+  });
+});
