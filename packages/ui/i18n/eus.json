@@ -1148,7 +1148,14 @@
       "attachSummary": "~{tokens} token (gehienekoaren % {pct})",
       "attachCost": "≈ {creditos} kreditu galdera bakoitzeko",
       "attachError": "Ezin izan da fitxategia erantsi",
-      "attachTruncated": "«{name}» ez zen osorik sartzen: elkarrizketaren gehienekora moztu da."
+      "attachTruncated": "«{name}» ez zen osorik sartzen: elkarrizketaren gehienekora moztu da.",
+      "nivel": "Maila:",
+      "nivelNormal": "Normala",
+      "nivelRazonamiento": "Arrazoiketa",
+      "nivelProfundo": "Pentsamendu sakona",
+      "nivelAvisoRazonamiento": "Denbora gehiago behar du eta kreditu gehiago gastatzen ditu.",
+      "nivelAvisoProfundo": "Eredurik indartsuena: denbora gehiago behar du eta kreditu askoz gehiago gastatzen ditu.",
+      "modeloReserva": "Aukeratutako eredua ez zegoen eskuragarri une honetan: erreserbako ereduak erantzun du."
     },
     "registradorPicker": {
       "placeholder": "Bilatu erregistroa izenez edo herriz…",

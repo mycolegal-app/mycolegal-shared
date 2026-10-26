@@ -1149,7 +1149,14 @@
       "attachSummary": "~{tokens} tokens ({pct} % del màxim)",
       "attachCost": "≈ {creditos} crèdits per pregunta",
       "attachError": "No s'ha pogut adjuntar el fitxer",
-      "attachTruncated": "«{name}» no hi cabia sencer: s'ha retallat al màxim de la conversa."
+      "attachTruncated": "«{name}» no hi cabia sencer: s'ha retallat al màxim de la conversa.",
+      "nivel": "Nivell:",
+      "nivelNormal": "Normal",
+      "nivelRazonamiento": "Raonament",
+      "nivelProfundo": "Pensament profund",
+      "nivelAvisoRazonamiento": "Triga més i gasta més crèdits.",
+      "nivelAvisoProfundo": "El model més potent: triga més i gasta força més crèdits.",
+      "modeloReserva": "El model triat no estava disponible en aquest moment: ha respost el model de reserva."
     },
     "registradorPicker": {
       "placeholder": "Cercar registre per nom o població…",

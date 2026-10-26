@@ -115,6 +115,8 @@ interface DonePayload {
   trace?: AiTrace;
   /** Idioma en que respondió MycoBot (F8): el botón 🔊 lo lee con ese acento. */
   idioma?: string;
+  /** Respondió el modelo de contingencia (categorías de modelo, F6). */
+  modeloReserva?: boolean;
 }
 
 // Cita devuelta por el backend (AskResult.citas de consultor).
@@ -175,6 +177,8 @@ interface Msg {
   sinCreditos?: boolean;
   /** Pasos que siguió el bucle agéntico (para «Ver proceso»). */
   steps?: StepRecord[];
+  /** Respondió el modelo de CONTINGENCIA (el del nivel elegido no tenía capacidad). */
+  modeloReserva?: boolean;
   /** Identificación de la salida de IA (modelo, residencia, versión, contexto):
    *  badge discreto al pie de la respuesta (PLAN_TECNICO_IA_RESPONSABLE §3). */
   trace?: AiTrace | null;
@@ -238,6 +242,9 @@ interface MycoBotRailProps {
   voz?: boolean;
 }
 
+/** Nivel del modelo elegido en el chat (F6 de PLAN_TECNICO_CATEGORIAS_MODELO). */
+type NivelChat = "normal" | "razonamiento" | "profundo";
+const NIVEL_STORAGE_KEY = "mycobot.nivel";
 const OPEN_STORAGE_KEY = "mycolegal:mycobot:open";
 // #768 — tamaño del panel (expandido a pantalla completa o rail lateral). Se
 // pidió "grande por defecto, al menos en Biblioteca" y se optó por RECORDAR lo
@@ -501,6 +508,20 @@ export function MycoBotRail({
   // conversación (su instrucción se inyecta como contexto al preguntar).
   const [skills, setSkills] = useState<{ id: string; nombre: string; descripcion: string | null; deFabrica: boolean; editable: boolean }[]>([]);
   const [activeSkillId, setActiveSkillId] = useState<string | null>(null);
+  // Nivel del modelo que elige el usuario (PLAN_TECNICO_CATEGORIAS_MODELO, F6). Se recuerda en
+  // este navegador; el servidor valida la lista y cualquier otra cosa es «normal».
+  const [nivel, setNivel] = useState<NivelChat>("normal");
+  useEffect(() => {
+    // Tras montar (no al inicializar): así el HTML del servidor y el primer render coinciden.
+    try {
+      const v = window.localStorage.getItem(NIVEL_STORAGE_KEY);
+      if (v === "razonamiento" || v === "profundo") setNivel(v);
+    } catch { /* sin almacenamiento: «normal» */ }
+  }, []);
+  const cambiarNivel = (v: NivelChat) => {
+    setNivel(v);
+    try { window.localStorage.setItem(NIVEL_STORAGE_KEY, v); } catch { /* sin almacenamiento: dura la sesión */ }
+  };
   // F3.4 — formulario de skill (crear/editar/duplicar) e import de .myc. `id` presente = editar.
   // `esquemaEntrada` y `pasoDeterminista` no se editan en el formulario, pero «Duplicar»
   // los arrastra: sin ellos la copia de una skill de fábrica perdía su paso determinista.
@@ -881,6 +902,8 @@ export function MycoBotRail({
             fuentes: readFuentesSel() ?? undefined,
             // F3 — skill activa: su instrucción se inyecta como contexto en el server.
             skillId: activeSkillId ?? undefined,
+            // F6 de categorías de modelo: nivel elegido (normal / razonamiento / profundo).
+            nivel,
           }),
         });
 
@@ -914,6 +937,7 @@ export function MycoBotRail({
               sinResultado: !!data.sinResultado,
               trace: data.trace ?? null,
               idioma: data.idioma,
+              modeloReserva: !!data.modeloReserva,
             },
           ]);
           return;
@@ -984,6 +1008,7 @@ export function MycoBotRail({
             steps: steps.length ? steps.slice() : undefined,
             trace: final?.trace ?? null,
             idioma: final?.idioma,
+            modeloReserva: !!final?.modeloReserva,
           },
         ]);
       } catch {
@@ -2066,6 +2091,9 @@ export function MycoBotRail({
                           por este usuario; al resto el propio texto ya les dice
                           que avisen a quien administra la cuenta. */}
                       {m.sinCreditos && <SinCreditos message="" />}
+                      {m.role === "bot" && m.modeloReserva && (
+                        <p className="mt-1.5 text-[11px] text-amber-700" data-modelo-reserva>{t("ui.mycobot.modeloReserva")}</p>
+                      )}
                       {m.role === "bot" && !m.error && m.skill !== "fuera" && m.text && (
                         <div className="mt-1.5 flex items-center justify-end gap-2">
                           {/* Identificación de la salida (punto ámbar; píldora al pasar) y
@@ -2489,6 +2517,26 @@ export function MycoBotRail({
                   >
                     <Send className="h-4 w-4" />
                   </button>
+                </div>
+                <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] text-gray-500">
+                  <label htmlFor="mycobot-nivel">{t("ui.mycobot.nivel")}</label>
+                  <select
+                    id="mycobot-nivel"
+                    value={nivel}
+                    onChange={(e) => cambiarNivel(e.target.value as NivelChat)}
+                    disabled={loading}
+                    data-nivel
+                    className="rounded border border-gray-200 bg-white px-1.5 py-0.5 text-[11px] text-gray-700"
+                  >
+                    <option value="normal">{t("ui.mycobot.nivelNormal")}</option>
+                    <option value="razonamiento">{t("ui.mycobot.nivelRazonamiento")}</option>
+                    <option value="profundo">{t("ui.mycobot.nivelProfundo")}</option>
+                  </select>
+                  {nivel !== "normal" && (
+                    <span className="text-amber-700">
+                      {t(nivel === "profundo" ? "ui.mycobot.nivelAvisoProfundo" : "ui.mycobot.nivelAvisoRazonamiento")}
+                    </span>
+                  )}
                 </div>
                 {avisoDictado ? (
                   <p role="status" className="mt-1.5 text-[10px] text-amber-700">{avisoDictado}</p>

@@ -1149,7 +1149,14 @@
       "attachSummary": "~{tokens} tokens ({pct} % del máximo)",
       "attachCost": "≈ {creditos} créditos por pregunta",
       "attachError": "No se pudo adjuntar el archivo",
-      "attachTruncated": "«{name}» no cabía entero: se ha recortado al máximo de la conversación."
+      "attachTruncated": "«{name}» no cabía entero: se ha recortado al máximo de la conversación.",
+      "nivel": "Nivel:",
+      "nivelNormal": "Normal",
+      "nivelRazonamiento": "Razonamiento",
+      "nivelProfundo": "Pensamiento profundo",
+      "nivelAvisoRazonamiento": "Tarda más y gasta más créditos.",
+      "nivelAvisoProfundo": "El modelo más potente: tarda más y gasta bastantes más créditos.",
+      "modeloReserva": "El modelo elegido no estaba disponible en este momento: ha respondido el modelo de reserva."
     },
     "registradorPicker": {
       "placeholder": "Buscar registro por nombre o población…",
