@@ -25,6 +25,8 @@ export {
   createTaskModelResolver,
   thinkingConfigDe,
   esModeloPro,
+  usaNivelDeRazonamiento,
+  type NivelRazonamiento,
   type ConfigDeTarea,
   type CatalogoTareas,
   type ResolutorDeModelo,

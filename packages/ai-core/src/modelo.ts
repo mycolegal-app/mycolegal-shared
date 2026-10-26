@@ -126,8 +126,27 @@ export function esModeloPro(model: string): boolean {
  * Con el `modelo` que va a responder (el primario o la contingencia), un presupuesto 0 en un «pro»
  * no se manda: ese modelo no admite ir sin razonamiento, y mandarlo da 400. Sin `modelo`, como antes.
  */
-export function thinkingConfigDe(c: Pick<ConfigDeTarea, 'thinkingBudget'>, modelo?: string): { thinkingConfig?: { thinkingBudget: number } } {
+export function thinkingConfigDe(
+  c: Pick<ConfigDeTarea, 'thinkingBudget'>,
+  modelo?: string,
+): { thinkingConfig?: { thinkingBudget: number } | { thinkingLevel: NivelRazonamiento } } {
   if (c.thinkingBudget === null || c.thinkingBudget === undefined) return {};
+  if (modelo && usaNivelDeRazonamiento(modelo)) {
+    // Gemini 4 (Argon) no admite `thinkingBudget` (400 «Use thinking level instead»): se traduce el
+    // presupuesto de Admin a su nivel. -1 (dinámico) = lo decide el modelo: no se manda nada.
+    if (c.thinkingBudget < 0) return {};
+    return { thinkingConfig: { thinkingLevel: c.thinkingBudget >= 4096 ? 'HIGH' : 'LOW' } };
+  }
   if (c.thinkingBudget === 0 && modelo && esModeloPro(modelo)) return {};
   return { thinkingConfig: { thinkingBudget: c.thinkingBudget } };
+}
+
+export type NivelRazonamiento = 'LOW' | 'HIGH';
+
+/**
+ * ¿El modelo pide el razonamiento por NIVEL (`thinkingLevel`) en vez de por presupuesto? Gemini 4
+ * (Argon, 26-oct-2026) responde 400 a `thinkingBudget`. Ampliar aquí cuando salga otro así.
+ */
+export function usaNivelDeRazonamiento(model: string): boolean {
+  return /^gemini-4/.test(model);
 }

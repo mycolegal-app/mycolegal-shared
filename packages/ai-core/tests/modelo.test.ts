@@ -142,3 +142,14 @@ describe('categorías de modelo: contingencia y regla del «pro»', () => {
     expect(thinkingConfigDe({ thinkingBudget: 2048 }, 'gemini-9-pro')).toEqual({ thinkingConfig: { thinkingBudget: 2048 } });
   });
 });
+
+describe('Gemini 4 (Argon): razonamiento por nivel, no por presupuesto', () => {
+  it('traduce el presupuesto a nivel y no manda nada si lo decide el modelo', () => {
+    expect(thinkingConfigDe({ thinkingBudget: 4096 }, 'gemini-4-argon')).toEqual({ thinkingConfig: { thinkingLevel: 'HIGH' } });
+    expect(thinkingConfigDe({ thinkingBudget: 1024 }, 'gemini-4-argon')).toEqual({ thinkingConfig: { thinkingLevel: 'LOW' } });
+    expect(thinkingConfigDe({ thinkingBudget: 0 }, 'gemini-4-argon')).toEqual({ thinkingConfig: { thinkingLevel: 'LOW' } });
+    expect(thinkingConfigDe({ thinkingBudget: -1 }, 'gemini-4-argon')).toEqual({});
+    expect(thinkingConfigDe({ thinkingBudget: null }, 'gemini-4-argon')).toEqual({});
+    expect(thinkingConfigDe({ thinkingBudget: 2048 }, 'gemini-3.8-flash')).toEqual({ thinkingConfig: { thinkingBudget: 2048 } });
+  });
+});
