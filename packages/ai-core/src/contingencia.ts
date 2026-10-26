@@ -128,10 +128,14 @@ function registrarSalto(e: EtiquetasContingencia, primario: string, contingencia
   const status = (err as { response?: { status?: number } })?.response?.status ?? null;
   const code = (err as { code?: unknown })?.code ?? null;
   // Una línea por salto, con un prefijo fijo: de aquí sale la métrica de logs de GCP
-  // (`ia_contingencia`) y el bloque de Admin › Salud (F5).
+  // (`ia_contingencia`) y el bloque de Admin › Salud (F5). `clave` junta servicio (Cloud Run lo
+  // da en `K_SERVICE`; separa PROD de TEST), primario, contingencia y tarea en UNA etiqueta de
+  // la métrica, porque el panel agrupa por una sola.
+  const servicio = (typeof process !== 'undefined' ? process.env?.K_SERVICE : undefined) ?? 'local';
   console.warn('[ia_contingencia]', JSON.stringify({
     app: e.app ?? null, tarea: e.tarea ?? null, primario, contingencia,
     motivo: status ?? code ?? 'red', simulado: err instanceof SinCapacidadSimuladaError, ms,
+    servicio, clave: [servicio, primario, contingencia, e.tarea ?? '-'].join('|'),
   }));
 }
 
