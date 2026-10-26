@@ -135,7 +135,9 @@ export function thinkingConfigDe(
     // Gemini 4 (Argon) no admite `thinkingBudget` (400 «Use thinking level instead»): se traduce el
     // presupuesto de Admin a su nivel. -1 (dinámico) = lo decide el modelo: no se manda nada.
     if (c.thinkingBudget < 0) return {};
-    return { thinkingConfig: { thinkingLevel: c.thinkingBudget >= 4096 ? 'HIGH' : 'LOW' } };
+    // Nivel alto solo para presupuestos muy grandes: con HIGH, Argon pasa de 60 s en la doctrina
+    // (26-oct-2026) y el turno se va al techo de Cloud Run.
+    return { thinkingConfig: { thinkingLevel: c.thinkingBudget >= 8192 ? 'HIGH' : 'LOW' } };
   }
   if (c.thinkingBudget === 0 && modelo && esModeloPro(modelo)) return {};
   return { thinkingConfig: { thinkingBudget: c.thinkingBudget } };

@@ -42,12 +42,18 @@ const INTENTOS_DEFECTO = 3;
 
 /** ¿Falla del serving (merece otro modelo) o de la petición? */
 export function esFalloDeCapacidad(err: unknown): boolean {
-  const e = err as { response?: { status?: number }; code?: unknown; type?: unknown; name?: unknown } | null;
+  const e = err as { response?: { status?: number }; code?: unknown; type?: unknown; name?: unknown; message?: unknown } | null;
   const status = e?.response?.status;
   if (status !== undefined) return status === 429 || status >= 500;
-  // Sin respuesta HTTP: timeout o red (gaxios/node-fetch). Un error nuestro («requiere un modelo
-  // Gemini») no trae nada de esto y no se enmascara.
-  return Boolean(e?.code || e?.type || e?.name === 'FetchError');
+  // Sin respuesta HTTP: tiempo agotado o red. El TIEMPO AGOTADO de gaxios llega sin `code` ni `type`
+  // (26-oct-2026, Argon razonando por encima del techo de 60 s): se reconoce por la clase del error
+  // o por el mensaje. Un error nuestro («requiere un modelo Gemini») es un Error normal y no se
+  // enmascara.
+  if (e?.code || e?.type) return true;
+  const nombre = String(e?.name ?? '');
+  const clase = (err as { constructor?: { name?: string } } | null)?.constructor?.name ?? '';
+  if (['FetchError', 'AbortError', 'TimeoutError'].includes(nombre) || clase === 'GaxiosError') return true;
+  return /abort|time ?out|timed out|socket hang up/i.test(String(e?.message ?? ''));
 }
 
 /** Modelos que la simulación da por «sin capacidad» (`IA_SIMULAR_SIN_CAPACIDAD`). */

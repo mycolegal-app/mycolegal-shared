@@ -12,6 +12,11 @@ describe('esFalloDeCapacidad', () => {
     expect(esFalloDeCapacidad(http(503))).toBe(true);
     expect(esFalloDeCapacidad(Object.assign(new Error('t'), { code: 'ETIMEDOUT' }))).toBe(true);
     expect(esFalloDeCapacidad(http(400))).toBe(false);
+    // Tiempo agotado de gaxios: sin respuesta, sin code ni type.
+    class GaxiosError extends Error {}
+    expect(esFalloDeCapacidad(new GaxiosError('The operation was aborted.'))).toBe(true);
+    expect(esFalloDeCapacidad(Object.assign(new Error('x'), { name: 'AbortError' }))).toBe(true);
+    expect(esFalloDeCapacidad(new Error('timeout of 60000ms exceeded'))).toBe(true);
     expect(esFalloDeCapacidad(new Error('requiere un modelo Gemini'))).toBe(false);
   });
 });
