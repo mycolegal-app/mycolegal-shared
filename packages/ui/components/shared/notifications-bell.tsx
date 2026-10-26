@@ -71,6 +71,73 @@ function formatRelative(
 }
 
 /**
+ * #987 — Destino de un aviso. `internal` = ruta de la app donde está montada
+ * la campana (se navega con el router del host); `external` = URL absoluta de
+ * otra app (navegación completa). `null` = el aviso no lleva a ningún sitio
+ * útil (sin enlace, o `/` de la propia app, que es el valor por defecto de los
+ * avisos de sistema).
+ */
+export type NotificationTarget =
+  | { kind: "internal"; path: string }
+  | { kind: "external"; url: string };
+
+const ABSOLUTE_URL = /^https?:\/\//i;
+
+/**
+ * #987 — Decide adónde lleva un aviso. Las apps no usan `basePath` (cada una
+ * vive en su subdominio), así que `link` es la ruta desde la raíz de la app y
+ * `absoluteLink` la misma ruta con el `app_url` de la app destino delante.
+ * `origin` se inyecta para poder probarlo sin `window`.
+ */
+export function resolveNotificationTarget(
+  n: Pick<NotificationEntry, "link" | "absoluteLink" | "appSlug">,
+  currentAppSlug: string,
+  origin: string | null = typeof window !== "undefined" ? window.location.origin : null,
+): NotificationTarget | null {
+  const sameOriginPath = (url: string): string | null => {
+    if (!origin) return null;
+    try {
+      const u = new URL(url);
+      return u.origin === origin ? `${u.pathname}${u.search}${u.hash}` : null;
+    } catch {
+      return null;
+    }
+  };
+  const link = (n.link ?? "").trim();
+  const sameApp = !n.appSlug || n.appSlug === currentAppSlug;
+
+  if (sameApp) {
+    if (!link) return null;
+    if (ABSOLUTE_URL.test(link)) {
+      const path = sameOriginPath(link);
+      if (path === "/") return null;
+      return path ? { kind: "internal", path } : { kind: "external", url: link };
+    }
+    const path = link.startsWith("/") ? link : `/${link}`;
+    return path === "/" ? null : { kind: "internal", path };
+  }
+
+  // Otra app: sólo vale la URL absoluta (si el servidor no conoce el `app_url`
+  // de esa app, `absoluteLink` vuelve con la ruta relativa, que en esta app
+  // llevaría a una página equivocada).
+  const url = (n.absoluteLink ?? "").trim() || link;
+  if (!ABSOLUTE_URL.test(url)) return null;
+  const path = sameOriginPath(url);
+  return path ? { kind: "internal", path } : { kind: "external", url };
+}
+
+/**
+ * #987 — ¿Se lee el aviso entero en la lista? La fila recorta el cuerpo a dos
+ * líneas (`line-clamp-2` en un panel de 20rem ≈ 90 caracteres). Si cabe, no
+ * hace falta la ventana de detalle y pulsar el aviso lleva directo al destino.
+ */
+const LIST_BODY_MAX_CHARS = 90;
+export function notificationFitsInList(n: Pick<NotificationEntry, "body">): boolean {
+  const body = (n.body ?? "").trim();
+  return !body || (body.length <= LIST_BODY_MAX_CHARS && !/\r|\n/.test(body));
+}
+
+/**
  * In-app notifications bell for the platform's sidebar. Polls an unread-count
  * endpoint while closed; fetches the full list when the user opens the
  * popover. Deep-links respect same-origin vs cross-app: same app → SPA
@@ -176,6 +243,9 @@ export function NotificationsBell({
         const res = await fetch(`${apiBase}/${id}/read`, {
           method: "PATCH",
           credentials: "include",
+          // #987 — `keepalive`: al abrir un aviso de otra app la página se
+          // descarga en el acto y, sin esto, el PATCH se cancelaría.
+          keepalive: true,
           headers: { "Content-Type": "application/json" },
           body: "{}",
         });
@@ -212,6 +282,20 @@ export function NotificationsBell({
     }
   }, [apiBase]);
 
+  // #987 — Navega al destino del aviso: misma app → router del host (o
+  // navegación completa si no lo ha pasado); otra app → URL absoluta.
+  const navigateTo = useCallback(
+    (target: NotificationTarget) => {
+      if (target.kind === "internal") {
+        if (onNavigateInternal) onNavigateInternal(target.path);
+        else window.location.assign(target.path);
+      } else {
+        window.location.assign(target.url);
+      }
+    },
+    [onNavigateInternal],
+  );
+
   const onEntryClick = useCallback(
     async (n: NotificationEntry) => {
       if (!n.readAt) {
@@ -219,13 +303,22 @@ export function NotificationsBell({
         n = { ...n, readAt: new Date().toISOString() };
         void markOneRead(n.id);
       }
-      // Cerramos el panel del sidebar y abrimos el modal centrado a
-      // pantalla completa con el detalle.
       setOpen(false);
+      // #987 — Si el aviso lleva a algún sitio y su texto ya se ha leído
+      // entero en la lista, vamos directos: la ventana sólo añadiría un clic.
+      const target = resolveNotificationTarget(n, currentAppSlug);
+      if (target && notificationFitsInList(n)) {
+        navigateTo(target);
+        return;
+      }
+      // Si no, abrimos el modal centrado a pantalla completa con el detalle
+      // (con «Abrir» cuando hay destino).
       setDetail(n);
     },
-    [markOneRead],
+    [markOneRead, currentAppSlug, navigateTo],
   );
+
+  const detailTarget = detail ? resolveNotificationTarget(detail, currentAppSlug) : null;
 
   const iconColour =
     variant === "dark"
@@ -399,6 +492,21 @@ export function NotificationsBell({
                 >
                   {t("ui.common.close")}
                 </button>
+                {/* #987 — Antes la ventana sólo tenía «Cerrar» y el aviso
+                    («nuevo mensaje de la gestoría»…) no llevaba al hilo. */}
+                {detailTarget && (
+                  <button
+                    type="button"
+                    autoFocus
+                    onClick={() => {
+                      setDetail(null);
+                      navigateTo(detailTarget);
+                    }}
+                    className="rounded-md bg-cyan px-3 py-1.5 text-sm font-medium text-white hover:bg-cyan/90"
+                  >
+                    {t("ui.notifications.open")}
+                  </button>
+                )}
               </div>
             </div>
           </div>,

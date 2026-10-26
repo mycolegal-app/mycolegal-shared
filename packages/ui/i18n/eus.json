@@ -389,6 +389,7 @@
       "errLoad": "Ezin izan dira jakinarazpenak kargatu",
       "detailAria": "Jakinarazpenaren xehetasuna",
       "noDescription": "Deskribapenik gabe.",
+      "open": "Ireki",
       "relSeconds": "duela segundo batzuk",
       "relMinutes": "duela {min} min",
       "relHours": "duela {hr} h",

@@ -389,6 +389,7 @@
       "errLoad": "Non se puideron cargar as notificacións",
       "detailAria": "Detalle da notificación",
       "noDescription": "Sen descrición.",
+      "open": "Abrir",
       "relSeconds": "fai uns segundos",
       "relMinutes": "fai {min} min",
       "relHours": "fai {hr} h",
