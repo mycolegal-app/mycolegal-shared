@@ -328,7 +328,17 @@
       "forgotPassword": "Has oblidat la contrasenya?",
       "loggingIn": "Accedint...",
       "btnLogin": "Entrar",
-      "platformPrefix": "Una aplicació de la plataforma"
+      "platformPrefix": "Una aplicació de la plataforma",
+      "totpTitle": "Codi de verificació",
+      "totpIntro": "Obre la teva app d'autenticació (o el gestor de contrasenyes del mòbil) i introdueix el codi de 6 dígits de MycoLegal.",
+      "totpBackupIntro": "Introdueix un dels codis de reserva que vas desar en activar la verificació en dos passos. Cada codi serveix una sola vegada.",
+      "totpLabel": "Codi de 6 dígits",
+      "totpBackupLabel": "Codi de reserva",
+      "totpSubmit": "Verificar",
+      "totpUseBackup": "Fer servir un codi de reserva",
+      "totpUseApp": "Fer servir el codi de l'app",
+      "errInvalidTotp": "El codi no és correcte. Comprova que és el de MycoLegal i que no ha caducat.",
+      "errTotpExpired": "Ha passat massa temps. Torna a iniciar sessió."
     },
     "forgotPassword": {
       "errProcess": "No s'ha pogut processar la sol·licitud. Torna-ho a intentar.",

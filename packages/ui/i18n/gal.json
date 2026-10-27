@@ -327,7 +327,17 @@
       "forgotPassword": "Esqueciches a túa contrasinal?",
       "loggingIn": "Accedendo...",
       "btnLogin": "Entrar",
-      "platformPrefix": "Unha aplicación da plataforma"
+      "platformPrefix": "Unha aplicación da plataforma",
+      "totpTitle": "Código de verificación",
+      "totpIntro": "Abre a túa app de autenticación (ou o xestor de contrasinais do móbil) e introduce o código de 6 díxitos de MycoLegal.",
+      "totpBackupIntro": "Introduce un dos códigos de respaldo que gardaches ao activar a verificación en dous pasos. Cada código serve unha soa vez.",
+      "totpLabel": "Código de 6 díxitos",
+      "totpBackupLabel": "Código de respaldo",
+      "totpSubmit": "Verificar",
+      "totpUseBackup": "Usar un código de respaldo",
+      "totpUseApp": "Usar o código da app",
+      "errInvalidTotp": "O código non é correcto. Comproba que é o de MycoLegal e que non caducou.",
+      "errTotpExpired": "Pasou demasiado tempo. Volve iniciar sesión."
     },
     "forgotPassword": {
       "errProcess": "Non se puido procesar a solicitude. Téntao de novo.",

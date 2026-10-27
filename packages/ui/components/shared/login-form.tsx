@@ -98,6 +98,9 @@ const LOGIN_ERROR_KEYS: Record<string, string> = {
   WEAK_PASSWORD: "errWeakPassword",
   RATE_LIMITED: "errRateLimited",
   REGISTRATION_INCOMPLETE: "errRegistrationIncomplete",
+  INVALID_TOTP: "errInvalidTotp",
+  MFA_TOKEN_EXPIRED: "errTotpExpired",
+  MFA_TOKEN_INVALID: "errTotpExpired",
 };
 
 /**
@@ -153,6 +156,12 @@ export function LoginForm({
   // apps): se pinta marcada y con el foco, así que basta con pulsar Intro.
   const [lastOrgId, setLastOrgId] = useState<string | null>(null);
   const [userName, setUserName] = useState("");
+
+  // Segundo factor (superadmin con TOTP, 27-oct-2026): token intermedio del primer
+  // paso y el código tecleado (6 dígitos o uno de respaldo).
+  const [mfaToken, setMfaToken] = useState<string | null>(null);
+  const [totpCode, setTotpCode] = useState("");
+  const [usarRespaldo, setUsarRespaldo] = useState(false);
 
   // Pending-activation state (invited user logging in — we resend the activation email)
   const [pendingActivation, setPendingActivation] = useState<{ email: string; message: string } | null>(null);
@@ -272,6 +281,15 @@ export function LoginForm({
       return;
     }
 
+    // Superadmin con segundo factor: falta el código.
+    if (data.requiresTotp) {
+      setMfaToken(data.mfaToken);
+      setTotpCode("");
+      setUsarRespaldo(false);
+      setUserName(data.user?.displayName || "");
+      return;
+    }
+
     // Superadmin with multiple orgs — show selector
     if (data.requiresOrgSelection) {
       setOrgs(data.organizations);
@@ -361,6 +379,46 @@ export function LoginForm({
     }
   }
 
+  // Segundo paso: el código va por la MISMA ruta de login de la app (sharedlib lo
+  // reenvía a auth /auth/login/totp). La respuesta es la de un login normal.
+  async function handleTotpSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      const res = await fetch(loginEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mfaToken, code: totpCode.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        const code = data.error?.code ?? data.code;
+        if (code === "MFA_TOKEN_EXPIRED" || code === "MFA_TOKEN_INVALID") {
+          handleBackToLogin();
+        } else {
+          setTotpCode("");
+        }
+        setError(resolveLoginError(t, res.status, code, data.error?.message));
+        return;
+      }
+      setMfaToken(null);
+      setTotpCode("");
+      if (data.requiresOrgSelection) {
+        setOrgs(data.organizations);
+        setSelectToken(data.selectToken);
+        setLastOrgId(data.lastOrgId ?? null);
+        setUserName(data.user?.displayName || userName);
+        return;
+      }
+      finishLogin(data);
+    } catch {
+      setError(t("ui.login.errConnection"));
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function handleOrgSelect(orgId: string) {
     setError("");
     setLoading(true);
@@ -388,6 +446,9 @@ export function LoginForm({
   }
 
   function handleBackToLogin() {
+    setMfaToken(null);
+    setTotpCode("");
+    setUsarRespaldo(false);
     setOrgs(null);
     setSelectToken(null);
     setLastOrgId(null);
@@ -502,6 +563,67 @@ export function LoginForm({
               >
                 {t("ui.login.backToLogin")}
               </button>
+            </>
+          ) : mfaToken ? (
+            /* ── Segundo factor (superadmin con TOTP) ── */
+            <>
+              <h2 className="text-2xl font-bold text-mc-slate-900">{t("ui.login.totpTitle")}</h2>
+              <p className="mt-2 text-sm text-mc-slate-500">
+                {usarRespaldo ? t("ui.login.totpBackupIntro") : t("ui.login.totpIntro")}
+              </p>
+
+              <form onSubmit={handleTotpSubmit} className="mt-8 space-y-5">
+                {error && (
+                  <div className="rounded-lg bg-mc-error-50 border border-mc-error-500/30 px-4 py-3 text-sm text-mc-error-700">
+                    {error}
+                  </div>
+                )}
+                <div>
+                  <label htmlFor="totp" className="block text-sm font-medium text-mc-slate-700">
+                    {usarRespaldo ? t("ui.login.totpBackupLabel") : t("ui.login.totpLabel")}
+                  </label>
+                  {/* `one-time-code` + `numeric`: sin ellos el iPhone no ofrece el código
+                      del gestor de contraseñas encima del teclado. */}
+                  <input
+                    key={usarRespaldo ? "respaldo" : "totp"}
+                    id="totp"
+                    value={totpCode}
+                    onChange={(e) => setTotpCode(e.target.value)}
+                    required
+                    autoFocus
+                    autoComplete={usarRespaldo ? "off" : "one-time-code"}
+                    inputMode={usarRespaldo ? "text" : "numeric"}
+                    pattern={usarRespaldo ? undefined : "[0-9 ]{6,7}"}
+                    maxLength={usarRespaldo ? 12 : 7}
+                    placeholder={usarRespaldo ? "XXXX-XXXX" : "123456"}
+                    className="mt-1 block w-full rounded-lg border border-mc-neutral-300 bg-white px-3 py-2.5 font-mono text-lg tracking-widest text-mc-slate-900 shadow-sm focus:border-mc-primary-500 focus:outline-none focus:ring-1 focus:ring-mc-primary-500"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full rounded-lg bg-mc-slate-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-mc-slate-900 focus:outline-none focus:ring-2 focus:ring-mc-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {loading ? t("ui.login.loggingIn") : t("ui.login.totpSubmit")}
+                </button>
+              </form>
+
+              <div className="mt-4 flex items-center justify-between gap-4">
+                <button
+                  type="button"
+                  onClick={() => { setUsarRespaldo(!usarRespaldo); setTotpCode(""); setError(""); }}
+                  className="text-sm text-mc-slate-500 hover:text-mc-slate-700 transition-colors"
+                >
+                  {usarRespaldo ? t("ui.login.totpUseApp") : t("ui.login.totpUseBackup")}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBackToLogin}
+                  className="text-sm text-mc-slate-500 hover:text-mc-slate-700 transition-colors"
+                >
+                  {t("ui.login.backToLogin")}
+                </button>
+              </div>
             </>
           ) : orgs ? (
             /* ── Org selection step ── */

@@ -10,7 +10,10 @@
  *
  * Lo que hace, en orden:
  *  1. valida el cuerpo;
- *  2. delega en auth (`POST /auth/login`) con el `appSlug` de la app;
+ *  2. delega en auth (`POST /auth/login`) con el `appSlug` de la app — o, si el
+ *     cuerpo trae `mfaToken` + `code`, en `POST /auth/login/totp`: el segundo paso
+ *     del superadmin con segundo factor va por esta MISMA ruta, para que ninguna
+ *     app necesite una ruta propia;
  *  3. reenvía tal cual los tres desenlaces que NO son sesión: gate de alta
  *     (403 REGISTRATION_INCOMPLETE, con su `completionUrl`), selección de org de
  *     superadmin, y cuenta pendiente de activación (202);
@@ -106,30 +109,32 @@ export function createLoginRoute(
   } = options;
 
   return async function POST(request: NextRequest): Promise<NextResponse> {
-    let body: { email?: string; password?: string };
+    let body: { email?: string; password?: string; mfaToken?: string; code?: string };
     try {
       body = await request.json();
     } catch {
       return jsonError('INVALID_BODY', 'Request body inválido', 400);
     }
 
-    if (!body.email || !body.password) {
+    // Segundo paso de un superadmin con segundo factor (27-oct-2026).
+    const pasoCodigo = typeof body.mfaToken === 'string' && typeof body.code === 'string';
+    if (!pasoCodigo && (!body.email || !body.password)) {
       return jsonError('VALIDATION_ERROR', 'Email y contraseña son obligatorios', 422);
     }
 
     let authResponse: Response;
     let authData: Record<string, any>;
     try {
-      authResponse = await fetch(`${authInternalUrl}/auth/login`, {
+      authResponse = await fetch(`${authInternalUrl}/auth/login${pasoCodigo ? '/totp' : ''}`, {
         method: 'POST',
         // La IP real del cliente viaja hasta auth: su rate-limit del login es por
         // IP y sin esto todas las apps compartían un único cupo. Ver client-ip.ts.
         headers: { 'Content-Type': 'application/json', ...clientForwardHeaders(request) },
-        body: JSON.stringify({
-          email: body.email,
-          password: body.password,
-          ...(appSlug ? { appSlug } : {}),
-        }),
+        body: JSON.stringify(
+          pasoCodigo
+            ? { mfaToken: body.mfaToken, code: body.code }
+            : { email: body.email, password: body.password, ...(appSlug ? { appSlug } : {}) },
+        ),
       });
       authData = await authResponse.json();
     } catch (err) {
@@ -157,6 +162,10 @@ export function createLoginRoute(
     // Superadmin con varias orgs: el front pinta el selector y vuelve por
     // /api/auth/login/select-org.
     if (authData.requiresOrgSelection) return NextResponse.json(authData);
+
+    // Superadmin con segundo factor: el front pide el código y vuelve por esta
+    // misma ruta con `mfaToken` + `code`.
+    if (authData.requiresTotp) return NextResponse.json(authData);
 
     // Usuario invitado que nunca activó: auth le reenvía el correo, no hay sesión.
     if (authResponse.status === 202 || authData.code === 'account_pending_activation') {

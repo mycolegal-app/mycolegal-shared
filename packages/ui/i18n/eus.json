@@ -327,7 +327,17 @@
       "forgotPassword": "Pasahitza ahaztu duzu?",
       "loggingIn": "Sartzen...",
       "btnLogin": "Sartu",
-      "platformPrefix": "Plataformaren aplikazio bat:"
+      "platformPrefix": "Plataformaren aplikazio bat:",
+      "totpTitle": "Egiaztapen-kodea",
+      "totpIntro": "Ireki zure autentifikazio-aplikazioa (edo mugikorreko pasahitz-kudeatzailea) eta idatzi MycoLegal-en 6 digituko kodea.",
+      "totpBackupIntro": "Idatzi bi urratseko egiaztapena aktibatzean gorde zenituen babeskopia-kodeetako bat. Kode bakoitza behin bakarrik erabil daiteke.",
+      "totpLabel": "6 digituko kodea",
+      "totpBackupLabel": "Babeskopia-kodea",
+      "totpSubmit": "Egiaztatu",
+      "totpUseBackup": "Erabili babeskopia-kode bat",
+      "totpUseApp": "Erabili aplikazioaren kodea",
+      "errInvalidTotp": "Kodea ez da zuzena. Egiaztatu MycoLegal-ena dela eta ez dela iraungi.",
+      "errTotpExpired": "Denbora gehiegi igaro da. Hasi saioa berriro."
     },
     "forgotPassword": {
       "errProcess": "Ezin izan da eskaera prozesatu. Saiatu berriro.",

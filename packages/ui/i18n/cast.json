@@ -328,7 +328,17 @@
       "forgotPassword": "¿Olvidaste tu contraseña?",
       "loggingIn": "Accediendo...",
       "btnLogin": "Entrar",
-      "platformPrefix": "Una aplicación de la plataforma"
+      "platformPrefix": "Una aplicación de la plataforma",
+      "totpTitle": "Código de verificación",
+      "totpIntro": "Abre tu app de autenticación (o el gestor de contraseñas del móvil) e introduce el código de 6 dígitos de MycoLegal.",
+      "totpBackupIntro": "Introduce uno de los códigos de respaldo que guardaste al activar la verificación en dos pasos. Cada código sirve una sola vez.",
+      "totpLabel": "Código de 6 dígitos",
+      "totpBackupLabel": "Código de respaldo",
+      "totpSubmit": "Verificar",
+      "totpUseBackup": "Usar un código de respaldo",
+      "totpUseApp": "Usar el código de la app",
+      "errInvalidTotp": "El código no es correcto. Comprueba que es el de MycoLegal y que no ha caducado.",
+      "errTotpExpired": "Ha pasado demasiado tiempo. Vuelve a iniciar sesión."
     },
     "forgotPassword": {
       "errProcess": "No se pudo procesar la solicitud. Vuelve a intentarlo.",
