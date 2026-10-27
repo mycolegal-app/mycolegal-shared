@@ -89,10 +89,12 @@ export interface EscrituraModalProps {
    *  una app con vista en papel (Redactor, papel notarial) pasa la suya, para que el borrador
    *  se vea igual que la vista previa. `hueco` es el que está en curso en el navegador. */
   cuerpo?: (p: { markdown: string; hueco: HuecoEscritura | null }) => React.ReactNode;
+  /** «amplio»: casi todo el ancho de la pantalla (Redactor, dos páginas de papel a la vez). */
+  ancho?: "normal" | "amplio";
 }
 
 export function EscrituraModal({
-  abierto, onCerrar, apiBase = "/api/generacion", tareaId, titulo, cuerpo,
+  abierto, onCerrar, apiBase = "/api/generacion", tareaId, titulo, cuerpo, ancho = "normal",
 }: EscrituraModalProps) {
   const { t } = useI18n();
   const [prev, setPrev] = useState<PrevisualizacionEscritura | null>(null);
@@ -159,7 +161,7 @@ export function EscrituraModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true">
-      <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white shadow-xl">
+      <div className={`flex max-h-[90vh] w-full ${ancho === "amplio" ? "max-w-[min(96vw,110rem)]" : "max-w-5xl"} flex-col overflow-hidden rounded-lg bg-white shadow-xl`}>
         {/* ── cabecera ─────────────────────────────────────────────────────── */}
         <div className="flex items-start justify-between gap-3 border-b border-gray-200 p-4">
           <div className="min-w-0">
