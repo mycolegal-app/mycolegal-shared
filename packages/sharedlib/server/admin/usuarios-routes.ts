@@ -30,9 +30,38 @@ type AuthUser = {
   role: string;
   status: string;
   lastLogin: string | null;
-  appPermission: { appRoleKey: string; permissions: string[] } | null;
-  otherApps: Array<{ slug: string; name: string; appRoleKey?: string }>;
+  /** `appRoleKey` null = grant A MEDIDA (permisos sueltos, sin rol). */
+  appPermission: { appRoleKey: string | null; permissions: string[] } | null;
+  otherApps: Array<{
+    slug: string;
+    name: string;
+    appRoleKey?: string | null;
+    permissions?: string[];
+  }>;
 };
+
+/**
+ * #1045 — Rol de ESTA app según auth, para la columna «Rol» y el modal.
+ *
+ * La columna pintaba `user_roles.role`, que es la fila local (una sola tabla
+ * para todas las apps) y no el rol que el usuario tiene en la app: en LegiFirma
+ * salía «Auxiliar» a quien tenía un rol del catálogo o permisos a medida.
+ *   - `appRoleKey`: clave del rol en auth; `null` = a medida; `undefined` = no
+ *     se sabe (consolas de plataforma o auth caído) y la UI cae a `role`.
+ *   - `appPermissions`: permisos efectivos del grant (para el detalle de la
+ *     fila a medida).
+ */
+export function appRoleFields(
+  au: Pick<AuthUser, 'appPermission'>,
+  isAdminApp: boolean,
+): { appRoleKey?: string | null; appPermissions?: string[] } {
+  if (isAdminApp) return {};
+  if (!au.appPermission) return { appRoleKey: null, appPermissions: [] };
+  return {
+    appRoleKey: au.appPermission.appRoleKey ?? null,
+    appPermissions: au.appPermission.permissions ?? [],
+  };
+}
 
 function resolveOrgAdminRole(deps: UsuariosRoutesDeps): string {
   return deps.orgAdminRole ?? deps.validRoles[0];
@@ -151,6 +180,7 @@ export function createUsuariosRoutes(deps: UsuariosRoutesDeps) {
             authStatus: au.status,
             authRole: au.role,
             hasAppAccess,
+            ...appRoleFields(au, isAdminApp),
             otherApps: au.otherApps,
           });
         } else {
@@ -174,6 +204,7 @@ export function createUsuariosRoutes(deps: UsuariosRoutesDeps) {
             authStatus: au.status,
             authRole: au.role,
             hasAppAccess,
+            ...appRoleFields(au, isAdminApp),
             otherApps: au.otherApps,
           });
         }

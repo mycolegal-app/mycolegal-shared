@@ -41,6 +41,7 @@ import { formatDateTime } from '../../lib/utils';
 import { toast } from '../../hooks/use-toast';
 import { roleLabel, roleColor } from './role-catalog';
 import { UserPermissionsModal, type AppCatalogEntry } from './user-permissions-modal';
+import { etiquetaRolApp } from './user-app-roles';
 
 export interface UserRow {
   id: string;
@@ -61,8 +62,22 @@ export interface UserRow {
   authRole?: string;
   /** Whether the user has UserAppPermission for the current app. */
   hasAppAccess?: boolean;
+  /**
+   * #1045 — Rol de la app actual según auth (`UserAppPermission.appRoleKey`).
+   * `null` = permisos a medida (o sin acceso); `undefined` = el servidor no lo
+   * informa (consolas de plataforma, sharedlib antiguo) y se usa `role`.
+   */
+  appRoleKey?: string | null;
+  /** #1045 — Permisos efectivos en la app actual (detalle de la fila a medida). */
+  appPermissions?: string[];
   /** Other apps the user has UserAppPermission in (slug + name + role). */
-  otherApps?: Array<{ slug: string; name: string; appRoleKey?: string }>;
+  otherApps?: Array<{
+    slug: string;
+    name: string;
+    /** null = permisos a medida. */
+    appRoleKey?: string | null;
+    permissions?: string[];
+  }>;
 }
 
 export interface UsersAdminPanelProps {
@@ -468,12 +483,31 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
       cell: ({ row }) => {
         const u = row.original;
         if (!u.hasAppAccess) {
-          return <span className="text-xs text-muted-foreground">—</span>;
+          // #1045 — Antes «—»: no se distinguía de un rol desconocido.
+          return (
+            <span className="text-xs text-muted-foreground">{t('ui.usersAdmin.statusNoAccess')}</span>
+          );
         }
+        // #1045 — Rol de ESTA app según auth, no la fila local `user_roles.role`
+        // (tabla única para todas las apps, que en LegiFirma decía «Auxiliar»).
+        if (u.appRoleKey === null) {
+          const n = u.appPermissions?.length ?? 0;
+          return (
+            <Badge
+              variant="outline"
+              className="border-dashed text-xs px-1.5 py-0"
+              title={t('ui.usersAdmin.roleCustomHint', { count: n })}
+            >
+              {t('ui.usersAdmin.roleCustom')}
+            </Badge>
+          );
+        }
+        const shownRole = u.appRoleKey ?? u.role!;
+        const currentAppRoles = appsCatalog.find((a) => a.slug === appSlug)?.roles;
         return (
           <div className="flex items-center gap-1">
-            <Badge variant="outline" className={`${roleColor(u.role!)} text-xs px-1.5 py-0`}>
-              {roleLabel(u.role!)}
+            <Badge variant="outline" className={`${roleColor(shownRole)} text-xs px-1.5 py-0`}>
+              {etiquetaRolApp(shownRole, currentAppRoles, roleLabel)}
             </Badge>
             {u.role === protectedRole && (
               <span title={t('ui.usersAdmin.protectedRoleHint', { role: roleLabel(protectedRole) })}>
@@ -509,7 +543,11 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
               <span
                 key={a.slug}
                 className={`${chipBase} border bg-background text-muted-foreground`}
-                title={a.appRoleKey ? `${a.name} · ${roleLabel(a.appRoleKey)}` : a.name}
+                title={
+                  a.appRoleKey
+                    ? `${a.name} · ${etiquetaRolApp(a.appRoleKey, appsCatalog.find((c) => c.slug === a.slug)?.roles, roleLabel)}`
+                    : `${a.name} · ${t('ui.usersAdmin.roleCustom')}`
+                }
               >
                 {a.name}
               </span>

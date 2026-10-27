@@ -24,6 +24,7 @@ import {
   Check,
   ScrollText,
   Printer,
+  Trash2,
 } from "lucide-react";
 // El rail tenía su propio `renderMarkdown`, gemelo del compartido salvo en un
 // detalle: no desmontaba el LaTeX. Cuando `markdown.tsx` aprendió a hacerlo, esta
@@ -473,6 +474,10 @@ export function MycoBotRail({
     [conversacionId, t],
   );
   const [conversaciones, setConversaciones] = useState<ConversacionResumen[] | null>(null);
+  // #1 — conversación que el usuario va a quitar de su historial (confirmación en línea).
+  const [quitarConvId, setQuitarConvId] = useState<string | null>(null);
+  const [quitandoConv, setQuitandoConv] = useState(false);
+  const [quitarConvError, setQuitarConvError] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [viewer, setViewer] = useState<ViewerState | null>(null);
   const [corpus, setCorpus] = useState<{
@@ -1135,6 +1140,101 @@ export function MycoBotRail({
     }
   }, [baseUrl]);
 
+  // #1 — quita una conversación del historial del usuario (borrado lógico en
+  // Consultor; los créditos no se devuelven). Si es la abierta, se empieza una nueva.
+  const quitarConversacion = useCallback(
+    async (id: string) => {
+      setQuitandoConv(true);
+      setQuitarConvError(false);
+      try {
+        const res = await fetch(`${baseUrl}/conversaciones/${encodeURIComponent(id)}`, { method: "DELETE" });
+        if (!res.ok && res.status !== 404) {
+          setQuitarConvError(true);
+          return;
+        }
+        setConversaciones((cs) => (cs ?? []).filter((c) => c.id !== id));
+        setQuitarConvId(null);
+        if (id === conversacionId) newConversation();
+      } catch {
+        setQuitarConvError(true);
+      } finally {
+        setQuitandoConv(false);
+      }
+    },
+    [baseUrl, conversacionId, newConversation],
+  );
+
+  // Fila de la lista de conversaciones (columna del modo expandido y vista
+  // "history"): botón para abrirla + papelera, o la confirmación de quitarla.
+  const filaConversacion = (c: ConversacionResumen, compacta: boolean) => (
+    <li key={c.id} className="group relative">
+      {quitarConvId === c.id ? (
+        <div className="rounded-md border border-red-200 bg-red-50 px-2.5 py-2 text-xs text-red-800">
+          <span className="block truncate font-medium">{c.titulo}</span>
+          <p className="mt-1">{t("ui.mycobot.quitarConvConfirmar")}</p>
+          {quitarConvError && <p className="mt-1 font-medium">{t("ui.mycobot.quitarConvError")}</p>}
+          <div className="mt-1.5 flex justify-end gap-1.5">
+            <button
+              type="button"
+              disabled={quitandoConv}
+              onClick={() => {
+                setQuitarConvId(null);
+                setQuitarConvError(false);
+              }}
+              className="rounded px-2 py-0.5 text-gray-600 hover:bg-white"
+            >
+              {t("ui.mycobot.quitarConvCancelar")}
+            </button>
+            <button
+              type="button"
+              disabled={quitandoConv}
+              onClick={() => void quitarConversacion(c.id)}
+              className="inline-flex items-center gap-1 rounded bg-red-600 px-2 py-0.5 font-medium text-white hover:bg-red-700 disabled:opacity-60"
+            >
+              {quitandoConv && <Loader2 className="h-3 w-3 animate-spin" />}
+              {t("ui.mycobot.quitarConv")}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <button
+            type="button"
+            onClick={() => void loadConversation(c.id)}
+            className={
+              compacta
+                ? `w-full rounded-md py-2 pl-2.5 pr-8 text-left hover:bg-gray-200/70 ${c.id === conversacionId ? "bg-cyan-100/70" : ""}`
+                : `w-full rounded-md py-2 pl-3 pr-9 text-left hover:bg-gray-100 ${c.id === conversacionId ? "bg-cyan-50" : ""}`
+            }
+          >
+            <span className={`block truncate ${compacta ? "text-[13px]" : "text-sm"} text-gray-800`}>{c.titulo}</span>
+            <span className="mt-0.5 block text-[11px] text-gray-400">
+              {new Date(c.updatedAt).toLocaleDateString()} · {t("ui.mycobot.turnos", { n: c.turnos })}
+              {c.esTelegram && (
+                <span className="ml-1.5 inline-flex items-center gap-0.5 rounded bg-sky-100 px-1 align-middle font-medium text-sky-700">
+                  <Send className="h-2.5 w-2.5" />
+                  Telegram
+                </span>
+              )}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setQuitarConvId(c.id);
+              setQuitarConvError(false);
+            }}
+            title={t("ui.mycobot.quitarConv")}
+            aria-label={t("ui.mycobot.quitarConv")}
+            className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-1.5 text-gray-300 hover:bg-red-50 hover:text-red-600 focus:text-red-600"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </>
+      )}
+    </li>
+  );
+
   // Abre el panel de historial y carga la lista de conversaciones.
   const openHistory = useCallback(async () => {
     setView("history");
@@ -1732,28 +1832,7 @@ export function MycoBotRail({
                   )}
                   {!historyLoading && conversaciones && conversaciones.length > 0 && (
                     <ul className="space-y-1">
-                      {conversaciones.map((c) => (
-                        <li key={c.id}>
-                          <button
-                            type="button"
-                            onClick={() => void loadConversation(c.id)}
-                            className={`w-full rounded-md px-2.5 py-2 text-left hover:bg-gray-200/70 ${
-                              c.id === conversacionId ? "bg-cyan-100/70" : ""
-                            }`}
-                          >
-                            <span className="block truncate text-[13px] text-gray-800">{c.titulo}</span>
-                            <span className="mt-0.5 block text-[11px] text-gray-400">
-                              {new Date(c.updatedAt).toLocaleDateString()} · {t("ui.mycobot.turnos", { n: c.turnos })}
-                              {c.esTelegram && (
-                                <span className="ml-1.5 inline-flex items-center gap-0.5 rounded bg-sky-100 px-1 align-middle font-medium text-sky-700">
-                                  <Send className="h-2.5 w-2.5" />
-                                  Telegram
-                                </span>
-                              )}
-                            </span>
-                          </button>
-                        </li>
-                      ))}
+                      {conversaciones.map((c) => filaConversacion(c, true))}
                     </ul>
                   )}
                 </div>
@@ -1835,26 +1914,7 @@ export function MycoBotRail({
               )}
               {!historyLoading && conversaciones && conversaciones.length > 0 && (
                 <ul className="space-y-1">
-                  {conversaciones.map((c) => (
-                    <li key={c.id}>
-                      <button
-                        type="button"
-                        onClick={() => void loadConversation(c.id)}
-                        className={`w-full rounded-md px-3 py-2 text-left hover:bg-gray-100 ${c.id === conversacionId ? "bg-cyan-50" : ""}`}
-                      >
-                        <span className="block truncate text-sm text-gray-800">{c.titulo}</span>
-                        <span className="mt-0.5 block text-[11px] text-gray-400">
-                          {new Date(c.updatedAt).toLocaleDateString()} · {t("ui.mycobot.turnos", { n: c.turnos })}
-                          {c.esTelegram && (
-                            <span className="ml-1.5 inline-flex items-center gap-0.5 rounded bg-sky-100 px-1 align-middle font-medium text-sky-700">
-                              <Send className="h-2.5 w-2.5" />
-                              Telegram
-                            </span>
-                          )}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
+                  {conversaciones.map((c) => filaConversacion(c, false))}
                 </ul>
               )}
             </div>

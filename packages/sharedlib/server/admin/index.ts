@@ -28,3 +28,7 @@ export {
   createUsuariosByIdAppPermRoute,
   createUsuariosAppPermsCatalogRoute,
 } from './usuarios-routes';
+
+// #1045 — fuente de datos de la sección «Roles y permisos de MycoLegal» del manual.
+export { createManualRolesMatrixRoute } from './manual-roles-route';
+export type { ManualRolesMatrixDeps } from './manual-roles-route';

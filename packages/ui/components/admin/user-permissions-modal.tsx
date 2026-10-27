@@ -58,6 +58,12 @@ import type { UserRow } from './users-admin-panel';
 import { AppPermissionsDialog } from './app-permissions-dialog';
 import { UserAuditTimeline } from './user-audit-timeline';
 import { isLegacyHiddenRole } from './role-catalog';
+import {
+  ROL_A_MEDIDA,
+  cambiosDeRoles,
+  rolesInicialesPorApp,
+  sustituyeAMedida,
+} from './user-app-roles';
 
 const LANGUAGE_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'CAST', label: 'Castellano' },
@@ -140,15 +146,19 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
   } = props;
   const { t } = useI18n();
 
-  const initialPermissions = useMemo(() => {
-    const map = new Map<string, string>();
-    if (!user) return map;
-    if (user.hasAppAccess && user.role) map.set(currentAppSlug, user.role);
-    for (const app of user.otherApps ?? []) {
-      if (app.appRoleKey) map.set(app.slug, app.appRoleKey);
-    }
-    return map;
-  }, [user, currentAppSlug]);
+  // #1045 — Valor inicial = rol de cada app según auth (no la fila local), y las
+  // filas a medida como «A medida» (antes se pintaban «sin acceso»).
+  const initialPermissions = useMemo(
+    () => rolesInicialesPorApp(user, currentAppSlug),
+    [user, currentAppSlug],
+  );
+
+  /** #1045 — Permisos a medida de una app (para «¿Qué puede hacer?»). */
+  function customPermsFor(slug: string): string[] {
+    if (!user) return [];
+    if (slug === currentAppSlug) return user.appPermissions ?? [];
+    return user.otherApps?.find((a) => a.slug === slug)?.permissions ?? [];
+  }
 
   const [permissions, setPermissions] = useState<Map<string, string>>(initialPermissions);
   const [saving, setSaving] = useState(false);
@@ -228,7 +238,10 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
     setPermissions((prev) => {
       const next = new Map(prev);
       if (hasAccess) {
-        if (!next.has(slug)) next.set(slug, defaultRoleFor(slug));
+        // #1045 — Si la app ya tenía acceso (también a medida) y se desmarca y
+        // vuelve a marcar, se recupera lo que tenía; el rol por defecto sólo
+        // para un acceso nuevo.
+        if (!next.has(slug)) next.set(slug, initialPermissions.get(slug) ?? defaultRoleFor(slug));
       } else {
         next.delete(slug);
       }
@@ -246,18 +259,9 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
 
   async function handleSave() {
     if (!user) return;
-    const grants: Array<{ slug: string; appRoleKey: string }> = [];
-    const removeApps: string[] = [];
-
-    for (const [slug, role] of permissions) {
-      const initial = initialPermissions.get(slug);
-      if (initial !== role) {
-        grants.push({ slug, appRoleKey: role });
-      }
-    }
-    for (const slug of initialPermissions.keys()) {
-      if (!permissions.has(slug)) removeApps.push(slug);
-    }
+    // #1045 — Una app que sigue «A medida» no se envía: sus permisos sólo se
+    // sustituyen si se elige un rol a propósito (el selector lo avisa).
+    const { grants, removeApps } = cambiosDeRoles(initialPermissions, permissions);
 
     if (grants.length === 0 && removeApps.length === 0) {
       // Sin diff no se llamaba a la API y se cerraba en silencio, lo que se
@@ -729,6 +733,11 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
                 {apps.map((app) => {
                   const access = permissions.has(app.slug);
                   const role = permissions.get(app.slug) ?? defaultRoleFor(app.slug);
+                  // #1045 — La fila a medida es una opción más del selector,
+                  // visible sólo si la app ya estaba así al abrir el modal.
+                  const wasCustom = initialPermissions.get(app.slug) === ROL_A_MEDIDA;
+                  const isCustom = role === ROL_A_MEDIDA;
+                  const replacesCustom = sustituyeAMedida(initialPermissions, permissions, app.slug);
                   return (
                     <div
                       key={app.slug}
@@ -770,6 +779,11 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
                               <SelectValue placeholder={t('ui.usersAdmin.pickRole')} />
                             </SelectTrigger>
                             <SelectContent>
+                              {wasCustom && (
+                                <SelectItem value={ROL_A_MEDIDA} className="text-xs">
+                                  {t('ui.usersAdmin.roleCustom')}
+                                </SelectItem>
+                              )}
                               {app.roles
                                 .filter((r) => !isLegacyHiddenRole(r.key) || r.key === role)
                                 .map((r) => (
@@ -795,6 +809,11 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
                           )}
                         </div>
                       )}
+                      {access && replacesCustom && (
+                        <p className="text-[11px] text-amber-700 dark:text-amber-300" role="alert">
+                          {t('ui.usersAdmin.roleCustomReplaceWarning')}
+                        </p>
+                      )}
                       {access && (
                         <div>
                           <button
@@ -802,11 +821,17 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
                             onClick={() => toggleRoleInfo(app.slug)}
                             className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2"
                           >
-                            {t('ui.usersAdmin.roleWhatItDoes')}
+                            {isCustom
+                              ? t('ui.usersAdmin.roleCustomWhatItDoes')
+                              : t('ui.usersAdmin.roleWhatItDoes')}
                           </button>
                           {roleInfoOpen.has(app.slug) && (
                             <RolePermsList
-                              perms={app.roles.find((r) => r.key === role)?.permissions ?? []}
+                              perms={
+                                isCustom
+                                  ? customPermsFor(app.slug)
+                                  : app.roles.find((r) => r.key === role)?.permissions ?? []
+                              }
                               catalog={permCatalog[app.slug] ?? []}
                               loading={permCatalogLoading.has(app.slug)}
                               t={t}

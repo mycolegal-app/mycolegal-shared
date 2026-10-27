@@ -148,6 +148,9 @@ function authActionLabel(action: string): string {
     SUPERADMIN_SUSPENDED: 'Superadmin suspendido',
     SUPERADMIN_REACTIVATED: 'Superadmin reactivado',
     SUPERADMIN_UPDATED: 'Superadmin actualizado',
+    // #1045 — Cambios de rol/permisos por app, auditados en auth.
+    USER_APP_PERMISSIONS_CHANGED: 'Permisos de app cambiados',
+    USER_APP_PERMISSIONS_REVOKED: 'Acceso a app retirado',
   };
   return map[action.toUpperCase()] ?? action;
 }

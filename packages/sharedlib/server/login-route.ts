@@ -284,6 +284,19 @@ export interface MirrorOrgAndRoleOptions<TRole extends string> {
    */
   mapCentralizedRole?: (key: string | undefined, fallback: TRole) => TRole;
   /**
+   * #1045 — Rol local que corresponde a un grant A MEDIDA (sin `appRoleKey`),
+   * deducido de sus permisos (legifirma: `rolLocalDePermisos`). Devuelve `null`
+   * si los permisos no encajan con ningún rol: entonces NO se reescribe el rol
+   * local en el login (se respeta el que hubiera; al crear la fila se usa el
+   * del mapa).
+   *
+   * Sin esta opción, una fila a medida caía al rol del mapa (AUXILIAR en
+   * legifirma) en CADA login con `updateRoleOnLogin`, y pisaba lo que hubiera.
+   * Sólo actúa con `centralizedRoleApp`; si auth no responde, tampoco se
+   * reescribe el rol (antes se pisaba con el del mapa).
+   */
+  roleFromPermissions?: (permissions: readonly string[]) => TRole | null;
+  /**
    * Campos extra para el upsert de la org espejo (entran tanto en `create` como
    * en `update`). Notaría lo usa para arrastrar la `comunidadAutonoma` que sirve
    * auth, que gobierna la jurisdicción por defecto de la app.
@@ -324,6 +337,7 @@ export function mirrorOrgAndRole<TRole extends string>(
     validRoles,
     updateRoleOnLogin = false,
     mapCentralizedRole,
+    roleFromPermissions,
     orgExtraData,
     afterOrg,
     espejarComunidadAutonoma = false,
@@ -376,20 +390,33 @@ export function mirrorOrgAndRole<TRole extends string>(
     const fallbackRole: TRole = roleMap[user.role] || defaultRole;
     let appRole: TRole = fallbackRole;
     let centralizedKey: string | undefined;
+    // #1045 — ¿Se reescribe el rol en la fila existente? Sólo si se ha podido
+    // resolver de verdad (ver `roleFromPermissions`).
+    let writeRoleOnUpdate = updateRoleOnLogin;
 
     if (centralizedRoleApp) {
+      let centralizedPermissions: string[] | null = null;
       try {
         const res = await fetch(`${authInternalUrl}/auth/me/permissions/${centralizedRoleApp}`, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
         if (res.ok) {
-          const data = (await res.json()) as { data?: { appRoleKey?: string } };
-          centralizedKey = data.data?.appRoleKey;
+          const data = (await res.json()) as {
+            data?: { appRoleKey?: string | null; permissions?: string[] };
+          };
+          centralizedKey = data.data?.appRoleKey ?? undefined;
+          centralizedPermissions = Array.isArray(data.data?.permissions) ? data.data!.permissions! : [];
         }
       } catch {
         // Sin permisos centralizados se conserva el rol del mapa.
       }
-      if (mapCentralizedRole) {
+      if (roleFromPermissions && !centralizedKey) {
+        // #1045 — Grant a medida (o auth caído): el rol sale de los permisos.
+        // Si no se puede deducir, la fila existente conserva su rol.
+        const deducido = centralizedPermissions ? roleFromPermissions(centralizedPermissions) : null;
+        if (deducido) appRole = deducido;
+        else writeRoleOnUpdate = false;
+      } else if (mapCentralizedRole) {
         appRole = mapCentralizedRole(centralizedKey, fallbackRole);
       } else if (centralizedKey) {
         // Un `appRoleKey` del catálogo global que el enum local no conoce haría
@@ -405,7 +432,7 @@ export function mirrorOrgAndRole<TRole extends string>(
         email: user.email,
         displayName: user.displayName,
         lastLoginAt: new Date(),
-        ...(updateRoleOnLogin ? { role: appRole } : {}),
+        ...(writeRoleOnUpdate ? { role: appRole } : {}),
       },
       create: {
         authUserId: user.id,

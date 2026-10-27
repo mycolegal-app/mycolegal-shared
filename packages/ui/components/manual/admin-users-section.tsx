@@ -11,11 +11,14 @@ import {
   AlertTriangle,
   Info,
   Mail,
+  Table2,
   Pause,
   Pencil,
   Trash2,
   UserPlus,
 } from "lucide-react";
+
+import { ROLES_MATRIX_ANCHOR, RolesMatrixSection } from "./roles-matrix-section";
 
 export type ManualLang = "CAST" | "CAT" | "EUS" | "GAL";
 
@@ -27,6 +30,13 @@ export interface AdminUsersSectionProps {
   assignableRoles: readonly string[];
   /** Rol protegido (no editable desde el panel). Default: el rol de org admin de la app. */
   protectedRole?: string;
+  /** #1045 — Slug de la app (abre su tabla primero en «Roles y permisos de MycoLegal»). */
+  appSlug?: string;
+  /**
+   * #1045 — Pinta detrás la sección generada «Roles y permisos de MycoLegal» y
+   * enlaza a ella. Default: true (así sale en el manual de todas las apps).
+   */
+  showRolesMatrix?: boolean;
 }
 
 interface ActionStrings {
@@ -45,6 +55,7 @@ interface SectionStrings {
   protectedRoleNote: (role: string) => string;
   rolesNote: (roles: string) => string;
   permissionsNote: string;
+  matrixLink: string;
 }
 
 const STRINGS: Record<ManualLang, SectionStrings> = {
@@ -78,6 +89,8 @@ const STRINGS: Record<ManualLang, SectionStrings> = {
       `Los roles asignables desde el desplegable de invitación en esta aplicación son: ${roles}.`,
     permissionsNote:
       "Las acciones de bloqueo (Suspender y Eliminar) revocan los tokens de refresco del usuario. La sesión activa puede sobrevivir unos minutos hasta que expira el access token corto, pero el usuario no podrá refrescarla.",
+    matrixLink:
+      "¿Qué puede hacer cada rol en cada aplicación? Consulta la tabla «Roles y permisos de MycoLegal», generada con los roles y permisos reales.",
   },
   CAT: {
     sectionTitle: "Gestió d'usuaris",
@@ -109,6 +122,8 @@ const STRINGS: Record<ManualLang, SectionStrings> = {
       `Els rols assignables des del desplegable d'invitació en aquesta aplicació són: ${roles}.`,
     permissionsNote:
       "Les accions de bloqueig (Suspendre i Eliminar) revoquen els tokens de refresc de l'usuari. La sessió activa pot sobreviure uns minuts fins que expira l'access token curt, però l'usuari no la podrà refrescar.",
+    matrixLink:
+      "Què pot fer cada rol a cada aplicació? Consulta la taula «Rols i permisos de MycoLegal», generada amb els rols i permisos reals.",
   },
   EUS: {
     sectionTitle: "Erabiltzaileen kudeaketa",
@@ -140,6 +155,8 @@ const STRINGS: Record<ManualLang, SectionStrings> = {
       `Aplikazio honetan gonbidapenaren goitibeherakatik esleigarriak diren rolak hauek dira: ${roles}.`,
     permissionsNote:
       "Blokeatze-ekintzek (Eten eta Ezabatu) erabiltzailearen freskatze-tokenak baliogabetzen dituzte. Saio aktiboak minutu batzuk iraun ditzake access token laburra iraungitzen den arte, baina erabiltzaileak ezin izango du freskatu.",
+    matrixLink:
+      "Zer egin dezake rol bakoitzak aplikazio bakoitzean? Kontsultatu «MycoLegal-eko rolak eta baimenak» taula, benetako rol eta baimenekin sortua.",
   },
   GAL: {
     sectionTitle: "Xestión de usuarios",
@@ -171,6 +188,8 @@ const STRINGS: Record<ManualLang, SectionStrings> = {
       `Os roles asignables dende o despregable de invitación nesta aplicación son: ${roles}.`,
     permissionsNote:
       "As accións de bloqueo (Suspender e Eliminar) revogan os tokens de refresco do usuario. A sesión activa pode sobrevivir uns minutos ata que expira o access token curto, pero o usuario non poderá refrescala.",
+    matrixLink:
+      "Que pode facer cada rol en cada aplicación? Consulta a táboa «Roles e permisos de MycoLegal», xerada cos roles e permisos reais.",
   },
 };
 
@@ -204,11 +223,13 @@ export function AdminUsersSection({
   appName: _appName,
   assignableRoles,
   protectedRole,
+  appSlug,
+  showRolesMatrix = true,
 }: AdminUsersSectionProps) {
   const t = STRINGS[lang] ?? STRINGS.CAST;
   const rolesList = assignableRoles.join(", ");
 
-  return (
+  const users = (
     <section id="usuarios" className="space-y-3">
       <h2 className="mb-1 text-lg font-semibold text-gray-900">{t.sectionTitle}</h2>
       <p className="text-sm leading-relaxed text-gray-600">{t.intro}</p>
@@ -237,6 +258,27 @@ export function AdminUsersSection({
         <Info className="h-5 w-5 shrink-0 text-gray-500" />
         <p className="text-sm text-gray-600">{t.permissionsNote}</p>
       </div>
+
+      {/* #1045 — enlace a la tabla generada de roles × permisos de todas las apps. */}
+      {showRolesMatrix && (
+        <a
+          href={`#${ROLES_MATRIX_ANCHOR}`}
+          className="flex items-start gap-3 rounded-xl border border-cyan-200 bg-white p-4 hover:bg-cyan-50"
+        >
+          <Table2 className="h-5 w-5 shrink-0 text-cyan-600" />
+          <span className="text-sm font-medium text-cyan-800 underline-offset-2 hover:underline">
+            {t.matrixLink}
+          </span>
+        </a>
+      )}
     </section>
+  );
+
+  if (!showRolesMatrix) return users;
+  return (
+    <>
+      {users}
+      <RolesMatrixSection lang={lang} appSlug={appSlug} appName={_appName} />
+    </>
   );
 }
