@@ -378,6 +378,8 @@
       "btnSave": "Guardar contraseña"
     },
     "inviteUser": {
+      "apps": "Aplicaciones",
+      "appsHint": "Marca las aplicaciones a las que tendrá acceso y elige su rol en cada una.",
       "title": "Invitar usuario",
       "description": "Introduce los datos del nuevo usuario. Recibirá un email de activación para establecer su contraseña.",
       "fullName": "Nombre completo",

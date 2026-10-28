@@ -377,6 +377,8 @@
       "btnSave": "Gardar contrasinal"
     },
     "inviteUser": {
+      "apps": "Aplicacións",
+      "appsHint": "Marca as aplicacións ás que terá acceso e escolle o seu rol en cada unha.",
       "title": "Convidar usuario",
       "description": "Introduce os datos do novo usuario. Recibirá un email de activación para establecer a súa contrasinal.",
       "fullName": "Nome completo",

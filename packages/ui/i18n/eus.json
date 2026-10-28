@@ -377,6 +377,8 @@
       "btnSave": "Pasahitza gorde"
     },
     "inviteUser": {
+      "apps": "Aplikazioak",
+      "appsHint": "Markatu zein aplikaziotara izango duen sarbidea eta aukeratu rola bakoitzean.",
       "title": "Erabiltzailea gonbidatu",
       "description": "Sartu erabiltzaile berriaren datuak. Aktibazio email bat jasoko du pasahitza ezartzeko.",
       "fullName": "Izen osoa",

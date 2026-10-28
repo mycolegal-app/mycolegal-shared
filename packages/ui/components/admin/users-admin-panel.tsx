@@ -39,7 +39,7 @@ import {
 } from '../ui/dialog';
 import { formatDateTime } from '../../lib/utils';
 import { toast } from '../../hooks/use-toast';
-import { roleLabel, roleColor } from './role-catalog';
+import { roleLabel, roleColor, isLegacyHiddenRole } from './role-catalog';
 import { UserPermissionsModal, type AppCatalogEntry } from './user-permissions-modal';
 import { etiquetaRolApp } from './user-app-roles';
 
@@ -699,6 +699,17 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
         onSubmit={handleInvite}
         roles={assignableRoles.map((r) => ({ value: r, label: roleLabel(r) }))}
         roleHint={orgAdminRoleHint}
+        // #1047 — En el Admin el rol de arriba es el de la organización: las apps
+        // (y su rol) se eligen aquí, o la persona queda invitada sin ninguna.
+        apps={
+          appSlug === 'admin'
+            ? appsCatalog.map((a) => ({
+                slug: a.slug,
+                name: a.name,
+                roles: a.roles.filter((r) => !isLegacyHiddenRole(r.key)),
+              }))
+            : undefined
+        }
         submitting={inviteSubmitting}
         allowInitialPassword={allowInitialPasswordInvite}
       />

@@ -378,6 +378,8 @@
       "btnSave": "Desar contrasenya"
     },
     "inviteUser": {
+      "apps": "Aplicacions",
+      "appsHint": "Marca les aplicacions a les quals tindrà accés i tria'n el rol a cadascuna.",
       "title": "Convidar usuari",
       "description": "Introdueix les dades del nou usuari. Rebrà un correu d'activació per establir la seva contrasenya.",
       "fullName": "Nom complet",

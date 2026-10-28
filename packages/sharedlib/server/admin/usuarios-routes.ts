@@ -583,6 +583,69 @@ export function createUsuariosByIdRoutes(deps: UsuariosRoutesDeps) {
 }
 
 // --------------------------------------------------------------------------
+// Alta desde la ficha de organización del Admin (#1047)
+// --------------------------------------------------------------------------
+
+/**
+ * #1047 — En el Admin el panel de usuarios no es el de una app: el «rol» del
+ * formulario es el de la ORGANIZACIÓN (org_admin / user) y las apps se eligen
+ * aparte. Antes el alta reutilizaba el camino de las apps con `appSlug = 'admin'`:
+ * concedía la app «admin» y luego le ponía el rol «user», que en esa app no
+ * existe (404 en el log, nada en pantalla). Resultado: la persona quedaba
+ * invitada SIN ninguna app y sin el rol de organización pedido.
+ */
+type AppAlta = { slug?: string; appRoleKey?: string };
+
+function appsDelAlta(apps: unknown): Array<{ slug: string; appRoleKey: string }> {
+  if (!Array.isArray(apps)) return [];
+  return (apps as AppAlta[])
+    .filter((a) => typeof a?.slug === 'string' && a.slug && typeof a?.appRoleKey === 'string' && a.appRoleKey)
+    .map((a) => ({ slug: a.slug as string, appRoleKey: a.appRoleKey as string }));
+}
+
+/**
+ * `appSlugs` del alta en auth. Ojo: auth trata una lista VACÍA como «todas las
+ * apps de la organización con su rol por defecto». Si en el Admin no se marca
+ * ninguna, se manda `admin`, que no es app de ninguna organización: no concede nada.
+ */
+function slugsDelAlta(appSlug: string, apps: Array<{ slug: string }>): string[] {
+  if (appSlug !== 'admin') return [appSlug];
+  return apps.length > 0 ? apps.map((a) => a.slug) : [appSlug];
+}
+
+/** Tras crear el usuario en auth: rol (de app o de organización) y apps del alta. */
+async function concederTrasAlta(
+  deps: Pick<UsuariosRoutesDeps, 'appSlug' | 'fetchFromAuth'>,
+  args: { orgId: string; authUserId: string; token: string; appRole: string; apps: Array<{ slug: string; appRoleKey: string }> },
+): Promise<void> {
+  const { appSlug, fetchFromAuth } = deps;
+  const { orgId, authUserId, token, appRole, apps } = args;
+  if (appSlug !== 'admin') {
+    // Panel de una app: el rol es el de ESA app (sustituye al que puso auth por defecto).
+    const r = await fetchFromAuth(`/orgs/${orgId}/users/${authUserId}/permissions/${appSlug}`, token, {
+      method: 'PUT',
+      body: { appRoleKey: appRole },
+    });
+    if (r.status >= 400) console.warn(`[admin/usuarios] failed to assign app role for ${authUserId}:`, r.data);
+    return;
+  }
+  if (appRole === 'org_admin') {
+    const r = await fetchFromAuth(`/orgs/${orgId}/users/${authUserId}`, token, {
+      method: 'PATCH',
+      body: { role: 'org_admin' },
+    });
+    if (r.status >= 400) console.warn(`[admin/usuarios] failed to set org_admin for ${authUserId}:`, r.data);
+  }
+  for (const a of apps) {
+    const r = await fetchFromAuth(`/orgs/${orgId}/users/${authUserId}/permissions/${a.slug}`, token, {
+      method: 'PUT',
+      body: { appRoleKey: a.appRoleKey },
+    });
+    if (r.status >= 400) console.warn(`[admin/usuarios] failed to grant ${a.slug} to ${authUserId}:`, r.data);
+  }
+}
+
+// --------------------------------------------------------------------------
 // /api/admin/usuarios/invite — POST
 // --------------------------------------------------------------------------
 
@@ -614,8 +677,11 @@ export function createUsuariosInviteRoute(deps: UsuariosRoutesDeps) {
         // autorizar el dominio entero. Se reenvía tal cual: la decisión es de
         // auth, que es quien conoce la regla.
         confirmaFueraDeDominio?: boolean;
+        /** #1047 — Solo en el Admin: apps que se conceden en el alta, con su rol. */
+        apps?: AppAlta[];
       };
       const { email, displayName, phoneNumber, appRole, confirmaFueraDeDominio } = body;
+      const apps = appsDelAlta(body.apps);
 
       if (!email || !displayName || !appRole) {
         return errorResponse(
@@ -642,7 +708,7 @@ export function createUsuariosInviteRoute(deps: UsuariosRoutesDeps) {
           email,
           displayName,
           phoneNumber: phoneNumber || undefined,
-          appSlugs: [appSlug],
+          appSlugs: slugsDelAlta(appSlug, apps),
           ...(confirmaFueraDeDominio ? { confirmaFueraDeDominio: true } : {}),
         },
       });
@@ -673,15 +739,9 @@ export function createUsuariosInviteRoute(deps: UsuariosRoutesDeps) {
         return errorResponse('AUTH_ERROR', 'No se recibió ID del usuario creado', 502);
       }
 
-      // Override the default role assigned by auth with the requested one.
-      const permRes = await fetchFromAuth(
-        `/orgs/${orgId}/users/${authUserId}/permissions/${appSlug}`,
-        token,
-        { method: 'PUT', body: { appRoleKey: appRole } },
-      );
-      if (permRes.status >= 400) {
-        console.warn(`[admin/usuarios] failed to assign app role for ${authUserId}:`, permRes.data);
-      }
+      // Override the default role assigned by auth with the requested one
+      // (#1047: en el Admin, rol de organización + apps elegidas).
+      await concederTrasAlta(deps, { orgId, authUserId, token, appRole, apps });
 
       const userRole = prisma
         ? await prisma.userRole.upsert({
@@ -974,11 +1034,14 @@ export function createUsuariosCreateWithPasswordRoute(deps: UsuariosRoutesDeps) 
         appRole?: string;
         /** #727 — Ver la ruta de invitación. */
         confirmaFueraDeDominio?: boolean;
+        /** #1047 — Ver la ruta de invitación. */
+        apps?: AppAlta[];
       };
       const {
         email, displayName, initialPassword, phoneNumber, language, appRole,
         confirmaFueraDeDominio,
       } = body;
+      const apps = appsDelAlta(body.apps);
 
       if (!email || !displayName || !initialPassword || !appRole) {
         return errorResponse(
@@ -1013,7 +1076,7 @@ export function createUsuariosCreateWithPasswordRoute(deps: UsuariosRoutesDeps) 
             initialPassword,
             phoneNumber: phoneNumber || undefined,
             language: language || undefined,
-            appSlugs: [appSlug],
+            appSlugs: slugsDelAlta(appSlug, apps),
             ...(confirmaFueraDeDominio ? { confirmaFueraDeDominio: true } : {}),
           },
         },
@@ -1037,11 +1100,7 @@ export function createUsuariosCreateWithPasswordRoute(deps: UsuariosRoutesDeps) 
 
       // Override the default role with the requested one (matches the
       // email-invite flow). Best-effort — auth already created the user.
-      await fetchFromAuth(
-        `/orgs/${orgId}/users/${authUserId}/permissions/${appSlug}`,
-        token,
-        { method: 'PUT', body: { appRoleKey: appRole } },
-      ).catch((err) =>
+      await concederTrasAlta(deps, { orgId, authUserId, token, appRole, apps }).catch((err) =>
         console.warn('[admin/usuarios/create-with-password] role assign failed:', err),
       );
 

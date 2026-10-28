@@ -46,6 +46,8 @@ export interface InviteFormData {
   displayName: string;
   phoneNumber?: string;
   appRole?: string;
+  /** #1047 — Apps que se conceden en el alta, con su rol (solo con `apps`). */
+  apps?: Array<{ slug: string; appRoleKey: string }>;
   language?: string;
   /** When set, the panel hits /create-with-password instead of /invite. */
   initialPassword?: string;
@@ -54,6 +56,13 @@ export interface InviteFormData {
 export interface RoleOption {
   value: string;
   label: string;
+}
+
+/** #1047 — App de la organización que se puede conceder en el alta. */
+export interface InviteAppOption {
+  slug: string;
+  name: string;
+  roles: Array<{ key: string; label: string; isDefault?: boolean }>;
 }
 
 export interface LanguageOption {
@@ -70,6 +79,12 @@ interface InviteUserDialogProps {
   roles?: RoleOption[];
   /** Hint text shown below the role selector */
   roleHint?: string;
+  /**
+   * #1047 — Si se pasa, el alta concede además estas apps, cada una con el rol
+   * elegido. Lo usa el Admin, donde el «rol» de arriba es el de la organización
+   * y sin esto la persona quedaba invitada sin ninguna app.
+   */
+  apps?: InviteAppOption[];
   /** Language options. If provided, a language selector is shown (used by admin). */
   languages?: LanguageOption[];
   /** Default language value */
@@ -151,6 +166,7 @@ export function InviteUserDialog({
   canAuthorizeDomain = false,
   roles,
   roleHint,
+  apps,
   languages,
   defaultLanguage = "CAST",
   emailPlaceholder = "usuario@ejemplo.com",
@@ -162,6 +178,8 @@ export function InviteUserDialog({
   const [displayName, setDisplayName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [appRole, setAppRole] = useState("");
+  // #1047 — slug → rol elegido de las apps marcadas.
+  const [appsElegidas, setAppsElegidas] = useState<Record<string, string>>({});
   const [language, setLanguage] = useState(defaultLanguage);
   const [authorizeDomain, setAuthorizeDomain] = useState(false);
   // #727 — Alternativa a autorizar el dominio entero: invitar solo esta persona.
@@ -175,6 +193,7 @@ export function InviteUserDialog({
     setDisplayName("");
     setPhoneNumber("");
     setAppRole("");
+    setAppsElegidas({});
     setLanguage(defaultLanguage);
     setMode("email");
     setInitialPassword("");
@@ -204,6 +223,9 @@ export function InviteUserDialog({
       ...(soloEstaDireccion ? { confirmaFueraDeDominio: true } : {}),
       ...(phoneNumber ? { phoneNumber } : {}),
       ...(roles && appRole ? { appRole } : {}),
+      ...(apps
+        ? { apps: Object.entries(appsElegidas).map(([slug, appRoleKey]) => ({ slug, appRoleKey })) }
+        : {}),
       ...(languages ? { language } : {}),
       ...(mode === "with_password" ? { initialPassword } : {}),
     };
@@ -332,6 +354,57 @@ export function InviteUserDialog({
               {roleHint && (
                 <p className="text-xs text-muted-foreground mt-1">{roleHint}</p>
               )}
+            </div>
+          )}
+
+          {apps && apps.length > 0 && (
+            <div>
+              <Label>{t("ui.inviteUser.apps")}</Label>
+              <p className="text-xs text-muted-foreground mb-1.5">{t("ui.inviteUser.appsHint")}</p>
+              <div className="space-y-1.5" data-testid="invite-apps">
+                {apps.map((a) => {
+                  const marcada = a.slug in appsElegidas;
+                  const porDefecto = (a.roles.find((r) => r.isDefault) ?? a.roles[0])?.key ?? "";
+                  return (
+                    <div key={a.slug} className="flex items-center gap-2">
+                      <label className="flex flex-1 items-center gap-2 text-sm cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={marcada}
+                          disabled={a.roles.length === 0}
+                          onChange={(e) =>
+                            setAppsElegidas((prev) => {
+                              const next = { ...prev };
+                              if (e.target.checked) next[a.slug] = porDefecto;
+                              else delete next[a.slug];
+                              return next;
+                            })
+                          }
+                          className="h-4 w-4 rounded border-input"
+                        />
+                        {a.name}
+                      </label>
+                      {marcada && (
+                        <Select
+                          value={appsElegidas[a.slug]}
+                          onValueChange={(v) => setAppsElegidas((prev) => ({ ...prev, [a.slug]: v }))}
+                        >
+                          <SelectTrigger className="h-8 w-48 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {a.roles.map((r) => (
+                              <SelectItem key={r.key} value={r.key} className="text-xs">
+                                {r.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
 
