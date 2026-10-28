@@ -1577,6 +1577,7 @@
     "paraQuien": "Norentzat",
     "todaNotaria": "Notariotza osoa",
     "confirmBorrarBloqueo": "Blokeo hau kendu nahi duzu?",
+    "quitarBloqueo": "Kendu",
     "btnIcs": "Esportatu (.ics)",
     "icsTitle": "Agenda harpidetu (.ics)",
     "icsHint": "Kopiatu URL hau eta gehitu «URL bidezko egutegia» gisa Google Calendar-en, Outlook-en edo mugikorrean. Aurreikusitako sinadurak, mugarriak eta blokeoak ikusiko dituzu. Aldizka eguneratzen da (ez denbora errealean).",

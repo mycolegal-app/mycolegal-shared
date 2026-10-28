@@ -216,6 +216,51 @@ export interface AgendaViewProps {
   capacidades?: { expedientes?: boolean };
 }
 
+/**
+ * #1049 — Botón «Quitar» dentro de un bloqueo en Día/Semana. Ahí el bloqueo es un
+ * evento de FONDO, y FullCalendar no avisa de los clics sobre ellos (`eventClick`
+ * no salta): solo se podía quitar desde Mes o Lista, y nadie lo sabía. Los
+ * escuchadores son NATIVOS y paran la propagación en el propio botón: FullCalendar
+ * escucha `mousedown`/`touchstart` en su contenedor para empezar a seleccionar
+ * franjas, y con los eventos sintéticos de React el clic abriría también «Nueva cita».
+ */
+function BotonQuitarBloqueo({ label, onQuitar }: { label: string; onQuitar: () => void }) {
+  const ref = useRef<HTMLButtonElement>(null);
+  const accion = useRef(onQuitar);
+  accion.current = onQuitar;
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const parar = (e: Event) => e.stopPropagation();
+    const pulsar = (e: Event) => {
+      e.stopPropagation();
+      e.preventDefault();
+      accion.current();
+    };
+    el.addEventListener("mousedown", parar);
+    el.addEventListener("pointerdown", parar);
+    el.addEventListener("touchstart", parar);
+    el.addEventListener("click", pulsar);
+    return () => {
+      el.removeEventListener("mousedown", parar);
+      el.removeEventListener("pointerdown", parar);
+      el.removeEventListener("touchstart", parar);
+      el.removeEventListener("click", pulsar);
+    };
+  }, []);
+  return (
+    <button
+      ref={ref}
+      type="button"
+      title={label}
+      data-testid="agenda-quitar-bloqueo"
+      className="pointer-events-auto ml-1 shrink-0 rounded border border-gray-400 bg-white/90 px-1.5 py-0 text-[10px] font-medium text-gray-700 hover:bg-white hover:text-red-700"
+    >
+      ✕ {label}
+    </button>
+  );
+}
+
 export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
   const conExpedientes = capacidades?.expedientes ?? true;
   const { t } = useI18n();
@@ -942,10 +987,17 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
           ? t("agendaPage.bloqueoTodoElDia")
           : `${hhmm(arg.event.start)}–${hhmm(arg.event.end)}`;
       const motivo = arg.event.title || (enRejilla ? t("agendaPage.leyenda.bloqueo") : t("agendaPage.bloqueado"));
+      const bloqueoId = arg.event.extendedProps.bloqueoId as string | undefined;
       return (
-        <div className="truncate px-1 py-0.5 text-[11px] font-semibold leading-tight text-gray-900">
-          <span aria-hidden="true">⛔ </span>
-          {horario ? `${horario} · ${motivo}` : motivo}
+        <div className="flex items-start justify-between gap-1 px-1 py-0.5 text-[11px] font-semibold leading-tight text-gray-900">
+          <span className="truncate">
+            <span aria-hidden="true">⛔ </span>
+            {horario ? `${horario} · ${motivo}` : motivo}
+          </span>
+          {/* #1049 — en Día/Semana no se puede pulsar el bloqueo (ver BotonQuitarBloqueo). */}
+          {enRejilla && bloqueoId && (
+            <BotonQuitarBloqueo label={t("agendaPage.quitarBloqueo")} onQuitar={() => void borrarBloqueo(bloqueoId)} />
+          )}
         </div>
       );
     }
@@ -1671,7 +1723,7 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
                 display: esBloqueo ? (vista.startsWith("timeGrid") ? "background" : "block") : undefined,
                 // #629 — el tipo del hito llega hasta el render para distinguir
                 // una FIRMA de una consulta o una reunión.
-                extendedProps: { kind: ev.kind, tipo: ev.tipo, meta: ev.meta },
+                extendedProps: { kind: ev.kind, tipo: ev.tipo, meta: ev.meta, bloqueoId: ev.bloqueoId },
               };
             })}
           // #281 Fase 1 — la firma prevista muestra titular, acto y empleado.

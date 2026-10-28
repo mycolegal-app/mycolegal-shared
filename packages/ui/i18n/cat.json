@@ -1578,6 +1578,7 @@
     "paraQuien": "Per a qui",
     "todaNotaria": "Tota la notaria",
     "confirmBorrarBloqueo": "Voleu treure aquest bloqueig?",
+    "quitarBloqueo": "Treure",
     "btnIcs": "Exportar (.ics)",
     "icsTitle": "Subscriure l'agenda (.ics)",
     "icsHint": "Copia aquesta URL i afegeix-la com a «calendari per URL» a Google Calendar, Outlook o el mòbil. Hi veuràs signatures previstes, fites i bloquejos. S'actualitza periòdicament (no en temps real).",

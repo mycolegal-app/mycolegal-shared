@@ -1577,6 +1577,7 @@
     "paraQuien": "Para quen",
     "todaNotaria": "Toda a notaría",
     "confirmBorrarBloqueo": "Quitar este bloqueo?",
+    "quitarBloqueo": "Quitar",
     "btnIcs": "Exportar (.ics)",
     "icsTitle": "Subscribir a axenda (.ics)",
     "icsHint": "Copia este URL e engádeo como «calendario por URL» en Google Calendar, Outlook ou o móbil. Verás firmas previstas, fitos e bloqueos. Actualízase periodicamente (non en tempo real).",

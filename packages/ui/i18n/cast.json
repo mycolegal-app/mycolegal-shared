@@ -1578,6 +1578,7 @@
     "paraQuien": "Para quién",
     "todaNotaria": "Toda la notaría",
     "confirmBorrarBloqueo": "¿Quitar este bloqueo?",
+    "quitarBloqueo": "Quitar",
     "btnIcs": "Exportar (.ics)",
     "icsTitle": "Suscribir la agenda (.ics)",
     "icsHint": "Copia esta URL y añádela como «calendario por URL» en Google Calendar, Outlook o tu móvil. Verás firmas previstas, hitos y bloqueos. Se actualiza periódicamente (no es en tiempo real).",
