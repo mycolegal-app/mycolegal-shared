@@ -95,6 +95,14 @@ export interface ManualPrintViewProps<S extends string = string> {
    * «Imprimir / Guardar como PDF» con el diálogo del navegador.
    */
   pdfEndpoint?: string;
+  /**
+   * #999 — Encabezado de página con el apartado en el que se está («Copias de
+   * terceros › 2. Peticiones»): grupo y título de la sección de cada página,
+   * arriba a la izquierda (margin box `@top-left` de una página con nombre por
+   * sección). Como el pie numerado, lo pintan Chrome/Edge ≥ 131 (y el PDF del
+   * servidor); los demás navegadores lo ignoran. Ni portada ni índice lo llevan.
+   */
+  runningHeader?: boolean;
 }
 
 const LOCALE: Record<string, string> = {
@@ -470,6 +478,33 @@ const PRINT_CSS = `
 [data-manual-print] a[data-manual-print-unlinked] { color: inherit; text-decoration: none; cursor: text; }
 `;
 
+/** Texto del encabezado de página de una sección: «grupo › título» (sin repetir el grupo). */
+export function runningHeaderText(s: { title: string; group?: string }): string {
+  const g = s.group?.trim();
+  return g && !s.title.includes(g) ? `${g} › ${s.title}` : s.title;
+}
+
+/** Cadena CSS entre comillas (para `content:`). */
+function cssString(v: string): string {
+  return `"${v.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/[\r\n]+/g, " ")}"`;
+}
+
+/**
+ * #999 — CSS del encabezado de página: cada sección imprime en su propia página
+ * con nombre (`page: mp-sec-<n>`; ya empieza página, así que no añade saltos), y
+ * cada nombre lleva su `@top-left`.
+ */
+export function runningHeaderCss(sections: { key: string; title: string; group?: string }[]): string {
+  const rules = sections.map((s, i) => {
+    const name = `mp-sec-${i}`;
+    return (
+      `  [data-manual-print-section="${s.key.replace(/"/g, "")}"] { page: ${name}; }\n` +
+      `  @page ${name} { @top-left { content: ${cssString(runningHeaderText(s))}; font-size: 8pt; color: #6b7280; vertical-align: bottom; padding-bottom: 3mm; } }`
+    );
+  });
+  return `@media print {\n${rules.join("\n")}\n}`;
+}
+
 /** Línea del índice: título enlazado, puntos guía y número de página (fuera del enlace). */
 function TocLine({ anchor, title, page, className }: { anchor: string; title: string; page?: number; className?: string }) {
   return (
@@ -494,6 +529,7 @@ export function ManualPrintView<S extends string>({
   showSectionTitles = false,
   date,
   pdfEndpoint,
+  runningHeader = false,
 }: ManualPrintViewProps<S>) {
   const { t, language: ctxLanguage } = useI18n();
   const lang = language ?? ctxLanguage;
@@ -667,6 +703,7 @@ export function ManualPrintView<S extends string>({
     <div data-manual-print ref={rootRef} className="mx-auto pb-16 text-gray-900" style={{ width: `${PRINT_WIDTH_MM}mm` }}>
       <style>{MANUAL_PROSE_CSS}</style>
       <style>{PRINT_CSS}</style>
+      {runningHeader && <style>{runningHeaderCss(sections)}</style>}
 
       {/* Barra (no se imprime) */}
       <div

@@ -31,6 +31,11 @@ export interface CopiaCustodioFieldsProps {
   refsEntidadVisibles: boolean;
   /** Endpoint del NotarioPicker (el Portal acota a autorizantes). */
   notarioApiBase?: string;
+  /**
+   * #995 — Etiquetas «jubilado»/«obsoleto» del NotarioPicker. Default true; el
+   * Portal las apaga.
+   */
+  mostrarEstadoNotario?: boolean;
   /** Debajo de las referencias SEDAS (validación contra el feed). */
   sedasAyuda?: ReactNode;
   /** Al final del bloque, campos propios de la pantalla. */
@@ -45,6 +50,7 @@ export function CopiaCustodioFields({
   onChange,
   refsEntidadVisibles,
   notarioApiBase = "/api/notarios",
+  mostrarEstadoNotario = true,
   sedasAyuda,
   children,
 }: CopiaCustodioFieldsProps) {
@@ -96,6 +102,7 @@ export function CopiaCustodioFields({
         value={v.notarioAutorizante}
         onChange={(text, match) => onChange({ ...v, notarioAutorizante: text, notarioAutorizanteId: match?.id ?? null })}
         apiBase={notarioApiBase}
+        mostrarEstado={mostrarEstadoNotario}
       />
       <div className="grid grid-cols-2 gap-3">
         <div>

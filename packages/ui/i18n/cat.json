@@ -638,7 +638,9 @@
       "noResultsAllowCustom": "No és al catàleg — es desarà el text tal qual",
       "obsoleto": "obsolet",
       "jubilado": "jubilat",
-      "obsoletoWarning": "Aquest notari ja no figura al cens actual del Notariat"
+      "obsoletoWarning": "Aquest notari ja no figura al cens actual del Notariat",
+      "jubiladoTitle": "Amb data de baixa al cens",
+      "obsoletoTitle": "No figura al cens actual del Notariat; només a la importació antiga"
     },
     "clientPicker": {
       "placeholder": "Cercar client per nom o NIF...",
@@ -1073,6 +1075,7 @@
       "skill_agente": "Dades",
       "copy": "Copiar",
       "copied": "Copiat",
+      "copyDescriptions": "Copiar descripcions",
       "outOfScope": "Només puc ajudar-te amb doctrina notarial, registral o fiscal i amb l'ús de les aplicacions de MyCoLegal.",
       "corpusBadge": "{count} resolucions a la base de doctrina",
       "welcomeTitle": "Hola, soc en MycoBot 👋",
@@ -1139,6 +1142,8 @@
       },
       "attach": "Adjuntar document a la conversa",
       "attachRemove": "Treure document",
+      "attachRemoveAll": "Treure'ls tots",
+      "attachEveryTurn": "Aquests documents s'envien amb cada pregunta d'aquesta conversa",
       "skillSelect": "Aplicar una skill a la conversa",
       "skillNone": "Sense skill",
       "skills": "Skills",

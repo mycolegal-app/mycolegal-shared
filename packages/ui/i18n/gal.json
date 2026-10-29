@@ -637,7 +637,9 @@
       "noResultsAllowCustom": "Non está no catálogo — gardarase o texto tal cal",
       "obsoleto": "obsoleto",
       "jubilado": "xubilado",
-      "obsoletoWarning": "Este notario xa non figura no censo actual do Notariado"
+      "obsoletoWarning": "Este notario xa non figura no censo actual do Notariado",
+      "jubiladoTitle": "Con data de baixa no censo",
+      "obsoletoTitle": "Non figura no censo actual do Notariado; só na importación antiga"
     },
     "clientPicker": {
       "placeholder": "Buscar cliente por nome ou NIF...",
@@ -1072,6 +1074,7 @@
       "skill_agente": "Datos",
       "copy": "Copiar",
       "copied": "Copiado",
+      "copyDescriptions": "Copiar descricións",
       "outOfScope": "Só podo axudarte con doutrina notarial, rexistral ou fiscal e co uso das aplicacións de MyCoLegal.",
       "corpusBadge": "{count} resolucións na base de doutrina",
       "welcomeTitle": "Ola, son MycoBot 👋",
@@ -1138,6 +1141,8 @@
       },
       "attach": "Anexar documento á conversa",
       "attachRemove": "Quitar documento",
+      "attachRemoveAll": "Quitar todos",
+      "attachEveryTurn": "Estes documentos envíanse con cada pregunta desta conversa",
       "skillSelect": "Aplicar unha skill á conversa",
       "skillNone": "Sen skill",
       "skills": "Skills",

@@ -637,7 +637,9 @@
       "noResultsAllowCustom": "Ez dago katalogoan — testua bere horretan gordeko da",
       "obsoleto": "zaharkitua",
       "jubilado": "erretiratua",
-      "obsoletoWarning": "Notario hau jada ez dago Notariadoaren egungo erroldan"
+      "obsoletoWarning": "Notario hau jada ez dago Notariadoaren egungo erroldan",
+      "jubiladoTitle": "Erroldan baja-data duena",
+      "obsoletoTitle": "Ez dago Notariadoaren egungo erroldan; inportazio zaharrean bakarrik"
     },
     "clientPicker": {
       "placeholder": "Bilatu bezeroa izenez edo NIF zenbakiz...",
@@ -1072,6 +1074,7 @@
       "skill_agente": "Datuak",
       "copy": "Kopiatu",
       "copied": "Kopiatuta",
+      "copyDescriptions": "Kopiatu deskribapenak",
       "outOfScope": "Notariotza-, erregistro- edo zerga-doktrinan eta MyCoLegal aplikazioen erabileran baino ezin dizut lagundu.",
       "corpusBadge": "{count} ebazpen doktrina-basean",
       "welcomeTitle": "Kaixo, MycoBot naiz 👋",
@@ -1138,6 +1141,8 @@
       },
       "attach": "Erantsi dokumentua elkarrizketari",
       "attachRemove": "Kendu dokumentua",
+      "attachRemoveAll": "Kendu guztiak",
+      "attachEveryTurn": "Dokumentu hauek elkarrizketa honetako galdera bakoitzarekin bidaltzen dira",
       "skillSelect": "Aplikatu skill bat elkarrizketari",
       "skillNone": "Skill gabe",
       "skills": "Skill-ak",

@@ -70,6 +70,12 @@ interface NotarioPickerProps {
    * censo actual del portal notariado.org".
    */
   selectedFuente?: NotarioFuente | null;
+  /**
+   * #995 — Si es false, no se pintan las etiquetas «jubilado»/«obsoleto» ni el
+   * aviso de notario fuera del censo. El Portal lo apaga: al solicitante externo
+   * no le dicen nada y le confunden. Default true (la notaría sí las ve).
+   */
+  mostrarEstado?: boolean;
 }
 
 const DEBOUNCE_MS = 300;
@@ -98,6 +104,7 @@ export function NotarioPicker({
   allowCustom = true,
   size = "md",
   selectedFuente,
+  mostrarEstado = true,
 }: NotarioPickerProps) {
   const { t } = useI18n();
   const resolvedPlaceholder = placeholder ?? t("ui.notarioPicker.placeholder");
@@ -195,7 +202,7 @@ export function NotarioPicker({
         />
       </div>
 
-      {selectedFuente === "LEGACY" && (
+      {mostrarEstado && selectedFuente === "LEGACY" && (
         <p className="mt-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] text-amber-800">
           ⚠ {t("ui.notarioPicker.obsoletoWarning")}
         </p>
@@ -210,8 +217,8 @@ export function NotarioPicker({
           )}
           {!loading && options.map((n) => {
             const subtitle = getSubtitle(n);
-            const obsoleto = n.fuente === "LEGACY";
-            const jubilado = Boolean(n.fechaBaja);
+            const obsoleto = mostrarEstado && n.fuente === "LEGACY";
+            const jubilado = mostrarEstado && Boolean(n.fechaBaja);
             return (
               <li key={n.id}>
                 <button
@@ -224,12 +231,18 @@ export function NotarioPicker({
                       {getDisplayName(n)}
                     </span>
                     {jubilado && (
-                      <span className="rounded bg-gray-200 px-1 py-0.5 text-[9px] uppercase text-gray-600">
+                      <span
+                        title={t("ui.notarioPicker.jubiladoTitle")}
+                        className="rounded bg-gray-200 px-1 py-0.5 text-[9px] uppercase text-gray-600"
+                      >
                         {t("ui.notarioPicker.jubilado")}
                       </span>
                     )}
                     {obsoleto && (
-                      <span className="rounded bg-amber-100 px-1 py-0.5 text-[9px] uppercase text-amber-800">
+                      <span
+                        title={t("ui.notarioPicker.obsoletoTitle")}
+                        className="rounded bg-amber-100 px-1 py-0.5 text-[9px] uppercase text-amber-800"
+                      >
                         {t("ui.notarioPicker.obsoleto")}
                       </span>
                     )}

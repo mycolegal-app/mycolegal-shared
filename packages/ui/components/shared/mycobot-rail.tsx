@@ -32,6 +32,7 @@ import {
 // mientras el chat enseñaba `$$\text{22.068,00 €} \times 1,1000$$` (#31, Lara,
 // 28-sep-2026). Un solo renderizador para los dos.
 import { renderMarkdown } from "./markdown";
+import { copiarHtmlYTexto, extraerDescripcionesDH, markdownATextoPlano } from "./mycobot-copiar";
 import { useI18n } from "../i18n/i18n-context";
 import { AiBadge, type AiTrace } from "./ai-badge";
 import { SinCreditos, esErrorDeCreditos } from "./sin-creditos";
@@ -362,12 +363,18 @@ export function MycoBotRail({
   // Mensajes cuyo «Ver proceso» está desplegado (por índice de mensaje).
   const [openProcess, setOpenProcess] = useState<Set<number>>(new Set());
   // Índice del mensaje cuya respuesta se acaba de copiar al portapapeles (feedback ✓).
-  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
-  const copyAnswer = useCallback(async (idx: number, text: string) => {
+  // Clave «<índice>» (respuesta entera) o «<índice>:dh» (solo las descripciones de la skill
+  // de división horizontal), para que el ✓ salga en el botón que se ha pulsado.
+  const [copiedIdx, setCopiedIdx] = useState<string | null>(null);
+  // #1057 — Se copia en HTML (Word lo pega con formato, sin `**` ni `###`) y en texto.
+  const copyAnswer = useCallback(async (idx: number, text: string, soloDescripcionesDH = false) => {
+    const clave = soloDescripcionesDH ? `${idx}:dh` : String(idx);
+    const md = soloDescripcionesDH ? extraerDescripcionesDH(text) : text;
+    if (!md) return;
     try {
-      await navigator.clipboard.writeText(text);
-      setCopiedIdx(idx);
-      setTimeout(() => setCopiedIdx((c) => (c === idx ? null : c)), 1800);
+      await copiarHtmlYTexto(md, soloDescripcionesDH ? markdownATextoPlano(md) : md);
+      setCopiedIdx(clave);
+      setTimeout(() => setCopiedIdx((c) => (c === clave ? null : c)), 1800);
     } catch {
       // Portapapeles no disponible (permiso/contexto no seguro): no rompemos nada.
     }
@@ -1104,6 +1111,12 @@ export function MycoBotRail({
     },
     [conversacionId, baseUrl],
   );
+
+  // #44 — «Quitar todos»: lo mismo que la ✕ de cada documento, uno tras otro (cada
+  // DELETE devuelve la lista que queda, y la última respuesta deja el estado al día).
+  const removeAllDocs = useCallback(async () => {
+    for (const d of attachedDocs?.docs ?? []) await removeDoc(d.id);
+  }, [attachedDocs, removeDoc]);
 
   // #34 — Al cambiar de conversación (abrir una del historial, restaurar la de la
   // sesión) se recuperan sus documentos: siguen inyectándose en cada turno y el
@@ -2198,7 +2211,7 @@ export function MycoBotRail({
                             title={t("ui.mycobot.copy")}
                             aria-label={t("ui.mycobot.copy")}
                           >
-                            {copiedIdx === i ? (
+                            {copiedIdx === String(i) ? (
                               <>
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                                   <polyline points="20 6 9 17 4 12" />
@@ -2215,6 +2228,34 @@ export function MycoBotRail({
                               </>
                             )}
                           </button>
+                          {/* #1057 — respuesta del programa de división horizontal: solo las
+                              descripciones, sin la explicación ni las comprobaciones. */}
+                          {extraerDescripcionesDH(m.text) && (
+                            <button
+                              type="button"
+                              onClick={() => copyAnswer(i, m.text, true)}
+                              className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-gray-600"
+                              title={t("ui.mycobot.copyDescriptions")}
+                              aria-label={t("ui.mycobot.copyDescriptions")}
+                            >
+                              {copiedIdx === `${i}:dh` ? (
+                                <>
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                    <polyline points="20 6 9 17 4 12" />
+                                  </svg>
+                                  {t("ui.mycobot.copied")}
+                                </>
+                              ) : (
+                                <>
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                                  </svg>
+                                  {t("ui.mycobot.copyDescriptions")}
+                                </>
+                              )}
+                            </button>
+                          )}
                         </div>
                       )}
                       {m.role === "bot" && !m.error && m.steps && m.steps.length > 0 && (
@@ -2479,6 +2520,18 @@ export function MycoBotRail({
                 )}
                 {attachedDocs && attachedDocs.docs.length > 0 && (
                   <div className="mb-2 space-y-1 rounded-md border bg-gray-50 px-2 py-1 text-xs text-gray-700">
+                    {/* #44 — el adjunto es de la CONVERSACIÓN, no de una pregunta: se dice
+                        siempre, y se pueden quitar todos de una vez. */}
+                    <div className="flex items-center gap-2 border-b pb-1 text-[11px] text-gray-500">
+                      <span className="flex-1">{t("ui.mycobot.attachEveryTurn")}</span>
+                      <button
+                        type="button"
+                        onClick={() => void removeAllDocs()}
+                        className="shrink-0 rounded px-1 text-gray-500 underline hover:text-gray-800"
+                      >
+                        {t("ui.mycobot.attachRemoveAll")}
+                      </button>
+                    </div>
                     {attachedDocs.docs.map((d) => (
                       <div key={d.id} className="flex items-center gap-2">
                         <Paperclip className="h-3.5 w-3.5 shrink-0 text-cyan-600" />

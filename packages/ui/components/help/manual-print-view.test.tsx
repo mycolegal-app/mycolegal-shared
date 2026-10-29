@@ -7,7 +7,7 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/manual/imprimir",
 }));
 
-import { ManualPrintView } from "./manual-print-view";
+import { ManualPrintView, runningHeaderCss, runningHeaderText } from "./manual-print-view";
 
 // Sin I18nProvider, `t` devuelve la clave: los textos se buscan por clave.
 afterEach(cleanup);
@@ -140,5 +140,30 @@ describe("#905 — ManualPrintView", () => {
 
     clickSpy.mockRestore();
     vi.unstubAllGlobals();
+  });
+});
+
+describe("#999 — encabezado de página con el apartado", () => {
+  it("grupo › título, sin repetir el grupo", () => {
+    expect(runningHeaderText({ title: "2. Peticiones", group: "Copias de terceros" })).toBe("Copias de terceros › 2. Peticiones");
+    expect(runningHeaderText({ title: "1. Copias de terceros", group: "Copias de terceros" })).toBe("1. Copias de terceros");
+    expect(runningHeaderText({ title: "Inicio" })).toBe("Inicio");
+  });
+  it("una página con nombre por sección, con su @top-left (comillas escapadas)", () => {
+    const css = runningHeaderCss([
+      { key: "home", title: "Inicio" },
+      { key: "peticiones", title: 'Peticiones "nuevas"', group: "Copias" },
+    ]);
+    expect(css).toContain('[data-manual-print-section="home"] { page: mp-sec-0; }');
+    expect(css).toContain("@page mp-sec-1 { @top-left { content: \"Copias › Peticiones \\\"nuevas\\\"\";");
+  });
+  it("sin la prop no se añade; con ella, el <style> va en la vista", () => {
+    const one = render(
+      <ManualPrintView sections={[{ key: "home", title: "Inicio" }]} resolve={() => Home} appName="App" runningHeader />,
+    );
+    expect(one.container.innerHTML).toContain("mp-sec-0");
+    cleanup();
+    const two = render(<ManualPrintView sections={[{ key: "home", title: "Inicio" }]} resolve={() => Home} appName="App" />);
+    expect(two.container.innerHTML).not.toContain("mp-sec-0");
   });
 });
