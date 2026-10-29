@@ -1607,6 +1607,7 @@
     "expedienteAnulado": "Espediente baliogabetua",
     "expedienteAnuladoAviso": "baliogabetua: bertan behera utzi hitzordua bezeroarekin",
     "crearOtroExpedienteDesdeCita": "sortu beste espediente bat",
+    "crearOtroExpedienteMismaCita": "Sortu beste espediente bat hitzordu honetarako (adib. ezkontidearena)",
     "leyenda": {
       "firma": "Sinadurak",
       "reunion": "Bilerak",

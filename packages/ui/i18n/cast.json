@@ -1608,6 +1608,7 @@
     "expedienteAnulado": "Expediente anulado",
     "expedienteAnuladoAviso": "anulado: cancela la cita con el cliente",
     "crearOtroExpedienteDesdeCita": "crear otro expediente",
+    "crearOtroExpedienteMismaCita": "Crear otro expediente para esta cita (p. ej. el del cónyuge)",
     "leyenda": {
       "firma": "Firmas",
       "reunion": "Reuniones",

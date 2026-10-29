@@ -1608,6 +1608,7 @@
     "expedienteAnulado": "Expedient anul·lat",
     "expedienteAnuladoAviso": "anul·lat: cancel·la la cita amb el client",
     "crearOtroExpedienteDesdeCita": "crear un altre expedient",
+    "crearOtroExpedienteMismaCita": "Crear un altre expedient per a aquesta cita (p. ex. el del cònjuge)",
     "leyenda": {
       "firma": "Signatures",
       "reunion": "Reunions",

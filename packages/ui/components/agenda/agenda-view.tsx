@@ -1865,6 +1865,23 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
                       : t("agendaPage.crearExpedienteDesdeCita")}
                   </button>
                 )}
+                {/* #1051 — Una cita puede dar para DOS expedientes: dos testamentos
+                    (marido y mujer) se firman en la misma cita pero son expedientes
+                    distintos. Con el primero ya vinculado, se ofrece abrir otro con
+                    la misma hora y contacto; la cita sigue vinculada al primero. */}
+                {form.expedienteVinculadoId && !form.expedienteVinculadoAnulado && (
+                  <>
+                    <br />
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/expedientes/nuevo?desdeCita=${form.id}`)}
+                      className="mt-1 font-medium text-cyan-700 underline underline-offset-2 hover:text-cyan-800"
+                      data-testid="agenda-crear-otro-expediente"
+                    >
+                      {t("agendaPage.crearOtroExpedienteMismaCita")}
+                    </button>
+                  </>
+                )}
                 {/* #964 — El expediente se dio de alta por otro camino: la cita
                     se puede vincular a él en vez de crear otro. */}
                 {(!form.expedienteVinculadoId || form.expedienteVinculadoAnulado) && !vincAbierto && (
