@@ -639,7 +639,13 @@
       "jubilado": "xubilado",
       "obsoletoWarning": "Este notario xa non figura no censo actual do Notariado",
       "jubiladoTitle": "Con data de baixa no censo",
-      "obsoletoTitle": "Non figura no censo actual do Notariado; só na importación antiga"
+      "obsoletoTitle": "Non figura no censo actual do Notariado; só na importación antiga",
+      "altaAviso": "Non atopa o notario no directorio? Pode seguir co nome escrito a man e pedir a soporte que o incorporen.",
+      "altaBoton": "Pedir que o dean de alta no directorio",
+      "altaEnviando": "Enviando…",
+      "altaEnviada": "Feito: pedimos a soporte que o dean de alta. Pode seguir co nome escrito.",
+      "altaError": "Non se puido enviar. Ténteo de novo ou avise desde o botón de incidencias.",
+      "altaDescartar": "Descartar aviso"
     },
     "clientPicker": {
       "placeholder": "Buscar cliente por nome ou NIF...",

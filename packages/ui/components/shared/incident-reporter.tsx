@@ -14,6 +14,7 @@ import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 import { useI18n } from "../i18n/i18n-context";
 import { apiErrorMessage } from "../../lib/api-error";
+import { EVENTO_REPORTE_DIRECTO, type ReporteDirectoDetail } from "../../lib/incident-quick-report";
 // #875 — esquina configurable del botón flotante. #889 — anclaje al soltar.
 import {
   useFloatingCorner,
@@ -362,6 +363,46 @@ export function IncidentReporter({
     window.addEventListener("mycolegal:open-incident-reporter", handler);
     return () => window.removeEventListener("mycolegal:open-incident-reporter", handler);
   }, [openReporter]);
+
+  // #1011 — Reporte de un clic sin abrir el modal (p.ej. «pedir que den de alta
+  // este notario» desde el NotarioPicker). Lo enviamos aquí porque es el reporter
+  // quien conoce la app y el endpoint; la promesa vuelve en el propio `detail`.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const d = (e as CustomEvent<ReporteDirectoDetail>).detail;
+      if (!d || d.handled || !d.description?.trim()) return;
+      d.handled = true;
+      d.result = (async () => {
+        const res = await fetch(submitUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            appSlug,
+            kind: d.kind ?? "incident",
+            description: d.description.trim(),
+            pageUrl: window.location.href,
+            userAgent: navigator.userAgent,
+            metadata: {
+              language: navigator.language,
+              capturedAt: new Date().toISOString(),
+              origen: "reporte_directo",
+              ...(d.extra ? { context: d.extra } : {}),
+            },
+          }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          const message =
+            body?.error?.message || (typeof body?.error === "string" ? body.error : undefined) || body?.message;
+          throw new Error(
+            apiErrorMessage(t, { status: res.status, code: body?.error?.code, message }, t("ui.incidentReporter.errSend")),
+          );
+        }
+      })();
+    };
+    window.addEventListener(EVENTO_REPORTE_DIRECTO, handler);
+    return () => window.removeEventListener(EVENTO_REPORTE_DIRECTO, handler);
+  }, [appSlug, submitUrl, t]);
 
   const submit = useCallback(async () => {
     if (!description.trim()) return;

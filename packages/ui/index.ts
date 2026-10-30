@@ -56,6 +56,8 @@ export type {
   DocumentFieldSpec,
 } from './components/shared/document-producer';
 export { IncidentReporter } from './components/shared/incident-reporter';
+export { enviarReporteDirecto, EVENTO_REPORTE_DIRECTO, SinReporterError } from './lib/incident-quick-report';
+export type { ReporteDirecto, TipoReporteDirecto } from './lib/incident-quick-report';
 export { BillingPanel } from './components/shared/billing-panel';
 export type { BillingPanelProps } from './components/shared/billing-panel';
 export { CreditBalanceBadge } from './components/shared/credit-balance-badge';

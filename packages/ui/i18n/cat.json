@@ -640,7 +640,13 @@
       "jubilado": "jubilat",
       "obsoletoWarning": "Aquest notari ja no figura al cens actual del Notariat",
       "jubiladoTitle": "Amb data de baixa al cens",
-      "obsoletoTitle": "No figura al cens actual del Notariat; només a la importació antiga"
+      "obsoletoTitle": "No figura al cens actual del Notariat; només a la importació antiga",
+      "altaAviso": "No trobeu el notari al directori? Podeu continuar amb el nom escrit a mà i demanar a suport que l'incorporin.",
+      "altaBoton": "Demanar que el donin d'alta al directori",
+      "altaEnviando": "Enviant…",
+      "altaEnviada": "Fet: hem demanat a suport que el donin d'alta. Podeu continuar amb el nom escrit.",
+      "altaError": "No s'ha pogut enviar. Torneu-ho a provar o aviseu des del botó d'incidències.",
+      "altaDescartar": "Descartar l'avís"
     },
     "clientPicker": {
       "placeholder": "Cercar client per nom o NIF...",

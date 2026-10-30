@@ -639,7 +639,13 @@
       "jubilado": "erretiratua",
       "obsoletoWarning": "Notario hau jada ez dago Notariadoaren egungo erroldan",
       "jubiladoTitle": "Erroldan baja-data duena",
-      "obsoletoTitle": "Ez dago Notariadoaren egungo erroldan; inportazio zaharrean bakarrik"
+      "obsoletoTitle": "Ez dago Notariadoaren egungo erroldan; inportazio zaharrean bakarrik",
+      "altaAviso": "Ez duzu notarioa aurkitzen direktorioan? Eskuz idatzitako izenarekin jarrai dezakezu eta laguntza-zerbitzuari gehitzeko eskatu.",
+      "altaBoton": "Eskatu direktorioan alta emateko",
+      "altaEnviando": "Bidaltzen…",
+      "altaEnviada": "Eginda: laguntza-zerbitzuari alta emateko eskatu diogu. Idatzitako izenarekin jarrai dezakezu.",
+      "altaError": "Ezin izan da bidali. Saiatu berriro edo jakinarazi gorabeheren botoitik.",
+      "altaDescartar": "Baztertu oharra"
     },
     "clientPicker": {
       "placeholder": "Bilatu bezeroa izenez edo NIF zenbakiz...",
