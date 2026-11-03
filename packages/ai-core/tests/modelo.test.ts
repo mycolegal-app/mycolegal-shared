@@ -23,6 +23,16 @@ describe('createTaskModelResolver', () => {
     expect(await r.modeloDeTarea('x')).toBe('de-reserva');
   });
 
+  it('la reserva va sin razonar; un null EN la fila (lo decide el modelo) se respeta', async () => {
+    const sinFila = createTaskModelResolver({ prisma: prismaCon(null), app: 'redactor', fallbackModel: 'de-reserva' });
+    expect((await sinFila.configDeTarea('x')).thinkingBudget).toBe(0);
+    const conNull = createTaskModelResolver({
+      prisma: prismaCon({ model: 'gemini-4-argon', active: true, thinkingBudget: null }),
+      app: 'redactor', fallbackModel: 'de-reserva',
+    });
+    expect((await conNull.configDeTarea('x')).thinkingBudget).toBeNull();
+  });
+
   it('cae a la reserva si la consulta revienta: un fallo de BD no mata la función de IA', async () => {
     const r = createTaskModelResolver({
       prisma: { aiTaskModel: { findUnique: async () => { throw new Error('sin BD'); } } },
@@ -105,9 +115,9 @@ describe('configDeTarea', () => {
     expect(await r.configDeTarea('t')).toEqual({ model: 'm', thinkingBudget: 0, modelContingencia: null });
   });
 
-  it('sin fila, la reserva y sin presupuesto (decide el modelo)', async () => {
+  it('sin fila, la reserva y sin razonar (presupuesto 0)', async () => {
     const r = createTaskModelResolver({ prisma: prismaCon(null), app: 'redactor', fallbackModel: 'f' });
-    expect(await r.configDeTarea('t')).toEqual({ model: 'f', thinkingBudget: null, modelContingencia: null });
+    expect(await r.configDeTarea('t')).toEqual({ model: 'f', thinkingBudget: 0, modelContingencia: null });
   });
 
   it('modeloDeTarea y configDeTarea comparten la caché', async () => {

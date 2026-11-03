@@ -84,7 +84,10 @@ export function createTaskModelResolver(cfg: ResolutorDeModeloConfig): Resolutor
       const hit = cache.get(taskKey);
       if (hit && hit.expira > Date.now()) return hit.valor;
 
-      let valor: ConfigDeTarea = { model: cfg.fallbackModel, thinkingBudget: null, modelContingencia: null };
+      // Sin fila activa, el modelo de reserva SIN razonar: Gemini 3 sin tope razona por defecto y se
+      // factura como salida (oct-2026: 61M tokens de salida de 3.7 Flash en Redactor). `null` en una
+      // fila sí es una decisión de Admin («lo decide el modelo») y se respeta.
+      let valor: ConfigDeTarea = { model: cfg.fallbackModel, thinkingBudget: 0, modelContingencia: null };
       try {
         const row = await cfg.prisma.aiTaskModel.findUnique({
           where: { app_taskKey: { app: cfg.app, taskKey } },
