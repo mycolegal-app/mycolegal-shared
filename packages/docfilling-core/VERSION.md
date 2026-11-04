@@ -1,5 +1,9 @@
 # @mycolegal-app/docfilling-core
 
+## 0.1.34 — 4-nov-2026
+
+Formato de salida `#words_m`: el número en letra apocopado, para delante de un nombre masculino («un minuto», «veintiún minutos», «treinta y un días»; en catalán «vint-i-un»). Con `#words` las horas y los minutos del otorgamiento salían «uno minutos» (testamento catalán del informe de Javier). `tests/formatos.test.ts`.
+
 ## 0.1.17 — 7-oct-2026
 
 `expandirIncludes` ignora los `{{INCLUDE}}` de las líneas `//`: ni los expande ni los cuenta como `faltantes`. `stripDirectives` ya borraba esas líneas al componer, así que el documento no cambia; lo que cambia es el grafo de la biblioteca, que avisaba de «faltan» por una inclusión retirada a propósito (la reducción aragonesa por inundaciones, caducada en 2015). `tests/include-comentado.test.ts`.

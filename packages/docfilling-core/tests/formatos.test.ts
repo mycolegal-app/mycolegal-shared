@@ -29,6 +29,13 @@ describe('aplicarFormato', () => {
     expect(enLetras(2_500_000)).toBe('dos millones quinientos mil');
     expect(enLetras(2026)).toBe('dos mil veintiséis');
     expect(aplicarFormato('3', 'words').texto).toBe('tres');
+    // Delante de un nombre masculino: «un minuto», «veintiún minutos», «treinta y un días».
+    expect(aplicarFormato('1', 'words_m').texto).toBe('un');
+    expect(aplicarFormato('21', 'words_m').texto).toBe('veintiún');
+    expect(aplicarFormato('31', 'words_m').texto).toBe('treinta y un');
+    expect(aplicarFormato('17', 'words_m').texto).toBe('diecisiete');
+    expect(aplicarFormato('21', 'words_m', 'ca').texto).toBe('vint-i-un');
+    expect(aplicarFormato('1', 'words').texto).toBe('uno');
     expect(aplicarFormato('180000', 'amount_words').texto).toBe('ciento ochenta mil euros');
     expect(aplicarFormato('180000,50', 'amount_words').texto).toBe('ciento ochenta mil euros con cincuenta céntimos');
     expect(aplicarFormato('21', 'amount_words').texto).toBe('veintiún euros');

@@ -32,6 +32,9 @@ export const FORMATOS: Record<string, DefFormato> = {
   amount: { descripcion: 'Importe con punto de miles y dos decimales', ejemplo: ['180000', '180.000,00'] },
   amount_words: { descripcion: 'Importe en letra, con «euros» y los céntimos', ejemplo: ['180000,50', 'ciento ochenta mil euros con cincuenta céntimos'] },
   words: { descripcion: 'Número en letra', ejemplo: ['3', 'tres'] },
+  // Delante de un nombre masculino («un minuto», «veintiún minutos», «treinta y un días»): las horas y los
+  // minutos del otorgamiento, que con `words` salían «uno minutos» (testamento catalán, 4-nov-2026).
+  words_m: { descripcion: 'Número en letra delante de un nombre masculino (apocopado)', ejemplo: ['21', 'veintiún'] },
   percent: { descripcion: 'Porcentaje en cifra, con el signo separado por un espacio', ejemplo: ['50', '50 %'] },
   percent_words: { descripcion: 'Porcentaje en letra', ejemplo: ['50', 'cincuenta por ciento'] },
   date: { descripcion: 'Fecha en número', ejemplo: ['2026-10-14', '14/10/2026'] },
@@ -218,6 +221,7 @@ export function aplicarFormato(valor: string, formato: string, idioma = 'es'): R
     case 'amount': { const n = leerNumero(v); return n === null ? noNumero : { texto: enCifra(n, 2) }; }
     case 'amount_words': { const n = leerNumero(v); return n === null || n < 0 ? noNumero : { texto: importeEnLetras(n, lang) }; }
     case 'words': { const n = leerNumero(v); return n === null || n < 0 ? noNumero : { texto: numeroEnLetras(n, lang) }; }
+    case 'words_m': { const n = leerNumero(v); return n === null || n < 0 || !Number.isInteger(n) ? noNumero : { texto: enLetras(n, lang, true) }; }
     case 'percent': { const n = leerNumero(v); return n === null ? noNumero : { texto: `${enCifra(n)} %` }; }
     case 'percent_words': {
       const n = leerNumero(v);
