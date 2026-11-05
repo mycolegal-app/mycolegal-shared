@@ -1,5 +1,9 @@
 # @mycolegal-app/docfilling-core
 
+## 0.1.35 — 4-nov-2026
+
+Secciones por lengua en un mismo fichero: `{{LANG-SECTION xx}}` … `{{LANG-END}}` (`src/syntax/lang-section.ts`). `expandirIncludes` las resuelve fichero a fichero con `opciones.idioma` (por defecto `es`) y cuenta en `sinSeccion` los bloques sin esa lengua; `auditarSeccionesDeLengua` comprueba que todas tengan la misma estructura. Las marcas no son campos, y un texto que llegue sin expandir sale en una sola lengua. Un fichero sin secciones no cambia. `tests/lang-section.test.ts`.
+
 ## 0.1.34 — 4-nov-2026
 
 Formato de salida `#words_m`: el número en letra apocopado, para delante de un nombre masculino («un minuto», «veintiún minutos», «treinta y un días»; en catalán «vint-i-un»). Con `#words` las horas y los minutos del otorgamiento salían «uno minutos» (testamento catalán del informe de Javier). `tests/formatos.test.ts`.

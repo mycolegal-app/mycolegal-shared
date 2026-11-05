@@ -20,6 +20,7 @@ import { parseComparacion, compararNumerico } from "../syntax/comparar";
 import { quitarReqDoc } from "../syntax/req-doc";
 import { aplicarFormatos, partirFormatos } from "../format/formats";
 import { idiomaDePlantilla } from "../syntax/template-lang";
+import { resolverSeccionesDeLengua } from "../syntax/lang-section";
 
 export type FieldValues = Record<string, unknown>;
 
@@ -1259,6 +1260,9 @@ export function composeWithDiagnostics(
   locale: string = DEFAULT_LOCALE,
 ): { text: string; warnings: ComposeWarning[] } {
   const warnings: ComposeWarning[] = [];
+  // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py. Un texto que llegue sin expandir: una sola lengua, nunca
+  // las dos con «[NO DISPONIBLE]» en medio (`lang-section.ts`).
+  template = resolverSeccionesDeLengua(template, idiomaDePlantilla(template, locale.slice(0, 2).toLowerCase())).texto;
 
   // Step 1: Extract DECLARE fixed values
   const allFields: FieldValues = { ...fields };
@@ -1349,6 +1353,8 @@ export function composeForPreview(
    */
   highlightField?: string,
 ): string {
+  // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py. Ver `composeWithDiagnostics`.
+  template = resolverSeccionesDeLengua(template, idiomaDePlantilla(template, locale.slice(0, 2).toLowerCase())).texto;
   const allFields: FieldValues = { ...fields };
   const declareFixed = extractDeclareFixedValues(template);
   Object.assign(allFields, declareFixed);

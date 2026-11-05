@@ -35,6 +35,7 @@
 import { MAX_INCLUDE_DEPTH } from '../syntax/constants';
 import { parseFields, FieldType } from '../syntax/parser';
 import { applyFieldSuffix, INC_BEGIN_MARK, INC_END_MARK, BIND_END_MARK, bindBeginMark } from './engine';
+import { resolverSeccionesDeLengua } from '../syntax/lang-section';
 
 /** De dónde salen los párrafos. Lo implementa la app contra su catálogo
  *  efectivo —override de la organización > global— y **filtrando por derecho de
@@ -81,6 +82,8 @@ export interface ResultadoExpansion {
   /** Nombres efectivamente insertados, sin repetidos. La app lo cachea en
    *  `docfilling_plantillas.includes` por `(nombre, huella)`. */
   usados: string[];
+  /** Bloques `{{LANG-SECTION}}` sin versión en la lengua pedida: salieron en castellano. */
+  sinSeccion: number;
 }
 
 export interface OpcionesExpansion {
@@ -95,6 +98,8 @@ export interface OpcionesExpansion {
   /** Poner el nombre del párrafo tras su centinela de apertura (`marcaParrafo`). Sólo para el modo cobertura
    *  (`cobertura.ts`), que lo usa para decir de qué párrafo es cada rama y lo quita antes de componer. */
   nombrarParrafos?: boolean;
+  /** La lengua del trabajo para las secciones `{{LANG-SECTION xx}}` de cada fichero. Por defecto, castellano. */
+  idioma?: string;
 }
 
 /** La marca con el nombre del párrafo que abre un centinela (modo cobertura). */
@@ -120,6 +125,13 @@ export async function expandirIncludes(
   const faltantes: string[] = [];
   const ciclos: string[] = [];
   const usados: string[] = [];
+  let sinSeccion = 0;
+  // Fichero a fichero y antes de expandir: ver `lang-section.ts`.
+  const enSuLengua = (t: string) => {
+    const r = resolverSeccionesDeLengua(t, opciones.idioma);
+    sinSeccion += r.sinSeccion;
+    return r.texto;
+  };
 
   async function expandir(actual: string, profundidad: number, enCurso: string[]): Promise<string> {
     if (profundidad > profundidadMaxima) return actual;
@@ -147,7 +159,7 @@ export async function expandirIncludes(
           reemplazo = marcador(nombre);
         } else {
           if (!usados.includes(nombre)) usados.push(nombre);
-          let cuerpo = contenido;
+          let cuerpo = enSuLengua(contenido);
           // El sufijo se aplica ANTES de recursar: así la directiva anidada ya
           // lleva el sufijo compuesto y sus campos hoja salen bien renombrados.
           if (d.includeSuffix) cuerpo = applyFieldSuffix(cuerpo, d.includeSuffix);
@@ -166,6 +178,6 @@ export async function expandirIncludes(
   }
 
   // NFC en la frontera: ver la nota 4 de la cabecera.
-  const texto2 = await expandir(texto.normalize('NFC'), 0, []);
-  return { texto: texto2, faltantes, ciclos, usados };
+  const texto2 = await expandir(enSuLengua(texto.normalize('NFC')), 0, []);
+  return { texto: texto2, faltantes, ciclos, usados, sinSeccion };
 }

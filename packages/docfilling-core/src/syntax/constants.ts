@@ -213,6 +213,15 @@ export const DIRECTIVES: readonly DirectiveSpec[] = [
     endDirective: null,
     runtimeOwner: "composer",
   },
+  // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py. Las secciones por lengua (`lang-section.ts`).
+  {
+    name: "LANG_SECTION",
+    prefixes: ["LANG-SECTION", "LANG-END"],
+    isMetadata: true,
+    isBlock: false,
+    endDirective: null,
+    runtimeOwner: "composer",
+  },
   {
     name: "HUMAN_ACTION_BLOCK",
     prefixes: ["HUMAN_ACTION_INIT:"],
@@ -292,6 +301,8 @@ export const KNOWN_DIRECTIVE_PREFIXES = [
   "DOCUBOT",
   "LANG=",
   "LANG =",
+  "LANG-SECTION",
+  "LANG-END",
   "HUMAN_ACTION_INIT:",
   "HUMAN_ACTION:",
   "HUMAN_ACTION_PRE:",
@@ -329,6 +340,8 @@ export const METADATA_PREFIXES = [
   "DOCUBOT",
   "LANG=",
   "LANG =",
+  "LANG-SECTION",
+  "LANG-END",
   "HUMAN_ACTION_INIT:",
   "HUMAN_ACTION:",
   "HUMAN_ACTION_PRE:",

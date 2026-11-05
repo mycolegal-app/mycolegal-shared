@@ -10,7 +10,7 @@
 // Aquí están los ejemplos que el manual afirma, verbatim. Si el motor cambia y
 // el manual se queda viejo, esto falla y dice cuál.
 import { describe, it, expect } from 'vitest';
-import { compose, composeWithDiagnostics, validateText, parseNumero } from '../index';
+import { auditarSeccionesDeLengua, compose, composeWithDiagnostics, resolverSeccionesDeLengua, validateText, parseNumero } from '../index';
 
 describe('manual · la tabla de interpretación de números (§5)', () => {
   it.each([
@@ -113,5 +113,23 @@ describe('manual · formatos de salida (§1, 14-oct-2026)', () => {
 
   it('E907 para un formato que no existe', () => {
     expect(validateText('{{PRECIO#amont}}').diagnostics.some((d) => d.code === 'E907')).toBe(true);
+  });
+});
+
+describe('manual · secciones por lengua', () => {
+  const PARRAFO = `{{LANG-SECTION es}}
+**Revocación.-** Revoca cualquier disposición anterior. {{IF EXISTE_PACTO}}Respeta el pacto de {{DATOS_PACTO}}.{{ENDIF}}
+{{LANG-SECTION ca}}
+**Revocació.-** Revoca qualsevol disposició anterior. {{IF EXISTE_PACTO}}Respecta el pacte de {{DATOS_PACTO}}.{{ENDIF}}
+{{LANG-END}}`;
+
+  it('sale la sección de la lengua, y sin ella el castellano', () => {
+    expect(resolverSeccionesDeLengua(PARRAFO, 'ca').texto).toContain('Revocació');
+    expect(resolverSeccionesDeLengua(PARRAFO, 'ca').texto).not.toContain('Revocación');
+    expect(resolverSeccionesDeLengua(PARRAFO, 'gl')).toMatchObject({ sinSeccion: 1 });
+  });
+  it('la carga comprueba que tengan la misma estructura', () => {
+    expect(auditarSeccionesDeLengua(PARRAFO)).toEqual([]);
+    expect(auditarSeccionesDeLengua(PARRAFO.replace('Respecta el pacte de {{DATOS_PACTO}}.', 'Respecta el pacte.'))).not.toEqual([]);
   });
 });

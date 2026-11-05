@@ -187,6 +187,8 @@ export function classifyField(content: string): FieldType {
 
   if (upper.startsWith("SYSTEM:")) return FieldType.SYSTEM;
   if (upper in SYSTEM_FIELDS) return FieldType.SYSTEM;
+  // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py. Ver lang-section.ts: las marcas no son campos.
+  if (/^LANG-(SECTION\s|END$)/.test(upper)) return FieldType.LANG;
   // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py. Ver page-break.ts.
   if (esPageBreak(content)) return FieldType.PAGE_BREAK;
   // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py. Ver word-style.ts.
