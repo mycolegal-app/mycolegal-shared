@@ -451,7 +451,7 @@ export function checkReqCatalogo(fields: ParsedField[], catalogo: CatalogoReq): 
 
     for (const e of enlaces) {
       for (const r of e.req) {
-        if (r.rol && r.rol !== '*' && !catalogo.rol(r.rol)) {
+        if (r.rol && r.rol !== '*' && r.rol !== 'TODOS' && !catalogo.rol(r.rol)) {
           avisar('W909', `@${r.rol}${e.donde} no es un rol del catálogo.`);
         }
         if (!r.ref) continue;
