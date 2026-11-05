@@ -139,6 +139,14 @@ export function esquemaDeCampos(
   for (const f of analizados) {
     if (f.name && f.inputDescription && !preguntaDe.has(f.name)) preguntaDe.set(f.name, f.inputDescription);
   }
+  // Y las opciones, igual. El campo nace con su primera aparición, que puede ser un uso pintado o un `DECLARE` sin ellas:
+  // `ESTADO_CIVIL_TESTADOR` se imprime en la comparecencia antes de su `DECLARE … :INPUT(…|soltero,soltera,…)` del VAR, y
+  // llegaba a la pantalla como texto libre, en el que una errata no entra en ninguna condición. Medido el 5-nov-2026 en
+  // `_PROD`: 28 campos, en 161 de los 171 esquemas (visto con el porqué de cada pregunta de Redactor).
+  const opcionesDe = new Map<string, string[]>();
+  for (const f of analizados) {
+    if (f.name && f.inputOptions?.length && !opcionesDe.has(f.name)) opcionesDe.set(f.name, f.inputOptions);
+  }
   for (const f of analizados) {
     if (!f.name || (!f.req?.length && !f.doc?.length)) continue;
     if (!reqDocDe.has(f.name)) reqDocDe.set(f.name, { req: f.req, doc: f.doc });
@@ -167,9 +175,11 @@ export function esquemaDeCampos(
       // Un `DECLARE X:INPUT(desc|a,b)` guarda la lista en `inputOptions`, igual que
       // el INPUT pintado: sin esto, 363 condiciones de la biblioteca llegaban a la
       // pantalla como texto libre y a la IA sin «valores admitidos».
-      opciones: esInput || f.inputOptions?.length
-        ? [...(f.inputOptions ?? [])]
-        : [...(f.extractionOptions ?? [])],
+      opciones: opcionesDe.has(nombre)
+        ? [...opcionesDe.get(nombre)!]
+        : esInput
+          ? []
+          : [...(f.extractionOptions ?? [])],
       instruccion: f.declareInstruction || f.inputDescription || instrucciones[nombre] || null,
       porDefecto: f.inputDefault || f.declareValue || null,
       esArray: Boolean(f.isArray),

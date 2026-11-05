@@ -63,6 +63,16 @@ describe('esquemaDeCampos', () => {
     expect(c?.instruccion).toBe('El precio en euros, sin símbolo');
   });
 
+  it('las opciones salen de su declaración aunque el campo se imprima antes', () => {
+    const c = esquemaDeCampos('{{ESTADO}}\n{{DECLARE ESTADO:INPUT(¿Estado civil?|soltero,casado)}}\n{{IF ESTADO=="casado"}}x{{ENDIF}}').campos.find((x) => x.nombre === 'ESTADO');
+    expect(c?.opciones).toEqual(['soltero', 'casado']);
+  });
+
+  it('las opciones salen de la declaración que las trae, aunque otra anterior no las tenga', () => {
+    const c = esquemaDeCampos('{{DECLARE USO}}\n{{USO}}\n{{DECLARE USO:INPUT(¿Uso?|Vivienda,Local)}}').campos.find((x) => x.nombre === 'USO');
+    expect(c?.opciones).toEqual(['Vivienda', 'Local']);
+  });
+
   it('un DECLARE con OPTIONS deja la lista en `opciones`, no pegada a la instrucción', () => {
     // El motor de referencia prefiere `declare_instruction` sobre la cadena
     // compuesta de `extract_field_instructions`, así que la restricción viaja
