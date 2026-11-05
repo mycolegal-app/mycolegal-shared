@@ -2,6 +2,13 @@ import { describe, it, expect } from "vitest";
 import { normalizarLatex, renderMarkdown } from "./markdown";
 
 describe("normalizarLatex", () => {
+  it("#48 — desmonta comandos anidados y las fórmulas sin comandos de letras", () => {
+    expect(normalizarLatex("104.000 × 51 % = $\\mathbf{53.040,00\\,\\text{€}}$")).toBe("104.000 × 51 % = 53.040,00 €");
+    expect(normalizarLatex("es del 51 % ($100\\,\\% - 49\\,\\%$).")).toBe("es del 51 % (100 % - 49 %).");
+    expect(normalizarLatex("total \\mathbf{\\text{53.040,00 €}}")).toBe("total 53.040,00 €");
+    expect(normalizarLatex("entre $5 y $6")).toBe("entre $5 y $6");
+  });
+
   it("pasa a texto plano las cifras con LaTeX que escribe el Revisor", () => {
     expect(normalizarLatex("suma ($500,00\\ \\text{€} + 47.500,00\\ \\text{€} = 48.000,00\\ \\text{€}$) coincide"))
       .toBe("suma (500,00 € + 47.500,00 € = 48.000,00 €) coincide");

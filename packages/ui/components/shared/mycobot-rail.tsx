@@ -394,19 +394,31 @@ export function MycoBotRail({
    * citadas y el aviso de que la respuesta es de IA — lo mismo que se ve en
    * pantalla, porque lo que acaba en papel se archiva.
    */
-  const printAnswer = useCallback(
-    (idx: number, m: Msg) => {
-      const pregunta = idx > 0 && messages[idx - 1]?.role === "user" ? messages[idx - 1].text : "";
+  // #47 — Un bloque por pregunta y respuesta: una sola para el botón de cada respuesta, todas
+  // para «Imprimir conversación». Citas y avisos van con su respuesta, que es a la que se refieren.
+  const imprimir = useCallback(
+    (bloques: { pregunta: string; m: Msg }[]) => {
       const esc = (x: string) =>
         x.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-      const citas = (m.citas ?? [])
-        .map((c, n) => `<li><span class="n">[${n + 1}]</span> ${esc(c.titulo || c.referenciaBoe || "")}</li>`)
+      const cuerpo = bloques
+        .map(({ pregunta, m }) => {
+          const citas = (m.citas ?? [])
+            .map((c, n) => `<li><span class="n">[${n + 1}]</span> ${esc(c.titulo || c.referenciaBoe || "")}</li>`)
+            .join("");
+          const ayuda = (m.citasAyuda ?? [])
+            .map((c) => `<li>${esc(c.title || c.section || "")}</li>`)
+            .join("");
+          return `<section>
+  ${pregunta ? `<div class="preg">${esc(pregunta)}</div>` : ""}
+  ${renderMarkdown(m.text)}
+  ${citas ? `<div class="fuentes"><div class="tit">${esc(t("ui.mycobot.sources"))}</div><ul>${citas}</ul></div>` : ""}
+  ${ayuda ? `<div class="fuentes"><ul>${ayuda}</ul></div>` : ""}
+</section>`;
+        })
         .join("");
-      const ayuda = (m.citasAyuda ?? [])
-        .map((c) => `<li>${esc(c.title || c.section || "")}</li>`)
-        .join("");
+      const titulo = bloques[0]?.pregunta;
       const html = `<!doctype html><html lang="es"><head><meta charset="utf-8">
-<title>${esc(pregunta ? pregunta.slice(0, 80) : "MycoBot")}</title>
+<title>${esc(titulo ? titulo.slice(0, 80) : "MycoBot")}</title>
 <style>
   @page{size:A4;margin:18mm 16mm}
   body{margin:0;font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;color:#1e293b;font-size:11pt;line-height:1.55}
@@ -422,12 +434,10 @@ export function MycoBotRail({
   .fuentes .tit{font-weight:700;margin-bottom:4px}
   .fuentes .n{color:#0e7490;font-weight:700}
   .disc{color:#94a3b8;font-size:8.5pt;font-style:italic;margin-top:16px}
+  section+section{margin-top:22px;border-top:1px solid #e2e8f0;padding-top:16px}
 </style></head><body>
   <div class="brand">MycoBot</div>
-  ${pregunta ? `<div class="preg">${esc(pregunta)}</div>` : ""}
-  ${renderMarkdown(m.text)}
-  ${citas ? `<div class="fuentes"><div class="tit">${esc(t("ui.mycobot.sources"))}</div><ul>${citas}</ul></div>` : ""}
-  ${ayuda ? `<div class="fuentes"><ul>${ayuda}</ul></div>` : ""}
+  ${cuerpo}
   <p class="disc">${esc(t("ui.mycobot.disclaimer"))}</p>
 </body></html>`;
 
@@ -453,8 +463,23 @@ export function MycoBotRail({
       doc.write(html);
       doc.close();
     },
-    [messages, t],
+    [t],
   );
+
+  const preguntaDe = useCallback(
+    (idx: number) => (idx > 0 && messages[idx - 1]?.role === "user" ? messages[idx - 1].text : ""),
+    [messages],
+  );
+  const printAnswer = useCallback(
+    (idx: number, m: Msg) => imprimir([{ pregunta: preguntaDe(idx), m }]),
+    [imprimir, preguntaDe],
+  );
+  const printConversation = useCallback(() => {
+    const bloques = messages.flatMap((m, i) =>
+      m.role === "user" || !m.text.trim() ? [] : [{ pregunta: preguntaDe(i), m }],
+    );
+    if (bloques.length > 0) imprimir(bloques);
+  }, [messages, imprimir, preguntaDe]);
 
   // «Reportar esta respuesta» (PLAN_TECNICO_IA_RESPONSABLE §5, art. 27 del Código):
   // abre el IncidentReporter montado en el app-shell con la conversación como
@@ -1766,6 +1791,18 @@ export function MycoBotRail({
             >
               <ScrollText className="h-[18px] w-[18px]" />
             </button>
+            )}
+            {messages.some((m) => m.role !== "user" && m.text.trim()) && (
+              <button
+                type="button"
+                onClick={printConversation}
+                data-testid="mycobot-imprimir-conversacion"
+                aria-label={t("ui.mycobot.printConversation")}
+                title={t("ui.mycobot.printConversation")}
+                className="rounded p-1 hover:bg-white/10"
+              >
+                <Printer className="h-[18px] w-[18px]" />
+              </button>
             )}
             <button
               type="button"

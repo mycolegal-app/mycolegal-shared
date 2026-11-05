@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Clock,
   Download,
+  Contact,
   Hourglass,
   ListChecks,
   MoreHorizontal,
@@ -262,6 +263,11 @@ function BotonQuitarBloqueo({ label, onQuitar }: { label: string; onQuitar: () =
       ✕ {label}
     </button>
   );
+}
+
+/** #1079 — `https://legifirma.test.mycolegal.app` → `https://notaria.test.mycolegal.app/contactos`. */
+export function urlContactosNotaria(origen: string): string {
+  return `${origen.replace(/^(https?:\/\/)[^.]+/, "$1notaria")}/contactos`;
 }
 
 export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
@@ -611,7 +617,9 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
     }
     let cancel = false;
     const id = setTimeout(() => {
-      fetch(`/api/catalogs/clientes?search=${encodeURIComponent(contBusqueda.trim())}&pageSize=8`)
+      // #1079 — Por la API de la agenda, que las demás apps reenvían a Notaría: `/api/catalogs/clientes`
+      // no existe en LegiFirma, Archivo ni Consultor y allí esta búsqueda nunca encontraba a nadie.
+      fetch(`${apiBase}/agenda/contactos?search=${encodeURIComponent(contBusqueda.trim())}&pageSize=8`)
         .then((r) => (r.ok ? r.json() : null))
         .then((j) => {
           if (!cancel && Array.isArray(j?.data)) setContResultados(j.data);
@@ -1325,6 +1333,16 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
                 label: t("agendaPage.cambiarDuraciones"),
                 icon: <Hourglass className="h-4 w-4" aria-hidden="true" />,
                 onClick: abrirDuraciones,
+              },
+              {
+                // #1079 — El directorio vive en Notaría; desde otra app se abre aparte.
+                key: "contactos",
+                label: t("agendaPage.abrirContactos"),
+                icon: <Contact className="h-4 w-4" aria-hidden="true" />,
+                onClick: () => {
+                  if (conExpedientes) window.location.href = "/contactos";
+                  else window.open(urlContactosNotaria(window.location.origin), "_blank");
+                },
               },
               {
                 key: "obligatorios",

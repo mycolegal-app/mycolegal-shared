@@ -27,9 +27,19 @@ marked.setOptions({ breaks: true, gfm: true });
 const CMD_TEXTO = /\\(?:text|mathrm|textrm|mathit|textbf|mathbf|operatorname)\{([^{}]*)\}/g;
 const SUPER: Record<string, string> = { "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹" };
 
+/** #48 — Anidados (`\\mathbf{53.040,00\\,\\text{€}}`): se desmontan de dentro afuera. */
+function quitarComandosTexto(f: string): string {
+  let antes: string;
+  let ahora = f;
+  do {
+    antes = ahora;
+    ahora = antes.replace(CMD_TEXTO, "$1");
+  } while (ahora !== antes);
+  return ahora;
+}
+
 function desmontarLatex(f: string): string {
-  return f
-    .replace(CMD_TEXTO, "$1")
+  return quitarComandosTexto(f)
     .replace(/\\frac\{([^{}]*)\}\{([^{}]*)\}/g, "$1/$2")
     .replace(/\^\{?(\d)\}?/g, (_, d: string) => SUPER[d] ?? `^${d}`)
     .replace(/\\(?:times|cdot)\b/g, "×")
@@ -52,11 +62,12 @@ export function normalizarLatex(text: string): string {
       // (\text, \frac…) o si no contiene espacios sin escapar.
       .replace(/\$\$([^$\n]+)\$\$|\$([^$\n]+)\$/g, (m, a?: string, b?: string) => {
         const inner = (a ?? b ?? "").trim();
-        const esFormula = /\\[A-Za-z]/.test(inner) || !/(^|[^\\])\s/.test(inner);
+        // #48 — `\\,` o `\\%` delatan una fórmula igual que un comando: `$100\\,\\% - 49\\,\\%$`.
+        const esFormula = /\\[A-Za-z,;:!%]/.test(inner) || !/(^|[^\\])\s/.test(inner);
         return esFormula ? desmontarLatex(inner) : m;
       })
       // Comandos sueltos fuera de $…$ (`\text{€}` sin delimitar).
-      .replace(CMD_TEXTO, "$1")
+      .replace(/.+/g, quitarComandosTexto)
   );
 }
 
