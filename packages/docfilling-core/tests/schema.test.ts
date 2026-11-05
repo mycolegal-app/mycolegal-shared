@@ -73,6 +73,11 @@ describe('esquemaDeCampos', () => {
     expect(c?.opciones).toEqual(['Vivienda', 'Local']);
   });
 
+  it('el tipo sale de su declaración aunque el campo se imprima antes', () => {
+    const c = esquemaDeCampos('{{PODER_FECHA}}\n{{DECLARE PODER_FECHA AS DATE:[La fecha del poder]}}').campos.find((x) => x.nombre === 'PODER_FECHA');
+    expect(c?.tipo).toBe('DATE');
+  });
+
   it('un DECLARE con OPTIONS deja la lista en `opciones`, no pegada a la instrucción', () => {
     // El motor de referencia prefiere `declare_instruction` sobre la cadena
     // compuesta de `extract_field_instructions`, así que la restricción viaja

@@ -147,6 +147,11 @@ export function esquemaDeCampos(
   for (const f of analizados) {
     if (f.name && f.inputOptions?.length && !opcionesDe.has(f.name)) opcionesDe.set(f.name, f.inputOptions);
   }
+  // Y el tipo, por lo mismo: `PODER_FECHA_*` se pedía como texto en vez de como fecha.
+  const tipoDe = new Map<string, string>();
+  for (const f of analizados) {
+    if (f.name && f.declareType && !tipoDe.has(f.name)) tipoDe.set(f.name, f.declareType);
+  }
   for (const f of analizados) {
     if (!f.name || (!f.req?.length && !f.doc?.length)) continue;
     if (!reqDocDe.has(f.name)) reqDocDe.set(f.name, { req: f.req, doc: f.doc });
@@ -169,7 +174,7 @@ export function esquemaDeCampos(
       categoria: f.fieldType,
       // Siempre canónico: quien consume el esquema no tiene que saber que el
       // biblioteca escribe BOOLEAN o STRING (ver `declare-types.ts`).
-      tipo: tipoCanonico(f.declareType),
+      tipo: tipoCanonico(tipoDe.get(nombre) ?? f.declareType),
       etiqueta: quien === QUIEN.MOTOR ? nombre : etiquetar(nombre),
       pregunta: preguntaDe.get(nombre) ?? null,
       // Un `DECLARE X:INPUT(desc|a,b)` guarda la lista en `inputOptions`, igual que
