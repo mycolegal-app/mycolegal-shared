@@ -48,8 +48,15 @@ function leerBloques(texto: string): { bloques: Bloque[]; errores: string[] } {
   return { bloques, errores };
 }
 
+/**
+ * Las marcas de lo que YA está en la lengua pedida (`marcar`), en su propio párrafo: quien traduce el resto se lo salta,
+ * porque es texto aprobado, y las quita. Nunca llegan a una escritura sin pasar por él.
+ */
+export const LENGUA_APROBADA_INICIO = '\u27EALANG-OK\u27EB';
+export const LENGUA_APROBADA_FIN = '\u27EA/LANG-OK\u27EB';
+
 /** El texto en esa lengua. `sinSeccion`: los bloques que no la tienen y salen en castellano (o en la primera). */
-export function resolverSeccionesDeLengua(texto: string, idioma: string = IDIOMA_POR_DEFECTO): { texto: string; sinSeccion: number } {
+export function resolverSeccionesDeLengua(texto: string, idioma: string = IDIOMA_POR_DEFECTO, opciones: { marcar?: boolean } = {}): { texto: string; sinSeccion: number } {
   RE_ABRE.lastIndex = 0;
   if (!RE_ABRE.test(texto)) return { texto, sinSeccion: 0 };
   const lengua = idioma.toLowerCase();
@@ -61,7 +68,8 @@ export function resolverSeccionesDeLengua(texto: string, idioma: string = IDIOMA
     const propia = b.secciones.find((s) => s.idioma === lengua);
     if (!propia) sinSeccion++;
     const elegida = propia ?? b.secciones.find((s) => s.idioma === IDIOMA_POR_DEFECTO) ?? b.secciones[0];
-    salida += texto.slice(desde, b.inicio) + (elegida?.texto ?? '');
+    const cuerpo = elegida?.texto ?? '';
+    salida += texto.slice(desde, b.inicio) + (propia && opciones.marcar ? `\n\n${LENGUA_APROBADA_INICIO}\n\n${cuerpo}\n\n${LENGUA_APROBADA_FIN}\n\n` : cuerpo);
     desde = b.fin;
   }
   return { texto: salida + texto.slice(desde), sinSeccion };

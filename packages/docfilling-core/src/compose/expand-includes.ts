@@ -100,6 +100,8 @@ export interface OpcionesExpansion {
   nombrarParrafos?: boolean;
   /** La lengua del trabajo para las secciones `{{LANG-SECTION xx}}` de cada fichero. Por defecto, castellano. */
   idioma?: string;
+  /** Marcar lo que sale de una sección en esa lengua, para no traducirlo (`LENGUA_APROBADA_*`). */
+  marcarLengua?: boolean;
 }
 
 /** La marca con el nombre del párrafo que abre un centinela (modo cobertura). */
@@ -128,7 +130,7 @@ export async function expandirIncludes(
   let sinSeccion = 0;
   // Fichero a fichero y antes de expandir: ver `lang-section.ts`.
   const enSuLengua = (t: string) => {
-    const r = resolverSeccionesDeLengua(t, opciones.idioma);
+    const r = resolverSeccionesDeLengua(t, opciones.idioma, { marcar: opciones.marcarLengua });
     sinSeccion += r.sinSeccion;
     return r.texto;
   };

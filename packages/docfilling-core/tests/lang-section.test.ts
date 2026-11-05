@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { auditarSeccionesDeLengua, composeWithDiagnostics, expandirIncludes, parseFields, repositorioDeMapa, resolverSeccionesDeLengua } from '../index';
+import { LENGUA_APROBADA_FIN, LENGUA_APROBADA_INICIO, auditarSeccionesDeLengua, composeWithDiagnostics, expandirIncludes, parseFields, repositorioDeMapa, resolverSeccionesDeLengua } from '../index';
 
 const PARR = `Antes.
 {{LANG-SECTION es}}
@@ -44,6 +44,22 @@ describe('{{LANG-SECTION}}', () => {
     const es = await expandirIncludes(raiz, repo, { centinelas: false });
     expect(es.texto).toBe('Hola.');
     expect(es.usados).toEqual(['PARR_A']);
+  });
+});
+
+describe('marcar lo que ya está en la lengua', () => {
+  const repo = repositorioDeMapa({ PARR_A: '{{LANG-SECTION es}}Hola.{{LANG-SECTION ca}}Hola, cat.{{LANG-END}}', PARR_B: 'Sólo castellano.' });
+  it('sólo lo que sale de una sección de esa lengua', async () => {
+    const r = await expandirIncludes('{{INCLUDE PARR_A}}\n\n{{INCLUDE PARR_B}}', repo, { idioma: 'ca', centinelas: false, marcarLengua: true });
+    const dentro = r.texto.slice(r.texto.indexOf(LENGUA_APROBADA_INICIO), r.texto.indexOf(LENGUA_APROBADA_FIN));
+    expect(dentro).toContain('Hola, cat.');
+    expect(dentro).not.toContain('Sólo castellano.');
+    expect(r.texto).toContain('Sólo castellano.');
+  });
+  it('sin sección en esa lengua, no marca', async () => {
+    const r = await expandirIncludes('{{INCLUDE PARR_A}}', repo, { idioma: 'gl', centinelas: false, marcarLengua: true });
+    expect(r.texto).toBe('Hola.');
+    expect(r.sinSeccion).toBe(1);
   });
 });
 

@@ -1,5 +1,9 @@
 # @mycolegal-app/docfilling-core
 
+## 0.1.36 — 4-nov-2026
+
+`expandirIncludes(…, { marcarLengua })`: lo que sale de una sección en la lengua pedida va entre `LENGUA_APROBADA_INICIO` y `LENGUA_APROBADA_FIN`, para que quien traduce el resto se lo salte.
+
 ## 0.1.35 — 4-nov-2026
 
 Secciones por lengua en un mismo fichero: `{{LANG-SECTION xx}}` … `{{LANG-END}}` (`src/syntax/lang-section.ts`). `expandirIncludes` las resuelve fichero a fichero con `opciones.idioma` (por defecto `es`) y cuenta en `sinSeccion` los bloques sin esa lengua; `auditarSeccionesDeLengua` comprueba que todas tengan la misma estructura. Las marcas no son campos, y un texto que llegue sin expandir sale en una sola lengua. Un fichero sin secciones no cambia. `tests/lang-section.test.ts`.
