@@ -1632,6 +1632,14 @@
     "coloresTitulo": "Agendaren koloreak",
     "coloresRestablecer": "Jatorrizkoak berrezarri",
     "cambiarDuraciones": "Iraupenak aldatu",
+    "cambiarObligatorios": "Derrigorrezko eremuak",
+    "agendadaPor": "Nork agendatu du",
+    "empleadoResponsable": "Langile arduraduna",
+    "guardarFaltaObligatorios": "Nork agendatu duen edo langile arduraduna falta da",
+    "obligatorios": {
+      "titulo": "Derrigorrezko eremuak",
+      "ayuda": "Markatzen dituzun motetan, hitzordu bakoitzak «Nork agendatu du» eta «Langile arduraduna» eskatuko ditu."
+    },
     "duraciones": {
       "titulo": "Hitzorduen iraupena",
       "ayuda": "Hitzordu bat sortzean proposatzen diren minutuak, eta amaiera-ordurik gabeko sinadura batek agendan hartzen dituenak. Hutsik = plataformaren balioa.",

@@ -16,6 +16,7 @@ import {
   Clock,
   Download,
   Hourglass,
+  ListChecks,
   MoreHorizontal,
   Palette,
   Printer,
@@ -91,6 +92,8 @@ type EventoForm = {
   // #629/#630 — solo para hitos de tipo FIRMA: a quién se le asigna y si va
   // señalada. Se envían siempre; el servidor los ignora si el tipo no es FIRMA.
   asignadoId: string;
+  // #1077 — quién apuntó la cita; se propone el usuario actual.
+  agendadoPorId: string;
   importante: boolean;
   inicio: string; // datetime-local
   fin: string; // datetime-local
@@ -382,6 +385,37 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
       .catch(() => {});
   }, []);
 
+  // #1077 — Tipos de cita que exigen «Agendada por» y «Empleado responsable», por
+  // notaría. Si no se puede leer, no se exige nada aquí; el servidor decide al guardar.
+  const [obligatorios, setObligatorios] = useState<{ tipos: string[]; yo: string | null }>({ tipos: [], yo: null });
+  const [obligatoriosForm, setObligatoriosForm] = useState<string[] | null>(null);
+  useEffect(() => {
+    fetch(`${apiBase}/agenda/campos-obligatorios`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => { if (j?.data) setObligatorios(j.data); })
+      .catch(() => {});
+  }, []);
+
+  async function guardarObligatorios() {
+    if (!obligatoriosForm) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`${apiBase}/agenda/campos-obligatorios`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tipos: obligatoriosForm }),
+      });
+      const j = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(j?.error?.message ?? t("agendaPage.errGuardar"));
+      setObligatorios(j.data);
+      setObligatoriosForm(null);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   /** Minutos por defecto de un tipo de cita: los de la notaría, o los de la plataforma. */
   function minutosTipo(tipo: EventoForm["tipo"]): number {
     const k = tipo.toLowerCase();
@@ -642,6 +676,7 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
       esSalida: false,
       lugar: "",
       asignadoId: "",
+      agendadoPorId: obligatorios.yo ?? "",
       importante: false,
       expedienteVinculadoId: null,
       expedienteVinculadoRef: null,
@@ -789,6 +824,7 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
       esSalida: ev.meta?.esSalida === true,
       lugar: (ev.meta?.lugar as string | null) ?? "",
       asignadoId: "",
+      agendadoPorId: obligatorios.yo ?? "",
       importante: false,
       expedienteVinculadoId: expedienteId,
       expedienteVinculadoRef: (ev.meta?.expedienteRef as string | null) ?? null,
@@ -817,6 +853,7 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
       // #629/#630 — al reabrir una firma hay que recuperar a quién está
       // asignada y si va señalada, o editarla las borraría sin querer.
       asignadoId: (ev.meta?.asignadoId as string | null) ?? "",
+      agendadoPorId: (ev.meta?.agendadoPorId as string | null) ?? "",
       importante: ev.meta?.importante === true,
       // #672 — si de esta cita ya salió un expediente, el diálogo lo enseña en
       // vez de volver a ofrecer crearlo.
@@ -826,6 +863,9 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
       firmaExistente: false,
     });
   }
+
+  const citaExigeCampos = form?.modo === "hito" && obligatorios.tipos.includes(form.tipo);
+  const faltanCamposCita = citaExigeCampos && (!form?.agendadoPorId || !form?.asignadoId);
 
   async function guardarEvento() {
     if (!form) return;
@@ -884,6 +924,7 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
           lugar: form.lugar.trim() || null,
           // #629/#630 — el servidor los descarta si el tipo no es FIRMA.
           asignadoId: form.asignadoId || null,
+          agendadoPorId: form.agendadoPorId || null,
           importante: form.importante,
           // #964 — vínculo a un expediente existente, solo si se ha cambiado aquí.
           ...(form.id && form.vinculoCambiado ? { expedienteId: form.expedienteVinculadoId } : {}),
@@ -1285,6 +1326,12 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
                 icon: <Hourglass className="h-4 w-4" aria-hidden="true" />,
                 onClick: abrirDuraciones,
               },
+              {
+                key: "obligatorios",
+                label: t("agendaPage.cambiarObligatorios"),
+                icon: <ListChecks className="h-4 w-4" aria-hidden="true" />,
+                onClick: () => setObligatoriosForm([...obligatorios.tipos]),
+              },
             ]}
           />
         </div>
@@ -1470,6 +1517,51 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
 
       {/* M-20 (#706) — Diálogo de duraciones, junto a los colores. Cada tipo
           enseña los minutos de la plataforma como marcador: vacío = esos. */}
+      {/* #1077 — Qué tipos de cita exigen quién la agendó y quién la lleva. */}
+      {obligatoriosForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <h3 className="mb-1 text-lg font-semibold">{t("agendaPage.obligatorios.titulo")}</h3>
+            <p className="mb-3 text-xs text-gray-500">{t("agendaPage.obligatorios.ayuda")}</p>
+            <div className="space-y-2">
+              {([
+                ["CONSULTA", "agendaPage.tipoConsulta"],
+                ["REUNION", "agendaPage.tipoReunion"],
+                ["FIRMA", "agendaPage.tipoFirma"],
+                ["OTRO", "agendaPage.tipoOtro"],
+              ] as const).map(([tipo, etiqueta]) => (
+                <label key={tipo} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    data-obligatorio={tipo}
+                    checked={obligatoriosForm.includes(tipo)}
+                    onChange={(e) =>
+                      setObligatoriosForm(
+                        e.target.checked ? [...obligatoriosForm, tipo] : obligatoriosForm.filter((x) => x !== tipo),
+                      )
+                    }
+                  />
+                  {t(etiqueta)}
+                </label>
+              ))}
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" onClick={() => setObligatoriosForm(null)} className="rounded-md border px-4 py-2 text-sm">
+                {t("common.cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={guardarObligatorios}
+                disabled={saving}
+                className="rounded-md bg-cyan-600 px-4 py-2 text-sm font-medium text-white hover:bg-cyan-700 disabled:opacity-50"
+              >
+                {saving ? t("common.saving") : t("common.save")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {duracionesForm && duraciones && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
@@ -2123,12 +2215,46 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
                     </select>
                   </div>
 
+                  {/* #1077 — Si la notaría los exige en este tipo de cita. */}
+                  {citaExigeCampos && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="mb-1 block text-sm font-medium">{t("agendaPage.agendadaPor")} *</label>
+                        <select
+                          data-agendada-por
+                          value={form.agendadoPorId}
+                          onChange={(e) => setForm({ ...form, agendadoPorId: e.target.value })}
+                          className="w-full rounded-md border px-3 py-2 text-sm"
+                        >
+                          <option value="">{t("agendaPage.sinAsignar")}</option>
+                          {empleados.map((e) => (
+                            <option key={e.id} value={e.id}>{e.displayName}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium">{t("agendaPage.empleadoResponsable")} *</label>
+                        <select
+                          data-empleado-responsable
+                          value={form.asignadoId}
+                          onChange={(e) => setForm({ ...form, asignadoId: e.target.value })}
+                          className="w-full rounded-md border px-3 py-2 text-sm"
+                        >
+                          <option value="">{t("agendaPage.sinAsignar")}</option>
+                          {empleados.map((e) => (
+                            <option key={e.id} value={e.id}>{e.displayName}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  )}
+
                   {/* #629/#630 — Una firma apuntada en la agenda lleva empleado
                       asignado y puede ir señalada. Solo aparece al elegir
                       Firma: en una consulta o una reunión no significan nada. */}
                   {form.tipo === "FIRMA" && (
                     <div className="space-y-2 rounded-md border border-cyan-200 bg-cyan-50/50 p-3">
-                      <div>
+                      {!citaExigeCampos && (<div>
                         <label className="mb-1 block text-sm font-medium">
                           {t("agendaPage.empleadoAsignado")}
                         </label>
@@ -2144,7 +2270,7 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
                             </option>
                           ))}
                         </select>
-                      </div>
+                      </div>)}
                       {/* Los dos checks juntos, como pedía: dónde se firma y si
                           va señalada. El de salida es el mismo de #626; aquí
                           sube a esta caja para no partir la lista en dos. */}
@@ -2382,7 +2508,7 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
                     (form.modo === "firma"
                       ? !form.expedienteId
                       : form.modo === "hito"
-                        ? !form.titulo.trim()
+                        ? !form.titulo.trim() || faltanCamposCita
                         : false)
                   }
                   // #794 — el botón apagado explica qué le falta.
@@ -2391,7 +2517,9 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
                       ? t("agendaPage.guardarFaltaExpediente")
                       : form.modo === "hito" && !form.titulo.trim()
                         ? t("agendaPage.guardarFaltaTitulo")
-                        : undefined
+                        : faltanCamposCita
+                          ? t("agendaPage.guardarFaltaObligatorios")
+                          : undefined
                   }
                   className="rounded-md bg-cyan-600 px-4 py-2 text-sm font-medium text-white hover:bg-cyan-700 disabled:opacity-50"
                 >

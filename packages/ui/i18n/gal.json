@@ -1632,6 +1632,14 @@
     "coloresTitulo": "Cores da axenda",
     "coloresRestablecer": "Restablecer as de fábrica",
     "cambiarDuraciones": "Cambiar duracións",
+    "cambiarObligatorios": "Campos obrigatorios",
+    "agendadaPor": "Axendada por",
+    "empleadoResponsable": "Empregado responsable",
+    "guardarFaltaObligatorios": "Falta quen a axendou ou o empregado responsable",
+    "obligatorios": {
+      "titulo": "Campos obrigatorios",
+      "ayuda": "Nos tipos que marques, cada cita esixirá «Axendada por» e «Empregado responsable»."
+    },
     "duraciones": {
       "titulo": "Duración das citas",
       "ayuda": "Minutos que se propoñen ao crear unha cita e os que ocupa na axenda unha sinatura sen hora de fin. Baleiro = o valor da plataforma.",

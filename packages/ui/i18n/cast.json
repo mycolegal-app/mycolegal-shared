@@ -1633,6 +1633,14 @@
     "coloresTitulo": "Colores de la agenda",
     "coloresRestablecer": "Restablecer los de fábrica",
     "cambiarDuraciones": "Cambiar duraciones",
+    "cambiarObligatorios": "Campos obligatorios",
+    "agendadaPor": "Agendada por",
+    "empleadoResponsable": "Empleado responsable",
+    "guardarFaltaObligatorios": "Falta quién la agendó o el empleado responsable",
+    "obligatorios": {
+      "titulo": "Campos obligatorios",
+      "ayuda": "En los tipos que marques, cada cita exigirá «Agendada por» y «Empleado responsable»."
+    },
     "duraciones": {
       "titulo": "Duración de las citas",
       "ayuda": "Minutos que se proponen al crear una cita y los que ocupa en la agenda una firma sin hora de fin. Vacío = el valor de la plataforma.",

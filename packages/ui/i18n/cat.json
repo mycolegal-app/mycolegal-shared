@@ -1633,6 +1633,14 @@
     "coloresTitulo": "Colors de l'agenda",
     "coloresRestablecer": "Restablir els de fàbrica",
     "cambiarDuraciones": "Canviar durades",
+    "cambiarObligatorios": "Camps obligatoris",
+    "agendadaPor": "Agendada per",
+    "empleadoResponsable": "Empleat responsable",
+    "guardarFaltaObligatorios": "Falta qui l'ha agendat o l'empleat responsable",
+    "obligatorios": {
+      "titulo": "Camps obligatoris",
+      "ayuda": "En els tipus que marquis, cada cita exigirà «Agendada per» i «Empleat responsable»."
+    },
     "duraciones": {
       "titulo": "Durada de les cites",
       "ayuda": "Minuts que es proposen en crear una cita i els que ocupa a l'agenda una signatura sense hora de fi. Buit = el valor de la plataforma.",
