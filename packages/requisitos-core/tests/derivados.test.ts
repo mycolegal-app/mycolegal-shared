@@ -88,3 +88,39 @@ describe('resolverRequisitos con datos derivados', () => {
     expect(d.map((x) => x.valor)).toEqual(['EXENTO_TEMPORAL']);
   });
 });
+
+describe('un tramo en duda pregunta lo que falta en él (0.3.13)', () => {
+  const r25 = regla({ codigo: 'R25', condiciones: [cond('ACTO', 'SITUACION_SEGURO_DECENAL', 'EQ', 'OBLIGATORIO', { tipoDato: 'LISTA' })] });
+  const conDef: DerivadoDef = {
+    ...SEGURO,
+    tramos: SEGURO.tramos.map((t) => ({ ...t, si: t.si.map((c) => ({ ...c, def: { label: c.fact, tipoDato: 'BOOL', opciones: null, fuentePreferente: null } })) })),
+  };
+  const repoCon = (defs: DerivadoDef[]): RepositorioRequisitos => ({
+    ...repo({ reglas: [r25], tiposObjeto: TIPOS_OBJETO, tiposSujeto: TIPOS_SUJETO }),
+    async derivados() { return defs; },
+  });
+
+  it('persona física sin contestar la autopromoción: se pregunta la autopromoción, de ella, y no la situación', async () => {
+    const r = await resolverRequisitos(repoCon([conDef]), '0405', { objetos: [casa(5)], sujetos: [pf()] }, { preguntasPorSujeto: true });
+    expect(r.preguntas.map((p) => p.fact)).toEqual(['SUJETO.ES_AUTOPROMOTOR_USO_PROPIO']);
+    expect(r.preguntas[0].sujetoId).toBe('s');
+    expect(r.preguntas[0].bloquea).toEqual(['R25']);
+    expect(r.condicionados[0].faltan).toEqual(['SUJETO.ES_AUTOPROMOTOR_USO_PROPIO']);
+  });
+
+  it('sin la antigüedad, se pregunta la antigüedad del bien', async () => {
+    const r = await resolverRequisitos(repoCon([conDef]), '0405', { objetos: [casa(undefined)], sujetos: [pf()] }, { preguntasPorSujeto: true });
+    expect(r.preguntas.map((p) => [p.fact, p.objetoId])).toEqual([['OBJETO.ANTIGUEDAD_ANOS', 'b']]);
+  });
+
+  it('contestada la situación, manda y no se pregunta nada', async () => {
+    const r = await resolverRequisitos(repoCon([conDef]), '0405', { acto: { SITUACION_SEGURO_DECENAL: 'OBLIGATORIO' }, objetos: [casa(5)], sujetos: [pf()] });
+    expect(r.preguntas).toEqual([]);
+    expect(r.firmes.map((x) => x.codigo)).toEqual(['R25']);
+  });
+
+  it('sin saber cómo preguntar lo del tramo (repositorio sin def), se pregunta el derivado, como en 0.3.12', async () => {
+    const r = await resolverRequisitos(repoCon([SEGURO]), '0405', { objetos: [casa(5)], sujetos: [pf()] });
+    expect(r.preguntas.map((p) => p.fact)).toEqual(['ACTO.SITUACION_SEGURO_DECENAL']);
+  });
+});

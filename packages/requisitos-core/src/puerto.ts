@@ -180,7 +180,12 @@ export interface DerivadoDef {
   tramos: {
     valor: unknown;
     porQue: string | null;
-    si: { fact: string; op: string; valor: unknown; scopeRol: string | null; paraTipo: string | null }[];
+    si: {
+      fact: string; op: string; valor: unknown; scopeRol: string | null; paraTipo: string | null;
+      /** Cómo se pregunta el dato si el tramo queda en duda (0.3.13): con él se pregunta lo que falta
+       *  en el tramo y no el dato derivado. Sin él, se pregunta el derivado, como en 0.3.12. */
+      def?: { label: string; tipoDato: string; opciones: unknown; fuentePreferente: string | null };
+    }[];
   }[];
 }
 

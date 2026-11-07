@@ -236,14 +236,20 @@ export function crearRepositorioRequisitos(client: ClienteGolden): RepositorioRe
       const citados = [...new Set(filas.flatMap((f) => (Array.isArray(f.deriva) ? f.deriva as Tramo[] : [])
         .flatMap((t) => (t.si ?? []).map((c) => String(c.fact ?? '')))))].filter(Boolean);
       const defs = citados.length ? await client.$queryRawUnsafe(
-        'SELECT "ambito", "codigo", "sujetoTipoCodigo" AS suj, "objetoTipoCodigo" AS obj FROM "atributo_defs_global" WHERE ("ambito" || \'.\' || "codigo") = ANY($1)',
-        citados) as { ambito: string; codigo: string; suj: string | null; obj: string | null }[] : [];
+        'SELECT "ambito", "codigo", "sujetoTipoCodigo" AS suj, "objetoTipoCodigo" AS obj, "label", "tipoDato", "opciones", "fuentePreferente" FROM "atributo_defs_global" WHERE ("ambito" || \'.\' || "codigo") = ANY($1)',
+        citados) as { ambito: string; codigo: string; suj: string | null; obj: string | null; label: string; tipoDato: string; opciones: unknown; fuentePreferente: string | null }[] : [];
       const tipos = new Map<string, Set<string | null>>();
       for (const d of defs) {
         const k = `${d.ambito}.${d.codigo}`;
         (tipos.get(k) ?? tipos.set(k, new Set()).get(k)!).add(d.ambito === 'SUJETO' ? d.suj : d.ambito === 'OBJETO' ? d.obj : null);
       }
       const paraTipo = (fact: string) => { const t = tipos.get(fact); return t && t.size === 1 ? [...t][0] : null; };
+      // Cómo se pregunta cada dato si su tramo queda en duda: la primera fila, que es la misma pregunta.
+      const comoPreguntar = new Map<string, { label: string; tipoDato: string; opciones: unknown; fuentePreferente: string | null }>();
+      for (const d of defs) {
+        const k = `${d.ambito}.${d.codigo}`;
+        if (!comoPreguntar.has(k)) comoPreguntar.set(k, { label: d.label, tipoDato: d.tipoDato, opciones: d.opciones ?? null, fuentePreferente: d.fuentePreferente ?? null });
+      }
       const vistos = new Set<string>();
       return filas.flatMap((f): DerivadoDef[] => {
         const fact = `${f.ambito}.${f.codigo}`;
@@ -257,6 +263,7 @@ export function crearRepositorioRequisitos(client: ClienteGolden): RepositorioRe
             si: (t.si ?? []).map((c) => ({
               fact: String(c.fact), op: String(c.op), valor: c.valor,
               scopeRol: typeof c.scopeRol === 'string' ? c.scopeRol : null, paraTipo: paraTipo(String(c.fact)),
+              ...(comoPreguntar.has(String(c.fact)) ? { def: comoPreguntar.get(String(c.fact))! } : {}),
             })),
           })),
         }];

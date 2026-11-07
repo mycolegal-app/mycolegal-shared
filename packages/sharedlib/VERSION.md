@@ -1,6 +1,11 @@
 # mycolegal-sharedlib — Changelog
 
-## (siguiente) — el adaptador de requisitos sirve los datos derivados (2026-11-07)
+## (siguiente) — los derivados llevan cómo preguntar cada dato de sus tramos (2026-11-07)
+
+`derivados()` añade a cada condición de un tramo su `def` (rótulo, tipo, opciones, fuente) de
+`atributo_defs_global`, para que `requisitos-core` 0.3.13 pregunte lo que falta en el tramo.
+
+## 0.12.38 — el adaptador de requisitos sirve los datos derivados (2026-11-07)
 
 `requisitos-repo.ts` implementa `derivados()` del puerto de `requisitos-core` 0.3.12: lee
 `atributo_defs_global.deriva` por SQL (`$queryRawUnsafe`, opcional en `ClienteGolden`), porque los

@@ -1,5 +1,12 @@
 # @mycolegal-app/requisitos-core
 
+## 0.3.13 — un derivado en duda pregunta lo que falta en su tramo (7-nov-2026)
+
+- Si un tramo para porque falta un dato, se pregunta ESE dato (la autopromoción del declarante, la antigüedad
+  del bien), con su papel y su interviniente o bien, y no el dato derivado (Catálogo, `vocabulario/README.md`).
+  Lo contestado del derivado sigue mandando. Hace falta que el repositorio sirva cómo preguntar cada dato
+  (`DerivadoDef.tramos[].si[].def`, opcional); sin él, se pregunta el derivado, como en 0.3.12.
+
 ## 0.3.12 — datos derivados (7-nov-2026)
 
 - **`derivar` y `derivarHechos`**: un dato que el catálogo DERIVA de otros (`atributo_defs_global.deriva`,

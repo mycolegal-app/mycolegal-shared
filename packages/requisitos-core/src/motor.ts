@@ -539,13 +539,37 @@ export function derivar(
   defs: DerivadoDef[],
   hechos: Hechos,
   presunciones: Record<string, unknown>,
-  ctx: {
-    esUn?: (tipo: string | null | undefined, exigido: string) => boolean;
-    esUnRol?: (rol: string | null | undefined, exigido: string) => boolean;
-    acompana?: (rol: string | null | undefined) => boolean;
-  } = {},
+  ctx: CtxDerivar = {},
 ): Derivado[] {
+  return derivarConDudas(defs, hechos, presunciones, ctx).derivados;
+}
+
+type CtxDerivar = {
+  esUn?: (tipo: string | null | undefined, exigido: string) => boolean;
+  esUnRol?: (rol: string | null | undefined, exigido: string) => boolean;
+  acompana?: (rol: string | null | undefined) => boolean;
+};
+
+/**
+ * El tramo en el que PARÓ un derivado: lo que falta en él es lo que hay que preguntar (Catálogo,
+ * 7-nov-2026: «que se pregunte lo que falta en ese tramo, no el dato derivado»). Si el oficial
+ * contesta directamente el derivado, manda lo contestado, como siempre.
+ */
+interface DudaDerivado {
+  si: DerivadoDef['tramos'][number]['si'];
+  faltan: string[];
+  faltanPorRol: string[];
+  faltanPorSujeto: string[];
+}
+
+function derivarConDudas(
+  defs: DerivadoDef[],
+  hechos: Hechos,
+  presunciones: Record<string, unknown>,
+  ctx: CtxDerivar = {},
+): { derivados: Derivado[]; dudas: Map<string, DudaDerivado> } {
   const out: Derivado[] = [];
+  const dudas = new Map<string, DudaDerivado>();
   let pres = presunciones;
   const ambitoDe = (fact: string) => fact.split('.')[0];
   for (const d of defs) {
@@ -558,7 +582,10 @@ export function derivar(
         fact: c.fact, operador: c.op, valor: c.valor, scopeRolCodigo: c.scopeRol ?? null, grupo: 0, paraTipo: c.paraTipo ?? null,
       }));
       const r = evaluar(conds, hechos, ambitoDe, pres, ctx.esUnRol, ctx.esUn, {}, ctx.acompana);
-      if (r.valor === null) break;
+      if (r.valor === null) {
+        dudas.set(d.fact, { si: t.si.filter((c) => c.fact !== d.fact), faltan: r.faltan, faltanPorRol: r.faltanPorRol, faltanPorSujeto: r.faltanPorSujeto });
+        break;
+      }
       if (r.valor === true) {
         out.push({ fact: d.fact, valor: t.valor, porQue: t.porQue ?? null });
         pres = { ...pres, [d.fact]: t.valor };
@@ -566,7 +593,7 @@ export function derivar(
       }
     }
   }
-  return out;
+  return { derivados: out, dudas };
 }
 
 /** `derivar` con las jerarquías del repositorio: para quien necesita lo derivado sin resolver el acto
@@ -756,7 +783,11 @@ export async function resolverRequisitos(
   const ambitoDe = (fact: string) => fact.split('.')[0];
 
   // 2 ter. Los datos DERIVADOS (catálogo 1.1.63): pesan más que el caso y menos que lo contestado.
-  const derivados = repo.derivados ? derivar(await repo.derivados(), hechos, presunciones, { esUn, esUnRol, acompana }) : [];
+  const { derivados, dudas } = repo.derivados
+    ? derivarConDudas(await repo.derivados(), hechos, presunciones, { esUn, esUnRol, acompana })
+    : { derivados: [] as Derivado[], dudas: new Map<string, DudaDerivado>() };
+  /** Un derivado en duda falta por lo que falta en su tramo (si se sabe cómo preguntarlo). */
+  const enDuda = (fact: string) => { const d = dudas.get(fact); return d && d.si.every((c) => c.def) ? d : undefined; };
   if (derivados.length) presunciones = { ...presunciones, ...Object.fromEntries(derivados.map((d) => [d.fact, d.valor])) };
 
   // Qué tipos de objeto declara el acto en conjunto. Un tipo «estrecha» si alguna otra
@@ -823,7 +854,7 @@ export async function resolverRequisitos(
     else if (porSujeto === false) diag.descartadasPorSujeto++;
     const valor = y(y(porCondicion.valor, porObjeto), porSujeto);
     const faltan = valor === null
-      ? [...porCondicion.faltan, ...(porObjeto === null ? [FACT_TIPO_OBJETO] : []), ...(porSujeto === null ? [FACT_TIPO_SUJETO] : [])]
+      ? [...new Set([...porCondicion.faltan.flatMap((f) => enDuda(f)?.faltan ?? [f]), ...(porObjeto === null ? [FACT_TIPO_OBJETO] : []), ...(porSujeto === null ? [FACT_TIPO_SUJETO] : [])])]
       : [];
     if (valor !== false && r.estado !== 'VALIDADA') diag.sinRevisionNotarial++;
 
@@ -874,18 +905,20 @@ export async function resolverRequisitos(
     else if (valor === true) firmes.push(resuelto);
     else {
       condicionados.push(resuelto);
-      for (const c of r.condiciones) {
-        const fact = `${c.atributoDef.ambito}.${c.atributoDef.codigo}`;
-        if (!faltan.includes(fact)) continue;
-        const rol = c.scopeRolCodigo ?? null;
+      // Una pregunta por condición que falta: la del hecho con su papel, o una por interviniente o bien.
+      const preguntar = (
+        fact: string, rol: string | null, ambito: string,
+        def: { label: string; tipoDato: string; opciones: unknown; fuentePreferente: string | null },
+        faltanPorRol: string[], faltanPorSujeto: string[],
+      ) => {
         // Esta condición en concreto (su hecho con su papel) es la que falta.
-        if (!porCondicion.faltanPorRol.includes(`${fact}@${rol ?? ''}`)) continue;
+        if (!faltanPorRol.includes(`${fact}@${rol ?? ''}`)) return;
         const nueva = (extra: Partial<Pregunta>): Pregunta => ({
           fact,
-          label: c.atributoDef.label,
-          tipoDato: c.atributoDef.tipoDato,
-          opciones: c.atributoDef.opciones,
-          fuentePreferente: c.atributoDef.fuentePreferente,
+          label: def.label,
+          tipoDato: def.tipoDato,
+          opciones: def.opciones,
+          fuentePreferente: def.fuentePreferente,
           bloquea: [],
           roles: [],
           ...(porRol || porInterviniente ? { rol } : {}),
@@ -899,18 +932,32 @@ export async function resolverRequisitos(
         };
         // Por interviniente o bien: a cada uno que no lo tiene, su pregunta.
         const prefijo = `${fact}@${rol ?? ''}#`;
-        const ids = porInterviniente ? porCondicion.faltanPorSujeto.filter((k) => k.startsWith(prefijo)).map((k) => k.slice(prefijo.length)) : [];
+        const ids = porInterviniente ? faltanPorSujeto.filter((k) => k.startsWith(prefijo)).map((k) => k.slice(prefijo.length)) : [];
         if (ids.length) {
-          const ambito = c.atributoDef.ambito;
           for (const id of ids) {
             const clave = `${fact}#${id}`;
             const suj = ambito === 'SUJETO' ? (hechos.sujetos ?? []).find((x) => x.id === id) : undefined;
             anotar(clave, preguntas.get(clave) ?? nueva(ambito === 'SUJETO' ? { sujetoId: id, rol: suj?.rol ?? null } : { objetoId: id, rol: null }));
           }
-          continue;
+          return;
         }
         const clave = porRol || porInterviniente ? `${fact}@${rol ?? ''}` : fact;
         anotar(clave, preguntas.get(clave) ?? nueva({}));
+      };
+      for (const c of r.condiciones) {
+        const fact = `${c.atributoDef.ambito}.${c.atributoDef.codigo}`;
+        // Un derivado que paró en un tramo: se pregunta lo que falta en ese tramo.
+        const duda = enDuda(fact);
+        if (duda) {
+          if (!porCondicion.faltan.includes(fact)) continue;
+          for (const x of duda.si) {
+            if (!duda.faltan.includes(x.fact)) continue;
+            preguntar(x.fact, x.scopeRol ?? null, x.fact.split('.')[0], x.def!, duda.faltanPorRol, duda.faltanPorSujeto);
+          }
+          continue;
+        }
+        if (!faltan.includes(fact)) continue;
+        preguntar(fact, c.scopeRolCodigo ?? null, c.atributoDef.ambito, c.atributoDef, porCondicion.faltanPorRol, porCondicion.faltanPorSujeto);
       }
       // Medio de pago y causa no tienen `AtributoDef` propio en todas las bases: la pregunta se
       // compone aquí con los valores que de verdad distinguen algo en este acto.
