@@ -786,6 +786,10 @@ export async function resolverRequisitos(
   const { derivados, dudas } = repo.derivados
     ? derivarConDudas(await repo.derivados(), hechos, presunciones, { esUn, esUnRol, acompana })
     : { derivados: [] as Derivado[], dudas: new Map<string, DudaDerivado>() };
+  // Datos que se preguntan por otro (catálogo 1.1.64): la antigüedad, por el año de terminación.
+  const preguntaPor = new Map((repo.preguntasPor ? await repo.preguntasPor() : []).map((p) => [p.fact, p]));
+  /** El dato que se pregunta de verdad por uno que falta. */
+  const porQuien = (fact: string) => preguntaPor.get(fact)?.por ?? fact;
   /** Un derivado en duda falta por lo que falta en su tramo (si se sabe cómo preguntarlo). */
   const enDuda = (fact: string) => { const d = dudas.get(fact); return d && d.si.every((c) => c.def) ? d : undefined; };
   if (derivados.length) presunciones = { ...presunciones, ...Object.fromEntries(derivados.map((d) => [d.fact, d.valor])) };
@@ -854,7 +858,7 @@ export async function resolverRequisitos(
     else if (porSujeto === false) diag.descartadasPorSujeto++;
     const valor = y(y(porCondicion.valor, porObjeto), porSujeto);
     const faltan = valor === null
-      ? [...new Set([...porCondicion.faltan.flatMap((f) => enDuda(f)?.faltan ?? [f]), ...(porObjeto === null ? [FACT_TIPO_OBJETO] : []), ...(porSujeto === null ? [FACT_TIPO_SUJETO] : [])])]
+      ? [...new Set([...porCondicion.faltan.flatMap((f) => enDuda(f)?.faltan ?? [f]).map(porQuien), ...(porObjeto === null ? [FACT_TIPO_OBJETO] : []), ...(porSujeto === null ? [FACT_TIPO_SUJETO] : [])])]
       : [];
     if (valor !== false && r.estado !== 'VALIDADA') diag.sinRevisionNotarial++;
 
@@ -913,12 +917,16 @@ export async function resolverRequisitos(
       ) => {
         // Esta condición en concreto (su hecho con su papel) es la que falta.
         if (!faltanPorRol.includes(`${fact}@${rol ?? ''}`)) return;
+        // Si el dato se pregunta por otro, se pregunta ése, del mismo interviniente o bien.
+        const por = preguntaPor.get(fact);
+        const preguntado = por?.por ?? fact;
+        const como = por?.def ?? def;
         const nueva = (extra: Partial<Pregunta>): Pregunta => ({
-          fact,
-          label: def.label,
-          tipoDato: def.tipoDato,
-          opciones: def.opciones,
-          fuentePreferente: def.fuentePreferente,
+          fact: preguntado,
+          label: como.label,
+          tipoDato: como.tipoDato,
+          opciones: como.opciones,
+          fuentePreferente: como.fuentePreferente,
           bloquea: [],
           roles: [],
           ...(porRol || porInterviniente ? { rol } : {}),
@@ -935,13 +943,13 @@ export async function resolverRequisitos(
         const ids = porInterviniente ? faltanPorSujeto.filter((k) => k.startsWith(prefijo)).map((k) => k.slice(prefijo.length)) : [];
         if (ids.length) {
           for (const id of ids) {
-            const clave = `${fact}#${id}`;
+            const clave = `${preguntado}#${id}`;
             const suj = ambito === 'SUJETO' ? (hechos.sujetos ?? []).find((x) => x.id === id) : undefined;
             anotar(clave, preguntas.get(clave) ?? nueva(ambito === 'SUJETO' ? { sujetoId: id, rol: suj?.rol ?? null } : { objetoId: id, rol: null }));
           }
           return;
         }
-        const clave = porRol || porInterviniente ? `${fact}@${rol ?? ''}` : fact;
+        const clave = porRol || porInterviniente ? `${preguntado}@${rol ?? ''}` : preguntado;
         anotar(clave, preguntas.get(clave) ?? nueva({}));
       };
       for (const c of r.condiciones) {
@@ -956,7 +964,7 @@ export async function resolverRequisitos(
           }
           continue;
         }
-        if (!faltan.includes(fact)) continue;
+        if (!faltan.includes(porQuien(fact))) continue;
         preguntar(fact, c.scopeRolCodigo ?? null, c.atributoDef.ambito, c.atributoDef, porCondicion.faltanPorRol, porCondicion.faltanPorSujeto);
       }
       // Medio de pago y causa no tienen `AtributoDef` propio en todas las bases: la pregunta se

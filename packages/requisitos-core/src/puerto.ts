@@ -168,6 +168,17 @@ export interface RepositorioRequisitos {
   /** Los datos que el catálogo DERIVA de otros (`atributo_defs_global.deriva`). OPCIONAL: sin él
    *  no se deriva nada, como hasta ahora. Ver `derivar` en `motor.ts`. */
   derivados?(): Promise<DerivadoDef[]>;
+
+  /** Datos que no se preguntan ellos mismos sino por otro (`atributo_defs_global.preguntaPor`, catálogo
+   *  1.1.64): la antigüedad de la obra se pregunta por su AÑO de terminación. OPCIONAL (0.3.14). */
+  preguntasPor?(): Promise<PreguntaPor[]>;
+}
+
+/** Un dato que se pregunta por otro del mismo ámbito (y del mismo interviniente o bien), con cómo se pregunta éste. */
+export interface PreguntaPor {
+  fact: string;
+  por: string;
+  def: { label: string; tipoDato: string; opciones: unknown; fuentePreferente: string | null };
 }
 
 /**

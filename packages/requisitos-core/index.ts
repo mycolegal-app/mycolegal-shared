@@ -41,6 +41,7 @@ export {
   type FilaTransversal,
   type AjustePresuncion,
   type DerivadoDef,
+  type PreguntaPor,
 } from './src/puerto';
 
 // Escenarios base (0.3.3): cuál toca y qué presume, con lo heredado de GLOBAL, familia y subfamilia.

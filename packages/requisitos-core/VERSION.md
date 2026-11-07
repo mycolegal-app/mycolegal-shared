@@ -1,5 +1,11 @@
 # @mycolegal-app/requisitos-core
 
+## 0.3.14 — un dato que se pregunta por otro (7-nov-2026)
+
+- `preguntasPor?()` en el puerto (OPCIONAL): un dato con `preguntaPor` en el catálogo (1.1.64) no se pregunta él,
+  sino el otro, del mismo interviniente o bien y con su rótulo y su tipo: la antigüedad de la obra, por su año
+  de terminación (el oficial sabe el año, no los años). También en `faltan`. Sin el método, como en 0.3.13.
+
 ## 0.3.13 — un derivado en duda pregunta lo que falta en su tramo (7-nov-2026)
 
 - Si un tramo para porque falta un dato, se pregunta ESE dato (la autopromoción del declarante, la antigüedad

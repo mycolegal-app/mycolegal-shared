@@ -25,7 +25,7 @@
 // sharedlib cuando sólo DocFilling la declara y la usa—, y el coste no es el
 // disco: un cambio incompatible en el motor podría romper el `npm install` de
 // trece apps que no lo tocan.
-import type { RepositorioRequisitos, ReglaGolden, NodoTipo, FilaEscenario, FilaTransversal, AjustePresuncion, DerivadoDef } from '@mycolegal-app/requisitos-core';
+import type { RepositorioRequisitos, ReglaGolden, NodoTipo, FilaEscenario, FilaTransversal, AjustePresuncion, DerivadoDef, PreguntaPor } from '@mycolegal-app/requisitos-core';
 import { ORIGEN_GOLDEN } from '@mycolegal-app/requisitos-core';
 
 // Se declara aquí y no se importa: `requisitos-core` lo exporta desde la versión de las dos
@@ -267,6 +267,31 @@ export function crearRepositorioRequisitos(client: ClienteGolden): RepositorioRe
             })),
           })),
         }];
+      });
+    },
+
+    // ── Preguntar un dato por otro (7-nov-2026, catálogo 1.1.64) ───────────────
+    async preguntasPor() {
+      if (!client.$queryRawUnsafe) return [];
+      let filas: { ambito: string; codigo: string; por: string }[];
+      try {
+        filas = await client.$queryRawUnsafe(
+          'SELECT DISTINCT "ambito", "codigo", "preguntaPor" AS por FROM "atributo_defs_global" WHERE "preguntaPor" IS NOT NULL');
+      } catch { return []; } // sin la columna: un entorno sin la migración `atributo_pregunta_por`
+      if (!filas.length) return [];
+      const destinos = [...new Set(filas.map((f) => f.por))];
+      const defs = await client.$queryRawUnsafe(
+        'SELECT "ambito", "codigo", "label", "tipoDato", "opciones", "fuentePreferente" FROM "atributo_defs_global" WHERE ("ambito" || \'.\' || "codigo") = ANY($1)',
+        destinos) as { ambito: string; codigo: string; label: string; tipoDato: string; opciones: unknown; fuentePreferente: string | null }[];
+      const comoPreguntar = new Map<string, PreguntaPor['def']>();
+      for (const d of defs) {
+        const k = `${d.ambito}.${d.codigo}`;
+        if (!comoPreguntar.has(k)) comoPreguntar.set(k, { label: d.label, tipoDato: d.tipoDato, opciones: d.opciones ?? null, fuentePreferente: d.fuentePreferente ?? null });
+      }
+      // Sin la definición del dato por el que se pregunta, no se sabe preguntarlo: se pregunta el original.
+      return filas.flatMap((f): PreguntaPor[] => {
+        const def = comoPreguntar.get(f.por);
+        return def ? [{ fact: `${f.ambito}.${f.codigo}`, por: f.por, def }] : [];
       });
     },
   };

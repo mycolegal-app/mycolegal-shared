@@ -124,3 +124,34 @@ describe('un tramo en duda pregunta lo que falta en él (0.3.13)', () => {
     expect(r.preguntas.map((p) => p.fact)).toEqual(['ACTO.SITUACION_SEGURO_DECENAL']);
   });
 });
+
+describe('un dato que se pregunta por otro: la antigüedad, por el año de terminación (0.3.14)', () => {
+  const r25 = regla({ codigo: 'R25', condiciones: [cond('ACTO', 'SITUACION_SEGURO_DECENAL', 'EQ', 'OBLIGATORIO', { tipoDato: 'LISTA' })] });
+  const rAnt = regla({ codigo: 'RANT', condiciones: [cond('OBJETO', 'ANTIGUEDAD_ANOS', 'GT', 10, { tipoDato: 'NUMERO' })] });
+  const conDef: DerivadoDef = {
+    ...SEGURO,
+    tramos: SEGURO.tramos.map((t) => ({ ...t, si: t.si.map((c) => ({ ...c, def: { label: c.fact, tipoDato: 'BOOL', opciones: null, fuentePreferente: null } })) })),
+  };
+  const ANO = { fact: 'OBJETO.ANTIGUEDAD_ANOS', por: 'OBJETO.ANO_TERMINACION_OBRA', def: { label: 'Año de terminación de la obra', tipoDato: 'NUMERO', opciones: null, fuentePreferente: null } };
+  const repoCon = (reglas: typeof r25[], conPor: boolean): RepositorioRequisitos => ({
+    ...repo({ reglas, tiposObjeto: TIPOS_OBJETO, tiposSujeto: TIPOS_SUJETO }),
+    async derivados() { return [conDef]; },
+    ...(conPor ? { async preguntasPor() { return [ANO]; } } : {}),
+  });
+
+  it('un tramo en duda por la antigüedad pregunta el AÑO del bien, con su rótulo', async () => {
+    const r = await resolverRequisitos(repoCon([r25], true), '0405', { objetos: [casa(undefined)], sujetos: [pf()] }, { preguntasPorSujeto: true });
+    expect(r.preguntas.map((p) => [p.fact, p.objetoId, p.label])).toEqual([['OBJETO.ANO_TERMINACION_OBRA', 'b', 'Año de terminación de la obra']]);
+    expect(r.condicionados[0].faltan).toEqual(['OBJETO.ANO_TERMINACION_OBRA']);
+  });
+
+  it('una regla con la antigüedad en su condición también pregunta el año', async () => {
+    const r = await resolverRequisitos(repoCon([rAnt], true), '0405', { objetos: [casa(undefined)] }, { preguntasPorSujeto: true });
+    expect(r.preguntas.map((p) => [p.fact, p.objetoId])).toEqual([['OBJETO.ANO_TERMINACION_OBRA', 'b']]);
+  });
+
+  it('sin preguntaPor en el repositorio, se pregunta la antigüedad, como en 0.3.13', async () => {
+    const r = await resolverRequisitos(repoCon([r25], false), '0405', { objetos: [casa(undefined)], sujetos: [pf()] }, { preguntasPorSujeto: true });
+    expect(r.preguntas.map((p) => p.fact)).toEqual(['OBJETO.ANTIGUEDAD_ANOS']);
+  });
+});

@@ -1,6 +1,11 @@
 # mycolegal-sharedlib — Changelog
 
-## (siguiente) — los derivados llevan cómo preguntar cada dato de sus tramos (2026-11-07)
+## (siguiente) — preguntar un dato por otro (2026-11-07)
+
+`preguntasPor()` lee `atributo_defs_global."preguntaPor"` por SQL, con cómo se pregunta el dato de destino,
+para `requisitos-core` 0.3.14. Sin la columna (entorno sin `atributo_pregunta_por`), nada.
+
+## 0.12.39 — los derivados llevan cómo preguntar cada dato de sus tramos (2026-11-07)
 
 `derivados()` añade a cada condición de un tramo su `def` (rótulo, tipo, opciones, fuente) de
 `atributo_defs_global`, para que `requisitos-core` 0.3.13 pregunte lo que falta en el tramo.
