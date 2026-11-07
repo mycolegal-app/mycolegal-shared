@@ -1,5 +1,12 @@
 # mycolegal-sharedlib — Changelog
 
+## (siguiente) — el adaptador de requisitos sirve los datos derivados (2026-11-07)
+
+`requisitos-repo.ts` implementa `derivados()` del puerto de `requisitos-core` 0.3.12: lee
+`atributo_defs_global.deriva` por SQL (`$queryRawUnsafe`, opcional en `ClienteGolden`), porque los
+espejos de las apps no llevan la columna. Sin el método en el cliente o sin la columna (entorno sin la
+migración `atributo_deriva`), no se deriva nada.
+
 ## (siguiente) — el adaptador de requisitos sirve los escenarios base (2026-10-09)
 
 `requisitos-repo.ts` implementa los tres métodos opcionales del puerto de `requisitos-core` 0.3.3:

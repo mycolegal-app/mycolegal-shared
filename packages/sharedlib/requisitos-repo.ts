@@ -25,7 +25,7 @@
 // sharedlib cuando sólo DocFilling la declara y la usa—, y el coste no es el
 // disco: un cambio incompatible en el motor podría romper el `npm install` de
 // trece apps que no lo tocan.
-import type { RepositorioRequisitos, ReglaGolden, NodoTipo, FilaEscenario, FilaTransversal, AjustePresuncion } from '@mycolegal-app/requisitos-core';
+import type { RepositorioRequisitos, ReglaGolden, NodoTipo, FilaEscenario, FilaTransversal, AjustePresuncion, DerivadoDef } from '@mycolegal-app/requisitos-core';
 import { ORIGEN_GOLDEN } from '@mycolegal-app/requisitos-core';
 
 // Se declara aquí y no se importa: `requisitos-core` lo exporta desde la versión de las dos
@@ -61,6 +61,10 @@ export interface ClienteGolden {
   actoEscenarioBase?: { findMany(args: any): Promise<any[]> };
   presuncionTransversalGlobal?: { findMany(args: any): Promise<any[]> };
   actoPresuncionOverride?: { findMany(args: any): Promise<any[]> };
+  /** Datos derivados (requisitos-core 0.3.12): `atributo_defs_global.deriva` se lee por SQL, porque
+   *  los espejos de las apps no llevan la columna (como `concretaPapel`, para no dar P2022 en un
+   *  entorno sin migrar). OPCIONAL: sin él, o sin la columna, no se deriva nada. */
+  $queryRawUnsafe?(query: string, ...values: any[]): Promise<any>;
   /* eslint-enable @typescript-eslint/no-explicit-any */
 }
 
@@ -215,6 +219,48 @@ export function crearRepositorioRequisitos(client: ClienteGolden): RepositorioRe
         select: { id: true, escenarioCodigo: true, fact: true, modo: true, valor: true, motivo: true },
       });
       return filas as AjustePresuncion[];
+    },
+
+    // ── Datos derivados (7-nov-2026, catálogo 1.1.63) ──────────────────────────
+    async derivados() {
+      if (!client.$queryRawUnsafe) return [];
+      type Tramo = { valor?: unknown; porQue?: unknown; si?: { fact?: unknown; op?: unknown; valor?: unknown; scopeRol?: unknown }[] };
+      let filas: { ambito: string; codigo: string; deriva: unknown }[];
+      try {
+        filas = await client.$queryRawUnsafe(
+          'SELECT "ambito", "codigo", "deriva" FROM "atributo_defs_global" WHERE "deriva" IS NOT NULL');
+      } catch { return []; } // sin la columna: un entorno sin la migración `atributo_deriva`
+      if (!filas.length) return [];
+      // El tipo para el que existe cada dato de las condiciones, como en una condición de regla.
+      // Un dato con filas de tipos distintos no se acota (null).
+      const citados = [...new Set(filas.flatMap((f) => (Array.isArray(f.deriva) ? f.deriva as Tramo[] : [])
+        .flatMap((t) => (t.si ?? []).map((c) => String(c.fact ?? '')))))].filter(Boolean);
+      const defs = citados.length ? await client.$queryRawUnsafe(
+        'SELECT "ambito", "codigo", "sujetoTipoCodigo" AS suj, "objetoTipoCodigo" AS obj FROM "atributo_defs_global" WHERE ("ambito" || \'.\' || "codigo") = ANY($1)',
+        citados) as { ambito: string; codigo: string; suj: string | null; obj: string | null }[] : [];
+      const tipos = new Map<string, Set<string | null>>();
+      for (const d of defs) {
+        const k = `${d.ambito}.${d.codigo}`;
+        (tipos.get(k) ?? tipos.set(k, new Set()).get(k)!).add(d.ambito === 'SUJETO' ? d.suj : d.ambito === 'OBJETO' ? d.obj : null);
+      }
+      const paraTipo = (fact: string) => { const t = tipos.get(fact); return t && t.size === 1 ? [...t][0] : null; };
+      const vistos = new Set<string>();
+      return filas.flatMap((f): DerivadoDef[] => {
+        const fact = `${f.ambito}.${f.codigo}`;
+        if (vistos.has(fact) || !Array.isArray(f.deriva)) return [];
+        vistos.add(fact);
+        return [{
+          fact,
+          tramos: (f.deriva as Tramo[]).map((t) => ({
+            valor: t.valor,
+            porQue: typeof t.porQue === 'string' ? t.porQue : null,
+            si: (t.si ?? []).map((c) => ({
+              fact: String(c.fact), op: String(c.op), valor: c.valor,
+              scopeRol: typeof c.scopeRol === 'string' ? c.scopeRol : null, paraTipo: paraTipo(String(c.fact)),
+            })),
+          })),
+        }];
+      });
     },
   };
 }

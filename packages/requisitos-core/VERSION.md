@@ -1,5 +1,14 @@
 # @mycolegal-app/requisitos-core
 
+## 0.3.12 — datos derivados (7-nov-2026)
+
+- **`derivar` y `derivarHechos`**: un dato que el catálogo DERIVA de otros (`atributo_defs_global.deriva`,
+  catálogo 1.1.63) se evalúa aquí, con las condiciones de siempre (`evaluar`). Tramos en orden: el primero
+  TRUE da el valor, FALSE pasa al siguiente, NULL para. Lo contestado manda; lo derivado pesa más que el caso.
+  Primer uso: la situación del seguro decenal de la obra nueva (0405), que antes calculaba Redactor en código.
+- `resolverRequisitos` aplica lo derivado como supuesto y lo devuelve en `Resultado.derivados` (opcional).
+- El puerto gana `derivados?()`, OPCIONAL: sin él no se deriva nada, como hasta ahora.
+
 ## Sin publicar (próxima: 0.3.3)
 
 - **Escenarios base en el paquete** (`escenarioPara`, `escenariosDelActo`, `presuncionesDe`, y las

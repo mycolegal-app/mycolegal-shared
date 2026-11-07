@@ -163,6 +163,25 @@ export interface RepositorioRequisitos {
 
   /** Lo que una notaría presume o pregunta siempre en el acto (`acto_presuncion_override`). */
   ajustesDePresuncion?(orgId: string, actoCodigo: string): Promise<AjustePresuncion[]>;
+
+  // ── Datos derivados (0.3.12, 7-nov-2026) ────────────────────────────────────
+  /** Los datos que el catálogo DERIVA de otros (`atributo_defs_global.deriva`). OPCIONAL: sin él
+   *  no se deriva nada, como hasta ahora. Ver `derivar` en `motor.ts`. */
+  derivados?(): Promise<DerivadoDef[]>;
+}
+
+/**
+ * Un dato derivado (catálogo 1.1.63, `vocabulario/README.md`): su valor sale del primer tramo cuyas
+ * condiciones se cumplen todas, en orden. Las condiciones son las de una regla (`comparar`), y
+ * `paraTipo` es el del dato, como en una condición de regla (NO_APLICA en otro tipo).
+ */
+export interface DerivadoDef {
+  fact: string;
+  tramos: {
+    valor: unknown;
+    porQue: string | null;
+    si: { fact: string; op: string; valor: unknown; scopeRol: string | null; paraTipo: string | null }[];
+  }[];
 }
 
 /** Un escenario base tal como se guarda. `presunciones[].modo`: PRESUMIR | PREGUNTAR. */

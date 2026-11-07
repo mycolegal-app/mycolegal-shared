@@ -15,6 +15,8 @@
 export {
   resolverRequisitos,
   evaluar,
+  derivar,
+  derivarHechos,
   FACT_TIPO_OBJETO,
   FACT_TIPO_SUJETO,
   TIPO_NINGUNO,
@@ -28,6 +30,7 @@ export {
   type OpcionesMotor,
   type Ternario,
   type Cond,
+  type Derivado,
 } from './src/motor';
 
 export {
@@ -37,6 +40,7 @@ export {
   type FilaEscenario,
   type FilaTransversal,
   type AjustePresuncion,
+  type DerivadoDef,
 } from './src/puerto';
 
 // Escenarios base (0.3.3): cuál toca y qué presume, con lo heredado de GLOBAL, familia y subfamilia.

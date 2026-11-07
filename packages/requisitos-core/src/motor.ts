@@ -24,7 +24,7 @@
  *   · preguntas    — el hecho que bloquea, con su enunciado, tipo y opciones
  */
 import { decidirCapa, type Capa } from './capa';
-import type { RepositorioRequisitos } from './puerto';
+import type { RepositorioRequisitos, DerivadoDef } from './puerto';
 
 /** TRUE / FALSE / UNKNOWN. `null` es UNKNOWN: no se conoce, que no es lo mismo que falso. */
 export type Ternario = true | false | null;
@@ -167,7 +167,13 @@ export interface Resultado {
     /** Desplazadas por una regla más específica que pide lo mismo bajo las mismas condiciones. */
     desplazadasPorEspecificidad: number;
   };
+  /** Los datos derivados (`derivar`) con que se ha resuelto, para enseñarlos con su porqué. Lo que
+   *  decidieron sale además en `porPresuncion` de cada regla, como cualquier supuesto. */
+  derivados?: Derivado[];
 }
+
+/** Un dato derivado ya resuelto: el valor del tramo que se cumplió y su porqué. */
+export interface Derivado { fact: string; valor: unknown; porQue: string | null }
 
 // ── evaluación ───────────────────────────────────────────────────────────────
 
@@ -513,16 +519,75 @@ export interface OpcionesMotor {
   preguntasPorSujeto?: boolean;
 }
 
-export async function resolverRequisitos(
-  repo: RepositorioRequisitos,
-  actoCodigo: string,
+/**
+ * LOS DATOS DERIVADOS (catálogo 1.1.63, 7-nov-2026). El catálogo declara que un dato sale de otros
+ * (`atributo_defs_global.deriva`): tramos en orden, cada uno con sus condiciones, escritas y
+ * evaluadas como las de una regla de acto (`evaluar`: «algún bien», «algún interviniente», con su
+ * papel; NO_APLICA es falso). Así una regla jurídica —los diez años del seguro decenal— vive en el
+ * catálogo y la calculan igual Redactor, Consultor y Notaría, en vez de estar escrita en una app.
+ *
+ *   · el primer tramo que sale TRUE da el valor;
+ *   · uno que sale FALSE deja pasar al siguiente;
+ *   · uno que sale NULL (falta un dato) PARA: no se deriva nada y el dato se pregunta. Saltarlo
+ *     daría el valor de un tramo posterior cuando el anterior quizá se cumplía.
+ *
+ * Lo contestado manda: un dato con respuesta no se deriva. Un dato no se deriva de sí mismo (esa
+ * condición se ignora). Las condiciones ven lo contestado y, donde falta, lo que presume el caso;
+ * y lo ya derivado antes en la lista, en su orden.
+ */
+export function derivar(
+  defs: DerivadoDef[],
   hechos: Hechos,
-  opciones: OpcionesMotor = {},
-): Promise<Resultado> {
-  const ccaa = opciones.ccaaCodigo ?? '';
-  const presunciones = opciones.presunciones ?? {};
-  const porRol = Boolean(opciones.preguntasPorRol);
-  const porInterviniente = Boolean(opciones.preguntasPorSujeto);
+  presunciones: Record<string, unknown>,
+  ctx: {
+    esUn?: (tipo: string | null | undefined, exigido: string) => boolean;
+    esUnRol?: (rol: string | null | undefined, exigido: string) => boolean;
+    acompana?: (rol: string | null | undefined) => boolean;
+  } = {},
+): Derivado[] {
+  const out: Derivado[] = [];
+  let pres = presunciones;
+  const ambitoDe = (fact: string) => fact.split('.')[0];
+  for (const d of defs) {
+    // Sólo datos del ACTO: uno de interviniente o de bien sería un valor por cada uno, y las
+    // presunciones valen para todos. El catálogo hoy sólo deriva de ACTO.
+    if (ambitoDe(d.fact) !== 'ACTO') continue;
+    if (hechos.acto?.[d.fact.split('.').slice(1).join('.')] !== undefined) continue;
+    for (const t of d.tramos) {
+      const conds: Cond[] = t.si.filter((c) => c.fact !== d.fact).map((c) => ({
+        fact: c.fact, operador: c.op, valor: c.valor, scopeRolCodigo: c.scopeRol ?? null, grupo: 0, paraTipo: c.paraTipo ?? null,
+      }));
+      const r = evaluar(conds, hechos, ambitoDe, pres, ctx.esUnRol, ctx.esUn, {}, ctx.acompana);
+      if (r.valor === null) break;
+      if (r.valor === true) {
+        out.push({ fact: d.fact, valor: t.valor, porQue: t.porQue ?? null });
+        pres = { ...pres, [d.fact]: t.valor };
+        break;
+      }
+    }
+  }
+  return out;
+}
+
+/** `derivar` con las jerarquías del repositorio: para quien necesita lo derivado sin resolver el acto
+ *  (Redactor, para contestar con ello las casillas del esquema). */
+export async function derivarHechos(
+  repo: RepositorioRequisitos,
+  hechos: Hechos,
+  opciones: Pick<OpcionesMotor, 'presunciones' | 'rolComodin'> = {},
+): Promise<Derivado[]> {
+  if (!repo.derivados) return [];
+  const defs = await repo.derivados();
+  if (!defs.length) return [];
+  return derivar(defs, hechos, opciones.presunciones ?? {}, await jerarquias(repo, opciones.rolComodin));
+}
+
+/**
+ * Las jerarquías de tipos y de roles, ya como funciones: `esUn` (una VIVIENDA es un INMUEBLE),
+ * `subeRol` (un VENDEDOR es un DISPONENTE), `acompana` y el `esUnRol` que usan las condiciones. Las
+ * comparten la resolución y la derivación (`derivarHechos`), para que evalúen exactamente igual.
+ */
+async function jerarquias(repo: RepositorioRequisitos, rolComodin?: boolean) {
   // La jerarquía is-a de los tipos de objeto y sujeto. Sin ella, una regla que pide
   // INMUEBLE no encuentra una VIVIENDA, y los requisitos MÁS BÁSICOS -la nota simple, la
   // referencia catastral- generan CERO instancias. Se ve solo al contar instancias, no al
@@ -554,6 +619,29 @@ export async function resolverRequisitos(
     };
   /** `VIVIENDA` cumple una regla que pide `URBANO`, `INMUEBLE` u `OBJETO`. */
   const esUn = sube(padres);
+  /** Y un `VENDEDOR` cumple una regla escrita para `DISPONENTE`. Mismo recorrido, otro mapa. */
+  const subeRol = sube(padresRol);
+  /** ¿El rol (o uno de sus padres) acompaña a otra persona? */
+  const acompana = (rol: string | null | undefined) => !!rol && rolesQueAcompanan.some((r) => subeRol(rol, r));
+  const esUnRol = rolComodin
+    ? (rol: string | null | undefined, exigido: string) => (rol ? subeRol(rol, exigido) : !acompana(exigido))
+    : subeRol;
+
+  return { esUn, subeRol, acompana, esUnRol };
+}
+
+export async function resolverRequisitos(
+  repo: RepositorioRequisitos,
+  actoCodigo: string,
+  hechos: Hechos,
+  opciones: OpcionesMotor = {},
+): Promise<Resultado> {
+  const ccaa = opciones.ccaaCodigo ?? '';
+  // Lo del caso; lo derivado se le suma más abajo (`derivar`).
+  let presunciones = opciones.presunciones ?? {};
+  const porRol = Boolean(opciones.preguntasPorRol);
+  const porInterviniente = Boolean(opciones.preguntasPorSujeto);
+  const { esUn, subeRol, acompana, esUnRol } = await jerarquias(repo, opciones.rolComodin);
   /**
    * Las opciones de la pregunta «¿qué tipo es?»: los tipos que piden las reglas en duda y
    * «Ninguno de estos». Sólo con los pedidos la pregunta podía no tener respuesta —un aumento
@@ -564,14 +652,6 @@ export async function resolverRequisitos(
    * y descarta esas reglas, sin lógica aparte.
    */
   const opcionesDeTipo = (pedidos: string[]): string[] => [...new Set(pedidos)].sort().concat(TIPO_NINGUNO);
-  /** Y un `VENDEDOR` cumple una regla escrita para `DISPONENTE`. Mismo recorrido, otro mapa. */
-  const subeRol = sube(padresRol);
-  /** ¿El rol (o uno de sus padres) acompaña a otra persona? */
-  const acompana = (rol: string | null | undefined) => !!rol && rolesQueAcompanan.some((r) => subeRol(rol, r));
-  const esUnRol = opciones.rolComodin
-    ? (rol: string | null | undefined, exigido: string) => (rol ? subeRol(rol, exigido) : !acompana(exigido))
-    : subeRol;
-
   // Qué reglas alcanzan al acto: las suyas y, si lo sirve el catálogo universal, también
   // las TRANSVERSALES —las de TODOS los actos, las de su FAMILIA y las de su SUBFAMILIA—. La
   // consulta la hace el adaptador (`puerto.ts` dice qué debe devolver): el filtro de capa,
@@ -674,6 +754,10 @@ export async function resolverRequisitos(
     }
   }
   const ambitoDe = (fact: string) => fact.split('.')[0];
+
+  // 2 ter. Los datos DERIVADOS (catálogo 1.1.63): pesan más que el caso y menos que lo contestado.
+  const derivados = repo.derivados ? derivar(await repo.derivados(), hechos, presunciones, { esUn, esUnRol, acompana }) : [];
+  if (derivados.length) presunciones = { ...presunciones, ...Object.fromEntries(derivados.map((d) => [d.fact, d.valor])) };
 
   // Qué tipos de objeto declara el acto en conjunto. Un tipo «estrecha» si alguna otra
   // regla del acto declara un ancestro suyo: RUSTICA estrecha en una compraventa porque
@@ -884,7 +968,7 @@ export async function resolverRequisitos(
   // Las preguntas que más requisitos desbloquean, primero: contestar una que destraba
   // ocho rinde más que contestar ocho que destraban una.
   const orden = [...preguntas.values()].sort((a, b) => b.bloquea.length - a.bloquea.length);
-  return { firmes, condicionados, descartados, preguntas: orden, diagnostico: diag };
+  return { firmes, condicionados, descartados, preguntas: orden, diagnostico: diag, derivados };
 }
 
 /**
