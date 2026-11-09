@@ -133,3 +133,25 @@ describe('manual · secciones por lengua', () => {
     expect(auditarSeccionesDeLengua(PARRAFO.replace('Respecta el pacte de {{DATOS_PACTO}}.', 'Respecta el pacte.'))).not.toEqual([]);
   });
 });
+
+describe('manual · DECLARE_UNDEF, valor de respaldo (§3.1)', () => {
+  const cabecera = '{{DECLARE ES_ACTO_SIN_TRANSMISION AS BOOL=TRUE}}';
+  const parrafo = '{{DECLARE_UNDEF ES_ACTO_SIN_TRANSMISION AS BOOL=FALSE}}{{IF ES_ACTO_SIN_TRANSMISION}}TRUE{{ELSE}}FALSE{{ENDIF}}';
+
+  it('con la cabecera vale TRUE; en un esquema que no lo fija, FALSE', () => {
+    expect(compose(cabecera + parrafo, {})).toBe('TRUE');
+    expect(compose(parrafo, {})).toBe('FALSE');
+  });
+  it('regla 2: una declaración en una rama que no se toma no cuenta', () => {
+    expect(compose('{{IF A}}' + cabecera + '{{ENDIF}}' + parrafo, { A: 'FALSE' })).toBe('FALSE');
+  });
+  it('regla 3: lo contestado no se pisa; regla 4: un DECLARE posterior sí', () => {
+    expect(compose(parrafo, { ES_ACTO_SIN_TRANSMISION: 'TRUE' })).toBe('TRUE');
+    expect(compose('{{DECLARE_UNDEF X="a"}}{{DECLARE X="b"}}{{X}}', {})).toBe('b');
+  });
+  it('E908 y W914', () => {
+    const codigos = (t: string) => validateText(t).diagnostics.map((d) => d.code);
+    expect(codigos('{{DECLARE_UNDEF ARRAY L:[A,B]}}')).toContain('E908');
+    expect(codigos('{{DECLARE_UNDEF X}}{{X}}')).toContain('W914');
+  });
+});

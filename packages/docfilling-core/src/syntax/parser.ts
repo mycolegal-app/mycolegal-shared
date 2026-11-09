@@ -111,6 +111,9 @@ export interface ParsedField {
   declareType: string;
   /** For DECLARE: bracketed AI extraction hint, captured from `:[…]`. Surfaced by the wizard as the AI instruction body. */
   declareInstruction: string;
+  /** For DECLARE: escrito `DECLARE_UNDEF` — sólo declara si nadie ha dado valor antes (`resolverDeclarados`). El resto
+   *  del nodo es el de un DECLARE: `content` llega normalizado a `DECLARE …` y `raw` conserva lo escrito. */
+  declareSoloSiIndefinido: boolean;
   /** For DECLARE / DECLARE ARRAY: lleva algún `:IUI(...)`, que está RETIRADO (W913): el IUI vive
    *  ahora en el catálogo universal y el campo enlaza con él por `:REQ` (plan REQ_CATALOGO_IUI,
    *  DC8). El parser lo sigue pelando para que no ensucie el resto del DECLARE. */
@@ -158,6 +161,7 @@ function createParsedField(partial: Partial<ParsedField> & Pick<ParsedField, "ra
     declareValue: "",
     declareType: "",
     declareInstruction: "",
+    declareSoloSiIndefinido: false,
     iuiObsoleto: false,
     inputDefault: "",
     langCode: "",
@@ -445,6 +449,10 @@ export function parseFields(text: string): ParsedField[] {
       content = content.slice(0, i).trim();
     }
     const [line, col] = offsetToLineCol(text, offset);
+    // `DECLARE_UNDEF X…` es un DECLARE que sólo vale si X no tiene valor todavía: se lee como
+    // DECLARE (mismas formas) y se marca. Ver `resolverDeclarados` en compose/engine.ts.
+    const undef = /^DECLARE_UNDEF\s+/i.exec(content);
+    if (undef) content = "DECLARE " + content.slice(undef[0].length);
 
     const ftype = classifyField(content);
     const pf = createParsedField({
@@ -456,6 +464,7 @@ export function parseFields(text: string): ParsedField[] {
       col,
     });
     pf.formatos = formatos;
+    pf.declareSoloSiIndefinido = !!undef;
 
     const upper = content.toUpperCase().trim();
 

@@ -27,7 +27,7 @@ export function instruccionesDeCampo(
   }
 
   const conValorFijo = extractDeclareFixedValues(plantilla);
-  const reDeclare = /\{\{DECLARE\s+([\p{L}\p{N}_]+)(?:\s+AS\s+([\p{L}\p{N}_]+))?([^}]*)\}\}/giu;
+  const reDeclare = /\{\{DECLARE(?:_UNDEF)?\s+([\p{L}\p{N}_]+)(?:\s+AS\s+([\p{L}\p{N}_]+))?([^}]*)\}\}/giu;
   for (const m of plantilla.matchAll(reDeclare)) {
     const nombre = m[1].trim();
     if (Object.prototype.hasOwnProperty.call(conValorFijo, nombre)) continue;

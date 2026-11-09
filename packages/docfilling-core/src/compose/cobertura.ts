@@ -57,7 +57,7 @@ export interface TextoMarcado {
 
 const MARCA = (id: number, lado: 'T' | 'F') => `\x00COV:${id}:${lado}\x00`;
 const RE_MARCA = /\x00COV:(\d+):([TF])\x00/g;
-const RE_TOKEN = /\{\{IF\s+([^}]+)\}\}|\{\{ELSE\}\}|\{\{ENDIF\}\}|\x00INC_BEGIN\x00(?:\x00PARR:([^\x00]*)\x00)?|\x00INC_END\x00|\x00PARR:[^\x00]*\x00|\{\{\s*DECLARE\s+([A-Za-z_][\wÀ-ɏ.]*)([^}]*)\}\}/g;
+const RE_TOKEN = /\{\{IF\s+([^}]+)\}\}|\{\{ELSE\}\}|\{\{ENDIF\}\}|\x00INC_BEGIN\x00(?:\x00PARR:([^\x00]*)\x00)?|\x00INC_END\x00|\x00PARR:[^\x00]*\x00|\{\{\s*DECLARE(?:_UNDEF)?\s+([A-Za-z_][\wÀ-ɏ.]*)([^}]*)\}\}/g;
 
 /** Las opciones de un `:INPUT(etiqueta|a,b,"c, d")`, respetando comillas. */
 function opcionesDeInput(resto: string): string[] {

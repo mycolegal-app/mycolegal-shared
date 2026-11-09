@@ -46,7 +46,7 @@ export function camposSoloCondicionales(
       ES_CONDICIONAL.test(cuerpo.trim())
     ) continue;
     if (cuerpo.startsWith('@autonumber:')) continue;
-    if (cuerpo.startsWith('DECLARE ')) continue;
+    if (cuerpo.startsWith('DECLARE ') || cuerpo.startsWith('DECLARE_UNDEF ')) continue;
     if (cuerpo.toUpperCase().startsWith('MAP_IUI:')) continue;
     if (cuerpo.toUpperCase().startsWith('DEPENDENCY:')) continue;
 
@@ -70,7 +70,7 @@ export function camposSoloCondicionales(
 
   // 3) Los DECLARE: auxiliares por definición, siempre conditional-only.
   const declarados = new Set<string>();
-  const reDeclare = /\{\{DECLARE\s+([\p{L}\p{N}_]+)(?:\s+AS\s+[\p{L}\p{N}_]+)?(?:\s*[=:][^}]*)?\}\}/giu;
+  const reDeclare = /\{\{DECLARE(?:_UNDEF)?\s+([\p{L}\p{N}_]+)(?:\s+AS\s+[\p{L}\p{N}_]+)?(?:\s*[=:][^}]*)?\}\}/giu;
   for (const m of plantilla.matchAll(reDeclare)) {
     declarados.add(m[1]);
     condicionales.add(m[1]);

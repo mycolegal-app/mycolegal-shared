@@ -29,6 +29,7 @@ export {
   stripFieldSuffixes,
   stripDirectives,
   extractDeclareFixedValues,
+  resolverDeclarados,
   applyFieldSuffix,
   normalizeConditionals,
   processConditionals,

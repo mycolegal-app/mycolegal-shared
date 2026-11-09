@@ -1,5 +1,9 @@
 # @mycolegal-app/docfilling-core
 
+## 0.1.39 — 9-nov-2026
+
+`{{DECLARE_UNDEF X=v}}`: un valor de respaldo, que sólo da valor a X si nadie se lo ha dado antes en el orden del documento expandido (0405, ACT-253: el `FALSE` de respaldo de tres párrafos pisaba el `TRUE` de la cabecera del esquema). Una declaración en una rama que no se toma no cuenta, un dato del caso no se pisa y un `DECLARE` posterior sigue ganando. Lo resuelve `resolverDeclarados(texto, campos)`, que usan `compose` y `composeForPreview`; `extractDeclareFixedValues` incluye el respaldo cuando nada lo fija antes, sin mirar ramas ni datos (las constantes que nadie pregunta). El parser lo lee como un `DECLARE` con `declareSoloSiIndefinido`; validador: `E050` cuenta aparte los respaldos, `E908` (`DECLARE_UNDEF ARRAY`) y `W914` (sin valor fijo). Además, el valor sin comillas de un `DECLARE` acaba en la primera `}`: `{{DECLARE X=TRUE}}{{ENDIF}}` daba «TRUE}}{{ENDIF» (ninguno en `_PROD`). `tests/declare-undef.test.ts`, `tests/manual.test.ts`.
+
 ## 0.1.36 — 4-nov-2026
 
 `expandirIncludes(…, { marcarLengua })`: lo que sale de una sección en la lengua pedida va entre `LENGUA_APROBADA_INICIO` y `LENGUA_APROBADA_FIN`, para que quien traduce el resto se lo salte.

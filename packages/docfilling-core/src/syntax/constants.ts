@@ -102,7 +102,7 @@ export interface DirectiveSpec {
 export const DIRECTIVES: readonly DirectiveSpec[] = [
   {
     name: "DECLARE",
-    prefixes: ["DECLARE "],
+    prefixes: ["DECLARE ", "DECLARE_UNDEF "],
     isMetadata: true,
     isBlock: false,
     endDirective: null,
@@ -287,6 +287,7 @@ export const DIRECTIVES: readonly DirectiveSpec[] = [
 
 export const KNOWN_DIRECTIVE_PREFIXES = [
   "DECLARE ",
+  "DECLARE_UNDEF ",
   "SET ",
   "TAGS:",
   "SUMMARY:",
@@ -326,6 +327,7 @@ export const KNOWN_DIRECTIVE_PREFIXES = [
 
 export const METADATA_PREFIXES = [
   "DECLARE ",
+  "DECLARE_UNDEF ",
   "SET ",
   "TAGS:",
   "SUMMARY:",

@@ -274,8 +274,8 @@ export function stripDirectives(content: string): string {
   // thing on its line, consume the whole line incl. trailing \n so it
   // doesn't leave a blank line behind. Generic fallbacks afterwards
   // strip inline directives in the middle of text.
-  content = content.replace(/^[ \t]*\{\{DECLARE\s[^}]*\}\}[ \t]*\n/gim, "");
-  content = content.replace(/\{\{DECLARE\s[^}]*\}\}/gi, "");
+  content = content.replace(/^[ \t]*\{\{DECLARE(?:_UNDEF)?\s[^}]*\}\}[ \t]*\n/gim, "");
+  content = content.replace(/\{\{DECLARE(?:_UNDEF)?\s[^}]*\}\}/gi, "");
   content = content.replace(/^[ \t]*\{\{TAGS:[^}]*\}\}[ \t]*\n/gim, "");
   content = content.replace(/\{\{TAGS:[^}]*\}\}/gi, "");
   content = content.replace(/^[ \t]*\{\{SUMMARY:[^}]*\}\}[ \t]*\n/gim, "");
@@ -300,22 +300,133 @@ export function stripDirectives(content: string): string {
 // extractDeclareFixedValues
 // =============================================================================
 
-export function extractDeclareFixedValues(content: string): Record<string, string> {
-  const fixed: Record<string, string> = {};
+/** Una declaración con valor fijo (`{{DECLARE X=v}}` o `{{DECLARE_UNDEF X=v}}`), en el orden del texto. */
+interface DeclaracionFija {
+  nombre: string;
+  valor: string;
+  soloSiIndefinido: boolean;
+  desde: number;
+  hasta: number;
+}
+
+/** Las declaraciones con valor fijo, sobre el texto con `:IUI` / `:REQ` / `:DOC` pelados (posiciones en ESE texto). */
+function declaracionesFijas(content: string): { texto: string; decls: DeclaracionFija[] } {
   // `:IUI(path)` (FASE 32 / A9) is XML-mapping metadata; drop it so
   // `{{DECLARE X="v":IUI(A/B)}}` still yields the fixed value `v`.
   content = content.replace(/:IUI\([^()]*\)/gi, "");
   // `:REQ(…)` / `:DOC(…)` tampoco son valor: `{{DECLARE X=v:REQ(A.B)}}` da `v`.
-  content = content.replace(/\{\{DECLARE\s[^}]*\}\}/gi, (d) => quitarReqDoc(d));
+  content = content.replace(/\{\{DECLARE(?:_UNDEF)?\s[^}]*\}\}/gi, (d) => quitarReqDoc(d));
+  // El valor sin comillas acaba en la primera `}`: con `\S+` un DECLARE pegado a la directiva siguiente
+  // (`{{DECLARE X=TRUE}}{{ENDIF}}`) daba el valor «TRUE}}{{ENDIF» (9-nov-2026).
   const pattern =
-    /\{\{DECLARE\s+([\w\u00C0-\u024F]+)(?:\s+AS\s+[\w\u00C0-\u024F]+)?\s*=\s*(?:"([^"]*)"|(\S+))\s*\}\}/gi;
+    /\{\{DECLARE(_UNDEF)?\s+([\w\u00C0-\u024F]+)(?:\s+AS\s+[\w\u00C0-\u024F]+)?\s*=\s*(?:"([^"]*)"|([^\s}]+))\s*\}\}/gi;
+  const decls: DeclaracionFija[] = [];
   let m: RegExpExecArray | null;
   while ((m = pattern.exec(content)) !== null) {
-    const fieldName = m[1];
-    const value = m[2] !== undefined ? m[2] : m[3];
-    fixed[fieldName] = value;
+    decls.push({
+      nombre: m[2],
+      valor: m[3] !== undefined ? m[3] : m[4],
+      soloSiIndefinido: m[1] !== undefined,
+      desde: m.index,
+      hasta: m.index + m[0].length,
+    });
+  }
+  return { texto: content, decls };
+}
+
+/**
+ * Los valores fijos del texto, sin datos del caso ni condiciones: el último `DECLARE X=v` de cada campo, y un
+ * `DECLARE_UNDEF X=v` sólo si antes no hay ninguna declaración fija de X. Es lo que dice el esquema por sí solo
+ * (las constantes que nadie pregunta). Lo que se compone de verdad lo decide `resolverDeclarados`, que además
+ * mira las ramas vivas y los datos del caso.
+ */
+export function extractDeclareFixedValues(content: string): Record<string, string> {
+  const fixed: Record<string, string> = {};
+  const declarados = new Set<string>();
+  for (const d of declaracionesFijas(content).decls) {
+    const clave = d.nombre.toUpperCase();
+    if (d.soloSiIndefinido && declarados.has(clave)) continue;
+    declarados.add(clave);
+    fixed[d.nombre] = d.valor;
   }
   return fixed;
+}
+
+/**
+ * Los valores fijos que el motor pone ENCIMA de los datos del caso al componer.
+ *
+ * `DECLARE X=v` no cambia: vale siempre, esté donde esté, y gana el último. `DECLARE_UNDEF X=v` (9-nov-2026, 0405
+ * ACT-253) es un respaldo: sólo da valor a X si en ese punto del documento expandido nadie se lo ha dado:
+ *   1. «antes» es el orden del texto expandido, con los INCLUDE dentro;
+ *   2. una declaración en una rama que no se toma (IF falso, o tras un EXIT_INCLUDE) no cuenta, ni para declarar
+ *      ni para respaldar;
+ *   3. un dato del caso (lo contestado, no vacío) cuenta como declarado y no se pisa;
+ *   4. un `DECLARE` vivo POSTERIOR sigue pisando al respaldo.
+ * Las ramas dependen de los valores y los valores de las ramas: se repite hasta que no cambia (como mucho 4 veces).
+ */
+export function resolverDeclarados(
+  template: string,
+  fields: FieldValues = {},
+  locale: string = DEFAULT_LOCALE,
+): Record<string, string> {
+  const { texto, decls } = declaracionesFijas(template);
+  const fijos: Record<string, string> = {};
+  for (const d of decls) if (!d.soloSiIndefinido) fijos[d.nombre] = d.valor;
+  if (!decls.some((d) => d.soloSiIndefinido)) return fijos;
+
+  // Cada declaración, sustituida por una marca: las que sobreviven a las condiciones están vivas.
+  let marcado = "";
+  let pos = 0;
+  decls.forEach((d, i) => {
+    marcado += texto.slice(pos, d.desde) + `\u0007${i}\u0007`;
+    pos = d.hasta;
+  });
+  // Para saber qué rama se toma basta con las directivas, los centinelas de INCLUDE y las marcas: sin el texto
+  // corrido, cada vuelta cuesta una fracción (esquema 0405 expandido, 3 MB). Las líneas `//` se quitan antes,
+  // como hace `stripDirectives`, para no dejar viva una directiva comentada.
+  marcado = (marcado + texto.slice(pos)).replace(/^[ \t]*\/\/[^\n]*\n?/gm, "");
+  marcado = (marcado.match(/\{\{[\s\S]*?\}\}|\x00[^\x00]*\x00|\u0007\d+\u0007/g) ?? []).join("\n");
+  marcado = stripDirectives(stripFieldSuffixes(marcado));
+
+  const tieneDato = (n: string): boolean => {
+    const v = fields[n] ?? fields[n.toUpperCase()];
+    return v !== undefined && v !== null && String(v) !== "";
+  };
+  const sistema = getSystemFields(locale);
+  let aplicados: Record<string, string> = {};
+  for (let vuelta = 0; vuelta < 4; vuelta++) {
+    const valores: FieldValues = { ...sistema, ...fields, ...fijos, ...aplicados };
+    const vivas = new Set(
+      [...processExitIncludes(processConditionals(marcado, valores)).matchAll(/\u0007(\d+)\u0007/g)].map((m) => Number(m[1])),
+    );
+    const declarado = new Set<string>();
+    const respaldo = new Map<string, DeclaracionFija>();
+    decls.forEach((d, i) => {
+      if (!vivas.has(i)) return;
+      const clave = d.nombre.toUpperCase();
+      if (!d.soloSiIndefinido) {
+        declarado.add(clave);
+        respaldo.delete(clave);
+        return;
+      }
+      if (declarado.has(clave) || tieneDato(d.nombre)) return;
+      declarado.add(clave);
+      respaldo.set(clave, d);
+    });
+    const siguientes: Record<string, string> = {};
+    for (const d of respaldo.values()) siguientes[d.nombre] = d.valor;
+    const igual =
+      Object.keys(siguientes).length === Object.keys(aplicados).length &&
+      Object.entries(siguientes).every(([k, v]) => aplicados[k] === v);
+    aplicados = siguientes;
+    if (igual) break;
+  }
+
+  // El respaldo aplicado sustituye a lo que dijera un DECLARE muerto del mismo campo.
+  const out: Record<string, string> = {};
+  const conRespaldo = new Set(Object.keys(aplicados).map((k) => k.toUpperCase()));
+  for (const [k, v] of Object.entries(fijos)) if (!conRespaldo.has(k.toUpperCase())) out[k] = v;
+  return { ...out, ...aplicados };
 }
 
 // =============================================================================
@@ -380,7 +491,7 @@ function camposQueRenombra(content: string): Set<string> {
     const body = m[1].trim();
     const upper = body.toUpperCase();
     if (upper.startsWith("AUTO") || upper.startsWith("SYSTEM:") || upper.startsWith("@")) continue;
-    const decl = body.match(/^DECLARE\s+(?:ARRAY\s+)?([A-Za-z_][\w\u00C0-\u024F]*)/i);
+    const decl = body.match(/^DECLARE(?:_UNDEF)?\s+(?:ARRAY\s+)?([A-Za-z_][\w\u00C0-\u024F]*)/i);
     if (decl) { s.add(decl[1].toUpperCase()); continue; }
     const cond = body.match(/^(?:IF|ELSE)[_\s]+([\s\S]*)$/i);
     if (cond) {
@@ -475,8 +586,8 @@ export function applyFieldSuffix(content: string, suffix: string): string {
     m = body.match(/^(DECLARE\s+ARRAY\s+)([\w\u00C0-\u024F]+)([\s\S]*)$/i);
     if (m) return `{{${m[1]}${m[2]}${suffix}${m[3]}}}`;
 
-    // DECLARE NAME ... (covers =val, AS TYPE, :INPUT(...), bare DECLARE)
-    m = body.match(/^(DECLARE\s+)([\w\u00C0-\u024F]+)([\s\S]*)$/i);
+    // DECLARE NAME ... (covers =val, AS TYPE, :INPUT(...), bare DECLARE) — y DECLARE_UNDEF NAME …
+    m = body.match(/^(DECLARE(?:_UNDEF)?\s+)([\w\u00C0-\u024F]+)([\s\S]*)$/i);
     if (m) return `{{${m[1]}${m[2]}${suffix}${m[3]}}}`;
 
     // NAME:INPUT(...) / NAME:INPUT_FINAL(...)
@@ -1264,9 +1375,9 @@ export function composeWithDiagnostics(
   // las dos con «[NO DISPONIBLE]» en medio (`lang-section.ts`).
   template = resolverSeccionesDeLengua(template, idiomaDePlantilla(template, locale.slice(0, 2).toLowerCase())).texto;
 
-  // Step 1: Extract DECLARE fixed values
+  // Step 1: Extract DECLARE fixed values (y los DECLARE_UNDEF que apliquen, ver `resolverDeclarados`)
   const allFields: FieldValues = { ...fields };
-  const declareFixed = extractDeclareFixedValues(template);
+  const declareFixed = resolverDeclarados(template, fields, locale);
   Object.assign(allFields, declareFixed);
 
   // El idioma de la plantilla: lo usan los formatos de salida (`{{FECHA#date_words}}`).
@@ -1356,7 +1467,7 @@ export function composeForPreview(
   // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py. Ver `composeWithDiagnostics`.
   template = resolverSeccionesDeLengua(template, idiomaDePlantilla(template, locale.slice(0, 2).toLowerCase())).texto;
   const allFields: FieldValues = { ...fields };
-  const declareFixed = extractDeclareFixedValues(template);
+  const declareFixed = resolverDeclarados(template, fields, locale);
   Object.assign(allFields, declareFixed);
 
   // Phase 3 pipeline order, mirrored from compose():

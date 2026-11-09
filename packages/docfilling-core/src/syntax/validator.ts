@@ -539,13 +539,14 @@ function checkDuplicateDefinitions(
   result: ValidationResult,
 ): void {
   // 1. Duplicate DECLARE / DECLARE_ARRAY directives — Phase 7.1: shared namespace.
+  // Un `DECLARE_UNDEF` (respaldo) junto al `DECLARE` del mismo campo no es duplicado: se cuenta aparte.
   const declareSeen: Record<string, ParsedField> = {};
   for (const f of fields) {
     if ((f.fieldType === FieldType.DECLARE || f.fieldType === FieldType.DECLARE_ARRAY) && f.name) {
-      const key = f.name.toUpperCase();
+      const key = (f.declareSoloSiIndefinido ? "UNDEF:" : "") + f.name.toUpperCase();
       if (key in declareSeen) {
         const first = declareSeen[key];
-        const kind = f.fieldType === FieldType.DECLARE_ARRAY ? "DECLARE ARRAY" : "DECLARE";
+        const kind = f.fieldType === FieldType.DECLARE_ARRAY ? "DECLARE ARRAY" : f.declareSoloSiIndefinido ? "DECLARE_UNDEF" : "DECLARE";
         result.diagnostics.push(
           diag(f.line, f.col, f.raw.length, Severity.ERROR, "E050",
             `Definición duplicada: ${kind} ${f.name} ya existe en línea ${first.line}`),
@@ -596,6 +597,19 @@ function checkDeclareSyntax(
   result: ValidationResult,
 ): void {
   for (const f of fields) {
+    // `DECLARE_UNDEF` es el respaldo de UN valor (9-nov-2026): una lista no tiene respaldo, y con `:INPUT(…)` es una
+    // pregunta que se hace igual que con DECLARE (el «sólo si no tiene valor» sólo cambia un valor fijo).
+    if (f.declareSoloSiIndefinido && f.fieldType === FieldType.DECLARE_ARRAY) {
+      result.diagnostics.push(
+        diag(f.line, f.col, f.raw.length, Severity.ERROR, "E908",
+          `DECLARE_UNDEF ARRAY ${f.name}: no existe; una lista se declara con DECLARE ARRAY`),
+      );
+    } else if (f.declareSoloSiIndefinido && !f.declareValue) {
+      result.diagnostics.push(
+        diag(f.line, f.col, f.raw.length, Severity.WARNING, "W914",
+          `DECLARE_UNDEF ${f.name} sin valor fijo (=valor) se comporta como DECLARE: con :INPUT(...) la pregunta se hace igual`),
+      );
+    }
     if (f.fieldType !== FieldType.DECLARE) continue;
 
     // E051: AS TYPE must be a known type (canónico o sinónimo — ver
