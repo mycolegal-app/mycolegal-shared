@@ -1431,6 +1431,16 @@ export function MycoBotRail({
       // El scope de clases lo lee el `ask` de la cookie compartida (que la propia
       // Biblioteca escribe), así que aquí solo abrimos y lanzamos la pregunta.
       const pregunta = detail.pregunta as string | undefined;
+      // #49 (Lara) — Una conversación concreta que la página ya preparó (la del informe del
+      // Revisor, con el informe y la escritura adjuntos): se abre con su historial y, si
+      // trae pregunta, se lanza en ella.
+      const destino = typeof detail.conversacionId === "string" ? detail.conversacionId : null;
+      if (destino) {
+        void loadConversation(destino).then(() => {
+          if (pregunta) void ask(pregunta, destino);
+        });
+        return;
+      }
       // #34 — La barra principal de Consultor también adjunta: los ficheros llegan
       // en el evento, se cuelgan de la conversación y, si hay pregunta, se lanza
       // DESPUÉS, para que el primer turno ya los vea.
@@ -1445,7 +1455,7 @@ export function MycoBotRail({
     };
     window.addEventListener("mycolegal:open-mycobot", handler);
     return () => window.removeEventListener("mycolegal:open-mycobot", handler);
-  }, [ask, attachDocs, openHistory, setOpenPersisted]);
+  }, [ask, attachDocs, loadConversation, openHistory, setOpenPersisted]);
 
   // Auto-scroll al final del hilo.
   useEffect(() => {
