@@ -1567,6 +1567,7 @@
     "metaSalida": "Saída fóra do despacho",
     "contacto": "Contacto",
     "contactoHint": "Con quen é a cita. Búscase no directorio de Contactos.",
+    "errContactoSinElegir": "Escolle o contacto na lista ou borra o escrito: así non se garda.",
     "buscarContacto": "Buscar contacto por nome, NIF, teléfono…",
     "esSalida": "Saída fóra do despacho",
     "empleadoAsignado": "Empregado asignado",

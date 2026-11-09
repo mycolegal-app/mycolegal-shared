@@ -1568,6 +1568,7 @@
     "metaSalida": "Sortida fora del despatx",
     "contacto": "Contacte",
     "contactoHint": "Amb qui és la cita. Es cerca al directori de Contactes.",
+    "errContactoSinElegir": "Tria el contacte a la llista o esborra el que has escrit: així no es desa.",
     "buscarContacto": "Cercar contacte per nom, NIF, telèfon…",
     "esSalida": "Sortida fora del despatx",
     "empleadoAsignado": "Empleat assignat",

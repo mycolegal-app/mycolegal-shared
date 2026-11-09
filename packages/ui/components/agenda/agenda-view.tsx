@@ -842,6 +842,11 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
   }
 
   function openEditar(ev: AgendaEvent) {
+    // #1084 — la búsqueda de contacto de la cita anterior no puede seguir escrita
+    // en esta: parecía que el contacto había cambiado en todas las citas.
+    setError("");
+    setContBusqueda("");
+    setContResultados([]);
     setForm({
       id: ev.eventoId ?? null,
       modo: "hito",
@@ -916,6 +921,13 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
       } else {
         if (!form.titulo.trim()) {
           setError(t("agendaPage.errSinTitulo"));
+          setSaving(false);
+          return;
+        }
+        // #1084 — un nombre escrito sin elegirlo de la lista no se guarda: avisar
+        // antes que dar por puesto un contacto que la cita no tendrá.
+        if (!form.contactoId && contBusqueda.trim()) {
+          setError(t("agendaPage.errContactoSinElegir"));
           setSaving(false);
           return;
         }

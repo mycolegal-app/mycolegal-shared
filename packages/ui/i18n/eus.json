@@ -1567,6 +1567,7 @@
     "metaSalida": "Bulegotik kanpoko irteera",
     "contacto": "Kontaktua",
     "contactoHint": "Norekin den hitzordua. Kontaktuen direktorioan bilatzen da.",
+    "errContactoSinElegir": "Aukeratu kontaktua zerrendan edo ezabatu idatzitakoa: horrela ez da gordetzen.",
     "buscarContacto": "Bilatu kontaktua izenaz, NANaz, telefonoz…",
     "esSalida": "Bulegotik kanpoko irteera",
     "empleadoAsignado": "Esleitutako langilea",
