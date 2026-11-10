@@ -147,7 +147,11 @@ const CLASE_TEXTO: Record<string, string> = {
 };
 
 /** Las fuentes, primero y siempre iguales en todos los lotes: así el proveedor reutiliza el
- *  prefijo en caché y cada lote sólo paga su lista de requisitos. */
+ *  prefijo en caché y cada lote sólo paga su lista de requisitos.
+ *
+ *  El VOCABULARIO va DETRÁS de las fuentes (10-nov-2026): sus datos salen de los requisitos vivos y
+ *  cambian con cada respuesta, y delante invalidaban la caché de todos los documentos de una
+ *  evaluación a la siguiente (Can Marcet en TEST: 185.796 tokens de entrada en la evaluación). */
 export function cabeceraDelMensaje(ctx: ContextoEvaluacion): string {
   const partes = [
     `MODO: ${ctx.modo}`,
@@ -155,6 +159,8 @@ export function cabeceraDelMensaje(ctx: ContextoEvaluacion): string {
     '',
     '## FUENTES',
   ];
+  if (ctx.fuentes.length === 0) partes.push('', '(No hay ninguna fuente: todo es NS.)');
+  for (const f of ctx.fuentes) partes.push('', `### ${f.id} — ${f.nombre}`, f.texto.trim() || '(sin texto legible)');
   if (ctx.catalogo) {
     const c = ctx.catalogo;
     partes.push('', '## VOCABULARIO (los únicos códigos válidos)');
@@ -166,10 +172,8 @@ export function cabeceraDelMensaje(ctx: ContextoEvaluacion): string {
       const vals = d.opciones?.length ? d.opciones.join(' | ') : d.tipoDato === 'BOOLEANO' || d.tipoDato === 'BOOL' ? 'SI | NO' : d.tipoDato;
       partes.push(`- [${d.fact}] ${d.label}: ${vals}`);
     }
-    partes.push('Para cualquier dato vale también NO_APLICA si no existe para ese interviniente o bien.', '', '## FUENTES');
+    partes.push('Para cualquier dato vale también NO_APLICA si no existe para ese interviniente o bien.');
   }
-  if (ctx.fuentes.length === 0) partes.push('', '(No hay ninguna fuente: todo es NS.)');
-  for (const f of ctx.fuentes) partes.push('', `### ${f.id} — ${f.nombre}`, f.texto.trim() || '(sin texto legible)');
   return partes.join('\n');
 }
 
