@@ -104,7 +104,24 @@ async function ocrTolerante(args: Parameters<typeof ocrViaPlatform>[0]): Promise
  * Nunca lanza por formato no soportado ni por un fallo del OCR: devuelve
  * `{ metodo: 'empty', texto: '' }` y el llamante decide qué contestar.
  */
+/**
+ * El texto de un documento, LIMPIO de caracteres NUL (`\u0000`): PostgreSQL no admite NUL en un `text` («invalid byte
+ * sequence for encoding UTF8: 0x00»), y un PDF firmado con Viafirma los traía en la capa de texto; la subida a Redactor
+ * fallaba con un 500 (garaje de Sabadell en TEST, 10-nov-2026). Se limpia aquí, a la salida de todos los caminos (capa de
+ * texto, Word, OCR), para que ninguna app tenga que acordarse.
+ */
 export async function extraerTexto(bytes: Uint8Array, opts: ExtraerTextoOpts = {}): Promise<ExtraerTextoResult> {
+  return sinNul(await extraerTextoCrudo(bytes, opts));
+}
+
+/** El resultado sin caracteres NUL (y con `chars` recontado). */
+export function sinNul(r: ExtraerTextoResult): ExtraerTextoResult {
+  if (!r.texto.includes('\u0000')) return r;
+  const texto = r.texto.replace(/\u0000/g, '');
+  return { ...r, texto, chars: noEspacios(texto) };
+}
+
+async function extraerTextoCrudo(bytes: Uint8Array, opts: ExtraerTextoOpts = {}): Promise<ExtraerTextoResult> {
   const fileName = opts.fileName ?? '';
   const ocr = opts.ocr;
 
