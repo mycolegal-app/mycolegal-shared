@@ -14,6 +14,7 @@
   "files": [
     "index.ts",
     "word.ts",
+    "word-imagenes.ts",
     "xlsx.ts",
     "pdf.ts",
     "ocr-client.ts",
