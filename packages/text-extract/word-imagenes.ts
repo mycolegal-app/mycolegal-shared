@@ -4,7 +4,9 @@
 // tal cual van guardados dentro del fichero (Word 97 los guarda sin comprimir) para pasarlos por el OCR.
 //
 // Se recorren con su propia estructura —los segmentos del JPEG, los bloques del PNG—, no buscando un final
-// cualquiera, para no cortar una imagen por unos bytes que lo parezcan. Puro, sin dependencias.
+// cualquiera, para no cortar una imagen por unos bytes que lo parezcan. Un .docx es un ZIP con las imágenes
+// COMPRIMIDAS en `word/media/`: ahí no se buscan en los bytes, se sacan del ZIP (0.2.3).
+import { inflateRawSync } from 'node:zlib';
 
 export interface ImagenIncrustada { mime: 'image/jpeg' | 'image/png'; bytes: Uint8Array }
 
@@ -48,8 +50,41 @@ function finPng(b: Uint8Array, i: number): number {
   return -1;
 }
 
+const u16 = (b: Uint8Array, p: number) => b[p] | (b[p + 1] << 8);
+const u32 = (b: Uint8Array, p: number) => (b[p] | (b[p + 1] << 8) | (b[p + 2] << 16) | (b[p + 3] << 24)) >>> 0;
+
+/** Las imágenes de `word/media/` de un .docx (ZIP), descomprimidas. `null` si no es un ZIP legible. */
+function imagenesDeDocx(b: Uint8Array, maximo: number): ImagenIncrustada[] | null {
+  if (u32(b, 0) !== 0x04034b50) return null;
+  // El final del directorio central, buscando hacia atrás (puede llevar un comentario de hasta 64 KB).
+  let fin = -1;
+  for (let p = b.length - 22; p >= Math.max(0, b.length - 22 - 65_535); p--) if (u32(b, p) === 0x06054b50) { fin = p; break; }
+  if (fin < 0) return null;
+  const entradas = u16(b, fin + 10);
+  let p = u32(b, fin + 16);
+  const out: ImagenIncrustada[] = [];
+  for (let k = 0; k < entradas && p + 46 <= b.length && out.length < maximo; k++) {
+    if (u32(b, p) !== 0x02014b50) return out;
+    const metodo = u16(b, p + 10), comprimido = u32(b, p + 20);
+    const largoNombre = u16(b, p + 28), largoExtra = u16(b, p + 30), largoComentario = u16(b, p + 32);
+    const local = u32(b, p + 42);
+    const nombre = new TextDecoder().decode(b.subarray(p + 46, p + 46 + largoNombre));
+    p += 46 + largoNombre + largoExtra + largoComentario;
+    const tipo = /^word\/media\/.+\.(jpe?g|png)$/i.exec(nombre)?.[1]?.toLowerCase();
+    if (!tipo || u32(b, local) !== 0x04034b50) continue;
+    const desde = local + 30 + u16(b, local + 26) + u16(b, local + 28);
+    const datos = b.subarray(desde, desde + comprimido);
+    let bytes: Uint8Array;
+    try { bytes = metodo === 0 ? datos : metodo === 8 ? new Uint8Array(inflateRawSync(datos)) : new Uint8Array(); } catch { continue; }
+    if (bytes.length >= MINIMO_BYTES) out.push({ mime: tipo === 'png' ? 'image/png' : 'image/jpeg', bytes });
+  }
+  return out;
+}
+
 /** Las imágenes JPEG y PNG enteras que lleva dentro un fichero, en orden y sin repetir. */
 export function imagenesIncrustadas(bytes: Uint8Array, maximo = 12): ImagenIncrustada[] {
+  const docx = imagenesDeDocx(bytes, maximo);
+  if (docx) return docx;
   const out: ImagenIncrustada[] = [];
   const vistas = new Set<string>();
   for (let i = 0; i + 8 < bytes.length && out.length < maximo; i++) {

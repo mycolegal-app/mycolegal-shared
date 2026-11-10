@@ -34,3 +34,27 @@ console.log('  ✓ un icono pequeño no se manda al OCR');
 const cortado = jpeg.subarray(0, jpeg.length - 2);
 assert.equal(imagenesIncrustadas(unir(relleno(100), cortado)).length, 0);
 console.log('  ✓ un JPEG a medias no se manda');
+
+// Un .docx es un ZIP con las imágenes comprimidas en word/media/: se sacan del ZIP, no de los bytes.
+import { deflateRawSync } from 'node:zlib';
+const le16 = (n: number) => new Uint8Array([n & 255, (n >>> 8) & 255]);
+const le32 = (n: number) => new Uint8Array([n & 255, (n >>> 8) & 255, (n >>> 16) & 255, (n >>> 24) & 255]);
+function zip(ficheros: [string, Uint8Array][]): Uint8Array {
+  const locales: Uint8Array[] = [], centrales: Uint8Array[] = [];
+  let offset = 0;
+  for (const [nombre, datos] of ficheros) {
+    const n = new TextEncoder().encode(nombre), c = new Uint8Array(deflateRawSync(datos));
+    const local = unir(le32(0x04034b50), le16(20), le16(0), le16(8), le32(0), le32(0), le32(c.length), le32(datos.length), le16(n.length), le16(0), n, c);
+    centrales.push(unir(le32(0x02014b50), le16(20), le16(20), le16(0), le16(8), le32(0), le32(0), le32(c.length), le32(datos.length),
+      le16(n.length), le16(0), le16(0), le16(0), le16(0), le32(0), le32(offset), n));
+    locales.push(local); offset += local.length;
+  }
+  const central = unir(...centrales);
+  return unir(...locales, central, le32(0x06054b50), le16(0), le16(0), le16(ficheros.length), le16(ficheros.length), le32(central.length), le32(offset), le16(0));
+}
+const docx = zip([['word/document.xml', new TextEncoder().encode('<w:document/>')], ['word/media/image1.png', png], ['word/media/image2.jpeg', jpeg]]);
+const enDocx = imagenesIncrustadas(docx);
+assert.equal(enDocx.length, 2);
+assert.deepEqual(enDocx[0].bytes, png);
+assert.deepEqual(enDocx[1].bytes, jpeg);
+console.log('  ✓ un .docx: las imágenes comprimidas de word/media salen enteras');
