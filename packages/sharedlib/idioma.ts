@@ -69,8 +69,11 @@ const RASGOS: Array<[RegExp, Idioma, number]> = [
   [/ñ/g, 'gl', 0.4], // teño, viño: el gallego también la usa
   [/ción\b|ciones\b/g, 'es', 0.75],
   [/ção\b|ções\b|ã|õ/g, 'pt', 2],
-  [/\bx[aeiou]/g, 'gl', 0.75], // xa, xente, xuízo
-  [/[^\se]x[aeiou]/g, 'gl', 1], // orixinal, deixar, xestión (no «ex-»: examen, exacto)
+  // xa, xente, xuízo. A principio de palabra DE VERDAD: `\b` no tiene la «á» por letra y veía una «xi» inicial en «máximo».
+  [/(?<!\p{L})x[aeiou]/gu, 'gl', 0.75],
+  // orixinal, deixar, xestión (no «ex-»: examen, exacto; ni tras vocal con tilde: máximo, próximo, léxico, que son
+  // castellano — «mejor, pero 12 líneas máximo» salía gallego en una conversación en castellano, #50 de Consultor)
+  [/[^\seáéíóú]x[aeiou]/g, 'gl', 1],
   [/\bd?unha\b|\bnunha\b/g, 'gl', 1.5],
   [/tx|tz/g, 'eu', 1],
   [/\b\w+(?:ak|ek|ko|tik|ren|rekin|tzeko|tzen)\b/g, 'eu', 0.75],

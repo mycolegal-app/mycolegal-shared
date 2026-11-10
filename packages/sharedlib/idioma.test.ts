@@ -110,6 +110,26 @@ assert.equal(
   'es',
 );
 
+// #50 de Consultor (10-nov-2026): una frase corta con «máximo» no pasa una conversación en castellano a gallego.
+assert.equal(
+  decidirIdiomaRespuesta({
+    pregunta: 'mejor, pero 12 líneas máximo',
+    anteriores: [
+      'es exigible el libro del edificio (normativa Cataluña) en el caso de edificio plurifamiliar, cuya licencia es de 1991 pero que se ha terminado de construir en 2025?',
+      'redacta la cláusula',
+      'no me gusta la cláusula. me gustaría una cláusula que deje constancia de las fechas de las normativas (estatal y autonómica) que introdujeron el libro del edificio, en relación con la fecha (1991) de la licencia de obras, y las resoluciones que ratifiquen esto',
+    ],
+    preferido: 'CAST',
+  }),
+  'es',
+);
+assert.equal(detectarIdioma('el plazo máximo y el próximo trámite').idioma === 'gl', false);
+// Y un mensaje gallego de verdad sigue cambiando el idioma aunque la conversación vaya en castellano.
+assert.equal(
+  decidirIdiomaRespuesta({ pregunta: 'Agora quero a resposta en galego, por favor, xa que é para un cliente de Ourense', anteriores: ['¿Qué documentos necesito para una compraventa?'] }),
+  'gl',
+);
+
 assert.equal(idiomaDePreferencia('CAST'), 'es');
 assert.equal(idiomaDePreferencia('ca'), 'ca');
 assert.equal(idiomaDePreferencia('EUS'), 'eu');
