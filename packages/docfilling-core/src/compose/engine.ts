@@ -226,38 +226,28 @@ function tryMatchDirectiveChain(content: string, pos: number): number | null {
 }
 
 export function stripFieldSuffixes(content: string): string {
+  // Salta de «{{» en «{{» (indexOf) y copia los tramos de en medio enteros: avanzar carácter a carácter, con un
+  // `substring` y un `push` por carácter y el resto del texto copiado en cada «{{», era lo que más tiempo propio se
+  // llevaba al calcular el expediente de un esquema expandido de ~3 MB (perfil de Redactor, 10-nov-2026). Mismo
+  // resultado: lo que no es una declaración se copia tal cual y se sigue buscando desde el carácter siguiente.
   const out: string[] = [];
+  const declaracion = /\{\{([\w\u00C0-\u024F]+):/y;
   let i = 0;
-  const n = content.length;
-  while (i < n) {
-    if (content.substring(i, i + 2) !== "{{") {
-      out.push(content[i]);
-      i += 1;
-      continue;
-    }
-    const m = /^\{\{([\w\u00C0-\u024F]+):/.exec(content.substring(i));
-    if (!m) {
-      out.push(content[i]);
-      i += 1;
-      continue;
-    }
-    const name = m[1];
-    if (isMetadataField(name)) {
-      out.push(content[i]);
-      i += 1;
-      continue;
-    }
-    const end = tryMatchDirectiveChain(content, i + m[0].length - 1);
-    if (end === null) {
-      out.push(content[i]);
-      i += 1;
-      continue;
-    }
+  let copiado = 0;
+  for (;;) {
+    const k = content.indexOf("{{", i);
+    if (k < 0) break;
+    declaracion.lastIndex = k;
+    const m = declaracion.exec(content);
+    const end = m && !isMetadataField(m[1]) ? tryMatchDirectiveChain(content, k + m[0].length - 1) : null;
+    if (!m || end === null) { i = k + 1; continue; }
+    out.push(content.slice(copiado, k));
     // El formato de salida (`#amount`) no es un sufijo de declaración: se conserva.
-    const formato = /(#[^}]*)\}\}$/.exec(content.substring(i, end));
-    out.push("{{" + name + (formato ? formato[1].trim() : "") + "}}");
-    i = end;
+    const formato = /(#[^}]*)\}\}$/.exec(content.substring(k, end));
+    out.push("{{" + m[1] + (formato ? formato[1].trim() : "") + "}}");
+    i = copiado = end;
   }
+  out.push(content.slice(copiado));
   return out.join("");
 }
 
@@ -879,6 +869,23 @@ export function condicionTriestado(
   return ev(condicion);
 }
 
+/**
+ * Los IF/ELSE/ENDIF, en UNA pasada (10-nov-2026). Antes: una expresión regular que resolvía los bloques más internos
+ * y releía el texto entero por cada nivel de anidamiento (hasta 50 vueltas), y `resolverDeclarados` la repetía hasta 4
+ * veces: con el esquema expandido de una 0405 (~3 MB) era casi todo el tiempo de calcular el expediente.
+ *
+ * Ahora se emparejan los IF y los ENDIF con una pila y cada bloque se resuelve con sus hijos ya resueltos. El resultado
+ * es el MISMO carácter a carácter (condición de Carles; comparado con toda la biblioteca de _PROD), porque se imitan
+ * las reglas de la expresión regular, incluidas las de las plantillas mal formadas:
+ *
+ *   · un bloque sólo se resuelve si su cuerpo, con los hijos ya resueltos, no contiene ningún «{{IF » ni «{{ENDIF}}»:
+ *     un hijo que se queda sin resolver (un «{{IF » mal cerrado, uno sin ENDIF) deja literal a todos sus antecesores;
+ *   · el cuerpo se parte por el PRIMER «{{ELSE}}» que contenga (también uno que traiga un hijo ya resuelto);
+ *   · un bloque se resuelve en la vuelta «1 + la del hijo más profundo», y nada pasa de la vuelta 50 (W100 igual).
+ *
+ * Lo único que cambia es el ORDEN en que se evalúan las condiciones (de dentro afuera bloque a bloque, no nivel a nivel
+ * en todo el texto), y con él el orden de los avisos de evaluación.
+ */
 export function processConditionals(
   content: string,
   fields: FieldValues,
@@ -886,69 +893,86 @@ export function processConditionals(
 ): string {
   // Phase 4: pre-normalize legacy forms so a single regex handles all cases.
   content = normalizeConditionals(content);
-
-  // Innermost-first body: must not contain a nested {{IF }} opening or
-  // a {{ENDIF}}. Negative lookahead at each char position lets the
-  // engine match the innermost block before any outer wrapper.
-  const standardPat = new RegExp(
-    "\\{\\{IF\\s+([^}]+)\\}\\}" +
-    "((?:(?!\\{\\{IF\\s+|\\{\\{ENDIF\\}\\}).)*?)" +
-    "(?:\\{\\{ELSE\\}\\}((?:(?!\\{\\{IF\\s+|\\{\\{ENDIF\\}\\}).)*?))?" +
-    "\\{\\{ENDIF\\}\\}",
-    "gs",
-  );
+  if (!content.includes("{{IF")) return content;
 
   const { evalExpr } = crearEvaluador(fields, warnings);
-
-  const evalStandard = (
-    _m: string,
-    condition: string,
-    trueContent: string,
-    falseContent: string | undefined,
-  ): string => {
-    const fc = falseContent ?? "";
-    return evalExpr(condition.trim()) ? trueContent : fc;
-  };
-
-  // Era 10, y **la biblioteca real anida más que eso**: medido el 4-oct-2026
-  // sobre `0501_ESQUEMA_MAESTRO_VIVIENDA_PH`, sus condiciones llegan a **12
-  // niveles** de anidamiento. Con el tope en 10, las ramas más profundas no se
-  // resolvían nunca: el aviso `W100` que salía en cada composición no era
-  // incidental, era estructural.
-  //
-  // Carles pidió «al menos 20», y **la medición dijo que 20 no llega**: con el
-  // tope en 20, de los 105 esquemas 87 componen limpios y **18 siguen pasándose**
-  // —anidan más de veinte niveles—. Así que 50.
-  //
-  // Un tope alto NO cuesta pasadas: el bucle sale por el `content === prev` en
-  // cuanto no hay nada más que sustituir, así que sólo itera lo que la plantilla
-  // de verdad necesita. El número es una red contra un bucle infinito, no un
-  // presupuesto, y ponerlo justo convertía la red en un techo.
-  const maxIterations = 50;
-  let iteration = 0;
-
-  while (content.includes("{{IF") && iteration < maxIterations) {
-    const prev = content;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    content = content.replace(standardPat, evalStandard as any);
-    if (content === prev) break;
-    iteration++;
+  const MAX_VUELTAS = 50;
+  // Resolver un bloque puede FORMAR uno nuevo con lo que tenía al lado («{{» + «IF B}}…» que deja un bloque resuelto):
+  // la expresión regular lo veía en la vuelta siguiente. Se repite la pasada mientras cambie algo, con lo que quede de
+  // las 50 vueltas; en una plantilla normal la segunda no encuentra nada y sale enseguida.
+  let usadas = 0;
+  for (;;) {
+    const r = unaPasada(content, MAX_VUELTAS - usadas);
+    if (r.texto === content) break;
+    content = r.texto;
+    usadas += r.vueltas;
+    if (usadas >= MAX_VUELTAS || !content.includes("{{IF")) break;
   }
 
-  if (
-    warnings &&
-    iteration >= maxIterations &&
-    content.includes("{{IF")
-  ) {
+  if (warnings && usadas >= MAX_VUELTAS && content.includes("{{IF")) {
     warnings.push({
       code: "W100",
       message:
         "processConditionals reached max_iterations=50; unresolved {{IF ...}} / {{ENDIF}} blocks remain — likely a malformed or deeply nested conditional.",
-      iteration,
+      iteration: usadas,
     });
   }
-
   return content;
+
+  function unaPasada(content: string, MAX_VUELTAS: number): { texto: string; vueltas: number } {
+
+  // Las marcas que gobiernan el emparejamiento, como las ve la expresión regular de antes: un IF bien formado, un
+  // «{{IF » que no llega a serlo (abre y nunca se resuelve) y un ENDIF.
+  interface Bloque { ini: number; finTok: number; cond: string | null; cierreIni: number; cierreFin: number; hijos: Bloque[] }
+  const raiz: Bloque[] = [];
+  const pila: Bloque[] = [];
+  const marca = /\{\{IF\s+([^}]+)\}\}|\{\{IF\s+|\{\{ENDIF\}\}/g;
+  for (let m = marca.exec(content); m; m = marca.exec(content)) {
+    if (m[0] === "{{ENDIF}}") {
+      const b = pila.pop();
+      if (b) { b.cierreIni = m.index; b.cierreFin = m.index + m[0].length; }
+      continue;
+    }
+    const b: Bloque = { ini: m.index, finTok: m.index + m[0].length, cond: m[1] ?? null, cierreIni: -1, cierreFin: -1, hijos: [] };
+    (pila.length ? pila[pila.length - 1].hijos : raiz).push(b);
+    pila.push(b);
+  }
+
+  let vueltas = 0;
+  const quedaMarca = /\{\{IF\s+|\{\{ENDIF\}\}/;
+  /** El tramo [desde, hasta) con sus bloques resueltos; `vuelta` = la del más profundo; `ok` = todos resueltos. */
+  const tramo = (desde: number, hasta: number, hijos: Bloque[]): { texto: string; vuelta: number; ok: boolean } => {
+    let texto = "";
+    let vuelta = 0;
+    let ok = true;
+    let pos = desde;
+    for (const h of hijos) {
+      texto += content.slice(pos, h.ini);
+      const r = bloque(h);
+      texto += r.texto;
+      vuelta = Math.max(vuelta, r.vuelta);
+      ok = ok && r.ok;
+      pos = h.cierreFin >= 0 ? h.cierreFin : hasta;
+    }
+    return { texto: texto + content.slice(pos, hasta), vuelta, ok };
+  };
+  const bloque = (b: Bloque): { texto: string; vuelta: number; ok: boolean } => {
+    const cerrado = b.cierreIni >= 0;
+    const cuerpo = tramo(b.finTok, cerrado ? b.cierreIni : content.length, b.hijos);
+    const literal = () => ({
+      texto: content.slice(b.ini, b.finTok) + cuerpo.texto + (cerrado ? "{{ENDIF}}" : ""), vuelta: cuerpo.vuelta, ok: false,
+    });
+    if (b.cond === null || !cerrado || !cuerpo.ok) return literal();
+    const vuelta = cuerpo.vuelta + 1;
+    if (vuelta > MAX_VUELTAS || quedaMarca.test(cuerpo.texto)) return literal();
+    vueltas = Math.max(vueltas, vuelta);
+    const corte = cuerpo.texto.indexOf("{{ELSE}}");
+    const si = corte < 0 ? cuerpo.texto : cuerpo.texto.slice(0, corte);
+    const no = corte < 0 ? "" : cuerpo.texto.slice(corte + "{{ELSE}}".length);
+    return { texto: evalExpr(b.cond.trim()) ? si : no, vuelta, ok: true };
+  };
+  return { texto: tramo(0, content.length, raiz).texto, vueltas };
+  }
 }
 
 // =============================================================================
