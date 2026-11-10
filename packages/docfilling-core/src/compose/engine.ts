@@ -354,16 +354,18 @@ export function extractDeclareFixedValues(content: string): Record<string, strin
  *   4. un `DECLARE` vivo POSTERIOR sigue pisando al respaldo.
  * Las ramas dependen de los valores y los valores de las ramas: se repite hasta que no cambia (como mucho 4 veces).
  */
-export function resolverDeclarados(
-  template: string,
-  fields: FieldValues = {},
-  locale: string = DEFAULT_LOCALE,
-): Record<string, string> {
+/**
+ * Lo de `resolverDeclarados` que SÓLO depende de la plantilla —las declaraciones y el texto reducido a directivas y
+ * marcas—, guardado por plantilla (10-nov-2026). Redactor lo pide con cada cambio de valores (cada tanda de una lectura,
+ * cada respuesta) sobre el mismo esquema expandido de ~3 MB, y rehacerlo era la mitad del coste. Es una función pura
+ * del texto: guardarlo no cambia el resultado.
+ */
+const PREPARADOS = new Map<string, { decls: DeclaracionFija[]; marcado: string; cond: CondicionalesPreparadas }>();
+const PREPARADOS_MAX = 16;
+function preparacionDeDeclarados(template: string): { decls: DeclaracionFija[]; marcado: string; cond: CondicionalesPreparadas } {
+  const hecho = PREPARADOS.get(template);
+  if (hecho) return hecho;
   const { texto, decls } = declaracionesFijas(template);
-  const fijos: Record<string, string> = {};
-  for (const d of decls) if (!d.soloSiIndefinido) fijos[d.nombre] = d.valor;
-  if (!decls.some((d) => d.soloSiIndefinido)) return fijos;
-
   // Cada declaración, sustituida por una marca: las que sobreviven a las condiciones están vivas.
   let marcado = "";
   let pos = 0;
@@ -377,6 +379,21 @@ export function resolverDeclarados(
   marcado = (marcado + texto.slice(pos)).replace(/^[ \t]*\/\/[^\n]*\n?/gm, "");
   marcado = (marcado.match(/\{\{[\s\S]*?\}\}|\x00[^\x00]*\x00|\u0007\d+\u0007/g) ?? []).join("\n");
   marcado = stripDirectives(stripFieldSuffixes(marcado));
+  const r = { decls, marcado, cond: prepararCondicionales(marcado) };
+  if (PREPARADOS.size >= PREPARADOS_MAX) PREPARADOS.delete(PREPARADOS.keys().next().value!);
+  PREPARADOS.set(template, r);
+  return r;
+}
+
+export function resolverDeclarados(
+  template: string,
+  fields: FieldValues = {},
+  locale: string = DEFAULT_LOCALE,
+): Record<string, string> {
+  const { decls, cond } = preparacionDeDeclarados(template);
+  const fijos: Record<string, string> = {};
+  for (const d of decls) if (!d.soloSiIndefinido) fijos[d.nombre] = d.valor;
+  if (!decls.some((d) => d.soloSiIndefinido)) return fijos;
 
   const tieneDato = (n: string): boolean => {
     const v = fields[n] ?? fields[n.toUpperCase()];
@@ -387,7 +404,7 @@ export function resolverDeclarados(
   for (let vuelta = 0; vuelta < 4; vuelta++) {
     const valores: FieldValues = { ...sistema, ...fields, ...fijos, ...aplicados };
     const vivas = new Set(
-      [...processExitIncludes(processConditionals(marcado, valores)).matchAll(/\u0007(\d+)\u0007/g)].map((m) => Number(m[1])),
+      [...processExitIncludes(resolverCondicionales(cond, valores)).matchAll(/\u0007(\d+)\u0007/g)].map((m) => Number(m[1])),
     );
     const declarado = new Set<string>();
     const respaldo = new Map<string, DeclaracionFija>();
@@ -631,11 +648,10 @@ export function normalizeConditionals(content: string): string {
  * El evaluador de condiciones del motor, fuera de `processConditionals` para poder usarlo también por partes
  * (`condicionTriestado`). El código es el que había dentro, tal cual: un solo evaluador del lenguaje.
  */
-function crearEvaluador(fields: FieldValues, warnings?: ComposeWarning[]) {
   // Quote- and paren-aware splitter — splits `expr` by `sep`
   // ("AND" or "OR") when it appears outside quoted strings / IN(...)
   // lists. Mirrors the validator's helper.
-  const splitLogical = (expr: string, sep: string): string[] => {
+function splitLogicalCond(expr: string, sep: string): string[] {
     const parts: string[] = [];
     let buf: string[] = [];
     let quote: string | null = null;
@@ -675,15 +691,70 @@ function crearEvaluador(fields: FieldValues, warnings?: ComposeWarning[]) {
   // Map each opening quote → closer. Asymmetric pairs (curly /
   // guillemet) close with their partner; symmetric ones close
   // with themselves. Mirrors composer._QUOTE_PAIRS.
-  const QUOTE_PAIRS: Record<string, string> = {
+const QUOTE_PAIRS_COND: Record<string, string> = {
     "'": "'",
     '"': '"',
     "\u201c": "\u201d",
     "\u00ab": "\u00bb",
   };
-  const quoteCloses = (opener: string, c: string): boolean =>
-    (QUOTE_PAIRS[opener] ?? opener) === c;
+function quoteClosesCond(opener: string, c: string): boolean {
+  return (QUOTE_PAIRS_COND[opener] ?? opener) === c;
+}
 
+  // ¿Envuelve un único par de paréntesis la expresión ENTERA? `(A OR B)` sí;
+  // `(A) AND (B)` no —el primer `(` cierra antes del final—. Consciente de
+  // comillas, para no contar un paréntesis que va dentro de un valor.
+function envueltaEnParentesisCond(e: string): boolean {
+    if (!e.startsWith("(") || !e.endsWith(")")) return false;
+    let depth = 0;
+    let quote: string | null = null;
+    for (let i = 0; i < e.length; i++) {
+      const c = e[i];
+      if (quote !== null) { if (quoteClosesCond(quote, c)) quote = null; continue; }
+      if ("'\"\u201c\u00ab".includes(c)) { quote = c; continue; }
+      if (c === "(") depth++;
+      else if (c === ")") { depth--; if (depth === 0 && i < e.length - 1) return false; }
+    }
+    return depth === 0;
+  };
+
+/** La estructura de una condición, sin valores: lo que se puede guardar por texto. */
+type NodoCondicion =
+  | { t: "vacia" } | { t: "or"; hijos: NodoCondicion[] } | { t: "and"; hijos: NodoCondicion[] }
+  | { t: "not"; h: NodoCondicion } | { t: "atomo"; atomo: string };
+
+/**
+ * Analizar el texto de una condición (partir por OR y AND fuera de comillas y paréntesis, carácter a carácter) era la
+ * mitad del coste de evaluar las condiciones de un esquema de miles de IF, y se repetía en cada evaluación con cada
+ * juego de valores (perfil de Redactor, 10-nov-2026). No depende de los valores: se hace una vez por texto.
+ */
+const ESTRUCTURAS = new Map<string, NodoCondicion>();
+const ESTRUCTURAS_MAX = 50_000;
+function estructuraDeCondicion(expr: string): NodoCondicion {
+  const hecha = ESTRUCTURAS.get(expr);
+  if (hecha) return hecha;
+  const e = expr.trim();
+  let n: NodoCondicion;
+  if (!e) n = { t: "vacia" };
+  else {
+    const orParts = splitLogicalCond(e, "OR");
+    if (orParts.length > 1) n = { t: "or", hijos: orParts.map(estructuraDeCondicion) };
+    else {
+      const andParts = splitLogicalCond(e, "AND");
+      if (andParts.length > 1) n = { t: "and", hijos: andParts.map(estructuraDeCondicion) };
+      else if (/^NOT\s*\(/i.test(e) || /^NOT\s+/i.test(e)) n = { t: "not", h: estructuraDeCondicion(e.slice(3).trim()) };
+      else if (envueltaEnParentesisCond(e)) n = estructuraDeCondicion(e.slice(1, -1));
+      else n = { t: "atomo", atomo: e };
+    }
+  }
+  if (ESTRUCTURAS.size >= ESTRUCTURAS_MAX) ESTRUCTURAS.clear();
+  ESTRUCTURAS.set(expr, n);
+  return n;
+}
+
+function crearEvaluador(fields: FieldValues, warnings?: ComposeWarning[]) {
+  const splitLogical = splitLogicalCond;
+  const quoteCloses = quoteClosesCond;
   // Quote-aware split of an IN-list body by top-level commas.
   const splitTopCommas = (body: string): string[] => {
     const parts: string[] = [];
@@ -783,37 +854,21 @@ function crearEvaluador(fields: FieldValues, warnings?: ComposeWarning[]) {
   };
 
   // Recursive evaluator — precedence: NOT (highest) > AND > OR (lowest).
-  // ¿Envuelve un único par de paréntesis la expresión ENTERA? `(A OR B)` sí;
-  // `(A) AND (B)` no —el primer `(` cierra antes del final—. Consciente de
-  // comillas, para no contar un paréntesis que va dentro de un valor.
-  const envueltaEnParentesis = (e: string): boolean => {
-    if (!e.startsWith("(") || !e.endsWith(")")) return false;
-    let depth = 0;
-    let quote: string | null = null;
-    for (let i = 0; i < e.length; i++) {
-      const c = e[i];
-      if (quote !== null) { if (quoteCloses(quote, c)) quote = null; continue; }
-      if ("'\"\u201c\u00ab".includes(c)) { quote = c; continue; }
-      if (c === "(") depth++;
-      else if (c === ")") { depth--; if (depth === 0 && i < e.length - 1) return false; }
-    }
-    return depth === 0;
-  };
+  const envueltaEnParentesis = envueltaEnParentesisCond;
 
-  const evalExpr = (expr: string): boolean => {
-    const e = expr.trim();
-    if (!e) return false;
-    const orParts = splitLogical(e, "OR");
-    if (orParts.length > 1) return orParts.some((p) => evalExpr(p));
-    const andParts = splitLogical(e, "AND");
-    if (andParts.length > 1) return andParts.every((p) => evalExpr(p));
-    // ⚠️ PARCHE A MANO (5-oct-2026). Sin esto un grupo `(…)` llegaba entero a
-    // `evalAtom`, que buscaba un campo llamado `(A` y daba FALSO: las 483
-    // condiciones con paréntesis de la biblioteca tomaban la rama equivocada.
-    if (/^NOT\s*\(/i.test(e) || /^NOT\s+/i.test(e)) return !evalExpr(e.slice(3).trim());
-    if (envueltaEnParentesis(e)) return evalExpr(e.slice(1, -1));
-    return evalAtom(e);
+  // La ESTRUCTURA de cada condición (OR / AND / NOT / paréntesis / comparación) se analiza una vez y se guarda por
+  // texto (`estructuraDeCondicion`); aquí sólo se recorre con estos valores. Mismo orden y mismos cortocircuitos que
+  // el evaluador recursivo de antes, y cada comparación la sigue evaluando `evalAtom`.
+  const evalNodo = (n: NodoCondicion): boolean => {
+    switch (n.t) {
+      case "vacia": return false;
+      case "or": return n.hijos.some(evalNodo);
+      case "and": return n.hijos.every(evalNodo);
+      case "not": return !evalNodo(n.h);
+      default: return evalAtom(n.atomo);
+    }
   };
+  const evalExpr = (expr: string): boolean => evalNodo(estructuraDeCondicion(expr));
   return { evalExpr, evalAtom, splitLogical, envueltaEnParentesis };
 }
 
@@ -891,9 +946,52 @@ export function processConditionals(
   fields: FieldValues,
   warnings?: ComposeWarning[],
 ): string {
+  return resolverCondicionales(prepararCondicionales(content), fields, warnings);
+}
+
+/** Un IF (o un «{{IF » que no llega a serlo, `cond: null`) con su ENDIF (-1 si no lo tiene) y los bloques de dentro. */
+interface BloqueIf { ini: number; finTok: number; cond: string | null; cierreIni: number; cierreFin: number; hijos: BloqueIf[] }
+
+/**
+ * Lo de `processConditionals` que SÓLO depende del texto: normalizarlo y emparejar sus IF/ENDIF (10-nov-2026). Quien
+ * evalúa el mismo texto con muchos juegos de valores (`resolverDeclarados`: hasta 4 vueltas por llamada, y una llamada
+ * por cada cambio de valores en Redactor) lo prepara una vez y lo guarda.
+ */
+export interface CondicionalesPreparadas { texto: string; raiz: BloqueIf[] | null }
+export function prepararCondicionales(content: string): CondicionalesPreparadas {
   // Phase 4: pre-normalize legacy forms so a single regex handles all cases.
-  content = normalizeConditionals(content);
-  if (!content.includes("{{IF")) return content;
+  const texto = normalizeConditionals(content);
+  return { texto, raiz: texto.includes("{{IF") ? emparejarIfs(texto) : null };
+}
+
+function emparejarIfs(content: string): BloqueIf[] {
+  // Las marcas que gobiernan el emparejamiento, como las ve la expresión regular de antes: un IF bien formado, un
+  // «{{IF » que no llega a serlo (abre y nunca se resuelve) y un ENDIF.
+  const raiz: BloqueIf[] = [];
+  const pila: BloqueIf[] = [];
+  const marca = /\{\{IF\s+([^}]+)\}\}|\{\{IF\s+|\{\{ENDIF\}\}/g;
+  for (let m = marca.exec(content); m; m = marca.exec(content)) {
+    if (m[0] === "{{ENDIF}}") {
+      const b = pila.pop();
+      if (b) { b.cierreIni = m.index; b.cierreFin = m.index + m[0].length; }
+      continue;
+    }
+    const b: BloqueIf = { ini: m.index, finTok: m.index + m[0].length, cond: m[1] ?? null, cierreIni: -1, cierreFin: -1, hijos: [] };
+    (pila.length ? pila[pila.length - 1].hijos : raiz).push(b);
+    pila.push(b);
+  }
+
+  return raiz;
+}
+
+/** Evalúa unas condicionales ya preparadas con unos valores. Mismo resultado que `processConditionals`. */
+export function resolverCondicionales(
+  prep: CondicionalesPreparadas,
+  fields: FieldValues,
+  warnings?: ComposeWarning[],
+): string {
+  let content = prep.texto;
+  if (!prep.raiz) return content;
 
   const { evalExpr } = crearEvaluador(fields, warnings);
   const MAX_VUELTAS = 50;
@@ -901,12 +999,14 @@ export function processConditionals(
   // la expresión regular lo veía en la vuelta siguiente. Se repite la pasada mientras cambie algo, con lo que quede de
   // las 50 vueltas; en una plantilla normal la segunda no encuentra nada y sale enseguida.
   let usadas = 0;
+  let raiz: BloqueIf[] = prep.raiz;
   for (;;) {
-    const r = unaPasada(content, MAX_VUELTAS - usadas);
+    const r = unaPasada(content, raiz, MAX_VUELTAS - usadas);
     if (r.texto === content) break;
     content = r.texto;
     usadas += r.vueltas;
     if (usadas >= MAX_VUELTAS || !content.includes("{{IF")) break;
+    raiz = emparejarIfs(content);
   }
 
   if (warnings && usadas >= MAX_VUELTAS && content.includes("{{IF")) {
@@ -919,29 +1019,11 @@ export function processConditionals(
   }
   return content;
 
-  function unaPasada(content: string, MAX_VUELTAS: number): { texto: string; vueltas: number } {
-
-  // Las marcas que gobiernan el emparejamiento, como las ve la expresión regular de antes: un IF bien formado, un
-  // «{{IF » que no llega a serlo (abre y nunca se resuelve) y un ENDIF.
-  interface Bloque { ini: number; finTok: number; cond: string | null; cierreIni: number; cierreFin: number; hijos: Bloque[] }
-  const raiz: Bloque[] = [];
-  const pila: Bloque[] = [];
-  const marca = /\{\{IF\s+([^}]+)\}\}|\{\{IF\s+|\{\{ENDIF\}\}/g;
-  for (let m = marca.exec(content); m; m = marca.exec(content)) {
-    if (m[0] === "{{ENDIF}}") {
-      const b = pila.pop();
-      if (b) { b.cierreIni = m.index; b.cierreFin = m.index + m[0].length; }
-      continue;
-    }
-    const b: Bloque = { ini: m.index, finTok: m.index + m[0].length, cond: m[1] ?? null, cierreIni: -1, cierreFin: -1, hijos: [] };
-    (pila.length ? pila[pila.length - 1].hijos : raiz).push(b);
-    pila.push(b);
-  }
-
+  function unaPasada(content: string, raiz: BloqueIf[], MAX_VUELTAS: number): { texto: string; vueltas: number } {
   let vueltas = 0;
   const quedaMarca = /\{\{IF\s+|\{\{ENDIF\}\}/;
   /** El tramo [desde, hasta) con sus bloques resueltos; `vuelta` = la del más profundo; `ok` = todos resueltos. */
-  const tramo = (desde: number, hasta: number, hijos: Bloque[]): { texto: string; vuelta: number; ok: boolean } => {
+  const tramo = (desde: number, hasta: number, hijos: BloqueIf[]): { texto: string; vuelta: number; ok: boolean } => {
     let texto = "";
     let vuelta = 0;
     let ok = true;
@@ -956,7 +1038,7 @@ export function processConditionals(
     }
     return { texto: texto + content.slice(pos, hasta), vuelta, ok };
   };
-  const bloque = (b: Bloque): { texto: string; vuelta: number; ok: boolean } => {
+  const bloque = (b: BloqueIf): { texto: string; vuelta: number; ok: boolean } => {
     const cerrado = b.cierreIni >= 0;
     const cuerpo = tramo(b.finTok, cerrado ? b.cierreIni : content.length, b.hijos);
     const literal = () => ({
