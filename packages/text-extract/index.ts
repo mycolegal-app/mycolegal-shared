@@ -11,11 +11,13 @@
 export * from './pdf';
 export * from './ocr-client';
 export { extractWordText, esWord } from './word';
+export { imagenesIncrustadas, type ImagenIncrustada } from './word-imagenes';
 export { extractXlsxText, extractXlsx, esXlsx, XLSX_MAX_CHARS } from './xlsx';
 export type { XlsxExtraccion, XlsxHoja } from './xlsx';
 
 import { extractText as extractPdfLayer } from './pdf';
 import { extractWordText, esWord } from './word';
+import { imagenesIncrustadas } from './word-imagenes';
 import { extractXlsx, esXlsx } from './xlsx';
 import { ocrViaPlatform } from './ocr-client';
 
@@ -123,10 +125,19 @@ export async function extraerTexto(bytes: Uint8Array, opts: ExtraerTextoOpts = {
     };
   }
 
-  // 1) Word → texto embebido (sin OCR).
+  // 1) Word → texto embebido. Si no trae texto y hay OCR, sus imágenes (0.2.2): un .doc con notas simples o
+  //    certificaciones escaneadas y pegadas salía vacío (PROD, notaría Micó, nov-2026).
   if (esWord(mime, fileName)) {
     const texto = await extractWordText(bytes);
-    return { texto, chars: noEspacios(texto), metodo: texto ? 'word' : 'empty' };
+    if (noEspacios(texto) > 0 || !ocr) return { texto, chars: noEspacios(texto), metodo: texto ? 'word' : 'empty' };
+    const partes: string[] = [];
+    const imagenes = imagenesIncrustadas(bytes);
+    for (const [k, im] of imagenes.entries()) {
+      const t = await ocrTolerante({ platformUrl: ocr.platformUrl, serviceKey: ocr.serviceKey, bytes: im.bytes, mimeType: im.mime });
+      if (t) partes.push(imagenes.length > 1 ? `[Imagen ${k + 1} de ${imagenes.length}]\n${t}` : t);
+    }
+    const leido = partes.join('\n\n');
+    return leido ? { texto: leido, chars: noEspacios(leido), metodo: 'ocr' } : { texto, chars: noEspacios(texto), metodo: 'empty' };
   }
 
   // 2) PDF → capa de texto; si es escaneo (needsOcr) y hay config OCR, se OCR-iza.
