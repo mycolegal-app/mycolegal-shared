@@ -9,6 +9,7 @@ import listPlugin from "@fullcalendar/list";
 import interactionPlugin from "@fullcalendar/interaction";
 import esLocale from "@fullcalendar/core/locales/es";
 import type { EventContentArg } from "@fullcalendar/core";
+import { pedirConCacheDeSesion } from "../../lib/cache-sesion";
 import {
   CalendarDays,
   ChevronLeft,
@@ -306,11 +307,11 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
   const [saving, setSaving] = useState(false);
   // #281 Fase 2 — empleados para el selector "para quién" del bloqueo.
   const [empleados, setEmpleados] = useState<{ id: string; displayName: string }[]>([]);
+  // 5 min en sessionStorage: la plantilla casi no cambia y se pide en cada página.
   useEffect(() => {
-    fetch(`${apiBase}/catalogs/empleados?pageSize=200`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j) => {
-        const data = Array.isArray(j?.data) ? j.data : [];
+    pedirConCacheDeSesion(`${apiBase}/catalogs/empleados?pageSize=200`, { vidaMs: 5 * 60_000 })
+      .then((r) => {
+        const data = Array.isArray(r.json?.data) ? r.json.data : [];
         setEmpleados(data.map((e: any) => ({ id: e.id, displayName: e.displayName })));
       })
       .catch(() => setEmpleados([]));

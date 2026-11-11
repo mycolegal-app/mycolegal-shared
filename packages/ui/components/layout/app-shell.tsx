@@ -23,6 +23,7 @@ import { CreditsPurchaseModal } from "../shared/credits-purchase-modal";
 import { useI18n } from "../i18n/i18n-context";
 import { cn } from "../../lib/utils";
 import { pedirAuthMe, olvidarAuthMe } from "../../lib/auth-me";
+import { olvidarCacheDeSesion } from "../../lib/cache-sesion";
 import {
   SidebarCollapseProvider,
   useSidebarCollapse,
@@ -57,6 +58,7 @@ function writeMeCache(d: unknown) {
 /** Limpia el cache del perfil. Llamar en logout/timeout. */
 export function clearMeCache() {
   olvidarAuthMe();
+  olvidarCacheDeSesion();
   try {
     window.sessionStorage.removeItem(ME_CACHE_KEY);
   } catch {

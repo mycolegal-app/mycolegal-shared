@@ -17,6 +17,7 @@
 import { useEffect, useState } from "react";
 import { marked } from "marked";
 import { useI18n } from "../i18n/i18n-context";
+import { pedirConCacheDeSesion } from "../../lib/cache-sesion";
 
 interface PendingDoc {
   id: string;
@@ -27,15 +28,16 @@ interface PendingDoc {
   language: string;
 }
 
-async function fetchPending(): Promise<PendingDoc[]> {
-  try {
-    const res = await fetch("/api/legal/pending", { cache: "no-store" });
-    if (!res.ok) return [];
-    const json = await res.json();
-    return Array.isArray(json?.pending) ? json.pending : [];
-  } catch {
-    return [];
-  }
+// Solo se guarda (10 min, sessionStorage) el «nada pendiente»: un documento por
+// aceptar se pide siempre de nuevo, y tras aceptar se fuerza la red.
+async function fetchPending(forzar = false): Promise<PendingDoc[]> {
+  const r = await pedirConCacheDeSesion<{ pending?: PendingDoc[] }>("/api/legal/pending", {
+    vidaMs: 10 * 60_000,
+    forzar,
+    guardarSi: (json) => !Array.isArray(json?.pending) || json.pending.length === 0,
+  });
+  if (!r.ok) return [];
+  return Array.isArray(r.json?.pending) ? r.json.pending : [];
 }
 
 export function LegalGate() {
@@ -67,7 +69,7 @@ export function LegalGate() {
           return;
         }
       }
-      const next = await fetchPending();
+      const next = await fetchPending(true);
       setChecked(false);
       if (next.length === 0) {
         // Recargamos para que el estado de la app refleje el acceso ya concedido.

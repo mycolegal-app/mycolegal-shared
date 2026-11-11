@@ -6,6 +6,7 @@ import { Bell, Check, CheckCheck, Loader2, X } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { useI18n } from "../i18n/i18n-context";
 import { apiErrorMessage } from "../../lib/api-error";
+import { suscribirNoLeidas, refrescarNoLeidas } from "../../lib/no-leidas";
 
 export interface NotificationEntry {
   id: string;
@@ -35,7 +36,9 @@ interface NotificationsBellProps {
   currentAppSlug: string;
   /** Proxy base path. Defaults to each app's own `/api/notifications`. */
   apiBase?: string;
-  /** Polling interval for the unread badge. Default 30s. */
+  /** @deprecated Sin efecto desde el 11-nov-2026: el badge sale del sondeo
+   *  compartido con la barra de apps (`lib/no-leidas.ts`, cada 90 s y en pausa
+   *  con la pestaña oculta). Se conserva para no romper a quien lo pase. */
   pollIntervalMs?: number;
   /**
    * Host router push for same-app deep links. If omitted, internal links
@@ -51,8 +54,6 @@ interface NotificationsBellProps {
   /** Colour scheme for the trigger icon. Default `dark` (white icon on navy). */
   variant?: "dark" | "light";
 }
-
-const DEFAULT_POLL = 30_000;
 
 function formatRelative(
   iso: string,
@@ -149,7 +150,6 @@ export function notificationFitsInList(n: Pick<NotificationEntry, "body">): bool
 export function NotificationsBell({
   currentAppSlug,
   apiBase = "/api/notifications",
-  pollIntervalMs = DEFAULT_POLL,
   onNavigateInternal,
   className,
   align = "right",
@@ -167,32 +167,14 @@ export function NotificationsBell({
   const panelRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
 
-  // Poll just the cheap unread-count endpoint in the background. We keep
-  // the list request gated on open so a user who never opens the bell only
-  // pays the badge cost.
-  const refreshUnread = useCallback(async () => {
-    try {
-      const res = await fetch(`${apiBase}/unread-count`, { credentials: "include" });
-      if (!res.ok) return;
-      const body = await res.json();
-      if (typeof body.unread === "number") setUnread(body.unread);
-    } catch {
-      // Silent — transient network noise shouldn't throw UI errors.
-    }
-  }, [apiBase]);
-
-  useEffect(() => {
-    refreshUnread();
-    const id = setInterval(refreshUnread, pollIntervalMs);
-    return () => clearInterval(id);
-  }, [pollIntervalMs, refreshUnread]);
-
-  // Re-check on focus so a returning tab doesn't lag behind.
-  useEffect(() => {
-    const onFocus = () => refreshUnread();
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
-  }, [refreshUnread]);
+  // The badge comes from the poll shared with the app switcher bar (one
+  // request for both, paused while the tab is hidden, refreshed on return).
+  // The list request stays gated on open so a user who never opens the bell
+  // only pays the badge cost.
+  useEffect(
+    () => suscribirNoLeidas(apiBase, (e) => setUnread(e.unread)),
+    [apiBase],
+  );
 
   const fetchList = useCallback(async () => {
     setLoading(true);
@@ -254,6 +236,8 @@ export function NotificationsBell({
           prev.map((n) => (n.id === id ? { ...n, readAt: new Date().toISOString() } : n)),
         );
         setUnread((u) => Math.max(0, u - 1));
+        // La barra de apps comparte el sondeo: que también baje su badge.
+        void refrescarNoLeidas(apiBase);
       } catch {
         /* ignore — next poll will correct the state */
       }
@@ -277,6 +261,7 @@ export function NotificationsBell({
       const now = new Date().toISOString();
       setItems((prev) => prev.map((n) => ({ ...n, readAt: n.readAt ?? now })));
       setUnread(0);
+      void refrescarNoLeidas(apiBase);
     } finally {
       setMarking(false);
     }

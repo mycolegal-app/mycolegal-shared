@@ -39,6 +39,7 @@ import { SinCreditos, esErrorDeCreditos } from "./sin-creditos";
 import { useSidebarCollapse } from "../layout/sidebar-collapse-context";
 import { cn } from "../../lib/utils";
 import { apiErrorMessage } from "../../lib/api-error";
+import { pedirConCacheDeSesion } from "../../lib/cache-sesion";
 import { readClasesSel, writeClasesSel, CLASES_CHANGED_EVENT } from "../../lib/biblioteca-clases";
 import { BotonDictado } from "./boton-dictado";
 import { BotonEscuchar } from "./boton-escuchar";
@@ -594,22 +595,23 @@ export function MycoBotRail({
   const baseUrl = askUrl.replace(/\/ask$/, "");
 
   // F3 — carga las skills disponibles (org + fábrica) para el selector y la tienda.
-  const loadSkills = useCallback(async () => {
-    try {
-      const r = await fetch(`${baseUrl}/skills`);
-      if (r.status === 404 || r.status === 405 || r.status === 501) {
-        setSkillsDisponibles(false);
-        setSkills([]);
-        return;
-      }
-      const j = r.ok ? await r.json() : null;
-      const d = j?.data ?? j;
-      if (Array.isArray(d)) {
-        setSkills(d);
-        setSkillsDisponibles(true);
-      }
-    } catch {
-      /* best-effort */
+  // Se guardan 10 min en sessionStorage (también el «aquí no hay tienda», que no
+  // cambia); tras crear, borrar o importar una se fuerza la red (`forzar`).
+  const loadSkills = useCallback(async (forzar = false) => {
+    const r = await pedirConCacheDeSesion(`${baseUrl}/skills`, {
+      vidaMs: 10 * 60_000,
+      forzar,
+      estadosEstables: [404, 405, 501],
+    });
+    if (r.status === 404 || r.status === 405 || r.status === 501) {
+      setSkillsDisponibles(false);
+      setSkills([]);
+      return;
+    }
+    const d = r.json?.data ?? r.json;
+    if (Array.isArray(d)) {
+      setSkills(d);
+      setSkillsDisponibles(true);
     }
   }, [baseUrl]);
   useEffect(() => {
@@ -639,7 +641,7 @@ export function MycoBotRail({
     });
     if (r.ok) {
       setSkillForm(null);
-      await loadSkills();
+      await loadSkills(true);
     }
   }, [skillForm, baseUrl, loadSkills]);
 
@@ -676,7 +678,7 @@ export function MycoBotRail({
       const r = await fetch(`${baseUrl}/skills/${id}`, { method: "DELETE" });
       if (r.ok) {
         setActiveSkillId((cur) => (cur === id ? null : cur));
-        await loadSkills();
+        await loadSkills(true);
       }
     },
     [baseUrl, loadSkills, t],
@@ -700,7 +702,7 @@ export function MycoBotRail({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(json),
         });
-        if (r.ok) await loadSkills();
+        if (r.ok) await loadSkills(true);
         else setSkillImportError(t(r.status === 422 ? "ui.mycobot.skillImportInvalid" : "ui.mycobot.skillImportFailed"));
       } catch {
         setSkillImportError(t("ui.mycobot.skillImportFailed"));
@@ -735,11 +737,14 @@ export function MycoBotRail({
 
   // Capacidades de MycoBot en esta app/org (welcome + chip): total del corpus,
   // hasDoctrina (org con Consultor) y hasDatos (app con tools del despacho).
-  // Cacheado en el server; `appSlug` viaja también vía el proxy de otras apps.
+  // Cacheado en el server y 10 min en sessionStorage; `appSlug` viaja también vía
+  // el proxy de otras apps.
   useEffect(() => {
     let alive = true;
-    fetch(`${baseUrl}/stats?appSlug=${encodeURIComponent(appSlug ?? "")}`)
-      .then((r) => (r.ok ? r.json() : null))
+    pedirConCacheDeSesion(`${baseUrl}/stats?appSlug=${encodeURIComponent(appSlug ?? "")}`, {
+      vidaMs: 10 * 60_000,
+    })
+      .then((r) => (r.ok ? r.json : null))
       .then((j) => {
         if (alive && j?.data) {
           setCorpus({

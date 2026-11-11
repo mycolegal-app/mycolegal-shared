@@ -7,6 +7,7 @@ import { compareApps, type AppInfo } from "./app-info";
 import { SubscribeAppModal, type SubscribableApp } from "./subscribe-app-modal";
 import { useI18n } from "../i18n/i18n-context";
 import { cn } from "../../lib/utils";
+import { suscribirNoLeidas } from "../../lib/no-leidas";
 
 interface AppSwitcherBarProps {
   apps: AppInfo[];
@@ -32,41 +33,17 @@ const STORAGE_KEY = "mc:app-switcher:open";
 // temporizador se reinicia. 80 ms sigue evitando que se despliegue de paso
 // cuando solo estás cruzando la pantalla, pero responde a la intención.
 const HOVER_EXPAND_DELAY_MS = 80;
-const UNREAD_POLL_MS = 60_000;
 
 /**
  * Hook: nº de notificaciones no leídas por app para el usuario actual. Se sirve
  * del catch-all `/api/notifications` que montan todas las apps (proxya a auth
- * `GET /notifications/unread-by-app`). Refresca al montar, al recuperar el foco
- * de la pestaña y cada 60 s. Un fallo se traga (los badges son cosméticos).
+ * `GET /notifications/unread-by-app`), con el sondeo compartido con la campana
+ * (`lib/no-leidas.ts`: cada 90 s, en pausa con la pestaña oculta, al volver a
+ * ella en el acto). Un fallo se traga (los badges son cosméticos).
  */
 function useUnreadByApp(): Record<string, number> {
   const [byApp, setByApp] = useState<Record<string, number>>({});
-  useEffect(() => {
-    let alive = true;
-    let timer: ReturnType<typeof setInterval> | null = null;
-    async function load() {
-      try {
-        const res = await fetch("/api/notifications/unread-by-app");
-        if (!res.ok) return;
-        const json = await res.json();
-        if (alive) setByApp((json?.byApp ?? {}) as Record<string, number>);
-      } catch {
-        /* silencioso */
-      }
-    }
-    function onVisible() {
-      if (document.visibilityState === "visible") load();
-    }
-    load();
-    timer = setInterval(load, UNREAD_POLL_MS);
-    document.addEventListener("visibilitychange", onVisible);
-    return () => {
-      alive = false;
-      if (timer) clearInterval(timer);
-      document.removeEventListener("visibilitychange", onVisible);
-    };
-  }, []);
+  useEffect(() => suscribirNoLeidas("/api/notifications", (e) => setByApp(e.byApp)), []);
   return byApp;
 }
 
