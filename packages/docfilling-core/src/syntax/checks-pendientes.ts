@@ -29,7 +29,7 @@
 
 import { esFormato, FORMATOS } from '../format/formats';
 import { FieldType, type ParsedField } from './parser';
-import { Severity, type Diagnostic } from './validator';
+import { Severity, extractIfFieldRefs, type Diagnostic } from './validator';
 
 // Los tipos y sus sinónimos viven en `declare-types.ts`.
 import { tipoAceptado, tipoCanonico, TIPOS_CANONICOS } from './declare-types';
@@ -530,6 +530,75 @@ export function checkFormatos(fields: ParsedField[]): Diagnostic[] {
       out.push(diag(f.line, f.col, f.raw.length, Severity.ERROR, 'E907',
         `Formato de salida desconocido «${fmt}». Los que hay: ${Object.keys(FORMATOS).join(', ')}.`));
     }
+  }
+  return out;
+}
+
+/**
+ * SET y DECLARE en orden de documento (0.1.42, 10-nov-2026): un IF sólo ve los SET que van ANTES, y un DECLARE fijo
+ * dentro de un IF sólo vale si se toma esa rama.
+ *
+ * - **W915** `{{SET X=…}}` con un `{{IF}}` que lee X antes en el texto: ese IF no ve el valor del SET.
+ * - **W916** `{{DECLARE X=v}}` dentro de un IF, con X leído fuera de ese IF y sin otro DECLARE fijo de X fuera de
+ *   condiciones: donde no se toma la rama, X queda sin valor.
+ */
+export function checkSetYDeclareEnOrden(fields: ParsedField[]): Diagnostic[] {
+  const out: Diagnostic[] = [];
+  const esIf = (f: ParsedField) => f.fieldType === FieldType.CONDITIONAL && /^IF[\s_]/i.test(f.content.trim());
+  const esEndif = (f: ParsedField) => f.fieldType === FieldType.CONDITIONAL && /^END[\s_]?IF\b/i.test(f.content.trim());
+  const refsDeIf = (f: ParsedField) => new Set(extractIfFieldRefs(f.content).map((r) => r.toUpperCase()));
+
+  // Los bloques IF (índices de campo de apertura y cierre) y el más interior que envuelve cada campo.
+  const bloqueDe: ([number, number] | null)[] = new Array(fields.length).fill(null);
+  const pila: number[] = [];
+  const abiertos: number[][] = [];
+  fields.forEach((f, i) => {
+    if (esIf(f)) { pila.push(i); abiertos.push([]); return; }
+    if (esEndif(f)) {
+      const a = pila.pop();
+      const dentro = abiertos.pop();
+      if (a !== undefined && dentro) for (const k of dentro) bloqueDe[k] ??= [a, i];
+      return;
+    }
+    if (abiertos.length) abiertos[abiertos.length - 1].push(i);
+  });
+  // Lo que no se cierra en este texto no se juzga.
+  const sinCerrar = new Set(abiertos.flat());
+
+  const leidoPor = new Map<string, number[]>(); // campo → índices de IF que lo leen
+  fields.forEach((f, i) => {
+    if (!esIf(f)) return;
+    for (const r of refsDeIf(f)) leidoPor.set(r, [...(leidoPor.get(r) ?? []), i]);
+  });
+
+  fields.forEach((f, i) => {
+    if (f.fieldType !== FieldType.SET || !f.name) return;
+    const antes = (leidoPor.get(f.name.toUpperCase()) ?? []).filter((k) => k < i);
+    if (!antes.length) return;
+    const g = fields[antes[0]];
+    out.push(diag(f.line, f.col, f.raw.length, Severity.WARNING, 'W915',
+      `SET ${f.name}: el IF de la línea ${g.line} lee ${f.name} antes de este SET y no ve su valor (un IF sólo ve los SET que van antes)`));
+  });
+
+  const fijos = new Map<string, number[]>();
+  fields.forEach((f, i) => {
+    if (f.fieldType === FieldType.DECLARE && f.name && f.declareValue !== '' && !f.declareSoloSiIndefinido) {
+      fijos.set(f.name.toUpperCase(), [...(fijos.get(f.name.toUpperCase()) ?? []), i]);
+    }
+  });
+  for (const [n, ks] of fijos) {
+    if (ks.some((k) => !bloqueDe[k] && !sinCerrar.has(k))) continue; // hay uno incondicional
+    const condicionales = ks.filter((k) => bloqueDe[k]);
+    if (!condicionales.length) continue;
+    const dentroDeAlguno = (i: number) => condicionales.some((k) => bloqueDe[k]![0] < i && i < bloqueDe[k]![1]);
+    const fuera = fields.findIndex((f, i) =>
+      !dentroDeAlguno(i) &&
+      ((esIf(f) && refsDeIf(f).has(n)) || (f.fieldType === FieldType.EXTRACTED && f.name?.toUpperCase() === n)));
+    if (fuera < 0) continue;
+    const d = fields[condicionales[0]];
+    const c = fields[bloqueDe[condicionales[0]]![0]];
+    out.push(diag(d.line, d.col, d.raw.length, Severity.WARNING, 'W916',
+      `DECLARE ${d.name}: está dentro de {{${c.content.trim()}}} (línea ${c.line}) y sólo vale si se cumple; en la línea ${fields[fuera].line} se lee fuera de ese IF, donde puede quedar sin valor`));
   }
   return out;
 }

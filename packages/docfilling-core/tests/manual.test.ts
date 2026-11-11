@@ -155,3 +155,39 @@ describe('manual · DECLARE_UNDEF, valor de respaldo (§3.1)', () => {
     expect(codigos('{{DECLARE_UNDEF X}}{{X}}')).toContain('W914');
   });
 });
+
+describe('manual · SET y DECLARE en orden de documento (§3 y §3.bis, 10-nov-2026)', () => {
+  it('§3: un DECLARE fijo dentro de un IF sólo vale si se toma la rama', () => {
+    const T = '{{IF A}}{{DECLARE B=TRUE}}{{ENDIF}}B={{IF B}}sí{{ELSE}}no{{ENDIF}}';
+    expect(compose(T, { A: 'TRUE' })).toBe('B=sí');
+    expect(compose(T, { A: 'FALSE' })).toBe('B=no');
+  });
+
+  it('§3: sin valor no es lo mismo que FALSE en una comparación', () => {
+    const T = '{{IF A}}{{DECLARE B=FALSE}}{{ENDIF}}{{IF B != "FALSE"}}distinto{{ELSE}}igual{{ENDIF}}';
+    expect(compose(T, { A: 'TRUE' })).toBe('igual');
+    expect(compose(T, { A: 'FALSE' })).toBe('distinto');
+  });
+
+  it('§3.bis: el uso típico, con el IF de después', () => {
+    const T = '{{IF EXISTEN_CARGAS OR EXISTEN_AFECCIONES}}{{SET EXISTEN_CARGAS_O_AFECCIONES=TRUE}}{{ELSE}}{{SET EXISTEN_CARGAS_O_AFECCIONES=FALSE}}{{ENDIF}}{{IF EXISTEN_CARGAS_O_AFECCIONES}}cargas{{ENDIF}}';
+    expect(compose(T, { EXISTEN_CARGAS: 'TRUE' })).toBe('cargas');
+    expect(compose(T, { EXISTEN_CARGAS: 'FALSE', EXISTEN_AFECCIONES: 'FALSE' })).toBe('');
+  });
+
+  it('§3.bis: anidados y última asignación', () => {
+    const T = '{{IF CAMPO1}}{{SET CAMPO2=X}}{{ELSE}}{{SET CAMPO2=Y}}{{IF CAMPO3}}{{SET CAMPO2=Z}}{{ENDIF}}{{ENDIF}}{{IF CAMPO2=="Y"}}abre{{ENDIF}}';
+    expect(compose(T, { CAMPO1: 'TRUE' })).toBe('');
+    expect(compose(T, { CAMPO1: 'FALSE', CAMPO3: 'FALSE' })).toBe('abre');
+    expect(compose(T, { CAMPO1: 'FALSE', CAMPO3: 'TRUE' })).toBe('');
+  });
+
+  it('§3.bis: un IF antes del SET no lo ve; lo impreso lleva el último valor', () => {
+    expect(compose('[{{B}}]{{IF B=="v"}}antes{{ENDIF}}{{SET B=v}}{{IF B=="v"}}después{{ENDIF}}', {})).toBe('[v]después');
+  });
+
+  it('§3.bis: un SET dentro de un FOR EACH lo ven la iteración y lo que va después del bucle', () => {
+    const T = '{{FOR EACH P IN PARTES}}{{IF P.ES_MENOR}}{{SET HAY_MENOR=TRUE}}{{ENDIF}}{{IF HAY_MENOR}}m{{ELSE}}-{{ENDIF}}{{ENDFOR}}|{{IF HAY_MENOR}}con menores{{ENDIF}}';
+    expect(compose(T, { PARTES: [{ ES_MENOR: 'FALSE' }, { ES_MENOR: 'TRUE' }] as never })).toBe('-m|con menores');
+  });
+});

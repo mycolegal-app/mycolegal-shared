@@ -1127,6 +1127,100 @@ export function resolverCondicionales(
 /** `{{SET NOMBRE=valor}}` / `{{SET NOMBRE="valor"}}`: el mismo patrón que `processSets`. */
 const SET_PATRON = /\{\{\s*SET\s+([\wÀ-ɏ]+)\s*=\s*(?:"([^"]*)"|([^}]+?))\s*\}\}/gi;
 
+/** El texto sin comentarios ni directivas (un `// {{SET …}}` no asigna), con sus IF emparejados; uno por texto. */
+const ASIGNACIONES = new Map<string, CondicionalesPreparadas>();
+function preparacionDeAsignaciones(texto: string): CondicionalesPreparadas {
+  const hecha = ASIGNACIONES.get(texto);
+  if (hecha) return hecha;
+  const r = prepararCondicionales(stripDirectives(texto));
+  if (ASIGNACIONES.size >= 8) ASIGNACIONES.delete(ASIGNACIONES.keys().next().value!);
+  ASIGNACIONES.set(texto, r);
+  return r;
+}
+
+/**
+ * Lo que dejan los SET con lo que se sabe hasta ahora, para quien pregunta antes de componer (Redactor, 10-nov-2026).
+ * Se recorre el texto en orden de documento como `resolverCondicionales`, pero con tres valores (`condicionTriestado`):
+ *   · un SET en una rama que se toma seguro da su valor (el último gana);
+ *   · un SET en una rama de un IF aún sin decidir deja su campo INCIERTO: depende de lo que falta por contestar, y
+ *     no hay que preguntarlo — se sabrá al contestar esa condición;
+ *   · un IF que lee un campo incierto tampoco se decide.
+ * `desconocido(campo)` dice qué campos están por contestar. Devuelve los valores ciertos, en mayúsculas, y los inciertos.
+ */
+export function asignacionesEnOrden(
+  texto: string,
+  fields: FieldValues,
+  desconocido: (campo: string) => boolean,
+): { valores: Record<string, string>; inciertos: Set<string> } {
+  const valores: Record<string, string> = {};
+  const inciertos = new Set<string>();
+  if (!/\{\{\s*SET\s/i.test(texto)) return { valores, inciertos };
+  const prep = preparacionDeAsignaciones(texto);
+  const content = prep.texto;
+  const vals: FieldValues = { ...fields };
+  const asignar = (tramo: string, seguro: boolean): void => {
+    if (!tramo.includes("SET")) return;
+    for (const m of tramo.matchAll(SET_PATRON)) {
+      const n = m[1].toUpperCase();
+      if (!seguro) { inciertos.add(n); delete valores[n]; delete vals[m[1]]; delete vals[n]; continue; }
+      const v = m[2] !== undefined ? m[2] : (m[3] || "").trim();
+      valores[n] = v;
+      inciertos.delete(n);
+      vals[m[1]] = v;
+      vals[n] = v;
+    }
+  };
+  const recorrer = (desde: number, hasta: number, hijos: BloqueIf[], seguro: boolean): void => {
+    let pos = desde;
+    for (const h of hijos) {
+      if (h.ini < desde || h.ini >= hasta) continue;
+      asignar(content.slice(pos, h.ini), seguro);
+      entrar(h, seguro);
+      pos = h.cierreFin >= 0 ? h.cierreFin : hasta;
+    }
+    if (pos < hasta) asignar(content.slice(pos, hasta), seguro);
+  };
+  const entrar = (b: BloqueIf, seguro: boolean): void => {
+    const fin = b.cierreIni >= 0 ? b.cierreIni : content.length;
+    // Mal formado o sin cerrar: el motor lo deja literal con sus dos ramas, y sus SET valen.
+    if (b.cond === null || b.cierreIni < 0) { recorrer(b.finTok, fin, b.hijos, seguro); return; }
+    let corte = -1;
+    for (let p = content.indexOf("{{ELSE}}", b.finTok); p >= 0 && p < fin; p = content.indexOf("{{ELSE}}", p + 1)) {
+      if (!b.hijos.some((h) => p >= h.ini && p < h.cierreFin)) { corte = p; break; }
+    }
+    const r = seguro ? condicionTriestado(b.cond.trim(), vals, (c) => desconocido(c) || inciertos.has(c.toUpperCase())) : { valor: null };
+    const rama = (si: boolean, conSeguro: boolean) => {
+      if (si) recorrer(b.finTok, corte < 0 ? fin : corte, b.hijos, conSeguro);
+      else if (corte >= 0) recorrer(corte + "{{ELSE}}".length, fin, b.hijos, conSeguro);
+    };
+    if (r.valor === null) { rama(true, false); rama(false, false); }
+    else rama(r.valor, true);
+  };
+  if (prep.raiz) recorrer(0, content.length, prep.raiz, true);
+  else asignar(content, true);
+  return { valores, inciertos };
+}
+
+/**
+ * Los campos que el texto sólo declara con valor fijo (`DECLARE X = v`, ni `DECLARE_UNDEF` ni pregunta): constantes de
+ * la plantilla. Desde que un DECLARE en una rama que no se toma no cuenta (0.1.42), una constante puede quedarse sin
+ * valor; para el motor eso es lo mismo que su valor falso, pero no es una pregunta y quien pregunta no debe hacerla.
+ */
+export function constantesFijas(texto: string): Set<string> {
+  const todas = new Map<string, number>();
+  for (const m of texto.matchAll(/\{\{DECLARE(?:_UNDEF)?\s+(?:ARRAY\s+)?([\wÀ-ɏ]+)/gi)) {
+    const n = m[1].toUpperCase();
+    todas.set(n, (todas.get(n) ?? 0) + 1);
+  }
+  const fijas = new Map<string, number>();
+  for (const d of declaracionesFijas(texto).decls) {
+    if (d.soloSiIndefinido) continue;
+    const n = d.nombre.toUpperCase();
+    fijas.set(n, (fijas.get(n) ?? 0) + 1);
+  }
+  return new Set([...fijas].filter(([n, k]) => todas.get(n) === k).map(([n]) => n));
+}
+
 // =============================================================================
 // expandForEach (Phase 3.2 — re-evaluates conditionals per iteration)
 // =============================================================================

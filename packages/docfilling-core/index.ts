@@ -34,6 +34,8 @@ export {
   normalizeConditionals,
   processConditionals,
   condicionTriestado,
+  asignacionesEnOrden,
+  constantesFijas,
   expandForEach,
   processExitIncludes,
   processSets,
