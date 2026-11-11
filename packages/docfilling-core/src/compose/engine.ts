@@ -391,9 +391,10 @@ export function resolverDeclarados(
   locale: string = DEFAULT_LOCALE,
 ): Record<string, string> {
   const { decls, cond } = preparacionDeDeclarados(template);
-  const fijos: Record<string, string> = {};
+  let fijos: Record<string, string> = {};
   for (const d of decls) if (!d.soloSiIndefinido) fijos[d.nombre] = d.valor;
-  if (!decls.some((d) => d.soloSiIndefinido)) return fijos;
+  // Sin condiciones no hay ramas muertas: todos valen.
+  if (!cond.raiz && !decls.some((d) => d.soloSiIndefinido)) return fijos;
 
   const tieneDato = (n: string): boolean => {
     const v = fields[n] ?? fields[n.toUpperCase()];
@@ -408,10 +409,13 @@ export function resolverDeclarados(
     );
     const declarado = new Set<string>();
     const respaldo = new Map<string, DeclaracionFija>();
+    // Un `DECLARE X=v` en una rama que no se toma tampoco cuenta (Carles, 10-nov-2026): antes valía siempre.
+    const fijosVivos: Record<string, string> = {};
     decls.forEach((d, i) => {
       if (!vivas.has(i)) return;
       const clave = d.nombre.toUpperCase();
       if (!d.soloSiIndefinido) {
+        fijosVivos[d.nombre] = d.valor;
         declarado.add(clave);
         respaldo.delete(clave);
         return;
@@ -422,10 +426,11 @@ export function resolverDeclarados(
     });
     const siguientes: Record<string, string> = {};
     for (const d of respaldo.values()) siguientes[d.nombre] = d.valor;
-    const igual =
-      Object.keys(siguientes).length === Object.keys(aplicados).length &&
-      Object.entries(siguientes).every(([k, v]) => aplicados[k] === v);
+    const mismos = (a: Record<string, string>, b: Record<string, string>) =>
+      Object.keys(a).length === Object.keys(b).length && Object.entries(a).every(([k, v]) => b[k] === v);
+    const igual = mismos(siguientes, aplicados) && mismos(fijosVivos, fijos);
     aplicados = siguientes;
+    fijos = fijosVivos;
     if (igual) break;
   }
 
@@ -993,8 +998,14 @@ export function resolverCondicionales(
   let content = prep.texto;
   if (!prep.raiz) return content;
 
-  const { evalExpr } = crearEvaluador(fields, warnings);
+  // LOS SET EN ORDEN DE DOCUMENTO (Carles, 10-nov-2026): un `{{SET X=v}}` de una rama viva cambia lo que ven los IF
+  // que van DETRÁS. Las condiciones se deciden recorriendo el texto de arriba abajo (`decidir`), con una copia de los
+  // valores a la que se aplican los SET según se encuentran; el texto se sigue resolviendo como antes, de dentro
+  // afuera, con esas decisiones. Lo impreso no cambia: `processSets` sigue aplicando los SET vivos después.
+  const vals: FieldValues = { ...fields };
+  const { evalExpr } = crearEvaluador(vals, warnings);
   const MAX_VUELTAS = 50;
+  let decision = decidir(content, prep.raiz);
   // Resolver un bloque puede FORMAR uno nuevo con lo que tenía al lado («{{» + «IF B}}…» que deja un bloque resuelto):
   // la expresión regular lo veía en la vuelta siguiente. Se repite la pasada mientras cambie algo, con lo que quede de
   // las 50 vueltas; en una plantilla normal la segunda no encuentra nada y sale enseguida.
@@ -1007,6 +1018,9 @@ export function resolverCondicionales(
     usadas += r.vueltas;
     if (usadas >= MAX_VUELTAS || !content.includes("{{IF")) break;
     raiz = emparejarIfs(content);
+    for (const k of Object.keys(vals)) delete vals[k];
+    Object.assign(vals, fields);
+    decision = decidir(content, raiz);
   }
 
   if (warnings && usadas >= MAX_VUELTAS && content.includes("{{IF")) {
@@ -1051,11 +1065,67 @@ export function resolverCondicionales(
     const corte = cuerpo.texto.indexOf("{{ELSE}}");
     const si = corte < 0 ? cuerpo.texto : cuerpo.texto.slice(0, corte);
     const no = corte < 0 ? "" : cuerpo.texto.slice(corte + "{{ELSE}}".length);
-    return { texto: evalExpr(b.cond.trim()) ? si : no, vuelta, ok: true };
+    return { texto: (decision.get(b) ?? evalExpr(b.cond.trim())) ? si : no, vuelta, ok: true };
   };
   return { texto: tramo(0, content.length, raiz).texto, vueltas };
   }
+
+  /**
+   * Decide cada IF al que se llega en orden de documento, con los SET vivos de antes aplicados a `vals`. Un IF que no
+   * se resolverá (mal formado, sin ENDIF, o con un hijo así) queda literal con sus dos ramas, y sus SET cuentan, como
+   * en lo impreso. Los IF de una rama muerta no se deciden: su texto se descarta.
+   */
+  function decidir(content: string, raiz: BloqueIf[]): Map<BloqueIf, boolean> {
+    const out = new Map<BloqueIf, boolean>();
+    const resoluble = new Map<BloqueIf, number>(); // la vuelta en que se resuelve; 0 = nunca
+    const vuelta = (b: BloqueIf): number => {
+      const hecho = resoluble.get(b);
+      if (hecho !== undefined) return hecho;
+      let max = 0;
+      let ok = b.cond !== null && b.cierreIni >= 0;
+      for (const h of b.hijos) { const v = vuelta(h); if (!v) ok = false; max = Math.max(max, v); }
+      const r = ok && max + 1 <= MAX_VUELTAS ? max + 1 : 0;
+      resoluble.set(b, r);
+      return r;
+    };
+    const asignar = (texto: string): void => {
+      if (!texto.includes("SET")) return;
+      for (const m of texto.matchAll(SET_PATRON)) {
+        const v = m[2] !== undefined ? m[2] : (m[3] || "").trim();
+        vals[m[1]] = v;
+        vals[m[1].toUpperCase()] = v;
+      }
+    };
+    const recorrer = (desde: number, hasta: number, hijos: BloqueIf[]): void => {
+      let pos = desde;
+      for (const h of hijos) {
+        if (h.ini < desde || h.ini >= hasta) continue;
+        asignar(content.slice(pos, h.ini));
+        entrar(h);
+        pos = h.cierreFin >= 0 ? h.cierreFin : hasta;
+      }
+      if (pos < hasta) asignar(content.slice(pos, hasta));
+    };
+    const entrar = (b: BloqueIf): void => {
+      const fin = b.cierreIni >= 0 ? b.cierreIni : content.length;
+      if (!vuelta(b)) { recorrer(b.finTok, fin, b.hijos); return; }
+      const si = evalExpr(b.cond!.trim());
+      out.set(b, si);
+      // El ELSE de este bloque: el primero de su cuerpo que no está dentro de un hijo.
+      let corte = -1;
+      for (let p = content.indexOf("{{ELSE}}", b.finTok); p >= 0 && p < fin; p = content.indexOf("{{ELSE}}", p + 1)) {
+        if (!b.hijos.some((h) => p >= h.ini && p < h.cierreFin)) { corte = p; break; }
+      }
+      if (si) recorrer(b.finTok, corte < 0 ? fin : corte, b.hijos);
+      else if (corte >= 0) recorrer(corte + "{{ELSE}}".length, fin, b.hijos);
+    };
+    recorrer(0, content.length, raiz);
+    return out;
+  }
 }
+
+/** `{{SET NOMBRE=valor}}` / `{{SET NOMBRE="valor"}}`: el mismo patrón que `processSets`. */
+const SET_PATRON = /\{\{\s*SET\s+([\wÀ-ɏ]+)\s*=\s*(?:"([^"]*)"|([^}]+?))\s*\}\}/gi;
 
 // =============================================================================
 // expandForEach (Phase 3.2 — re-evaluates conditionals per iteration)
