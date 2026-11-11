@@ -18,6 +18,11 @@
 //   - auth inalcanzable (5xx / red / timeout) → se reusa el último set bueno
 //     reciente (TTL) en vez de vaciar. Si no hay cache → null (fallback por rol,
 //     comportamiento histórico).
+//   - Antes de todo eso, una respuesta de auth de hace menos de 60 s para el
+//     MISMO token se sirve sin volver a preguntar (era ~5.400 llamadas/día a auth
+//     de p50 7 ms, 11-nov-2026). Clave = token, no usuario: auth decide con el rol
+//     del JWT, así que un login o un cambio de rol (token nuevo) no hereda nada.
+//     Lo que sí puede tardar hasta 60 s es un cambio de grant en la BD.
 //
 // Módulo puro (sólo `fetch` global de Node/Next). La cache es por proceso de la
 // app (cada app es su propio proceso); module-level Map basta y es correcto.
@@ -71,6 +76,24 @@ export interface ResolvePermissionsOpts {
 export const PERM_CACHE_TTL_MS = 15 * 60 * 1000;
 
 const cache = new Map<string, CentralizedPermissions & { ts: number }>();
+
+/** Ventana en la que una respuesta en vivo de auth se reutiliza sin preguntar. */
+export const PERM_FRESH_TTL_MS = 60 * 1000;
+/** Por encima de este tamaño se barren las entradas caducadas de `fresh`. */
+const FRESH_SWEEP_SIZE = 1000;
+
+// Respuestas en vivo recientes por token (incluidas las vacías: también son
+// respuesta definitiva de auth). Estado por proceso, igual que `cache`.
+const fresh = new Map<string, CentralizedPermissions & { ts: number }>();
+
+function rememberFresh(token: string, value: CentralizedPermissions, now: number): void {
+  if (fresh.size >= FRESH_SWEEP_SIZE) {
+    for (const [k, v] of fresh) {
+      if (now - v.ts >= PERM_FRESH_TTL_MS) fresh.delete(k);
+    }
+  }
+  fresh.set(token, { ...value, ts: now });
+}
 
 // Throttle de telemetría: una línea por (usuario, org, app, motivo) cada 60 s,
 // para no inundar el log durante un outage prolongado de auth (cada request en
@@ -171,14 +194,21 @@ export async function resolveCentralizedPermissions(
   const { authInternalUrl, appSlug, token, userId, orgId } = opts;
   const now = opts.now ?? Date.now();
   const cacheKey = `${userId}:${orgId}:${appSlug}`;
+  // El token es de una sola app, pero el slug va en la clave por si un día no.
+  const freshKey = `${appSlug}:${token}`;
 
-  const fetched = await fetchOnce(authInternalUrl, appSlug, token);
+  const hit = fresh.get(freshKey);
+  const isFresh = hit !== undefined && now - hit.ts < PERM_FRESH_TTL_MS;
+  const fetched: Fetched = isFresh
+    ? { reachable: true, appRoleKey: hit.appRoleKey, permissions: hit.permissions }
+    : await fetchOnce(authInternalUrl, appSlug, token);
 
   if (fetched.reachable) {
     const value: CentralizedPermissions = {
       appRoleKey: fetched.appRoleKey,
       permissions: fetched.permissions,
     };
+    if (!isFresh) rememberFresh(freshKey, value, now);
     // Sólo cacheamos sets con contenido: un set vacío no debe pisar uno bueno.
     if (value.permissions.length > 0 || value.appRoleKey) {
       cache.set(cacheKey, { ...value, ts: now });
