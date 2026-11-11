@@ -7,6 +7,7 @@ import { cn } from "../../lib/utils";
 import { useI18n } from "../i18n/i18n-context";
 import { apiErrorMessage } from "../../lib/api-error";
 import { suscribirNoLeidas, refrescarNoLeidas } from "../../lib/no-leidas";
+import { confirmarSalida } from "../../hooks/use-aviso-salida";
 
 export interface NotificationEntry {
   id: string;
@@ -272,8 +273,9 @@ export function NotificationsBell({
   const navigateTo = useCallback(
     (target: NotificationTarget) => {
       if (target.kind === "internal") {
-        if (onNavigateInternal) onNavigateInternal(target.path);
-        else window.location.assign(target.path);
+        // router.push no descarga la página: sin esto se perdían cambios sin guardar.
+        if (!onNavigateInternal) window.location.assign(target.path);
+        else if (confirmarSalida()) onNavigateInternal(target.path);
       } else {
         window.location.assign(target.url);
       }

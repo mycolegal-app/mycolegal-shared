@@ -219,7 +219,8 @@
     },
     "common": {
       "close": "Pechar",
-      "loading": "Cargando…"
+      "loading": "Cargando…",
+      "unsavedLeave": "Tes cambios sen gardar. Se saes agora, perderanse. Saír igualmente?"
     },
     "incidentThread": {
       "statusOpen": "Aberta",

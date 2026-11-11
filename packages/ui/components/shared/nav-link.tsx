@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { ComponentProps } from "react";
+import { confirmarSalida } from "../../hooks/use-aviso-salida";
 
 /**
  * NavLink — drop-in replacement for Next.js Link that uses full-page navigation.
@@ -38,6 +39,11 @@ export function NavLink(props: ComponentProps<typeof Link>) {
       onClick={(e) => {
         if (e.metaKey || e.ctrlKey || e.shiftKey) return;
         if (NAVEGACION_SPA && !mismaRutaOtraQuery(destino)) {
+          // Sin recarga no salta `beforeunload`: la pantalla con cambios pregunta aquí.
+          if (!confirmarSalida()) {
+            e.preventDefault();
+            return;
+          }
           onClick?.(e);
           if (!e.defaultPrevented) vigilarNavegacion(destino);
           return;

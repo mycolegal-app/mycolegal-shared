@@ -69,6 +69,18 @@ describe("NavLink", () => {
     expect(ubicacion.href).toBe("/expedientes?estado=abierto");
   });
 
+  it("con el interruptor y cambios sin guardar: pregunta y, si no se confirma, no navega", async () => {
+    const a = await pintar(true);
+    const { useAvisoSalida } = await import("../../hooks/use-aviso-salida");
+    const { renderHook } = await import("@testing-library/react");
+    renderHook(() => useAvisoSalida(true, "¿Salir?"));
+    const confirmar = vi.spyOn(window, "confirm").mockReturnValue(false);
+    expect(fireEvent.click(a)).toBe(false); // preventDefault: Next no navega
+    expect(confirmar).toHaveBeenCalledWith("¿Salir?");
+    vi.advanceTimersByTime(10_000);
+    expect(ubicacion.href).toBe(`${ORIGEN}/expedientes`); // ni el respaldo
+  });
+
   it("cmd+clic sigue abriendo pestaña nueva en los dos modos", async () => {
     const a = await pintar(true);
     expect(fireEvent.click(a, { metaKey: true })).toBe(true);

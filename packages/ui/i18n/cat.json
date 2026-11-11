@@ -220,7 +220,8 @@
     },
     "common": {
       "close": "Tancar",
-      "loading": "Carregant…"
+      "loading": "Carregant…",
+      "unsavedLeave": "Tens canvis sense desar. Si surts ara, es perdran. Vols sortir igualment?"
     },
     "incidentThread": {
       "statusOpen": "Oberta",

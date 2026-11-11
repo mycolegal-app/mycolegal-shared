@@ -220,7 +220,8 @@
     },
     "common": {
       "close": "Cerrar",
-      "loading": "Cargando…"
+      "loading": "Cargando…",
+      "unsavedLeave": "Tienes cambios sin guardar. Si sales ahora, se perderán. ¿Salir igualmente?"
     },
     "incidentThread": {
       "statusOpen": "Abierta",

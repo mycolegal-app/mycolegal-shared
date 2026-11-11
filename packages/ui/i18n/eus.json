@@ -219,7 +219,8 @@
     },
     "common": {
       "close": "Itxi",
-      "loading": "Kargatzen…"
+      "loading": "Kargatzen…",
+      "unsavedLeave": "Gorde gabeko aldaketak dituzu. Orain irteten bazara, galdu egingo dira. Irten nahi duzu hala ere?"
     },
     "incidentThread": {
       "statusOpen": "Irekita",
