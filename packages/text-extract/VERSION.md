@@ -1,5 +1,23 @@
 # @mycolegal-app/text-extract — Changelog
 
+## 0.2.6 — Un Word sin extensión ya no va al OCR como PDF (2026-11-12)
+
+Type: **patch**
+
+PROD, Revisor de Consultor: un .docx llamado «CV RESTING RIOJA, S.L» llegó como `application/octet-stream`
+y sin extensión reconocible. `sniffMime` no reconocía el `PK` de un ZIP, así que se trató como PDF y se
+mandó al OCR como `application/pdf`; Vertex lo rechazó (400), platform devolvió 502 (los 3 errores 5xx del
+panel de salud) y el usuario vio «no se pudo extraer texto» hasta que lo renombró.
+
+- `sniffMime` reconoce los contenedores de Office: un ZIP por la pieza principal de su directorio central
+  (`word/document.xml` → Word, `xl/workbook.xml` → Excel) y un OLE2 como Word (si es un .xls o .ppt
+  antiguo, sale vacío).
+- Los bytes de un contenedor de Office ganan al MIME declarado, salvo que éste ya sea de Word o Excel: un
+  Word con nombre o MIME de PDF se lee como Word.
+- Un ZIP o un OLE **nunca** se manda entero al OCR (las imágenes de dentro de un Word sí, como antes).
+
+Test: `npx tsx packages/text-extract/contenedor.test.ts` (falla con la 0.2.5).
+
 ## 0.2.0 — El lector de Excel ya no tumba el libro por una celda y avisa si recorta (2026-10-22)
 
 Type: **minor**

@@ -63,11 +63,18 @@ const MIME_GENERICO = /^(?:application|binary)\/octet-stream$/i;
  * (2) mejora el ENRUTADO: un PDF declarado octet-stream pasa por su capa de
  *     texto (gratis) en vez de irse directo al OCR.
  *
- * Devuelve `null` si no reconoce la firma (incluido el `PK` de los contenedores
- * ZIP —docx/xlsx—, que resuelven `esWord`/`esXlsx` por extensión).
+ * (3) los contenedores de Office (ZIP de un .docx/.xlsx, OLE de un .doc): un Word
+ *     llamado «CV RESTING RIOJA, S.L», sin extensión y octet-stream, se tomaba
+ *     por PDF y se mandaba al OCR como `application/pdf`; Vertex lo rechazaba y
+ *     el Revisor contestaba «no se pudo extraer texto» (PROD, 12-nov-2026).
+ *
+ * Devuelve `null` si no reconoce la firma.
  */
 function sniffMime(bytes: Uint8Array): string | null {
   const empieza = (...sig: number[]) => sig.every((v, i) => bytes[i] === v);
+  if (empieza(0x50, 0x4b, 0x03, 0x04)) return mimeDeZip(bytes); // PK
+  // OLE2: .doc, pero también .xls o .ppt antiguos. Se prueba como Word; si no lo es, sale vacío.
+  if (empieza(0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1)) return MIME_OLE;
   if (empieza(0x25, 0x50, 0x44, 0x46)) return 'application/pdf'; // %PDF
   if (empieza(0x89, 0x50, 0x4e, 0x47)) return 'image/png'; // \x89PNG
   if (empieza(0xff, 0xd8, 0xff)) return 'image/jpeg';
@@ -77,6 +84,37 @@ function sniffMime(bytes: Uint8Array): string | null {
   const enPos = (pos: number, ...sig: number[]) => sig.every((v, i) => bytes[pos + i] === v);
   if (empieza(0x52, 0x49, 0x46, 0x46) && enPos(8, 0x57, 0x45, 0x42, 0x50)) return 'image/webp';
   return null;
+}
+
+const MIME_DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+const MIME_XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+const MIME_OLE = 'application/msword';
+const MIME_ZIP = 'application/zip';
+
+/** Un ZIP o un OLE: lo que tenga dentro no lo lee el OCR, y Vertex rechaza el fichero entero. */
+const esContenedor = (bytes: Uint8Array) =>
+  (bytes[0] === 0x50 && bytes[1] === 0x4b && bytes[2] === 0x03 && bytes[3] === 0x04) ||
+  (bytes[0] === 0xd0 && bytes[1] === 0xcf && bytes[2] === 0x11 && bytes[3] === 0xe0);
+
+/** Qué documento de Office es un ZIP, por la pieza principal de su directorio central. Se miran los NOMBRES
+ *  del directorio, no los bytes: un .docx con un Excel incrustado lleva `xl/workbook.xml` dentro, pero comprimido
+ *  en `word/embeddings/`, no como entrada propia. */
+function mimeDeZip(b: Uint8Array): string {
+  const u16 = (p: number) => b[p] | (b[p + 1] << 8);
+  const u32 = (p: number) => (b[p] | (b[p + 1] << 8) | (b[p + 2] << 16) | (b[p + 3] << 24)) >>> 0;
+  let fin = -1;
+  for (let p = b.length - 22; p >= Math.max(0, b.length - 22 - 65_535); p--) if (u32(p) === 0x06054b50) { fin = p; break; }
+  if (fin < 0) return MIME_ZIP;
+  const entradas = u16(fin + 10);
+  let p = u32(fin + 16);
+  for (let k = 0; k < entradas && p + 46 <= b.length && u32(p) === 0x02014b50; k++) {
+    const largo = u16(p + 28);
+    const nombre = new TextDecoder().decode(b.subarray(p + 46, p + 46 + largo));
+    if (nombre === 'word/document.xml') return MIME_DOCX;
+    if (nombre === 'xl/workbook.xml') return MIME_XLSX;
+    p += 46 + largo + u16(p + 30) + u16(p + 32);
+  }
+  return MIME_ZIP;
 }
 
 /**
@@ -125,10 +163,14 @@ async function extraerTextoCrudo(bytes: Uint8Array, opts: ExtraerTextoOpts = {})
   const fileName = opts.fileName ?? '';
   const ocr = opts.ocr;
 
-  // MIME de confianza: el declarado solo si dice algo; si no, el de los bytes.
+  // MIME de confianza: el declarado solo si dice algo; si no, el de los bytes. Un contenedor de Office
+  // gana además a un declarado que no sea de Office (un Word con nombre de PDF, o «application/pdf» a secas).
   // Puede quedar en `null` (→ se trata como PDF, el caso dominante).
-  const declarado = opts.mime?.trim() || null;
-  const mime = declarado && !MIME_GENERICO.test(declarado) ? declarado : sniffMime(bytes);
+  const crudo = opts.mime?.trim() || null;
+  const declarado = crudo && !MIME_GENERICO.test(crudo) ? crudo : null;
+  const contenedor = esContenedor(bytes);
+  const deOffice = declarado !== null && (esWord(declarado, '') || esXlsx(declarado, ''));
+  const mime = contenedor && !deOffice ? sniffMime(bytes) : declarado ?? sniffMime(bytes);
 
   // 0) XLSX → texto etiquetado por columna (sin OCR).
   if (esXlsx(mime, fileName)) {
@@ -158,7 +200,7 @@ async function extraerTextoCrudo(bytes: Uint8Array, opts: ExtraerTextoOpts = {})
   }
 
   // 2) PDF → capa de texto; si es escaneo (needsOcr) y hay config OCR, se OCR-iza.
-  const esPdf = !mime || /pdf/i.test(mime) || /\.pdf$/i.test(fileName);
+  const esPdf = !contenedor && (!mime || /pdf/i.test(mime) || /\.pdf$/i.test(fileName));
   if (esPdf) {
     const r = await extractPdfLayer(bytes, mime);
     if (!r.needsOcr) return { texto: r.texto, chars: r.chars, metodo: 'pdf-text-layer' };
@@ -172,7 +214,7 @@ async function extraerTextoCrudo(bytes: Uint8Array, opts: ExtraerTextoOpts = {})
   // 3) Imagen / otros formatos → OCR (si se provee config). Aquí `mime` siempre
   //    tiene valor (sin MIME se habría tratado como PDF arriba) y nunca es
   //    octet-stream: se manda tal cual, sin inventar un valor que Vertex rechace.
-  if (ocr && mime) {
+  if (ocr && mime && !contenedor) {
     const t = await ocrTolerante({ platformUrl: ocr.platformUrl, serviceKey: ocr.serviceKey, bytes, mimeType: mime });
     if (t) return { texto: t, chars: noEspacios(t), metodo: 'ocr' };
   }
