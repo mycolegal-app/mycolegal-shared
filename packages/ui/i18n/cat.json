@@ -1391,7 +1391,9 @@
       "descargarBorrador": "Baixar esborrany .docx",
       "sinHuecos": "No falta cap dada: l'escriptura està completa i es pot generar.",
       "faltanParrafos": "Falten {n} paràgrafs de la biblioteca. La seva clàusula surt BUIDA sense donar error.",
-      "dependen": "{n} depenen d'aquestes"
+      "dependen": "{n} depenen d'aquestes",
+      "generos": "Gènere a l'escriptura:",
+      "cambiarGenero": "Canvia a «{x}»"
     },
     "voz": {
       "escuchar": "Escolta",

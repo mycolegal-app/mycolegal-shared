@@ -72,10 +72,18 @@ export interface PrevisualizacionEscritura {
   condicionesSinDeterminar: number;
   faltantes: string[];
   concordancias: number;
+  /** El género con el que ha quedado cada persona en las concordancias («el testador»), si el servidor lo da. */
+  generos?: GeneroEscritura[];
   directivasPendientes: string[];
   plantilla: { nombre: string; ambito: string; porque: string };
   generadoAt: string | null;
   docxUrl: string;
+}
+
+export interface GeneroEscritura {
+  pista: string; nombre: string | null; genero: "M" | "F" | null;
+  origen: "corregido" | "dato" | "texto" | "ia" | null;
+  ejemplo: { M: string; F: string }; veces: number;
 }
 
 export interface EscrituraModalProps {
@@ -173,6 +181,22 @@ export function EscrituraModal({
     } finally { setGuardando(false); }
   }
 
+  // CAMBIAR EL GÉNERO DE UNA PERSONA CON UN CLIC (Carles, 12-nov-2026): si sale «el testador» y es «la
+  // testadora», todo el documento concuerda con la corrección, que se guarda en la tarea.
+  const [cambiando, setCambiando] = useState<string | null>(null);
+  async function cambiarGenero(pista: string, genero: "M" | "F") {
+    setCambiando(pista);
+    try {
+      await fetch(`${apiBase}/tareas/${tareaId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ genero: { pista, genero } }),
+      });
+      await cargar();
+    } finally { setCambiando(null); }
+  }
+  const generos = (prev?.generos ?? []).filter((g) => g.genero);
+
   if (!abierto) return null;
 
   return (
@@ -209,6 +233,25 @@ export function EscrituraModal({
             </button>
           </div>
         </div>
+
+        {/* ── el género de cada persona, para corregirlo ──────────────────── */}
+        {generos.length > 0 && (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-gray-200 px-4 py-2 text-xs text-gray-600">
+            <span className="font-medium text-gray-700">{t("ui.escrituraModal.generos")}</span>
+            {generos.map((g) => {
+              const otro = g.genero === "F" ? "M" : "F";
+              return (
+                <span key={g.pista} className="inline-flex items-center gap-1.5">
+                  <span>{g.nombre ? `${g.nombre}: ` : ""}«{g.ejemplo[g.genero!]}»</span>
+                  <button type="button" disabled={cambiando !== null} onClick={() => void cambiarGenero(g.pista, otro)}
+                    className="rounded border border-gray-300 px-1.5 py-0.5 hover:bg-gray-50 disabled:opacity-50">
+                    {cambiando === g.pista ? <Loader2 className="h-3 w-3 animate-spin" /> : t("ui.escrituraModal.cambiarGenero", { x: g.ejemplo[otro] })}
+                  </button>
+                </span>
+              );
+            })}
+          </div>
+        )}
 
         {/* ── el navegador de huecos ───────────────────────────────────────── */}
         {hueco && campo && (
