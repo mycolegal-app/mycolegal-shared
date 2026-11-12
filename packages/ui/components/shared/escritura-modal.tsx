@@ -105,14 +105,30 @@ export function EscrituraModal({
   const [borrador, setBorrador] = useState("");
   const cuerpoRef = useRef<HTMLDivElement>(null);
 
+  // Cada carga lleva su número: la respuesta lenta de una carga anterior no pisa la escritura nueva.
+  const vuelta = useRef(0);
   const cargar = useCallback(async () => {
+    const n = ++vuelta.current;
+    let data: PrevisualizacionEscritura;
     try {
       const r = await fetch(`${apiBase}/tareas/${tareaId}/previsualizar`);
       if (!r.ok) { setError(t("ui.escrituraModal.noDisponible")); return; }
-      const { data } = await r.json();
-      setPrev(data as PrevisualizacionEscritura);
+      data = (await r.json()).data as PrevisualizacionEscritura;
+      if (n !== vuelta.current) return;
+      setPrev(data);
       setError(null);
     } finally { setCargando(false); }
+    // Las concordancias («Don/Doña», «nacido/nacida») que la vista rápida deja con sus opciones las
+    // resuelve la IA en segundo plano, y sólo porque alguien está mirando el borrador (Carles,
+    // 12-nov-2026). La escritura se pinta ya y se corrige sola cuando llegan; si falla, se queda como estaba.
+    if (data.concordancias > 0) {
+      try {
+        const r = await fetch(`${apiBase}/tareas/${tareaId}/previsualizar?concordar=1`);
+        if (!r.ok || n !== vuelta.current) return;
+        const conc = (await r.json()).data as PrevisualizacionEscritura;
+        if (n === vuelta.current) setPrev(conc);
+      } catch { /* la vista rápida sigue valiendo */ }
+    }
   }, [apiBase, tareaId, t]);
 
   useEffect(() => { if (abierto) void cargar(); }, [abierto, cargar]);
