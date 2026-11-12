@@ -35,6 +35,34 @@ describe('expandirIncludes', () => {
     expect(r.texto).toBe('{{NOMBRE_COMP}} vive en {{CALLE_COMP}}');
   });
 
+  // Permuta 0503 (12-nov-2026): el sufijo renombraba los subcampos del elemento y daba E090.
+  describe('FIELDS:_sfx y los bucles: la lista lleva sufijo, lo del elemento no', () => {
+    const PARRAFO = '{{DECLARE ARRAY JOVENES(NOMBRE, EDAD)}}'
+      + '{{FOR EACH ITEM IN JOVENES}}{{ITEM.NOMBRE}}{{IF ITEM.EDAD == "menor"}} (menor){{ENDIF}}, {{ENDFOR}}{{TOTAL}}';
+
+    it('ITEM.X, IF ITEM.X y la propia lista', async () => {
+      const r = await expandirIncludes('{{INCLUDE MUR FIELDS:_PERMUTANTE_1}}', repositorioDeMapa({ MUR: PARRAFO }), { centinelas: false });
+      expect(r.texto).toBe('{{DECLARE ARRAY JOVENES_PERMUTANTE_1(NOMBRE, EDAD)}}'
+        + '{{FOR EACH ITEM IN JOVENES_PERMUTANTE_1}}{{ITEM.NOMBRE}}{{IF ITEM.EDAD == "menor"}} (menor){{ENDIF}}, {{ENDFOR}}{{TOTAL_PERMUTANTE_1}}');
+    });
+
+    it('compone con los subcampos de la lista renombrada, y sin E090', async () => {
+      const r = await expandirIncludes('{{INCLUDE MUR FIELDS:_P1}}', repositorioDeMapa({ MUR: PARRAFO }), { centinelas: false });
+      const { validateText } = await import('../index');
+      expect(validateText(r.texto).diagnostics.filter((d) => d.code === 'E090')).toEqual([]);
+      const texto = compose(r.texto, { JOVENES_P1: [{ NOMBRE: 'Ana', EDAD: 'menor' }, { NOMBRE: 'Luis' }], TOTAL_P1: '2' } as never);
+      expect(texto).toContain('Ana (menor), Luis, 2');
+    });
+
+    it('una variable que no se llama ITEM y un bucle anidado sobre un subcampo', async () => {
+      const r = await expandirIncludes('{{INCLUDE P FIELDS:_X}}', repositorioDeMapa({
+        P: '{{FOR EACH PERSONA IN LISTA}}{{PERSONA.NOMBRE}}{{FOR EACH H IN PERSONA.HIJOS}}{{H.NOMBRE}}{{ENDFOR}}{{ENDFOR}}{{PERSONA}}',
+      }), { centinelas: false });
+      // Fuera del bucle, `PERSONA` vuelve a ser un campo del párrafo y sí lleva sufijo.
+      expect(r.texto).toBe('{{FOR EACH PERSONA IN LISTA_X}}{{PERSONA.NOMBRE}}{{FOR EACH H IN PERSONA.HIJOS}}{{H.NOMBRE}}{{ENDFOR}}{{ENDFOR}}{{PERSONA_X}}');
+    });
+  });
+
   it('un párrafo que no existe se reporta y deja el marcador', async () => {
     const r = await expandirIncludes('X {{INCLUDE AUSENTE}} Y', repositorioDeMapa({}), { centinelas: false });
     expect(r.faltantes).toEqual(['AUSENTE']);

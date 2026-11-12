@@ -1,5 +1,13 @@
 # @mycolegal-app/docfilling-core
 
+## 0.1.49 — 12-nov-2026
+
+El sufijo de un `{{INCLUDE … FIELDS:_X}}` ya no renombra lo que cuelga de la variable de un `FOR EACH` abierto (`ITEM.NOMBRE`, `ITEM.DOMICILIO.CALLE`, la variable se llame como se llame), ni en un campo suelto ni dentro de un `IF`: son subcampos del elemento, declarados en el `DECLARE ARRAY LISTA(NOMBRE)`. Sólo la lista lleva el sufijo; la de un bucle anidado que cuelga del elemento (`IN ITEM.HIJOS`) no, como antes. Permuta 0503 (aviso de Catálogo): `{{ITEM.NOMBRE}}` pasaba a `{{ITEM.NOMBRE_PERMUTANTE_1}}`, 4 `E090` y los nombres de los adquirentes jóvenes de Murcia en blanco. En los 254 esquemas de `_PROD` sólo cambia la 0503 (−4 `E090`). `tests/expand-includes.test.ts`.
+
+## 0.1.48 — 12-nov-2026
+
+Republicación de la 0.1.47, sin cambios.
+
 ## 0.1.47 — 12-nov-2026
 
 Nombres RETIRADOS (Carles): `TIPO_ACTO`, `ACTO_JURIDICO`, `ES_TRANSMISION_GRATUITA`, `ES_MORTIS_CAUSA` y `ES_ACTO_SUCESORIO` no pueden declararse (`DECLARE`, `DECLARE_UNDEF`), asignarse (`SET`), compararse en un `IF` ni imprimirse: error `E927`, que remite a `SCHEMA:ACT`, `FAMILY`, `VARIANT` o `GROUP`. `nombresRetiradosEn(texto)` y `NOMBRES_RETIRADOS` para la carga de la biblioteca, que rechaza el fichero. Ninguno en `_PROD` ni en `_DEV`. `tests/schema-meta.test.ts`.

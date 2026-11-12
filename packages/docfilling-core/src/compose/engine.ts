@@ -466,7 +466,12 @@ const _SYSTEM_FIELDS_SET: ReadonlySet<string> = new Set([
   "FECHA", "FECHA_ISO", "HORA",
 ]);
 
-function _renameIfBody(body: string, suffix: string): string {
+/** ¿`name` (`ITEM`, `ITEM.NOMBRE`, `ITEM.DOMICILIO.CALLE`) es la variable de un FOR EACH abierto, o algo suyo? */
+function _esDeBucle(name: string, loopVars: ReadonlySet<string>): boolean {
+  return loopVars.size > 0 && loopVars.has(name.split(".")[0].toUpperCase());
+}
+
+function _renameIfBody(body: string, suffix: string, loopVars: ReadonlySet<string> = new Set()): string {
   if (!suffix) return body;
   // Mask quoted strings so identifiers inside them aren't touched.
   const quoted: string[] = [];
@@ -483,6 +488,8 @@ function _renameIfBody(body: string, suffix: string): string {
     // `SCHEMA:GROUP == "X"`: los metadatos del esquema no son campos y no llevan sufijo.
     if (upper === "SCHEMA" && rest.trimStart().startsWith(":")) return token;
     if (_IF_RESERVED.has(upper)) return token;
+    // `{{IF ITEM.CASADO == "Sí"}}` dentro de un bucle: el subcampo es del elemento, no un campo del párrafo.
+    if (_esDeBucle(name, loopVars)) return token;
     return `${leading}${name}${suffix}${rest}`;
   };
   const parts = masked.split(/(\bAND\b|\bOR\b|\bNOT\b|[()])/i);
@@ -532,6 +539,11 @@ export function applyFieldSuffix(content: string, suffix: string): string {
   // Sin esto, la pista de un párrafo incluido con `FIELDS:_VEND` apuntaba a un campo que no existe y la
   // concordancia decidía sólo por el contexto (certificación del 0507, 15-oct-2026).
   const renombrados = camposQueRenombra(content);
+  // Las variables de los FOR EACH abiertos, en orden: lo que cuelga de ellas (`ITEM.NOMBRE`) es un SUBCAMPO del
+  // elemento, declarado en el `DECLARE ARRAY LISTA(NOMBRE)`, y no lleva sufijo. Sólo lo lleva la lista. Permuta 0503
+  // (12-nov-2026): `{{ITEM.NOMBRE}}` pasaba a `{{ITEM.NOMBRE_PERMUTANTE_1}}`, E090 y nombres en blanco.
+  const bucles: string[] = [];
+  const loopVars = () => new Set(bucles);
   return content.replace(/\{\{([^}]+)\}\}/g, (full, raw: string) => {
     const body = raw.trim();
     const upper = body.toUpperCase();
@@ -563,9 +575,16 @@ export function applyFieldSuffix(content: string, suffix: string): string {
 
     // FOR EACH ITEM IN ARRAY → rename ARRAY only
     let m = body.match(/^(FOR\s+EACH\s+[\w\u00C0-\u024F]+\s+IN\s+)([\w\u00C0-\u024F]+)(\s*)$/i);
-    if (m) return `{{${m[1]}${m[2]}${suffix}${m[3]}}}`;
+    if (m) {
+      bucles.push(String(body.match(/^FOR\s+EACH\s+([\wÀ-ɏ]+)/i)![1]).toUpperCase());
+      return `{{${m[1]}${m[2]}${suffix}${m[3]}}}`;
+    }
+    // La lista con punto (`FOR EACH H IN ITEM.HIJOS`, la de un bucle anidado) no se renombra —como antes—, pero su
+    // variable también es de bucle.
+    m = body.match(/^FOR\s+EACH\s+([\wÀ-ɏ]+)\s+IN\s+[\wÀ-ɏ]+\.[\w.À-ɏ]+\s*$/i);
+    if (m) { bucles.push(m[1].toUpperCase()); return full; }
 
-    if (/^(?:ENDFOR|END[\s_]+FOR)\s*$/i.test(body)) return full;
+    if (/^(?:ENDFOR|END[\s_]+FOR)\s*$/i.test(body)) { bucles.pop(); return full; }
 
     // COUNT(ARRAY)
     m = body.match(/^(COUNT\s*\(\s*)([\w\u00C0-\u024F]+)(\s*\))\s*$/i);
@@ -576,7 +595,7 @@ export function applyFieldSuffix(content: string, suffix: string): string {
     if (m) {
       const head = m[1];
       const rest = m[2];
-      const newRest = _renameIfBody(rest, suffix);
+      const newRest = _renameIfBody(rest, suffix, loopVars());
       return `{{${head}${newRest}}}`;
     }
 
@@ -623,6 +642,7 @@ export function applyFieldSuffix(content: string, suffix: string): string {
     // Bare placeholder {{NAME}} (allow dots) — strip operator tail (==, !=, :)
     m = body.match(/^([A-Za-z_][\w.\u00C0-\u024F]*)([\s\S]*)$/);
     if (m && (!m[2] || /^\s*[=!:#]/.test(m[2]))) {
+      if (_esDeBucle(m[1], loopVars())) return full;
       return `{{${m[1]}${suffix}${m[2] || ""}}}`;
     }
 
