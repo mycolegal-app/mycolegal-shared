@@ -241,3 +241,9 @@ describe('manual · metadatos del esquema SCHEMA: (§7.bis)', () => {
     expect(si('{{SCHEMA_ACT:1104}}\n{{LANG=ca}}\n', 'SCHEMA:ACT == "1104" OR SCHEMA:LANG == "ca"')).toBe('NO');
   });
 });
+
+describe('manual · nombres retirados (§7.bis)', () => {
+  it.each(['TIPO_ACTO', 'ACTO_JURIDICO', 'ES_TRANSMISION_GRATUITA', 'ES_MORTIS_CAUSA', 'ES_ACTO_SUCESORIO'])('%s en un IF es E927', (n) => {
+    expect(validateText(`{{IF ${n}}}x{{ENDIF}}`).diagnostics.some((d) => d.code === 'E927')).toBe(true);
+  });
+});

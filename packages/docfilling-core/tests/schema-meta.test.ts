@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import {
   compose, validateText, metadatosDeEsquema, metadatosDeParrafo, leerSchema, valoresDeSchema, condicionTriestado,
   esquemaDeCampos, camposSoloCondicionales, applyFieldSuffix, resolverDeclarados, idiomaDePlantilla,
-  cambiarIdiomaDePlantilla, comparacionesSchema, processConditionals,
+  cambiarIdiomaDePlantilla, comparacionesSchema, processConditionals, nombresRetiradosEn,
 } from '../index';
 
 const CABECERA = `{{SCHEMA:ACT=1103 ALIAS ADJUDICACION_HERENCIA}}
@@ -217,5 +217,25 @@ describe('metadatos para la carga', () => {
     expect(comparacionesSchema('{{IF SCHEMA:ACT == "0501" OR SCHEMA:GROUP IN ("A", \'B\')}}x{{ENDIF}}')).toEqual([
       { clave: 'ACT', literal: '0501' }, { clave: 'GROUP', literal: 'A' }, { clave: 'GROUP', literal: 'B' },
     ]);
+  });
+});
+
+describe('E927 nombres retirados (TIPO_ACTO y compañía)', () => {
+  const codigos = (t: string) => validateText(t).diagnostics.filter((d) => d.code === 'E927').length;
+  it('declarar, respaldar, asignar, comparar o imprimir es error', () => {
+    expect(codigos('{{DECLARE TIPO_ACTO="Compraventa"}}')).toBe(1);
+    expect(codigos('{{DECLARE_UNDEF ES_MORTIS_CAUSA=FALSE}}')).toBe(1);
+    expect(codigos('{{SET ACTO_JURIDICO="Donación"}}')).toBe(1);
+    expect(codigos('{{IF ES_TRANSMISION_GRATUITA}}x{{ENDIF}}')).toBe(1);
+    expect(codigos('{{IF A AND ES_ACTO_SUCESORIO == "TRUE"}}x{{ENDIF}}')).toBe(1);
+    expect(codigos('Acto: {{TIPO_ACTO}}.')).toBe(1);
+  });
+  it('el mensaje remite a SCHEMA:, y un nombre parecido no salta', () => {
+    expect(validateText('{{IF ES_MORTIS_CAUSA}}x{{ENDIF}}').diagnostics.find((d) => d.code === 'E927')?.message).toMatch(/SCHEMA:GROUP == "MORTIS_CAUSA"/);
+    expect(codigos('{{DECLARE TIPO_ACTO_PREVIO}}{{IF ES_MORTIS_CAUSA_X}}x{{ENDIF}}')).toBe(0);
+  });
+  it('nombresRetiradosEn, para la carga', () => {
+    expect(nombresRetiradosEn('{{DECLARE TIPO_ACTO="X"}}{{IF ES_MORTIS_CAUSA}}y{{ENDIF}}').sort()).toEqual(['ES_MORTIS_CAUSA', 'TIPO_ACTO']);
+    expect(nombresRetiradosEn('Texto sin nada.')).toEqual([]);
   });
 });

@@ -15,5 +15,5 @@ export {
 } from './page-break';
 export { idiomaDePlantilla, IDIOMA_POR_DEFECTO, cambiarIdiomaDePlantilla, DECLARACION_DE_IDIOMA } from './template-lang';
 export * from './schema-meta';
-export { checkInputConOptions, checkIncludeConRuta } from './checks-pendientes';
+export { checkInputConOptions, checkIncludeConRuta, NOMBRES_RETIRADOS, nombresRetiradosEn } from './checks-pendientes';
 export * from './constants';

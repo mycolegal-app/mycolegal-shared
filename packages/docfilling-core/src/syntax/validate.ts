@@ -28,6 +28,7 @@ import {
   checkFormatos,
   checkSetYDeclareEnOrden,
   checkSchema,
+  checkNombresRetirados,
 } from './checks-pendientes';
 import type { CatalogoReq } from '../ports/catalogo';
 
@@ -69,6 +70,7 @@ export function validateText(
     ...checkFormatos(fields),
     ...checkSetYDeclareEnOrden(fields),
     ...checkSchema(text, fields, opciones.tipo),
+    ...checkNombresRetirados(fields),
     ...(opciones.catalogo ? checkReqCatalogo(fields, opciones.catalogo) : []),
   );
 

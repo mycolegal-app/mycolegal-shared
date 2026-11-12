@@ -28,7 +28,7 @@
 // viven en el rango 900+. El Python no tiene ningún W9xx/E9xx (comprobado).
 
 import { esFormato, FORMATOS } from '../format/formats';
-import { FieldType, offsetToLineCol, type ParsedField } from './parser';
+import { FieldType, offsetToLineCol, parseFields, type ParsedField } from './parser';
 import {
   CLAVES_SCHEMA, clavesLeidas, comparacionesSchema, declaracionesSchema, problemaDeLiteral, problemaDeValor,
   type DeclaracionSchema,
@@ -676,4 +676,45 @@ export function checkSchema(text: string, fields: ParsedField[], tipo?: 'esquema
     }
   }
   return out;
+}
+
+/**
+ * Nombres RETIRADOS (Carles, 12-nov-2026): lo que es el documento lo declara el esquema con `SCHEMA:`, no un campo.
+ * `TIPO_ACTO` y compañía no pueden volver a usarse: ni declararse (`DECLARE`, `DECLARE_UNDEF`), ni asignarse (`SET`),
+ * ni compararse en un `IF`, ni imprimirse.
+ */
+export const NOMBRES_RETIRADOS: Readonly<Record<string, string>> = {
+  TIPO_ACTO: 'SCHEMA:ACT (o SCHEMA:VARIANT)',
+  ACTO_JURIDICO: 'SCHEMA:ACT (o SCHEMA:FAMILY)',
+  ES_TRANSMISION_GRATUITA: 'SCHEMA:GROUP == "TRANSMISION_GRATUITA"',
+  ES_MORTIS_CAUSA: 'SCHEMA:GROUP == "MORTIS_CAUSA"',
+  ES_ACTO_SUCESORIO: 'SCHEMA:GROUP == "SUCESORIO"',
+};
+
+/** Los usos de un nombre retirado, por directiva. */
+function usosRetirados(fields: ParsedField[]): { f: ParsedField; nombre: string }[] {
+  const out: { f: ParsedField; nombre: string }[] = [];
+  const retirado = (n: string) => Object.prototype.hasOwnProperty.call(NOMBRES_RETIRADOS, n.toUpperCase()) ? n.toUpperCase() : null;
+  for (const f of fields) {
+    const nombres: string[] = [];
+    if (f.fieldType === FieldType.CONDITIONAL) nombres.push(...extractIfFieldRefs(f.content));
+    else if (f.name) nombres.push(f.name.replace(/^SYSTEM:/i, '').split(/[.\s=:#]/)[0]);
+    const m = f.content.match(/^(?:DECLARE(?:_UNDEF)?(?:\s+ARRAY)?|SET)\s+([\wÀ-ɏ]+)/i);
+    if (m) nombres.push(m[1]);
+    for (const n of new Set(nombres.map((x) => retirado(x)).filter((x): x is string => !!x))) out.push({ f, nombre: n });
+  }
+  return out;
+}
+
+/** **E927** nombre retirado (`TIPO_ACTO`, `ACTO_JURIDICO`, `ES_TRANSMISION_GRATUITA`, `ES_MORTIS_CAUSA`, `ES_ACTO_SUCESORIO`). */
+export function checkNombresRetirados(fields: ParsedField[]): Diagnostic[] {
+  return usosRetirados(fields).map(({ f, nombre }) =>
+    diag(f.line, f.col, f.raw.length, Severity.ERROR, 'E927',
+      `${nombre} está retirado: lo que es el documento lo declara el esquema. Use ${NOMBRES_RETIRADOS[nombre]}`));
+}
+
+/** Los nombres retirados que usa un texto, para la carga de la biblioteca (que lo rechaza). */
+export function nombresRetiradosEn(texto: string): string[] {
+  if (!/TIPO_ACTO|ACTO_JURIDICO|ES_TRANSMISION_GRATUITA|ES_MORTIS_CAUSA|ES_ACTO_SUCESORIO/i.test(texto)) return [];
+  return [...new Set(usosRetirados(parseFields(texto)).map((u) => u.nombre))];
 }

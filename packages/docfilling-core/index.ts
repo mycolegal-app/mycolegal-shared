@@ -123,7 +123,7 @@ export {
 } from './src/syntax/schema-meta';
 export type { ClaveSchema, DeclaracionSchema, MetaSchema, ComparacionSchema } from './src/syntax/schema-meta';
 export type { MetadatosDeEsquema, MetadatosDeParrafo } from './src/syntax/schema-act';
-export { checkInputConOptions, checkIncludeConRuta, checkDosPuntosEnPalabraClave, checkEndIfNoCanonico } from './src/syntax/checks-pendientes';
+export { checkInputConOptions, checkIncludeConRuta, checkDosPuntosEnPalabraClave, checkEndIfNoCanonico, NOMBRES_RETIRADOS, nombresRetiradosEn } from './src/syntax/checks-pendientes';
 export { expandirIncludes, repositorioDeMapa, normalizarNombre } from './src/compose/expand-includes';
 
 // Análisis de la biblioteca completa (F1.9b): huérfanos, vacíos y condiciones
