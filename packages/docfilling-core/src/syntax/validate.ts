@@ -29,6 +29,7 @@ import {
   checkSetYDeclareEnOrden,
   checkSchema,
   checkNombresRetirados,
+  checkBloqueos,
 } from './checks-pendientes';
 import type { CatalogoReq } from '../ports/catalogo';
 
@@ -71,6 +72,7 @@ export function validateText(
     ...checkSetYDeclareEnOrden(fields),
     ...checkSchema(text, fields, opciones.tipo),
     ...checkNombresRetirados(fields),
+    ...checkBloqueos(fields, opciones.tipo),
     ...(opciones.catalogo ? checkReqCatalogo(fields, opciones.catalogo) : []),
   );
 

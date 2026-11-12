@@ -6,3 +6,4 @@ export type { ResultadoExpansion, OpcionesExpansion } from './expand-includes';
 export { marcaParrafo } from './expand-includes';
 export { marcarRamas, ramasRecorridas, sinMarcasDeCobertura, ramasAlcanzables } from './cobertura';
 export type { RamaIf, PreguntaConOpciones, TextoMarcado } from './cobertura';
+export { bloqueosDeclarados, marcarBloqueos, bloqueosVivos, quitarMarcasDeBloqueo } from './bloqueos';

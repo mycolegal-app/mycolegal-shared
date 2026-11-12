@@ -146,5 +146,6 @@ export type { ParrafoRepository, ResultadoExpansion, OpcionesExpansion } from '.
 export { marcaParrafo } from './src/compose/expand-includes';
 // Modo cobertura (puerta P2 de la certificación): qué ramas de un esquema recorren sus casos.
 export { marcarRamas, ramasRecorridas, sinMarcasDeCobertura, ramasAlcanzables } from './src/compose/cobertura';
+export { bloqueosDeclarados, marcarBloqueos, bloqueosVivos, quitarMarcasDeBloqueo } from './src/compose/bloqueos';
 export type { RamaIf, PreguntaConOpciones, TextoMarcado } from './src/compose/cobertura';
 export { listasDeLaPlantilla, marcarListasParaSonda, type ListaDeducida, type ResultadoListas } from './src/fields/listas';

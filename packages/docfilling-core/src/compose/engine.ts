@@ -20,6 +20,7 @@ import { parseComparacion, compararNumerico } from "../syntax/comparar";
 import { quitarReqDoc } from "../syntax/req-doc";
 import { aplicarFormatos, partirFormatos } from "../format/formats";
 import { idiomaDePlantilla } from "../syntax/template-lang";
+import { marcarBloqueos, bloqueosVivos, quitarMarcasDeBloqueo } from "./bloqueos";
 import { resolverSeccionesDeLengua } from "../syntax/lang-section";
 import {
   conValoresDeSchema, evaluarAtomoSchema, MARCA_SCHEMA, quitarDeclaracionesSchema, sustituirLecturasSchema,
@@ -286,6 +287,9 @@ export function stripDirectives(content: string): string {
   // 4. HUMAN_ACTION single-line variants
   content = content.replace(/^[ \t]*\{\{(?:HUMAN_ACTION|HUMAN_ACTION_PRE|HUMAN_ACTION_POST|END_HUMAN_ACTION)(?::[^}]*)?\}\}[ \t]*\n/gim, "");
   content = content.replace(/\{\{(?:HUMAN_ACTION|HUMAN_ACTION_PRE|HUMAN_ACTION_POST|END_HUMAN_ACTION)(?::[^}]*)?\}\}/gi, "");
+  // `{{BLOQUEO: …}}` no se imprime nunca (`composeWithDiagnostics` los marca antes y devuelve los vivos).
+  content = content.replace(/^[ \t]*\{\{\s*BLOQUEO\s*:[^}]*\}\}[ \t]*\n/gim, "");
+  content = content.replace(/\{\{\s*BLOQUEO\s*:[^}]*\}\}/gi, "");
   // 5. // line comments (whole line including trailing newline)
   content = content.replace(/^[ \t]*\/\/[^\n]*\n?/gm, "");
   return content;
@@ -550,6 +554,7 @@ export function applyFieldSuffix(content: string, suffix: string): string {
 
     if (upper.startsWith("SYSTEM:")) return full;
     if (/^SCHEMA\s*:/.test(upper)) return full;
+    if (/^BLOQUEO\s*:/.test(upper)) return full;
     if (_SYSTEM_FIELDS_SET.has(upper)) return full;
     // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py.
     // El salto de página no es un campo: renombrarlo con el sufijo del INCLUDE
@@ -1387,7 +1392,7 @@ export function stripBindMarks(content: string): string {
   return content.replace(/\x00BIND:[\w\u00C0-\u024F]+\x00/g, "").split(BIND_END_MARK).join("");
 }
 
-const DIRECTIVAS_NO_CAMPO = /^\s*(?:DECLARE|COMMENT|INCLUDE|TAGS|SUMMARY|SCHEMA_ACT|SCHEMA\s*:|DEPENDENCY|MAP_IUI|HUMAN_ACTION|END_HUMAN_ACTION|LANG|WORD_STYLE|@autonumber|AUTO[:(]|SYSTEM:|FOR\s+EACH|ENDFOR|END[\s_]+FOR|EXIT_INCLUDE)/i;
+const DIRECTIVAS_NO_CAMPO = /^\s*(?:DECLARE|COMMENT|INCLUDE|TAGS|SUMMARY|SCHEMA_ACT|SCHEMA\s*:|BLOQUEO\s*:|DEPENDENCY|MAP_IUI|HUMAN_ACTION|END_HUMAN_ACTION|LANG|WORD_STYLE|@autonumber|AUTO[:(]|SYSTEM:|FOR\s+EACH|ENDFOR|END[\s_]+FOR|EXIT_INCLUDE)/i;
 
 /** Dentro de las regiones vinculadas a `iterador`, `NOMBRE` → `ITERADOR.NOMBRE`
  *  para los nombres que trae el elemento. Respeta comillas. */
@@ -1675,7 +1680,7 @@ export function composeWithDiagnostics(
   template: string,
   fields: FieldValues,
   locale: string = DEFAULT_LOCALE,
-): { text: string; warnings: ComposeWarning[] } {
+): { text: string; warnings: ComposeWarning[]; bloqueos: string[] } {
   const warnings: ComposeWarning[] = [];
   // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py. Un texto que llegue sin expandir: una sola lengua, nunca
   // las dos con «[NO DISPONIBLE]» en medio (`lang-section.ts`).
@@ -1691,6 +1696,10 @@ export function composeWithDiagnostics(
 
   // Step 2: Normalize {{NAME:HELP/INPUT/[instr]}} → {{NAME}}
   let content = stripFieldSuffixes(template);
+
+  // Step 2b: `{{BLOQUEO: …}}` → marca: las que sobrevivan a IF y FOR EACH son los bloqueos vivos (`bloqueos.ts`).
+  const marcados = marcarBloqueos(content);
+  content = marcados.texto;
 
   // Step 3: Strip metadata directives
   content = stripDirectives(content);
@@ -1731,7 +1740,8 @@ export function composeWithDiagnostics(
   // FOR EACH expands, and substitutions land).
   content = processAutonumbers(content);
 
-  return { text: content, warnings };
+  const bloqueos = bloqueosVivos(content, marcados.textos);
+  return { text: quitarMarcasDeBloqueo(content), warnings, bloqueos };
 }
 
 export function compose(

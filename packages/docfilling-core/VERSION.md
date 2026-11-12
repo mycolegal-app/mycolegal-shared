@@ -1,5 +1,9 @@
 # @mycolegal-app/docfilling-core
 
+## 0.1.50 — 12-nov-2026
+
+Directiva `{{BLOQUEO: texto}}` (Carles, dictamen P30 de Javier): lo que impide dar la escritura por buena. Va dentro de un IF (`{{IF HUELLA_DENTRO_SUELO_REAL == "No"}}{{BLOQUEO: …}}{{ENDIF}}`) y no se imprime nunca. `composeWithDiagnostics` devuelve `bloqueos: string[]`, los VIVOS —los de las ramas que el caso recorre, sin repetir aunque los abra un FOR EACH varias veces—: los marca antes de resolver IF y FOR EACH y recoge las marcas que sobreviven, como la cobertura de ramas. La línea del bloqueo desaparece entera, igual que con su IF muerto. No es un campo (`FieldType.BLOQUEO`; ni `esquemaDeCampos` ni las listas lo cuentan) ni lo renombra el sufijo de un INCLUDE. Validador: `E929` sin texto; `W928` fuera de todo IF en un esquema (bloquearía siempre; en un párrafo no se avisa, su INCLUDE puede estar dentro de un IF). `bloqueosDeclarados`, `marcarBloqueos`, `bloqueosVivos`, `quitarMarcasDeBloqueo`. Sin ningún BLOQUEO en `_PROD`, los 254 esquemas dan los mismos diagnósticos que con la 0.1.49. `tests/bloqueos.test.ts`.
+
 ## 0.1.49 — 12-nov-2026
 
 El sufijo de un `{{INCLUDE … FIELDS:_X}}` ya no renombra lo que cuelga de la variable de un `FOR EACH` abierto (`ITEM.NOMBRE`, `ITEM.DOMICILIO.CALLE`, la variable se llame como se llame), ni en un campo suelto ni dentro de un `IF`: son subcampos del elemento, declarados en el `DECLARE ARRAY LISTA(NOMBRE)`. Sólo la lista lleva el sufijo; la de un bucle anidado que cuelga del elemento (`IN ITEM.HIJOS`) no, como antes. Permuta 0503 (aviso de Catálogo): `{{ITEM.NOMBRE}}` pasaba a `{{ITEM.NOMBRE_PERMUTANTE_1}}`, 4 `E090` y los nombres de los adquirentes jóvenes de Murcia en blanco. En los 254 esquemas de `_PROD` sólo cambia la 0503 (−4 `E090`). `tests/expand-includes.test.ts`.

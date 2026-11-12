@@ -713,6 +713,32 @@ export function checkNombresRetirados(fields: ParsedField[]): Diagnostic[] {
       `${nombre} está retirado: lo que es el documento lo declara el esquema. Use ${NOMBRES_RETIRADOS[nombre]}`));
 }
 
+/**
+ * `{{BLOQUEO: texto}}` (12-nov-2026, ver `compose/bloqueos.ts`):
+ * - `E929` sin texto: el oficial no sabría qué tiene que arreglar.
+ * - `W928` fuera de todo IF, en un esquema: bloquearía SIEMPRE, y la escritura no se podría dar nunca por buena. En
+ *   un párrafo no se avisa: su INCLUDE puede estar dentro de un IF del esquema.
+ */
+export function checkBloqueos(fields: ParsedField[], tipo?: 'esquema' | 'parrafo'): Diagnostic[] {
+  const out: Diagnostic[] = [];
+  let ifs = 0;
+  for (const f of fields) {
+    if (f.fieldType === FieldType.CONDITIONAL) {
+      const c = f.content.trim().toUpperCase();
+      if (/^IF[_\s]/.test(c)) ifs++;
+      else if (/^END[\s_]?IF/.test(c)) ifs = Math.max(0, ifs - 1);
+      continue;
+    }
+    if (f.fieldType !== FieldType.BLOQUEO) continue;
+    if (!f.content.replace(/^\s*BLOQUEO\s*:/i, '').trim()) {
+      out.push(diag(f.line, f.col, f.raw.length, Severity.ERROR, 'E929', 'BLOQUEO sin texto: diga qué impide dar la escritura por buena y cómo se resuelve'));
+    } else if (ifs === 0 && tipo !== 'parrafo') {
+      out.push(diag(f.line, f.col, f.raw.length, Severity.WARNING, 'W928', 'BLOQUEO fuera de todo IF: bloquea siempre y la escritura no se podría dar nunca por buena'));
+    }
+  }
+  return out;
+}
+
 /** Los nombres retirados que usa un texto, para la carga de la biblioteca (que lo rechaza). */
 export function nombresRetiradosEn(texto: string): string[] {
   if (!/TIPO_ACTO|ACTO_JURIDICO|ES_TRANSMISION_GRATUITA|ES_MORTIS_CAUSA|ES_ACTO_SUCESORIO/i.test(texto)) return [];

@@ -60,6 +60,8 @@ export enum FieldType {
   SCHEMA_ACT = "schema_act",
   // `{{SCHEMA:ACT=1103 ALIAS …}}` (declaración) y `{{SCHEMA:ACT}}` (lectura), 12-nov-2026. Ver `schema-meta.ts`.
   SCHEMA = "schema",
+  // `{{BLOQUEO: texto}}`, 12-nov-2026: impide dar la escritura por buena si su rama está viva. Ver `compose/bloqueos.ts`.
+  BLOQUEO = "bloqueo",
   UNKNOWN = "unknown",
 }
 
@@ -203,6 +205,8 @@ export function classifyField(content: string): FieldType {
   if (esSchemaAct(content)) return FieldType.SCHEMA_ACT;
   // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py. Ver schema-meta.ts.
   if (/^SCHEMA\s*:/.test(upper)) return FieldType.SCHEMA;
+  // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py. Ver bloqueos.ts: no es un campo.
+  if (/^BLOQUEO\s*:/.test(upper)) return FieldType.BLOQUEO;
   if (upper.startsWith("COMMENT:")) return FieldType.COMMENT;
   // DECLARE ARRAY must be checked before plain DECLARE (longer-prefix wins).
   if (upper.startsWith("DECLARE ARRAY ") || upper === "DECLARE ARRAY") return FieldType.DECLARE_ARRAY;
@@ -550,6 +554,12 @@ export function parseFields(text: string): ParsedField[] {
       // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py. `SCHEMA:ACT`, la clave (declarada o leída).
       case FieldType.SCHEMA: {
         pf.name = "SCHEMA:" + (upper.match(/^SCHEMA\s*:\s*([A-Z_]\w*)/)?.[1] ?? "");
+        break;
+      }
+
+      // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py.
+      case FieldType.BLOQUEO: {
+        pf.name = "BLOQUEO";
         break;
       }
 
