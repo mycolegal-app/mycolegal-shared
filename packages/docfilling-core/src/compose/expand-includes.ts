@@ -104,6 +104,9 @@ export interface OpcionesExpansion {
   marcarLengua?: boolean;
 }
 
+/** Filtro previo de `expandir`: si no casa, el texto no puede tener un `{{INCLUDE…}}`. */
+const PUEDE_TENER_INCLUDE = /[iı]nclude/i;
+
 /** La marca con el nombre del párrafo que abre un centinela (modo cobertura). */
 export const marcaParrafo = (nombre: string): string => `\x00PARR:${nombre}\x00`;
 
@@ -137,16 +140,22 @@ export async function expandirIncludes(
 
   async function expandir(actual: string, profundidad: number, enCurso: string[]): Promise<string> {
     if (profundidad > profundidadMaxima) return actual;
+    // La mayoría de los párrafos son hojas: sin la palabra no hay INCLUDE que buscar, y se
+    // ahorra el análisis completo (`classifyField` mira `toUpperCase().startsWith('INCLUDE')`,
+    // y la «ı» sin punto también sube a «I»).
+    if (!PUEDE_TENER_INCLUDE.test(actual)) return actual;
 
     const directivas = parseFields(actual).filter(
       (f) => f.fieldType === FieldType.INCLUDE && f.includeTarget && !enLineaComentada(actual, f.offset),
     );
     if (directivas.length === 0) return actual;
 
-    let salida = actual;
-    // En orden INVERSO: así cada sustitución no invalida los offsets de las
-    // anteriores. Es lo que hace el Python, y por el mismo motivo.
-    for (const d of [...directivas].reverse()) {
+    // Los reemplazos se calculan en orden INVERSO, como el Python (y así salen en el mismo
+    // orden `faltantes`, `usados` y `ciclos`), pero el texto se monta una sola vez al final:
+    // rehacerlo entero en cada sustitución copiaba los megas de la permuta miles de veces.
+    const reemplazos: string[] = new Array(directivas.length);
+    for (let k = directivas.length - 1; k >= 0; k--) {
+      const d = directivas[k];
       const nombre = normalizarNombre(d.includeTarget);
       let reemplazo: string;
 
@@ -161,7 +170,10 @@ export async function expandirIncludes(
           reemplazo = marcador(nombre);
         } else {
           if (!usados.includes(nombre)) usados.push(nombre);
-          let cuerpo = enSuLengua(contenido);
+          // NFC también en cada párrafo, no sólo en la entrada (nota 4 de la cabecera): dos de
+          // `_PROD` traían una interrogación griega (U+037E) por «;», y con eso el texto
+          // expandido entero dejaba de estar en NFC (11-nov-2026).
+          let cuerpo = enSuLengua(contenido.normalize('NFC'));
           // El sufijo se aplica ANTES de recursar: así la directiva anidada ya
           // lleva el sufijo compuesto y sus campos hoja salen bien renombrados.
           if (d.includeSuffix) cuerpo = applyFieldSuffix(cuerpo, d.includeSuffix);
@@ -174,9 +186,16 @@ export async function expandirIncludes(
         }
       }
 
-      salida = salida.slice(0, d.offset) + reemplazo + salida.slice(d.offset + d.raw.length);
+      reemplazos[k] = reemplazo;
     }
-    return salida;
+    const piezas: string[] = [];
+    let desde = 0;
+    directivas.forEach((d, k) => {
+      piezas.push(actual.slice(desde, d.offset), reemplazos[k]);
+      desde = d.offset + d.raw.length;
+    });
+    piezas.push(actual.slice(desde));
+    return piezas.join('');
   }
 
   // NFC en la frontera: ver la nota 4 de la cabecera.

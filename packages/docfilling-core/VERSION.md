@@ -1,5 +1,13 @@
 # @mycolegal-app/docfilling-core
 
+## 0.1.44 — 11-nov-2026
+
+Rendimiento, sin cambio de resultado (comparado con la 0.1.43 en los 237 esquemas de `_PROD`: expansión, `esquemaDeCampos` y `compose` idénticos, salvo la normalización NFC de abajo).
+
+- **`parseFields` y `esquemaDeCampos` ya no tardan de 6 a 45 s la segunda vez.** La caché del índice de líneas de `offsetToLineCol` se quedaba con la cadena vieja, y `===` entre dos cadenas iguales que no son el mismo objeto compara el contenido entero: cada nueva generación del mismo esquema volvía a comparar los megas una vez por campo. 2.ª llamada: 0507 6,1 s → 0,16 s; 1103 23,7 s → 0,27 s; permuta 0503 44,8 s → 0,38 s. Ahora `parseFields` calcula su índice por llamada y la caché se queda con la cadena más reciente. `tests/offset-linea.test.ts`.
+- **`expandirIncludes`, ~2× más rápido:** no analiza los párrafos sin `INCLUDE` y monta el texto una sola vez en vez de rehacerlo en cada sustitución (permuta 257 → 154 ms).
+- **`expandirIncludes` normaliza a NFC cada párrafo**, no sólo la entrada. Dos párrafos de `_PROD` llevaban una interrogación griega (U+037E) por «;», y el texto expandido del 0507 y de la 0501 en PH dejaba de estar en NFC.
+
 ## 0.1.39 — 9-nov-2026
 
 `{{DECLARE_UNDEF X=v}}`: un valor de respaldo, que sólo da valor a X si nadie se lo ha dado antes en el orden del documento expandido (0405, ACT-253: el `FALSE` de respaldo de tres párrafos pisaba el `TRUE` de la cabecera del esquema). Una declaración en una rama que no se toma no cuenta, un dato del caso no se pisa y un `DECLARE` posterior sigue ganando. Lo resuelve `resolverDeclarados(texto, campos)`, que usan `compose` y `composeForPreview`; `extractDeclareFixedValues` incluye el respaldo cuando nada lo fija antes, sin mirar ramas ni datos (las constantes que nadie pregunta). El parser lo lee como un `DECLARE` con `declareSoloSiIndefinido`; validador: `E050` cuenta aparte los respaldos, `E908` (`DECLARE_UNDEF ARRAY`) y `W914` (sin valor fijo). Además, el valor sin comillas de un `DECLARE` acaba en la primera `}`: `{{DECLARE X=TRUE}}{{ENDIF}}` daba «TRUE}}{{ENDIF» (ninguno en `_PROD`). `tests/declare-undef.test.ts`, `tests/manual.test.ts`.

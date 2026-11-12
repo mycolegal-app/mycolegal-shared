@@ -257,18 +257,37 @@ export function classifyField(content: string): FieldType {
  * proceso de Redactor bloqueado entero mientras tanto (hasta 22 s sin atender a nadie
  * durante una generación). El índice se guarda para el último texto: las llamadas de un
  * mismo análisis comparten texto.
+ *
+ * ⚠️ Y la caché, a su vez, se quedaba con la cadena VIEJA. `===` entre dos cadenas que no son
+ * el mismo objeto compara el contenido entero, así que cuando llegaba otra cadena con el mismo
+ * texto (cada generación de Redactor vuelve a expandir el esquema) cada llamada comparaba los
+ * megas otra vez: una vez por campo. Medido el 11-nov-2026: `esquemaDeCampos` del 0507,
+ * 198 ms la primera vez y 6,4 s las siguientes; `parseFields` de la permuta 0503 (11 MB),
+ * 210 ms → 45 s. Ahora `parseFields` calcula su índice por llamada, y la caché se queda con
+ * la cadena más reciente: la siguiente comparación es por identidad, sin recorrer el texto.
  */
 let indiceDe: { text: string; inicios: number[] } | null = null;
 function iniciosDeLinea(text: string): number[] {
-  if (indiceDe && indiceDe.text === text) return indiceDe.inicios;
-  const inicios = [0];
-  for (let i = text.indexOf("\n"); i >= 0; i = text.indexOf("\n", i + 1)) inicios.push(i + 1);
+  if (indiceDe && indiceDe.text === text) {
+    indiceDe.text = text;
+    return indiceDe.inicios;
+  }
+  const inicios = calcularIniciosDeLinea(text);
   indiceDe = { text, inicios };
   return inicios;
 }
 
+function calcularIniciosDeLinea(text: string): number[] {
+  const inicios = [0];
+  for (let i = text.indexOf("\n"); i >= 0; i = text.indexOf("\n", i + 1)) inicios.push(i + 1);
+  return inicios;
+}
+
 export function offsetToLineCol(text: string, offset: number): [number, number] {
-  const inicios = iniciosDeLinea(text);
+  return lineaYColumna(iniciosDeLinea(text), offset);
+}
+
+function lineaYColumna(inicios: number[], offset: number): [number, number] {
   // La última línea cuyo inicio es <= offset.
   let lo = 0, hi = inicios.length - 1;
   while (lo < hi) {
@@ -430,6 +449,9 @@ const REFERENCIA_CON_FORMATO = /^(?:SYSTEM:)?[\w.\u00C0-\u024F]+(?::\[[^\]]*\])?
 
 export function parseFields(text: string): ParsedField[] {
   const fields: ParsedField[] = [];
+  // El índice de líneas, una vez por llamada y sin pasar por la caché global (ver
+  // `iniciosDeLinea`): ese era el camino de los 6–45 s del 11-nov-2026.
+  const inicios = calcularIniciosDeLinea(text);
 
   // Reset lastIndex for global regex
   const re = new RegExp(FIELD_PATTERN.source, "g");
@@ -448,7 +470,7 @@ export function parseFields(text: string): ParsedField[] {
       formatos = content.slice(i + 1).split("#").map((x) => x.trim().toLowerCase()).filter(Boolean);
       content = content.slice(0, i).trim();
     }
-    const [line, col] = offsetToLineCol(text, offset);
+    const [line, col] = lineaYColumna(inicios, offset);
     // `DECLARE_UNDEF X…` es un DECLARE que sólo vale si X no tiene valor todavía: se lee como
     // DECLARE (mismas formas) y se marca. Ver `resolverDeclarados` en compose/engine.ts.
     const undef = /^DECLARE_UNDEF\s+/i.exec(content);
