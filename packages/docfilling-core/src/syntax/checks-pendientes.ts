@@ -28,7 +28,11 @@
 // viven en el rango 900+. El Python no tiene ningún W9xx/E9xx (comprobado).
 
 import { esFormato, FORMATOS } from '../format/formats';
-import { FieldType, type ParsedField } from './parser';
+import { FieldType, offsetToLineCol, type ParsedField } from './parser';
+import {
+  CLAVES_SCHEMA, clavesLeidas, comparacionesSchema, declaracionesSchema, problemaDeLiteral, problemaDeValor,
+  type DeclaracionSchema,
+} from './schema-meta';
 import { Severity, extractIfFieldRefs, type Diagnostic } from './validator';
 
 // Los tipos y sus sinónimos viven en `declare-types.ts`.
@@ -599,6 +603,78 @@ export function checkSetYDeclareEnOrden(fields: ParsedField[]): Diagnostic[] {
     const c = fields[bloqueDe[condicionales[0]]![0]];
     out.push(diag(d.line, d.col, d.raw.length, Severity.WARNING, 'W916',
       `DECLARE ${d.name}: está dentro de {{${c.content.trim()}}} (línea ${c.line}) y sólo vale si se cumple; en la línea ${fields[fuera].line} se lee fuera de ese IF, donde puede quedar sin valor`));
+  }
+  return out;
+}
+
+/**
+ * Los metadatos del esquema, `{{SCHEMA:CLAVE=valor}}` (12-nov-2026, ver `schema-meta.ts`).
+ *
+ * - **E920** clave desconocida (`SCHEMA:FOO`), declarada o leída.
+ * - **E921** un párrafo declara `SCHEMA:` (sólo con `tipo: 'parrafo'`; un texto sin tipo no se sabe qué es).
+ * - **E922** clave declarada más de una vez (la forma antigua repetida con el mismo valor se sigue tolerando).
+ * - **E923** valor mal formado (ACT no son cuatro cifras, FAMILY no es F+2, alias o grupo con minúsculas o tildes…).
+ * - **E924** una condición compara con un literal que la clave no puede valer.
+ * - **E925** `DECLARE` o `SET` sobre `SCHEMA:…`: son constantes del esquema.
+ * - **W920** forma antigua (`{{SCHEMA_ACT:…}}`, `{{LANG=…}}`): vale, pero hay que migrarla.
+ *
+ * Leer `SCHEMA:` en un párrafo suelto, sin esquema que le dé valor, NO es un error.
+ */
+export function checkSchema(text: string, fields: ParsedField[], tipo?: 'esquema' | 'parrafo'): Diagnostic[] {
+  const out: Diagnostic[] = [];
+  if (!/SCHEMA|LANG/i.test(text)) return out;
+  const claves = new Set<string>(CLAVES_SCHEMA);
+  const largo = (desde: number) => Math.max(1, text.indexOf('}}', desde) + 2 - desde);
+
+  const porClave = new Map<string, DeclaracionSchema[]>();
+  for (const d of declaracionesSchema(text)) {
+    const [line, col] = offsetToLineCol(text, d.desde);
+    const n = largo(d.desde);
+    if (d.legado) {
+      out.push(diag(line, col, n, Severity.WARNING, 'W920', d.clave === 'ACT'
+        ? `Forma antigua: escriba {{SCHEMA:ACT=${d.valor}}} en vez de {{SCHEMA_ACT:${d.valor}}}`
+        : `Forma antigua: escriba {{SCHEMA:LANG=${d.valor}}} en vez de {{LANG=${d.valor}}}`));
+      // `{{LANG=xx}}` en un párrafo seguía valiendo; el formato del SCHEMA_ACT antiguo ya lo mira E120.
+      if (d.clave === 'LANG') continue;
+    } else if (!claves.has(d.clave)) {
+      out.push(diag(line, col, n, Severity.ERROR, 'E920', `SCHEMA:${d.clave} no existe: las claves son ${CLAVES_SCHEMA.join(', ')}`));
+      continue;
+    } else {
+      const p = problemaDeValor(d.clave, d.valor);
+      if (p) out.push(diag(line, col, n, Severity.ERROR, 'E923', p));
+    }
+    if (tipo === 'parrafo') {
+      out.push(diag(line, col, n, Severity.ERROR, 'E921', `SCHEMA:${d.clave} sólo se declara en un esquema: un párrafo lo lee del esquema que lo incluye`));
+    }
+    const l = porClave.get(d.clave) ?? [];
+    l.push(d);
+    porClave.set(d.clave, l);
+  }
+  for (const [clave, ds] of porClave) {
+    if (ds.length < 2 || ds.every((d) => d.legado && d.valor === ds[0].valor)) continue;
+    for (const d of ds.slice(1)) {
+      const [line, col] = offsetToLineCol(text, d.desde);
+      const [l0] = offsetToLineCol(text, ds[0].desde);
+      out.push(diag(line, col, largo(d.desde), Severity.ERROR, 'E922', `SCHEMA:${clave} repetido: ya se declara en la línea ${l0}; una sola declaración por clave`));
+    }
+  }
+
+  for (const f of fields) {
+    if (/^(?:DECLARE(?:_UNDEF)?|SET)\s+SCHEMA\s*:/i.test(f.content)) {
+      out.push(diag(f.line, f.col, f.raw.length, Severity.ERROR, 'E925', 'Los metadatos SCHEMA: son constantes del esquema: no se les da valor con DECLARE ni con SET, se declaran con {{SCHEMA:CLAVE=valor}}'));
+      continue;
+    }
+    const lectura = f.fieldType === FieldType.SCHEMA && !/^SCHEMA\s*:\s*\w+\s*=/i.test(f.content);
+    if (f.fieldType !== FieldType.CONDITIONAL && !lectura) continue;
+    for (const k of new Set(clavesLeidas(f.raw))) {
+      if (!claves.has(k)) out.push(diag(f.line, f.col, f.raw.length, Severity.ERROR, 'E920', `SCHEMA:${k} no existe: las claves son ${CLAVES_SCHEMA.join(', ')}`));
+    }
+    if (f.fieldType !== FieldType.CONDITIONAL) continue;
+    for (const c of comparacionesSchema(f.raw)) {
+      if (!claves.has(c.clave)) continue;
+      const p = problemaDeLiteral(c.clave, c.literal);
+      if (p) out.push(diag(f.line, f.col, f.raw.length, Severity.ERROR, 'E924', p));
+    }
   }
   return out;
 }

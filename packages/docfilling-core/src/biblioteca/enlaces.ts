@@ -88,7 +88,7 @@ export function enlacesDeEsquema(texto: string, catalogo?: CatalogoReq): Enlaces
       case FieldType.CONDITIONAL:
         for (const n of extractIfFieldRefs(f.content)) {
           const nombre = n.replace(/^SYSTEM:/i, '');
-          if (n.toUpperCase().startsWith('SYSTEM:') || nombre.toUpperCase() === 'COUNT' || sistema.has(nombre.toUpperCase())) continue;
+          if (n.toUpperCase().startsWith('SYSTEM:') || n.toUpperCase().startsWith('SCHEMA:') || nombre.toUpperCase() === 'COUNT' || sistema.has(nombre.toUpperCase())) continue;
           de(nombre).condicion = true;
         }
         break;

@@ -37,7 +37,7 @@ export function puntuacion(p: PesoCondicion | undefined): number {
 
 function referencias(expr: string): string[] {
   return extractIfFieldRefs(`IF ${expr}`)
-    .filter((r) => !/^SYSTEM:/i.test(r) && r.toUpperCase() !== 'COUNT');
+    .filter((r) => !/^(?:SYSTEM|SCHEMA):/i.test(r) && r.toUpperCase() !== 'COUNT');
 }
 
 export function pesoDeCondiciones(texto: string): Map<string, PesoCondicion> {

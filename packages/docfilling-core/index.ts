@@ -113,9 +113,15 @@ export type {
 export type { OpcionesValidacion } from './src/syntax/validate';
 // F1.3 (residuo) — `{{LANG=xx}}`: el idioma de la PLANTILLA, que decide en qué
 // idioma salen las fechas del motor.
-export { idiomaDePlantilla, IDIOMA_POR_DEFECTO } from './src/syntax/template-lang';
+export { idiomaDePlantilla, IDIOMA_POR_DEFECTO, cambiarIdiomaDePlantilla, DECLARACION_DE_IDIOMA } from './src/syntax/template-lang';
 export { resolverSeccionesDeLengua, auditarSeccionesDeLengua, LENGUA_APROBADA_INICIO, LENGUA_APROBADA_FIN } from './src/syntax/lang-section';
-export { metadatosDeEsquema, metadatosDeParrafo, esSchemaAct, CODIGO_ACTO } from './src/syntax/schema-act';
+export { metadatosDeEsquema, metadatosDeParrafo, esSchemaAct, CODIGO_ACTO, erroresDeDeclaraciones } from './src/syntax/schema-act';
+export {
+  CLAVES_SCHEMA, NOMBRE_SCHEMA, MARCA_SCHEMA, declaracionesSchema, leerSchema, valoresDeSchema, conValoresDeSchema,
+  esClaveSchema, evaluarAtomoSchema, sustituirLecturasSchema, quitarDeclaracionesSchema, comparacionesSchema,
+  clavesLeidas, problemaDeValor, problemaDeLiteral,
+} from './src/syntax/schema-meta';
+export type { ClaveSchema, DeclaracionSchema, MetaSchema, ComparacionSchema } from './src/syntax/schema-meta';
 export type { MetadatosDeEsquema, MetadatosDeParrafo } from './src/syntax/schema-act';
 export { checkInputConOptions, checkIncludeConRuta, checkDosPuntosEnPalabraClave, checkEndIfNoCanonico } from './src/syntax/checks-pendientes';
 export { expandirIncludes, repositorioDeMapa, normalizarNombre } from './src/compose/expand-includes';

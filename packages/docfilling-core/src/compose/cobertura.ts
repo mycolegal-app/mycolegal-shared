@@ -13,6 +13,7 @@
 //
 // Sin coste si no se usa: nadie llama a esto en una composición normal.
 import { INC_BEGIN_MARK, INC_END_MARK, normalizeConditionals, processConditionals, type FieldValues } from './engine';
+import { evaluarAtomoSchema, MARCA_SCHEMA } from '../syntax/schema-meta';
 
 /** Una rama: el lado verdadero (`T`) o el falso (`F`) de un `{{IF}}`. */
 export interface RamaIf {
@@ -212,6 +213,8 @@ function evaluarTri(expr: string, constantes: FieldValues, nombres: Set<string>)
   }
   if (/^NOT[\s(]/i.test(e)) { const r = evaluarTri(e.slice(3), constantes, nombres); return r === null ? null : !r; }
   if (envuelta(e)) return evaluarTri(e.slice(1, -1), constantes, nombres);
+  // Los metadatos del esquema (`SCHEMA:…`) son constantes si vienen con ellas.
+  if (MARCA_SCHEMA in constantes && /^SCHEMA\s*:/i.test(e)) return evaluarAtomoSchema(e, constantes);
   const campo = e.replace(/^COUNT\s*\(\s*/i, '').match(/^(?:SYSTEM:)?([A-Za-z_][\wÀ-ɏ.]*)/)?.[1]?.toUpperCase();
   if (!campo || !nombres.has(campo)) return null;
   return processConditionals(`{{IF ${e}}}1{{ELSE}}0{{ENDIF}}`, constantes) === '1';

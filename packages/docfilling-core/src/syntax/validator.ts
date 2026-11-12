@@ -194,12 +194,12 @@ function classifyConditional(content: string): { kind: CondKind | null; name: st
   if (upper === "ELSE") return { kind: "ELSE", name: null };
   // Field-name shape allows an optional `SYSTEM:` namespace prefix —
   // legacy `{{ENDIF_SYSTEM:COMUNIDAD}}` and friends classify properly.
-  let m = upper.match(/^ENDIF[_\s]+((?:SYSTEM:)?[\w.\u00C0-\u024F]+)$/);
+  let m = upper.match(/^ENDIF[_\s]+((?:SYSTEM:|SCHEMA:)?[\w.\u00C0-\u024F]+)$/);
   if (m) return { kind: "ENDIF", name: m[1] };
-  m = upper.match(/^ELSE[_\s]+((?:SYSTEM:)?[\w.\u00C0-\u024F]+)$/);
+  m = upper.match(/^ELSE[_\s]+((?:SYSTEM:|SCHEMA:)?[\w.\u00C0-\u024F]+)$/);
   if (m) return { kind: "ELSE", name: m[1] };
   if (/^IF\s+/.test(upper)) return { kind: "IF", name: null };
-  m = upper.match(/^IF_((?:SYSTEM:)?[\w.\u00C0-\u024F]+)/);
+  m = upper.match(/^IF_((?:SYSTEM:|SCHEMA:)?[\w.\u00C0-\u024F]+)/);
   if (m) return { kind: "IF", name: m[1] };
   return { kind: null, name: null };
 }
@@ -731,7 +731,7 @@ export function extractIfFieldRefs(content: string): string[] {
     const t = atom.trim();
     if (!t) continue;
     const lhs = t.split(/==|!=/)[0].trim();
-    const m = lhs.match(/^(SYSTEM:)?([A-Za-z_][\w.\u00C0-\u024F]*)/);
+    const m = lhs.match(/^(SYSTEM:|SCHEMA:)?([A-Za-z_][\w.\u00C0-\u024F]*)/);
     if (m && !IF_RESERVED.has(m[0].toUpperCase())) out.push(m[0]);
   }
   return out;
@@ -874,6 +874,8 @@ function checkUndeclaredUses(
 
   const isExempt = (nameUpper: string): boolean => {
     if (nameUpper.startsWith("SYSTEM:")) return true;
+    // Los metadatos del esquema (`SCHEMA:ACT`…): en un párrafo suelto no tienen valor, y no es un error.
+    if (nameUpper.startsWith("SCHEMA:")) return true;
     const bare = nameUpper.startsWith("SYSTEM:") ? nameUpper.slice(7) : nameUpper;
     if (Object.prototype.hasOwnProperty.call(SYSTEM_FIELDS, bare)) return true;
     if (DIRECTIVE_PSEUDO_FIELDS.has(nameUpper)) return true;
@@ -959,7 +961,7 @@ const IF_QUOTE_CHARS = "'\"\u201c\u201d\u00ab\u00bb";
 // `CAMPO [NOT] IN (...)` expression. Tolerates parens / commas inside
 // quoted list values (e.g. `"Tres (3)"` or `"a, b"`).
 function parseInAtomForValidation(atom: string): boolean {
-  const m = atom.match(/^((?:SYSTEM:)?[\w.\u00C0-\u024F]+)\s+(NOT\s+)?IN\s*\(/i);
+  const m = atom.match(/^((?:SYSTEM:|SCHEMA:)?[\w.\u00C0-\u024F]+)\s+(NOT\s+)?IN\s*\(/i);
   if (!m) return false;
   const start = m[0].length;
   let quote: string | null = null;
@@ -986,7 +988,7 @@ function isValidIfAtom(atom: string): boolean {
   if (!upper) return false;
   // Reserved boolean keywords aren't valid field names on their own.
   if (upper === "NOT" || upper === "AND" || upper === "OR") return false;
-  if (/^(?:SYSTEM:)?[\w.\u00C0-\u024F]+(\s*[!=]=\s*(["'\u201c\u201d\u00ab\u00bb][^"'\u201c\u201d\u00ab\u00bb]*["'\u201c\u201d\u00ab\u00bb]|\S+))?\s*$/.test(upper)) return true;
+  if (/^(?:SYSTEM:|SCHEMA:)?[\w.\u00C0-\u024F]+(\s*[!=]=\s*(["'\u201c\u201d\u00ab\u00bb][^"'\u201c\u201d\u00ab\u00bb]*["'\u201c\u201d\u00ab\u00bb]|\S+))?\s*$/.test(upper)) return true;
   if (parseInAtomForValidation(atom.trim())) return true;
   // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py.
   // Comparaciones numéricas (`<=`, `>=`, `<`, `>`): el lenguaje las acepta
@@ -1059,7 +1061,7 @@ function checkMalformedDirectives(
     // E013: IN / NOT IN with square brackets — suggest parentheses
     // Use a search-style regex so we still catch the form with trailing
     // noise (e.g. :HELP(file)) or an unclosed bracket.
-    const mSq = content.match(/IF(?:_|\s+)((?:SYSTEM:)?[\w.\u00C0-\u024F]+)\s+(NOT\s+)?IN\s*\[([^\]]*)\]?/i);
+    const mSq = content.match(/IF(?:_|\s+)((?:SYSTEM:|SCHEMA:)?[\w.\u00C0-\u024F]+)\s+(NOT\s+)?IN\s*\[([^\]]*)\]?/i);
     if (mSq) {
       const fieldName = mSq[1];
       const notPart = (mSq[2] || "").toUpperCase().trim();
@@ -1076,7 +1078,7 @@ function checkMalformedDirectives(
     }
 
     // E014: value comparison with unquoted value that contains spaces
-    const mUnquoted = content.match(/^IF(?:_|\s+)((?:SYSTEM:)?[\w\u00C0-\u024F]+)\s*([!=]=)\s*(\S+.*\S)\s*$/i);
+    const mUnquoted = content.match(/^IF(?:_|\s+)((?:SYSTEM:|SCHEMA:)?[\w\u00C0-\u024F]+)\s*([!=]=)\s*(\S+.*\S)\s*$/i);
     if (mUnquoted) {
       const value = mUnquoted[3];
       if (value.includes(" ")) {

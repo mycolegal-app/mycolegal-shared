@@ -13,6 +13,7 @@ export {
   PAGEBREAK, PAGEBREAK_HEREDADO, PAGEBREAK_DIRECTIVA, PAGEBREAK_PATTERN_G,
   esPageBreak, esPageBreakHeredado,
 } from './page-break';
-export { idiomaDePlantilla, IDIOMA_POR_DEFECTO } from './template-lang';
+export { idiomaDePlantilla, IDIOMA_POR_DEFECTO, cambiarIdiomaDePlantilla, DECLARACION_DE_IDIOMA } from './template-lang';
+export * from './schema-meta';
 export { checkInputConOptions, checkIncludeConRuta } from './checks-pendientes';
 export * from './constants';

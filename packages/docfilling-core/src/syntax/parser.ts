@@ -58,6 +58,8 @@ export enum FieldType {
   // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py.
   // `{{SCHEMA_ACT:1104}}` (F1.9): el acto IUI del esquema. Ver `src/syntax/schema-act.ts`.
   SCHEMA_ACT = "schema_act",
+  // `{{SCHEMA:ACT=1103 ALIAS …}}` (declaración) y `{{SCHEMA:ACT}}` (lectura), 12-nov-2026. Ver `schema-meta.ts`.
+  SCHEMA = "schema",
   UNKNOWN = "unknown",
 }
 
@@ -199,6 +201,8 @@ export function classifyField(content: string): FieldType {
   if (esWordStyle(content)) return FieldType.WORD_STYLE;
   // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py. Ver schema-act.ts.
   if (esSchemaAct(content)) return FieldType.SCHEMA_ACT;
+  // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py. Ver schema-meta.ts.
+  if (/^SCHEMA\s*:/.test(upper)) return FieldType.SCHEMA;
   if (upper.startsWith("COMMENT:")) return FieldType.COMMENT;
   // DECLARE ARRAY must be checked before plain DECLARE (longer-prefix wins).
   if (upper.startsWith("DECLARE ARRAY ") || upper === "DECLARE ARRAY") return FieldType.DECLARE_ARRAY;
@@ -540,6 +544,12 @@ export function parseFields(text: string): ParsedField[] {
       // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py.
       case FieldType.SCHEMA_ACT: {
         pf.name = codigoDeSchemaAct(content) ?? "";
+        break;
+      }
+
+      // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py. `SCHEMA:ACT`, la clave (declarada o leída).
+      case FieldType.SCHEMA: {
+        pf.name = "SCHEMA:" + (upper.match(/^SCHEMA\s*:\s*([A-Z_]\w*)/)?.[1] ?? "");
         break;
       }
 

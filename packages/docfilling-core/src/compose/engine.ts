@@ -21,6 +21,10 @@ import { quitarReqDoc } from "../syntax/req-doc";
 import { aplicarFormatos, partirFormatos } from "../format/formats";
 import { idiomaDePlantilla } from "../syntax/template-lang";
 import { resolverSeccionesDeLengua } from "../syntax/lang-section";
+import {
+  conValoresDeSchema, evaluarAtomoSchema, MARCA_SCHEMA, quitarDeclaracionesSchema, sustituirLecturasSchema,
+  valoresDeSchema,
+} from "../syntax/schema-meta";
 
 export type FieldValues = Record<string, unknown>;
 
@@ -272,6 +276,7 @@ export function stripDirectives(content: string): string {
   content = content.replace(/\{\{SUMMARY:[^}]*\}\}/gi, "");
   content = content.replace(/^[ \t]*\{\{\s*SCHEMA_ACT\s*:[^}]*\}\}[ \t]*\n/gim, "");
   content = content.replace(/\{\{\s*SCHEMA_ACT\s*:[^}]*\}\}/gi, "");
+  content = quitarDeclaracionesSchema(content);
   content = content.replace(/^[ \t]*\{\{COMMENT:[^}]*\}\}[ \t]*\n/gim, "");
   content = content.replace(/\{\{COMMENT:[^}]*\}\}/gi, "");
   content = content.replace(/^[ \t]*\{\{DEPENDENCY:[^}]*\}\}[ \t]*\n/gim, "");
@@ -401,9 +406,11 @@ export function resolverDeclarados(
     return v !== undefined && v !== null && String(v) !== "";
   };
   const sistema = getSystemFields(locale);
+  // Los metadatos del esquema raíz, para las condiciones sobre `SCHEMA:` (constantes), salvo que ya vengan.
+  const conMeta = conValoresDeSchema(fields, template, idiomaDePlantilla(template, locale.slice(0, 2).toLowerCase()));
   let aplicados: Record<string, string> = {};
   for (let vuelta = 0; vuelta < 4; vuelta++) {
-    const valores: FieldValues = { ...sistema, ...fields, ...fijos, ...aplicados };
+    const valores: FieldValues = { ...sistema, ...conMeta, ...fijos, ...aplicados };
     const vivas = new Set(
       [...processExitIncludes(resolverCondicionales(cond, valores)).matchAll(/\u0007(\d+)\u0007/g)].map((m) => Number(m[1])),
     );
@@ -473,6 +480,8 @@ function _renameIfBody(body: string, suffix: string): string {
     const [, leading, name, rest] = m;
     const upper = name.toUpperCase();
     if (upper.startsWith("SYSTEM:")) return token;
+    // `SCHEMA:GROUP == "X"`: los metadatos del esquema no son campos y no llevan sufijo.
+    if (upper === "SCHEMA" && rest.trimStart().startsWith(":")) return token;
     if (_IF_RESERVED.has(upper)) return token;
     return `${leading}${name}${suffix}${rest}`;
   };
@@ -528,6 +537,7 @@ export function applyFieldSuffix(content: string, suffix: string): string {
     const upper = body.toUpperCase();
 
     if (upper.startsWith("SYSTEM:")) return full;
+    if (/^SCHEMA\s*:/.test(upper)) return full;
     if (_SYSTEM_FIELDS_SET.has(upper)) return full;
     // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py.
     // El salto de página no es un campo: renombrarlo con el sufijo del INCLUDE
@@ -635,13 +645,13 @@ export function normalizeConditionals(content: string): string {
   // `SYSTEM:` namespace prefix so legacy
   // `{{IF_SYSTEM:COMUNIDAD == "Cataluña"}}` normalises correctly.
   content = content.replace(
-    /\{\{IF_((?:SYSTEM:)?[\w.\u00C0-\u024F]+)([^}]*)\}\}/gi,
+    /\{\{IF_((?:SYSTEM:|SCHEMA:)?[\w.\u00C0-\u024F]+)([^}]*)\}\}/gi,
     (_m: string, name: string, tail: string) => `{{IF ${name}${tail}}}`,
   );
   // ELSE_NAME / ELSE NAME → ELSE
-  content = content.replace(/\{\{ELSE[_\s]+(?:SYSTEM:)?[\w.\u00C0-\u024F]+\s*\}\}/gi, "{{ELSE}}");
+  content = content.replace(/\{\{ELSE[_\s]+(?:SYSTEM:|SCHEMA:)?[\w.\u00C0-\u024F]+\s*\}\}/gi, "{{ELSE}}");
   // ENDIF_NAME / ENDIF NAME → ENDIF
-  content = content.replace(/\{\{ENDIF[_\s]+(?:SYSTEM:)?[\w.\u00C0-\u024F]+\s*\}\}/gi, "{{ENDIF}}");
+  content = content.replace(/\{\{ENDIF[_\s]+(?:SYSTEM:|SCHEMA:)?[\w.\u00C0-\u024F]+\s*\}\}/gi, "{{ENDIF}}");
   return content;
 }
 
@@ -802,6 +812,9 @@ function crearEvaluador(fields: FieldValues, warnings?: ComposeWarning[]) {
 
   // Evaluate a single non-logical atom (no AND / OR / NOT).
   const evalAtom = (atom: string): boolean => {
+    // `SCHEMA:ACT == "…"`, `SCHEMA:GROUP IN (…)`: los metadatos del esquema raíz (`schema-meta.ts`).
+    const meta = evaluarAtomoSchema(atom, fields);
+    if (meta !== null) return meta;
     // ⚠️ PARCHE A MANO (5-oct-2026): `COUNT(ARRAY) <op> número`. La plantilla
     // necesita saber si hay una finca o varias («FINCA HIPOTECADA» / «FINCAS
     // HIPOTECADAS»); las de cancelaciones lo escribían `LEN(FINCAS) > 1`, que
@@ -922,6 +935,9 @@ export function condicionTriestado(
       return r.valor === null ? r : { valor: !r.valor, faltan: [] };
     }
     if (envueltaEnParentesis(e)) return ev(e.slice(1, -1));
+    // Los metadatos del esquema son constantes: nunca «no se sabe».
+    const meta = evaluarAtomoSchema(e, fields);
+    if (meta !== null) return { valor: meta, faltan: [] };
     const campo = campoDelAtomo(e);
     if (campo && desconocido(campo)) return { valor: null, faltan: [campo] };
     return { valor: evalAtom(e), faltan: [] };
@@ -951,7 +967,7 @@ export function processConditionals(
   fields: FieldValues,
   warnings?: ComposeWarning[],
 ): string {
-  return resolverCondicionales(prepararCondicionales(content), fields, warnings);
+  return resolverCondicionales(prepararCondicionales(content), conValoresDeSchema(fields, content), warnings);
 }
 
 /** Un IF (o un «{{IF » que no llega a serlo, `cond: null`) con su ENDIF (-1 si no lo tiene) y los bloques de dentro. */
@@ -1351,7 +1367,7 @@ export function stripBindMarks(content: string): string {
   return content.replace(/\x00BIND:[\w\u00C0-\u024F]+\x00/g, "").split(BIND_END_MARK).join("");
 }
 
-const DIRECTIVAS_NO_CAMPO = /^\s*(?:DECLARE|COMMENT|INCLUDE|TAGS|SUMMARY|SCHEMA_ACT|DEPENDENCY|MAP_IUI|HUMAN_ACTION|END_HUMAN_ACTION|LANG|WORD_STYLE|@autonumber|AUTO[:(]|SYSTEM:|FOR\s+EACH|ENDFOR|END[\s_]+FOR|EXIT_INCLUDE)/i;
+const DIRECTIVAS_NO_CAMPO = /^\s*(?:DECLARE|COMMENT|INCLUDE|TAGS|SUMMARY|SCHEMA_ACT|SCHEMA\s*:|DEPENDENCY|MAP_IUI|HUMAN_ACTION|END_HUMAN_ACTION|LANG|WORD_STYLE|@autonumber|AUTO[:(]|SYSTEM:|FOR\s+EACH|ENDFOR|END[\s_]+FOR|EXIT_INCLUDE)/i;
 
 /** Dentro de las regiones vinculadas a `iterador`, `NOMBRE` → `ITERADOR.NOMBRE`
  *  para los nombres que trae el elemento. Respeta comillas. */
@@ -1659,8 +1675,12 @@ export function composeWithDiagnostics(
   // Step 3: Strip metadata directives
   content = stripDirectives(content);
 
-  // Step 4: Inject system fields (lower priority than user-provided values)
-  const merged: FieldValues = { ...getSystemFields(locale), ...allFields };
+  // Step 4: Inject system fields (lower priority than user-provided values). Y ENCIMA, los metadatos del esquema
+  // raíz (`SCHEMA:ACT`…): son constantes y ningún dato del caso los pisa. Si ya vienen (Redactor), se respetan.
+  const merged: FieldValues = {
+    ...getSystemFields(locale), ...allFields, ...(MARCA_SCHEMA in fields ? {} : valoresDeSchema(template, idioma)),
+  };
+  content = sustituirLecturasSchema(content, merged);
 
   // Step 5: Expand FOR EACH first. Each iteration re-runs
   // processConditionals on its own body with item subkeys in scope.
@@ -1745,7 +1765,10 @@ export function composeForPreview(
   const idioma = idiomaDePlantilla(template, locale.slice(0, 2).toLowerCase());
   let content = stripFieldSuffixes(template);
   content = stripDirectives(content);
-  const merged: FieldValues = { ...getSystemFields(locale), ...allFields };
+  const merged: FieldValues = {
+    ...getSystemFields(locale), ...allFields, ...(MARCA_SCHEMA in fields ? {} : valoresDeSchema(template, idioma)),
+  };
+  content = sustituirLecturasSchema(content, merged);
 
   content = stripBindMarks(expandForEach(content, merged, undefined, idioma));
   content = processConditionals(content, merged);

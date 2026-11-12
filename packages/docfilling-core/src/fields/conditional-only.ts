@@ -48,6 +48,7 @@ export function camposSoloCondicionales(
     if (cuerpo.startsWith('@autonumber:')) continue;
     if (cuerpo.startsWith('DECLARE ') || cuerpo.startsWith('DECLARE_UNDEF ')) continue;
     if (cuerpo.toUpperCase().startsWith('MAP_IUI:')) continue;
+    if (/^SCHEMA\s*:/i.test(cuerpo)) continue;
     if (cuerpo.toUpperCase().startsWith('DEPENDENCY:')) continue;
 
     const nombre = cuerpo.split('==')[0].split('!=')[0].split(':')[0].split('#')[0].trim();
@@ -63,7 +64,7 @@ export function camposSoloCondicionales(
   for (const m of plantilla.matchAll(/\{\{(IF[_\s][^}]+)\}\}/g)) {
     for (const ref of extractIfFieldRefs(m[1])) {
       // `SYSTEM:X` lo resuelve el motor; `COUNT` es la función de `IF COUNT(LISTA) > 1`.
-      if (/^SYSTEM:/i.test(ref) || ref.toUpperCase() === 'COUNT') continue;
+      if (/^(?:SYSTEM|SCHEMA):/i.test(ref) || ref.toUpperCase() === 'COUNT') continue;
       if (!esConocido(ref)) condicionales.add(ref);
     }
   }

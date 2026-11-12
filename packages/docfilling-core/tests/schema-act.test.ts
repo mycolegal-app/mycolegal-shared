@@ -13,7 +13,7 @@ Ante mí, {{NOMBRE_NOTARIO}}, comparece {{RENUNCIANTE}}.`;
 
 describe('metadatosDeEsquema', () => {
   it('lee acto, descripción e idioma', () => {
-    expect(metadatosDeEsquema(ESQUEMA)).toEqual({
+    expect(metadatosDeEsquema(ESQUEMA)).toMatchObject({
       actoCodigo: '1104',
       descripcion: 'Renuncia pura y simple a la herencia',
       idioma: 'es',
@@ -22,13 +22,13 @@ describe('metadatosDeEsquema', () => {
   });
 
   it('sin directivas: acto y descripción nulos, idioma por defecto', () => {
-    expect(metadatosDeEsquema('Texto.')).toEqual({ actoCodigo: null, descripcion: null, idioma: 'es', errores: [] });
+    expect(metadatosDeEsquema('Texto.')).toMatchObject({ actoCodigo: null, descripcion: null, idioma: 'es', errores: [] });
   });
 
   it('un código sin forma IUI es un error y no se devuelve', () => {
     const m = metadatosDeEsquema('{{SCHEMA_ACT:11a4}}');
     expect(m.actoCodigo).toBeNull();
-    expect(m.errores[0]).toMatch(/cuatro dígitos/);
+    expect(m.errores[0]).toMatch(/cuatro cifras/);
   });
 
   it('dos códigos distintos son un error; el mismo repetido, no', () => {
@@ -50,7 +50,7 @@ describe('metadatosDeParrafo', () => {
   });
 
   it('un SCHEMA_ACT en un párrafo es un error', () => {
-    expect(metadatosDeParrafo('{{SCHEMA_ACT:1104}}\nTexto.').errores[0]).toMatch(/sólo puede ir en un esquema/);
+    expect(metadatosDeParrafo('{{SCHEMA_ACT:1104}}\nTexto.').errores[0]).toMatch(/sólo puede declararse en un esquema/);
   });
 });
 

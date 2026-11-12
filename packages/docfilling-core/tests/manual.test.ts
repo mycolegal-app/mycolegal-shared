@@ -192,3 +192,52 @@ describe('manual · SET y DECLARE en orden de documento (§3 y §3.bis, 10-nov-2
     expect(compose(T, { PARTES: [{ ES_MENOR: 'FALSE' }, { ES_MENOR: 'TRUE' }] as never })).toBe('-m|con menores');
   });
 });
+
+describe('manual · metadatos del esquema SCHEMA: (§7.bis)', () => {
+  const ESQ = `{{SCHEMA:ACT=1103 ALIAS ADJUDICACION_HERENCIA}}
+{{SCHEMA:FAMILY=F11 ALIAS HERENCIAS}}
+{{SCHEMA:VARIANT=SOBREVIVENCIA}}
+{{SCHEMA:GROUP=TRANSMISION_GRATUITA, MORTIS_CAUSA}}
+{{SCHEMA:LANG=es}}
+`;
+  const si = (cabecera: string, cond: string, v: Record<string, string> = {}) =>
+    compose(`${cabecera}{{IF ${cond}}}SI{{ELSE}}NO{{ENDIF}}`, v).trim();
+
+  it('la cabecera del manual valida sin errores y sale 0 caracteres', () => {
+    expect(validateText(ESQ, undefined, undefined, { tipo: 'esquema' }).diagnostics.filter((d) => d.code.startsWith('E'))).toEqual([]);
+    expect(compose(ESQ + 'Texto.', {})).toBe('Texto.');
+  });
+
+  it('los ejemplos de lectura', () => {
+    expect(si(ESQ, 'SCHEMA:GROUP == "TRANSMISION_GRATUITA"')).toBe('SI');
+    expect(si(ESQ, 'SCHEMA:FAMILY != "HERENCIAS" OR VAR_HAY_INMUEBLES', { VAR_HAY_INMUEBLES: 'No' })).toBe('NO');
+    const compraventa = '{{SCHEMA:ACT=0501 ALIAS COMPRAVENTA}}\n{{SCHEMA:FAMILY=F05 ALIAS COMPRAVENTAS}}\n';
+    expect(si(compraventa, 'SCHEMA:FAMILY != "HERENCIAS" OR VAR_HAY_INMUEBLES', { VAR_HAY_INMUEBLES: 'No' })).toBe('SI');
+    expect(si(compraventa, 'SCHEMA:ACT == "COMPRAVENTA" AND SCHEMA:VARIANT != "ARRAS"')).toBe('SI');
+    expect(si(compraventa, 'SCHEMA:ACT IN ("0501", "0502")')).toBe('SI');
+    expect(compose(ESQ + 'Acto {{SCHEMA:ACT}}.', {})).toBe('Acto 1103.');
+  });
+
+  it('la tabla de comparación', () => {
+    expect(si(ESQ, 'SCHEMA:ACT == "ADJUDICACION_HERENCIA"')).toBe(si(ESQ, 'SCHEMA:ACT == "1103"'));
+    expect(si('{{SCHEMA:ACT=0501}}\n', 'SCHEMA:VARIANT == "X"')).toBe('NO');
+    expect(si('{{SCHEMA:ACT=0501}}\n', 'SCHEMA:VARIANT != "X"')).toBe('SI');
+    expect(si(ESQ, 'SCHEMA:GROUP != "MORTIS_CAUSA"')).toBe('NO');
+    expect(si(ESQ, 'SCHEMA:GROUP IN ("OTRO", "MORTIS_CAUSA")')).toBe('SI');
+    expect(si(ESQ, 'SCHEMA:GROUP NOT IN ("OTRO", "MORTIS_CAUSA")')).toBe('NO');
+    expect(si(ESQ, 'SCHEMA:LANG == "es"')).toBe('SI');
+  });
+
+  it('los diagnósticos de §7.bis', () => {
+    const c = (t: string, tipo?: 'esquema' | 'parrafo') => validateText(t, undefined, undefined, { tipo }).diagnostics.map((d) => d.code);
+    expect(c('{{IF SCHEMA:ACT == "Compraventa"}}x{{ENDIF}}')).toContain('E924');
+    expect(c('{{SCHEMA:GROUP=X}}', 'parrafo')).toContain('E921');
+    expect(c('{{SCHEMA_ACT:1104}}')).toContain('W920');
+    // Un párrafo suelto que LEE SCHEMA: no da error.
+    expect(c('{{IF SCHEMA:GROUP == "X"}}x{{ENDIF}}', 'parrafo').filter((x) => x.startsWith('E'))).toEqual([]);
+  });
+
+  it('la forma antigua equivale', () => {
+    expect(si('{{SCHEMA_ACT:1104}}\n{{LANG=ca}}\n', 'SCHEMA:ACT == "1104" AND SCHEMA:LANG == "ca"')).toBe('SI');
+  });
+});

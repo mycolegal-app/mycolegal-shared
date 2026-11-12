@@ -27,6 +27,7 @@ import {
   checkSetDirectives,
   checkFormatos,
   checkSetYDeclareEnOrden,
+  checkSchema,
 } from './checks-pendientes';
 import type { CatalogoReq } from '../ports/catalogo';
 
@@ -39,6 +40,8 @@ import type { CatalogoReq } from '../ports/catalogo';
 export interface OpcionesValidacion {
   /** Con catálogo, se comprueban los `:REQ`/`:DOC` contra él (W907, W908, W909, W912). */
   catalogo?: CatalogoReq;
+  /** Qué es el texto. Con `'parrafo'`, declarar `SCHEMA:` es error (E921); sin tipo no se sabe y no se mira. */
+  tipo?: 'esquema' | 'parrafo';
 }
 
 export function validateText(
@@ -65,6 +68,7 @@ export function validateText(
     ...checkIuiObsoleto(fields),
     ...checkFormatos(fields),
     ...checkSetYDeclareEnOrden(fields),
+    ...checkSchema(text, fields, opciones.tipo),
     ...(opciones.catalogo ? checkReqCatalogo(fields, opciones.catalogo) : []),
   );
 
