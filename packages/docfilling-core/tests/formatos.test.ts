@@ -106,7 +106,7 @@ describe('en la composición', () => {
   });
 
   it('en el idioma de la plantilla', () => {
-    expect(compose('{{LANG=ca}}{{F#date_long}}', { F: '2026-10-14' })).toContain("14 d'octubre de 2026");
+    expect(compose('{{SCHEMA:LANG=ca}}{{F#date_long}}', { F: '2026-10-14' })).toContain("14 d'octubre de 2026");
   });
 
   it('subcampos de una lista', () => {

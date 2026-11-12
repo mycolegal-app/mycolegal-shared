@@ -1,7 +1,7 @@
 // `{{SCHEMA_ACT:1104}}` — el acto jurídico que cubre el esquema, por su código IUI.
 //
-// ⚠️ FORMA ANTIGUA desde el 12-nov-2026: la nueva es `{{SCHEMA:ACT=1104}}` (`schema-meta.ts`). Ésta sigue valiendo,
-// con aviso de obsoleto, hasta que toda la biblioteca esté migrada. Los metadatos de abajo leen las dos.
+// ⚠️ RETIRADA el 12-nov-2026: la forma es `{{SCHEMA:ACT=1104}}` (`schema-meta.ts`). Ésta ya no da valor a nada y
+// es un error (E926); lo de abajo la reconoce sólo para señalarla.
 //
 // QUÉ RESUELVE (F1.9, decidido por Carles el 6-oct-2026)
 //
@@ -52,18 +52,16 @@ export function codigoDeSchemaAct(cuerpo: string): string | null {
 }
 
 export interface MetadatosDeEsquema {
-  /** Código IUI del acto (`SCHEMA:ACT` o `SCHEMA_ACT`), o `null` si no lo declara o está mal. */
+  /** Código IUI del acto (`SCHEMA:ACT`), o `null` si no lo declara o está mal. */
   actoCodigo: string | null;
   /** Texto del primer `{{SUMMARY:…}}`, o `null` si no hay o está vacío. */
   descripcion: string | null;
-  /** De `{{SCHEMA:LANG=xx}}` (o `{{LANG=xx}}`); `es` si no lo declara. */
+  /** De `{{SCHEMA:LANG=xx}}`; `es` si no lo declara. */
   idioma: string;
   /** Todo lo que declara con `SCHEMA:` (12-nov-2026): alias, familia, variante, grupos. */
   schema: MetaSchema;
-  /** Problemas que impiden fiarse de los metadatos, en palabras. Vacío = bien. */
+  /** Problemas que impiden fiarse de los metadatos, en palabras (también la forma retirada). Vacío = bien. */
   errores: string[];
-  /** Declaraciones en la forma antigua (`{{SCHEMA_ACT:…}}`, `{{LANG=…}}`): valen, pero hay que migrarlas. */
-  obsoletos: string[];
 }
 
 export interface MetadatosDeParrafo {
@@ -79,13 +77,15 @@ function descripcionDe(md: string): string | null {
 }
 
 /** Errores de forma y de repetición de las declaraciones `SCHEMA:` de un esquema. */
-export function erroresDeDeclaraciones(md: string): { errores: string[]; obsoletos: string[] } {
+export function erroresDeDeclaraciones(md: string): { errores: string[] } {
   const errores: string[] = [];
-  const obsoletos: string[] = [];
   const porClave = new Map<string, { valor: string; legado: boolean }[]>();
   for (const d of declaracionesSchema(md)) {
-    if (d.legado) obsoletos.push(d.clave === 'ACT' ? `{{SCHEMA_ACT:${d.valor}}} → {{SCHEMA:ACT=${d.valor}}}` : `{{LANG=${d.valor}}} → {{SCHEMA:LANG=${d.valor}}}`);
-    const p = problemaDeValor(d.clave, d.valor, d.legado);
+    if (d.legado) {
+      errores.push(`forma retirada: ${d.clave === 'ACT' ? `{{SCHEMA_ACT:${d.valor}}} → {{SCHEMA:ACT=${d.valor}}}` : `{{LANG=${d.valor}}} → {{SCHEMA:LANG=${d.valor}}}`}`);
+      continue;
+    }
+    const p = problemaDeValor(d.clave, d.valor);
     if (p) errores.push(p);
     const l = porClave.get(d.clave) ?? [];
     l.push(d);
@@ -93,11 +93,9 @@ export function erroresDeDeclaraciones(md: string): { errores: string[]; obsolet
   }
   for (const [clave, ds] of porClave) {
     if (ds.length < 2) continue;
-    // Lo de antes de SCHEMA: repetido con el mismo valor se toleraba; se sigue tolerando.
-    if (ds.every((d) => d.legado && d.valor === ds[0].valor)) continue;
     errores.push(`SCHEMA:${clave} declarado ${ds.length} veces (${ds.map((d) => d.valor).join(' / ')}): una sola declaración por clave`);
   }
-  return { errores, obsoletos };
+  return { errores };
 }
 
 /**
@@ -107,7 +105,7 @@ export function erroresDeDeclaraciones(md: string): { errores: string[]; obsolet
  * formada o repetida va a `errores`: la carga decide si eso la para (la de Redactor sí).
  */
 export function metadatosDeEsquema(md: string): MetadatosDeEsquema {
-  const { errores, obsoletos } = erroresDeDeclaraciones(md);
+  const { errores } = erroresDeDeclaraciones(md);
   const schema = leerSchema(md);
   return {
     actoCodigo: schema.act || null,
@@ -115,15 +113,16 @@ export function metadatosDeEsquema(md: string): MetadatosDeEsquema {
     idioma: idiomaDePlantilla(md, IDIOMA_POR_DEFECTO),
     schema,
     errores,
-    obsoletos,
   };
 }
 
-/** Los metadatos que declara un PÁRRAFO: descripción e idioma. Declarar `SCHEMA:` (o `SCHEMA_ACT`) en un párrafo
- *  es un error: lo que es el documento lo dice el esquema. `{{LANG=xx}}` en un párrafo sigue valiendo. */
+/** Los metadatos que declara un PÁRRAFO: descripción e idioma (éste, `es`: un párrafo no lo declara). Declarar
+ *  `SCHEMA:` en un párrafo es un error: lo que es el documento lo dice el esquema. La forma retirada, también. */
 export function metadatosDeParrafo(md: string): MetadatosDeParrafo {
   const errores: string[] = [];
-  const claves = [...new Set(declaracionesSchema(md).filter((d) => !(d.legado && d.clave === 'LANG')).map((d) => d.clave))];
+  const decl = declaracionesSchema(md);
+  const claves = [...new Set(decl.filter((d) => !d.legado).map((d) => d.clave))];
   if (claves.length) errores.push(`SCHEMA:${claves.join(', SCHEMA:')} sólo puede declararse en un esquema, no en un párrafo`);
+  for (const d of decl.filter((x) => x.legado)) errores.push(`forma retirada: ${d.clave === 'ACT' ? `{{SCHEMA_ACT:${d.valor}}}` : `{{LANG=${d.valor}}}`}`);
   return { descripcion: descripcionDe(md), idioma: idiomaDePlantilla(md, IDIOMA_POR_DEFECTO), errores };
 }

@@ -27,8 +27,8 @@ describe('{{LANG-SECTION}}', () => {
     expect(gl.texto).toContain('**Revocación.-**');
   });
 
-  it('un fichero sin secciones no cambia, ni {{LANG=es}} se confunde', () => {
-    const t = '{{LANG=es}}\nTexto {{CAMPO}}.';
+  it('un fichero sin secciones no cambia, ni {{SCHEMA:LANG=es}} se confunde', () => {
+    const t = '{{SCHEMA:LANG=es}}\nTexto {{CAMPO}}.';
     expect(resolverSeccionesDeLengua(t, 'ca')).toEqual({ texto: t, sinSeccion: 0 });
   });
 
@@ -70,7 +70,7 @@ describe('un texto con secciones que llega sin expandir', () => {
   });
   it('componer da una sola lengua, sin [NO DISPONIBLE]', () => {
     expect(composeWithDiagnostics(t, { NOMBRE: 'Ana' }).text).toBe('Hola Ana.\nFin.');
-    expect(composeWithDiagnostics(`{{LANG=ca}}\n${t}`, { NOMBRE: 'Ana' }).text).toContain('Hola, Ana.');
+    expect(composeWithDiagnostics(`{{SCHEMA:LANG=ca}}\n${t}`, { NOMBRE: 'Ana' }).text).toContain('Hola, Ana.');
   });
 });
 

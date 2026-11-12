@@ -1,11 +1,11 @@
-// `{{LANG=xx}}` (residuo de F1.3) e inferencia de tipo por nombre (F1.7).
+// `{{SCHEMA:LANG=xx}}` (residuo de F1.3) e inferencia de tipo por nombre (F1.7).
 import { describe, it, expect } from 'vitest';
 import { idiomaDePlantilla, IDIOMA_POR_DEFECTO, inferirTipoDeNombre } from '../index';
 
 describe('idiomaDePlantilla', () => {
   it('lee la directiva y normaliza a minúsculas', () => {
-    expect(idiomaDePlantilla('{{LANG=CA}}\nText.')).toBe('ca');
-    expect(idiomaDePlantilla('{{ LANG = ca }}')).toBe('ca');
+    expect(idiomaDePlantilla('{{SCHEMA:LANG=CA}}\nText.')).toBe('ca');
+    expect(idiomaDePlantilla('{{ SCHEMA:LANG = ca }}')).toBe('ca');
   });
 
   it('sin directiva, castellano', () => {
@@ -14,11 +14,11 @@ describe('idiomaDePlantilla', () => {
   });
 
   it('se queda con la primera cuando hay dos', () => {
-    expect(idiomaDePlantilla('{{LANG=ca}}\n{{LANG=eu}}')).toBe('ca');
+    expect(idiomaDePlantilla('{{SCHEMA:LANG=ca}}\n{{SCHEMA:LANG=eu}}')).toBe('ca');
   });
 
   it('una directiva mal escrita no cuenta', () => {
-    expect(idiomaDePlantilla('{{LANG=}}')).toBe(IDIOMA_POR_DEFECTO);
+    expect(idiomaDePlantilla('{{SCHEMA:LANG=}}')).toBe(IDIOMA_POR_DEFECTO);
     expect(idiomaDePlantilla('{{LANG 3}}')).toBe(IDIOMA_POR_DEFECTO);
   });
 });

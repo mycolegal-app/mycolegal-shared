@@ -616,7 +616,7 @@ export function checkSetYDeclareEnOrden(fields: ParsedField[]): Diagnostic[] {
  * - **E923** valor mal formado (ACT no son cuatro cifras, FAMILY no es F+2, alias o grupo con minúsculas o tildes…).
  * - **E924** una condición compara con un literal que la clave no puede valer.
  * - **E925** `DECLARE` o `SET` sobre `SCHEMA:…`: son constantes del esquema.
- * - **W920** forma antigua (`{{SCHEMA_ACT:…}}`, `{{LANG=…}}`): vale, pero hay que migrarla.
+ * - **E926** forma retirada (`{{SCHEMA_ACT:…}}`, `{{LANG=…}}`): no da valor a nada (sin compatibilidad, 12-nov-2026).
  *
  * Leer `SCHEMA:` en un párrafo suelto, sin esquema que le dé valor, NO es un error.
  */
@@ -631,11 +631,10 @@ export function checkSchema(text: string, fields: ParsedField[], tipo?: 'esquema
     const [line, col] = offsetToLineCol(text, d.desde);
     const n = largo(d.desde);
     if (d.legado) {
-      out.push(diag(line, col, n, Severity.WARNING, 'W920', d.clave === 'ACT'
-        ? `Forma antigua: escriba {{SCHEMA:ACT=${d.valor}}} en vez de {{SCHEMA_ACT:${d.valor}}}`
-        : `Forma antigua: escriba {{SCHEMA:LANG=${d.valor}}} en vez de {{LANG=${d.valor}}}`));
-      // `{{LANG=xx}}` en un párrafo seguía valiendo; el formato del SCHEMA_ACT antiguo ya lo mira E120.
-      if (d.clave === 'LANG') continue;
+      out.push(diag(line, col, n, Severity.ERROR, 'E926', d.clave === 'ACT'
+        ? `Forma retirada: no declara nada. Escriba {{SCHEMA:ACT=${d.valor}}} en vez de {{SCHEMA_ACT:${d.valor}}}`
+        : `Forma retirada: no declara nada. Escriba {{SCHEMA:LANG=${d.valor}}} en vez de {{LANG=${d.valor}}}`));
+      continue;
     } else if (!claves.has(d.clave)) {
       out.push(diag(line, col, n, Severity.ERROR, 'E920', `SCHEMA:${d.clave} no existe: las claves son ${CLAVES_SCHEMA.join(', ')}`));
       continue;
@@ -651,7 +650,7 @@ export function checkSchema(text: string, fields: ParsedField[], tipo?: 'esquema
     porClave.set(d.clave, l);
   }
   for (const [clave, ds] of porClave) {
-    if (ds.length < 2 || ds.every((d) => d.legado && d.valor === ds[0].valor)) continue;
+    if (ds.length < 2) continue;
     for (const d of ds.slice(1)) {
       const [line, col] = offsetToLineCol(text, d.desde);
       const [l0] = offsetToLineCol(text, ds[0].desde);

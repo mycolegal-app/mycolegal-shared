@@ -13,8 +13,9 @@
 // claves que no pueden ser un campo porque llevan dos puntos (`SCHEMA:ACT`, `SCHEMA:GROUP`…), más una marca
 // (`SCHEMA:`) que dice que ya se han leído. `valoresDeSchema` las construye; `evaluarAtomoSchema` las compara.
 //
-// COMPATIBILIDAD. `{{SCHEMA_ACT:xxxx}}` y `{{LANG=xx}}` siguen valiendo, con aviso de obsoleto (W920), y equivalen a
-// `SCHEMA:ACT` y `SCHEMA:LANG`: la biblioteca de PROD sigue con ellas hasta que se cargue la migrada.
+// SIN COMPATIBILIDAD (Carles, 12-nov-2026). `{{SCHEMA_ACT:xxxx}}` y `{{LANG=xx}}` están RETIRADAS: no dan valor a nada
+// y el validador las marca como error (E926). Se siguen reconociendo (`legado`) sólo para decir dónde están; al componer
+// se omiten, como cualquier metadato, para que no salgan impresas.
 
 /** Las claves que un esquema puede declarar. */
 export const CLAVES_SCHEMA = ['ACT', 'FAMILY', 'VARIANT', 'GROUP', 'LANG'] as const;
@@ -33,7 +34,7 @@ const RE_LECTURA = /\{\{\s*SCHEMA\s*:\s*([A-Za-z_]\w*)\s*\}\}/g;
 const RE_SCHEMA_ACT = /\{\{\s*SCHEMA_ACT\s*:\s*([^}]*?)\s*\}\}/gi;
 const RE_LANG = /\{\{\s*LANG\s*=\s*([^}]*?)\s*\}\}/gi;
 
-/** Una declaración tal como está escrita, con su posición. `legado`: `{{SCHEMA_ACT:…}}` o `{{LANG=…}}`. */
+/** Una declaración tal como está escrita, con su posición. `legado`: la forma retirada `{{SCHEMA_ACT:…}}` o `{{LANG=…}}`. */
 export interface DeclaracionSchema {
   clave: string;
   valor: string;
@@ -52,7 +53,7 @@ export interface MetaSchema {
   lang: string;
 }
 
-/** Las declaraciones del texto, forma nueva y antigua, en orden. */
+/** Las declaraciones del texto en orden, también las de la forma retirada (para señalarlas). */
 export function declaracionesSchema(texto: string): DeclaracionSchema[] {
   const out: DeclaracionSchema[] = [];
   if (!/SCHEMA|LANG/i.test(texto)) return out;
@@ -63,11 +64,11 @@ export function declaracionesSchema(texto: string): DeclaracionSchema[] {
 }
 
 /** El problema de forma de un valor declarado, o `null` si está bien. */
-export function problemaDeValor(clave: string, valor: string, legado = false): string | null {
+export function problemaDeValor(clave: string, valor: string): string | null {
   switch (clave) {
     case 'ACT': {
       const m = valor.match(ACT);
-      if (!m || (legado && m[2])) return `SCHEMA:ACT «${valor}»: debe ser un código de acto IUI de cuatro cifras, con alias opcional (1103 ALIAS ADJUDICACION_HERENCIA)`;
+      if (!m) return `SCHEMA:ACT «${valor}»: debe ser un código de acto IUI de cuatro cifras, con alias opcional (1103 ALIAS ADJUDICACION_HERENCIA)`;
       if (m[2] && !esAlias(m[2])) return `SCHEMA:ACT: el alias «${m[2]}» sólo admite mayúsculas sin tilde, cifras y guion bajo`;
       return null;
     }
@@ -90,12 +91,12 @@ export function problemaDeValor(clave: string, valor: string, legado = false): s
   }
 }
 
-/** Los metadatos del texto: la PRIMERA declaración válida de cada clave. */
+/** Los metadatos del texto: la PRIMERA declaración válida de cada clave. La forma retirada no cuenta. */
 export function leerSchema(texto: string): MetaSchema {
   const meta: MetaSchema = { act: '', actAlias: '', family: '', familyAlias: '', variant: '', groups: [], lang: '' };
   const hechas = new Set<string>();
   for (const d of declaracionesSchema(texto)) {
-    if (hechas.has(d.clave) || problemaDeValor(d.clave, d.valor, d.legado)) continue;
+    if (d.legado || hechas.has(d.clave) || problemaDeValor(d.clave, d.valor)) continue;
     hechas.add(d.clave);
     switch (d.clave) {
       case 'ACT': { const m = d.valor.match(ACT)!; meta.act = m[1]; meta.actAlias = m[2] ?? ''; break; }

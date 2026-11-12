@@ -34,11 +34,11 @@ describe('declarar', () => {
     expect(compose(CABECERA + 'Texto.', {})).toBe('Texto.');
   });
 
-  it('la forma antigua equivale: SCHEMA_ACT es SCHEMA:ACT y LANG= es SCHEMA:LANG', () => {
+  it('la forma retirada (SCHEMA_ACT, LANG=) no declara nada', () => {
     const m = leerSchema('{{SCHEMA_ACT:1104}}\n{{LANG=ca}}');
-    expect(m.act).toBe('1104');
-    expect(m.lang).toBe('ca');
-    expect(si('{{SCHEMA_ACT:1104}}\n', 'SCHEMA:ACT == "1104"')).toBe('SI');
+    expect(m.act).toBe('');
+    expect(m.lang).toBe('');
+    expect(si('{{SCHEMA_ACT:1104}}\n', 'SCHEMA:ACT == "1104"')).toBe('NO');
   });
 });
 
@@ -152,14 +152,12 @@ describe('validador', () => {
 
   it('E921 un párrafo declara SCHEMA:; leerlo en un párrafo suelto no es error', () => {
     expect(codigos('{{SCHEMA:ACT=1103}}', 'parrafo')).toContain('E921');
-    expect(codigos('{{SCHEMA_ACT:1103}}', 'parrafo')).toContain('E921');
     const c = codigos('{{IF SCHEMA:GROUP == "X"}}a{{ENDIF}}{{SCHEMA:ACT}}', 'parrafo');
     expect(c.filter((x) => /^(E9|W056|E013)/.test(x))).toEqual([]);
   });
 
-  it('E922 clave repetida, también entre la forma nueva y la antigua', () => {
+  it('E922 clave repetida', () => {
     expect(codigos('{{SCHEMA:ACT=1103}}\n{{SCHEMA:ACT=1103}}')).toContain('E922');
-    expect(codigos('{{SCHEMA_ACT:1103}}\n{{SCHEMA:ACT=1104}}')).toContain('E922');
     expect(codigos('{{SCHEMA:GROUP=A}}\n{{SCHEMA:GROUP=B}}')).toContain('E922');
   });
 
@@ -182,10 +180,9 @@ describe('validador', () => {
     expect(codigos('{{SET SCHEMA:GROUP=X}}')).toContain('E925');
   });
 
-  it('W920 la forma antigua vale pero avisa', () => {
-    const c = codigos('{{SCHEMA_ACT:1103}}\n{{LANG=es}}');
-    expect(c.filter((x) => x === 'W920')).toHaveLength(2);
-    expect(c.filter((x) => x.startsWith('E'))).toEqual([]);
+  it('E926 la forma retirada, en esquemas y párrafos', () => {
+    expect(codigos('{{SCHEMA_ACT:1103}}\n{{LANG=es}}').filter((x) => x === 'E926')).toHaveLength(2);
+    expect(codigos('{{LANG=ca}}', 'parrafo')).toContain('E926');
   });
 });
 
@@ -196,24 +193,24 @@ describe('metadatos para la carga', () => {
     expect(m.idioma).toBe('es');
     expect(m.schema.familyAlias).toBe('HERENCIAS');
     expect(m.errores).toEqual([]);
-    expect(m.obsoletos).toEqual([]);
   });
 
-  it('la forma antigua carga igual y se apunta como obsoleta', () => {
+  it('la forma retirada no carga: no da acto ni idioma y es error', () => {
     const m = metadatosDeEsquema('{{SCHEMA_ACT:1104}}\n{{LANG=ca}}');
-    expect(m.actoCodigo).toBe('1104');
-    expect(m.idioma).toBe('ca');
-    expect(m.obsoletos).toHaveLength(2);
+    expect(m.actoCodigo).toBeNull();
+    expect(m.idioma).toBe('es');
+    expect(m.errores.filter((e) => /forma retirada/.test(e))).toHaveLength(2);
   });
 
   it('un párrafo no declara SCHEMA:', () => {
     expect(metadatosDeParrafo('{{SCHEMA:GROUP=X}}').errores).toHaveLength(1);
-    expect(metadatosDeParrafo('{{LANG=ca}}Text.').errores).toEqual([]);
+    expect(metadatosDeParrafo('Text.').errores).toEqual([]);
   });
 
-  it('idiomaDePlantilla y la traducción entienden las dos formas', () => {
+  it('idiomaDePlantilla y la traducción: sólo SCHEMA:LANG', () => {
     expect(idiomaDePlantilla('{{SCHEMA:LANG=ca}}')).toBe('ca');
-    expect(cambiarIdiomaDePlantilla('{{SCHEMA:LANG=es}}{{LANG=es}}', 'ca')).toBe('{{SCHEMA:LANG=ca}}{{LANG=ca}}');
+    expect(idiomaDePlantilla('{{LANG=ca}}')).toBe('es');
+    expect(cambiarIdiomaDePlantilla('{{SCHEMA:LANG=es}}', 'ca')).toBe('{{SCHEMA:LANG=ca}}');
   });
 
   it('comparacionesSchema da los literales que comparan las condiciones', () => {

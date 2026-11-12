@@ -1,14 +1,14 @@
-// F1.9 — `{{SCHEMA_ACT:xxxx}}` y los metadatos de esquema y párrafo
-// (acto, `{{SUMMARY:…}}`, `{{LANG=xx}}`). Decidido por Carles el 6-oct-2026.
+// F1.9 — `{{SCHEMA:ACT=xxxx}}` y los metadatos de esquema y párrafo
+// (acto, `{{SUMMARY:…}}`, `{{SCHEMA:LANG=xx}}`). Decidido por Carles el 6-oct-2026.
 import { describe, it, expect } from 'vitest';
 import {
   metadatosDeEsquema, metadatosDeParrafo, validateText, compose, parseFields, FieldType,
   esquemaDeCampos, camposSoloCondicionales,
 } from '../index';
 
-const ESQUEMA = `{{SCHEMA_ACT:1104}}
+const ESQUEMA = `{{SCHEMA:ACT=1104}}
 {{SUMMARY:Renuncia pura y simple a la herencia}}
-{{LANG=es}}
+{{SCHEMA:LANG=es}}
 Ante mí, {{NOMBRE_NOTARIO}}, comparece {{RENUNCIANTE}}.`;
 
 describe('metadatosDeEsquema', () => {
@@ -26,61 +26,63 @@ describe('metadatosDeEsquema', () => {
   });
 
   it('un código sin forma IUI es un error y no se devuelve', () => {
-    const m = metadatosDeEsquema('{{SCHEMA_ACT:11a4}}');
+    const m = metadatosDeEsquema('{{SCHEMA:ACT=11a4}}');
     expect(m.actoCodigo).toBeNull();
     expect(m.errores[0]).toMatch(/cuatro cifras/);
   });
 
   it('dos códigos distintos son un error; el mismo repetido, no', () => {
-    expect(metadatosDeEsquema('{{SCHEMA_ACT:1104}}\n{{SCHEMA_ACT:0505}}').errores).toHaveLength(1);
-    expect(metadatosDeEsquema('{{SCHEMA_ACT:1104}}\n{{SCHEMA_ACT:1104}}').actoCodigo).toBe('1104');
+    expect(metadatosDeEsquema('{{SCHEMA:ACT=1104}}\n{{SCHEMA:ACT=0505}}').errores).toHaveLength(1);
+    expect(metadatosDeEsquema('{{SCHEMA:ACT=1104}}\n{{SCHEMA:ACT=1104}}').actoCodigo).toBe('1104');
   });
 
   it('tolera espacios y un SUMMARY vacío cuenta como sin descripción', () => {
-    const m = metadatosDeEsquema('{{ SCHEMA_ACT : 0505 }}\n{{SUMMARY:  }}');
+    const m = metadatosDeEsquema('{{ SCHEMA:ACT = 0505 }}\n{{SUMMARY:  }}');
     expect(m.actoCodigo).toBe('0505');
     expect(m.descripcion).toBeNull();
   });
 });
 
 describe('metadatosDeParrafo', () => {
-  it('lee descripción e idioma', () => {
-    expect(metadatosDeParrafo('{{SUMMARY:Cláusula de renuncia}}\n{{LANG=ca}}\nText.'))
-      .toEqual({ descripcion: 'Cláusula de renuncia', idioma: 'ca', errores: [] });
+  it('lee la descripción; el idioma no lo declara un párrafo', () => {
+    expect(metadatosDeParrafo('{{SUMMARY:Cláusula de renuncia}}\nText.'))
+      .toEqual({ descripcion: 'Cláusula de renuncia', idioma: 'es', errores: [] });
   });
 
-  it('un SCHEMA_ACT en un párrafo es un error', () => {
-    expect(metadatosDeParrafo('{{SCHEMA_ACT:1104}}\nTexto.').errores[0]).toMatch(/sólo puede declararse en un esquema/);
+  it('un SCHEMA:ACT en un párrafo es un error', () => {
+    expect(metadatosDeParrafo('{{SCHEMA:ACT=1104}}\nTexto.').errores[0]).toMatch(/sólo puede declararse en un esquema/);
+  });
+
+  it('la forma retirada en un párrafo, también', () => {
+    expect(metadatosDeParrafo('{{LANG=ca}}\nText.').errores[0]).toMatch(/forma retirada/);
   });
 });
 
-describe('SCHEMA_ACT en el lenguaje', () => {
-  it('se clasifica como directiva propia, no como campo', () => {
-    const f = parseFields('{{SCHEMA_ACT:1104}}').find((x) => x.raw.includes('SCHEMA_ACT'));
-    expect(f?.fieldType).toBe(FieldType.SCHEMA_ACT);
-    expect(f?.name).toBe('1104');
-  });
-
+describe('SCHEMA:ACT en el lenguaje', () => {
   it('sale 0 caracteres al componer, y no deja línea en blanco', () => {
-    const r = compose('{{SCHEMA_ACT:1104}}\nTexto.', {});
-    const texto = typeof r === 'string' ? r : (r as { text?: string; content?: string }).text ?? (r as { content?: string }).content ?? '';
-    expect(texto).not.toMatch(/SCHEMA_ACT|1104/);
-    expect(texto.startsWith('\n')).toBe(false);
+    const r = compose('{{SCHEMA:ACT=1104}}\nTexto.', {});
+    expect(r).not.toMatch(/SCHEMA|1104/);
+    expect(r.startsWith('\n')).toBe(false);
   });
 
   it('no entra en el esquema de campos', () => {
     const e = esquemaDeCampos(ESQUEMA, {});
-    expect(e.campos.map((c: { nombre: string }) => c.nombre)).not.toContain('SCHEMA_ACT:1104');
-    expect(e.campos.some((c: { nombre: string }) => /SCHEMA_ACT/.test(c.nombre))).toBe(false);
+    expect(e.campos.some((c: { nombre: string }) => /SCHEMA/.test(c.nombre))).toBe(false);
   });
 
-  it('el validador: E120 si el código no tiene forma IUI, W120 si se repite', () => {
-    const malo = validateText('{{SCHEMA_ACT:11}}\nTexto.');
-    expect(malo.diagnostics.some((d) => d.code === 'E120')).toBe(true);
-    const doble = validateText('{{SCHEMA_ACT:1104}}\n{{SCHEMA_ACT:1104}}\nTexto.');
-    expect(doble.diagnostics.some((d) => d.code === 'W120')).toBe(true);
-    const bien = validateText(ESQUEMA);
-    expect(bien.diagnostics.some((d) => d.code === 'E120' || d.code === 'W120')).toBe(false);
+  it('el validador: E923 si el código no tiene forma IUI, E922 si se repite', () => {
+    expect(validateText('{{SCHEMA:ACT=11}}\nTexto.').diagnostics.some((d) => d.code === 'E923')).toBe(true);
+    expect(validateText('{{SCHEMA:ACT=1104}}\n{{SCHEMA:ACT=1104}}\nTexto.').diagnostics.some((d) => d.code === 'E922')).toBe(true);
+    expect(validateText(ESQUEMA).diagnostics.some((d) => d.code.startsWith('E92'))).toBe(false);
+  });
+});
+
+describe('la forma retirada {{SCHEMA_ACT:…}} (12-nov-2026, sin compatibilidad)', () => {
+  it('no declara nada y es error E926, pero no sale impresa', () => {
+    expect(metadatosDeEsquema('{{SCHEMA_ACT:1104}}').actoCodigo).toBeNull();
+    expect(metadatosDeEsquema('{{SCHEMA_ACT:1104}}').errores[0]).toMatch(/forma retirada/);
+    expect(validateText('{{SCHEMA_ACT:1104}}\nTexto.').diagnostics.some((d) => d.code === 'E926')).toBe(true);
+    expect(compose('{{SCHEMA_ACT:1104}}\nTexto.', {})).toBe('Texto.');
   });
 });
 

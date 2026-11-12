@@ -232,12 +232,12 @@ describe('manual · metadatos del esquema SCHEMA: (§7.bis)', () => {
     const c = (t: string, tipo?: 'esquema' | 'parrafo') => validateText(t, undefined, undefined, { tipo }).diagnostics.map((d) => d.code);
     expect(c('{{IF SCHEMA:ACT == "Compraventa"}}x{{ENDIF}}')).toContain('E924');
     expect(c('{{SCHEMA:GROUP=X}}', 'parrafo')).toContain('E921');
-    expect(c('{{SCHEMA_ACT:1104}}')).toContain('W920');
+    expect(c('{{SCHEMA_ACT:1104}}')).toContain('E926');
     // Un párrafo suelto que LEE SCHEMA: no da error.
     expect(c('{{IF SCHEMA:GROUP == "X"}}x{{ENDIF}}', 'parrafo').filter((x) => x.startsWith('E'))).toEqual([]);
   });
 
-  it('la forma antigua equivale', () => {
-    expect(si('{{SCHEMA_ACT:1104}}\n{{LANG=ca}}\n', 'SCHEMA:ACT == "1104" AND SCHEMA:LANG == "ca"')).toBe('SI');
+  it('la forma retirada no declara nada', () => {
+    expect(si('{{SCHEMA_ACT:1104}}\n{{LANG=ca}}\n', 'SCHEMA:ACT == "1104" OR SCHEMA:LANG == "ca"')).toBe('NO');
   });
 });
