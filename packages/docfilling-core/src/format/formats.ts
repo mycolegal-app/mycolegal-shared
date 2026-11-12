@@ -35,6 +35,9 @@ export const FORMATOS: Record<string, DefFormato> = {
   // Delante de un nombre masculino («un minuto», «veintiún minutos», «treinta y un días»): las horas y los
   // minutos del otorgamiento, que con `words` salían «uno minutos» (testamento catalán, 4-nov-2026).
   words_m: { descripcion: 'Número en letra delante de un nombre masculino (apocopado)', ejemplo: ['21', 'veintiún'] },
+  // Delante de un nombre femenino: «las veintiuna horas», en catalán «les dues hores», «les vint-i-una hores»
+  // (testamento catalán, 11-nov-2026: con `words_m` salía «les vint-i-un hores»).
+  words_f: { descripcion: 'Número en letra delante de un nombre femenino', ejemplo: ['21', 'veintiuna'] },
   percent: { descripcion: 'Porcentaje en cifra, con el signo separado por un espacio', ejemplo: ['50', '50 %'] },
   percent_words: { descripcion: 'Porcentaje en letra', ejemplo: ['50', 'cincuenta por ciento'] },
   date: { descripcion: 'Fecha en número', ejemplo: ['2026-10-14', '14/10/2026'] },
@@ -68,15 +71,19 @@ const UNI_ES = ['cero', 'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete'
 const DEC_ES = ['', '', '', 'treinta', 'cuarenta', 'cincuenta', 'sesenta', 'setenta', 'ochenta', 'noventa'];
 const CEN_ES = ['', 'ciento', 'doscientos', 'trescientos', 'cuatrocientos', 'quinientos', 'seiscientos', 'setecientos', 'ochocientos', 'novecientos'];
 
-/** 0–999 en castellano; `apocope`: «uno» → «un», «veintiuno» → «veintiún» (delante de un nombre o de «mil»). */
-function cientosEs(n: number, apocope: boolean): string {
+/**
+ * 0–999 en castellano; `apocope`: «uno» → «un», «veintiuno» → «veintiún» (delante de un nombre o de «mil»).
+ * `femenino`: «doscientas», y «una», «veintiuna» salvo que se apocope («veintiún mil horas»).
+ */
+function cientosEs(n: number, apocope: boolean, femenino = false): string {
   const c = Math.floor(n / 100);
   const d = n % 100;
   const partes: string[] = [];
-  if (c) partes.push(c === 1 && d === 0 ? 'cien' : CEN_ES[c]);
+  if (c) partes.push(c === 1 && d === 0 ? 'cien' : femenino ? CEN_ES[c].replace(/os$/, 'as') : CEN_ES[c]);
   if (d) {
     let t = d < 30 ? UNI_ES[d] : `${DEC_ES[Math.floor(d / 10)]}${d % 10 ? ` y ${UNI_ES[d % 10]}` : ''}`;
     if (apocope) t = t.replace(/veintiuno$/, 'veintiún').replace(/(^|\s)uno$/, '$1un');
+    else if (femenino) t = t.replace(/uno$/, 'una');
     partes.push(t);
   }
   return partes.join(' ');
@@ -86,17 +93,22 @@ const UNI_CA = ['zero', 'u', 'dos', 'tres', 'quatre', 'cinc', 'sis', 'set', 'vui
   'onze', 'dotze', 'tretze', 'catorze', 'quinze', 'setze', 'disset', 'divuit', 'dinou'];
 const DEC_CA = ['', '', 'vint', 'trenta', 'quaranta', 'cinquanta', 'seixanta', 'setanta', 'vuitanta', 'noranta'];
 
-/** 0–999 en catalán; `apocope`: «u» → «un» (delante de un nombre o de «mil»). */
-function cientosCa(n: number, apocope: boolean): string {
+/**
+ * 0–999 en catalán; `apocope`: «u» → «un» (delante de un nombre o de «mil»). `femenino`: «una», «dues»,
+ * «dues-centes»; manda sobre `apocope`, porque en catalán no se apocopa en femenino («vint-i-una mil persones»).
+ */
+function cientosCa(n: number, apocope: boolean, femenino = false): string {
   const c = Math.floor(n / 100);
   const d = n % 100;
+  const fem = (u: string) => (u === 'u' ? 'una' : u === 'dos' ? 'dues' : u);
   const partes: string[] = [];
-  if (c) partes.push(c === 1 ? 'cent' : `${UNI_CA[c]}-cents`);
+  if (c) partes.push(c === 1 ? 'cent' : femenino ? `${fem(UNI_CA[c])}-centes` : `${UNI_CA[c]}-cents`);
   if (d) {
     const dec = Math.floor(d / 10);
     const uni = d % 10;
-    let t = d < 20 ? UNI_CA[d] : uni === 0 ? DEC_CA[dec] : `${DEC_CA[dec]}${dec === 2 ? '-i-' : '-'}${UNI_CA[uni]}`;
-    if (apocope) t = t.replace(/(^|-)u$/, '$1un');
+    const u = (k: number) => (femenino ? fem(UNI_CA[k]) : UNI_CA[k]);
+    let t = d < 20 ? u(d) : uni === 0 ? DEC_CA[dec] : `${DEC_CA[dec]}${dec === 2 ? '-i-' : '-'}${u(uni)}`;
+    if (apocope && !femenino) t = t.replace(/(^|-)u$/, '$1un');
     partes.push(t);
   }
   return partes.join(' ');
@@ -104,9 +116,11 @@ function cientosCa(n: number, apocope: boolean): string {
 
 /**
  * Un entero no negativo en letra, hasta los billones. `apocope` para cuando va delante de un nombre
- * («veintiún euros», «un euro»); delante de «mil» y de «millones» se apocopa siempre.
+ * («veintiún euros», «un euro»); delante de «mil» y de «millones» se apocopa siempre. `femenino` para delante de
+ * un nombre femenino: concuerdan las unidades y las centenas, también las de los miles («doscientas mil horas»);
+ * los millones no, que «millón» es masculino («dos millones de horas»).
  */
-export function enLetras(n: number, idioma = 'es', apocope = false): string {
+export function enLetras(n: number, idioma = 'es', apocope = false, femenino = false): string {
   if (!Number.isInteger(n) || n < 0) throw new Error(`enLetras: ${n}`);
   const ca = idioma === 'ca';
   const cientos = ca ? cientosCa : cientosEs;
@@ -119,8 +133,8 @@ export function enLetras(n: number, idioma = 'es', apocope = false): string {
     if (millones === 1) partes.push(ca ? 'un milió' : 'un millón');
     else partes.push(`${enLetras(millones, idioma, true)} ${ca ? 'milions' : 'millones'}`);
   }
-  if (miles) partes.push(miles === 1 ? 'mil' : `${cientos(miles, true)} mil`);
-  if (resto) partes.push(cientos(resto, apocope));
+  if (miles) partes.push(miles === 1 ? 'mil' : `${cientos(miles, true, femenino)} mil`);
+  if (resto) partes.push(cientos(resto, apocope, femenino));
   return partes.join(' ');
 }
 
@@ -222,6 +236,7 @@ export function aplicarFormato(valor: string, formato: string, idioma = 'es'): R
     case 'amount_words': { const n = leerNumero(v); return n === null || n < 0 ? noNumero : { texto: importeEnLetras(n, lang) }; }
     case 'words': { const n = leerNumero(v); return n === null || n < 0 ? noNumero : { texto: numeroEnLetras(n, lang) }; }
     case 'words_m': { const n = leerNumero(v); return n === null || n < 0 || !Number.isInteger(n) ? noNumero : { texto: enLetras(n, lang, true) }; }
+    case 'words_f': { const n = leerNumero(v); return n === null || n < 0 || !Number.isInteger(n) ? noNumero : { texto: enLetras(n, lang, false, true) }; }
     case 'percent': { const n = leerNumero(v); return n === null ? noNumero : { texto: `${enCifra(n)} %` }; }
     case 'percent_words': {
       const n = leerNumero(v);

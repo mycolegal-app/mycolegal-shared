@@ -97,6 +97,7 @@ describe('manual · formatos de salida (§1, 14-oct-2026)', () => {
     ['{{X#amount_words}}', '180000,50', 'ciento ochenta mil euros con cincuenta céntimos'],
     ['{{X#words}}', '3', 'tres'],
     ['{{X#words_m}}', '21', 'veintiún'],
+    ['{{X#words_f}}', '21', 'veintiuna'],
     ['{{X#percent}}', '50', '50 %'],
     ['{{X#percent_words}}', '50', 'cincuenta por ciento'],
     ['{{X#date}}', '2026-10-14', '14/10/2026'],

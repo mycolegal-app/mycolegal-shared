@@ -1,5 +1,9 @@
 # @mycolegal-app/docfilling-core
 
+## 0.1.45 — 11-nov-2026
+
+Formato de salida `#words_f`: el número en letra para delante de un nombre femenino («una», «veintiuna», «treinta y una», «doscientas»; en catalán «una», «dues», «vint-i-una», «vint-i-dues», «dues-centes»). Los miles concuerdan («doscientas mil», «dues mil»); los millones no, que «millón» es masculino. Con `#words` y `#words_m` la hora del otorgamiento del testamento catalán salía «les dos hores», «les vint-i-un hores» (`PARR_PRELIMINARES`, aviso de Catálogo). `tests/formatos.test.ts`, `tests/manual.test.ts`.
+
 ## 0.1.44 — 11-nov-2026
 
 Rendimiento, sin cambio de resultado (comparado con la 0.1.43 en los 237 esquemas de `_PROD`: expansión, `esquemaDeCampos` y `compose` idénticos, salvo la normalización NFC de abajo).

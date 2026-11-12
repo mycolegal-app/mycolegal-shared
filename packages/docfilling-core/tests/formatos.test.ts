@@ -35,6 +35,27 @@ describe('aplicarFormato', () => {
     expect(aplicarFormato('31', 'words_m').texto).toBe('treinta y un');
     expect(aplicarFormato('17', 'words_m').texto).toBe('diecisiete');
     expect(aplicarFormato('21', 'words_m', 'ca').texto).toBe('vint-i-un');
+    // Delante de un nombre femenino: las horas del otorgamiento («les dues hores», «las veintiuna horas»).
+    expect(aplicarFormato('1', 'words_f').texto).toBe('una');
+    expect(aplicarFormato('21', 'words_f').texto).toBe('veintiuna');
+    expect(aplicarFormato('31', 'words_f').texto).toBe('treinta y una');
+    expect(aplicarFormato('2', 'words_f').texto).toBe('dos');
+    expect(aplicarFormato('200', 'words_f').texto).toBe('doscientas');
+    expect(aplicarFormato('500', 'words_f').texto).toBe('quinientas');
+    expect(aplicarFormato('100', 'words_f').texto).toBe('cien');
+    expect(aplicarFormato('221000', 'words_f').texto).toBe('doscientas veintiún mil');
+    expect(aplicarFormato('2000000', 'words_f').texto).toBe('dos millones');
+    expect(aplicarFormato('1', 'words_f', 'ca').texto).toBe('una');
+    expect(aplicarFormato('2', 'words_f', 'ca').texto).toBe('dues');
+    expect(aplicarFormato('21', 'words_f', 'ca').texto).toBe('vint-i-una');
+    expect(aplicarFormato('22', 'words_f', 'ca').texto).toBe('vint-i-dues');
+    expect(aplicarFormato('32', 'words_f', 'ca').texto).toBe('trenta-dues');
+    expect(aplicarFormato('12', 'words_f', 'ca').texto).toBe('dotze');
+    expect(aplicarFormato('200', 'words_f', 'ca').texto).toBe('dues-centes');
+    expect(aplicarFormato('302', 'words_f', 'ca').texto).toBe('tres-centes dues');
+    expect(aplicarFormato('2000', 'words_f', 'ca').texto).toBe('dues mil');
+    expect(aplicarFormato('2000000', 'words_f', 'ca').texto).toBe('dos milions');
+    expect(aplicarFormato('2,5', 'words_f').problema).toBeTruthy();
     expect(aplicarFormato('1', 'words').texto).toBe('uno');
     expect(aplicarFormato('180000', 'amount_words').texto).toBe('ciento ochenta mil euros');
     expect(aplicarFormato('180000,50', 'amount_words').texto).toBe('ciento ochenta mil euros con cincuenta céntimos');
