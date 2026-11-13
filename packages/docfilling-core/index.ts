@@ -49,8 +49,11 @@ export {
   bindBeginMark,
   stripBindMarks,
   INC_END_MARK,
+  // Lo que nadie ha confirmado (13-nov-2026): marcas `⟬?nivel:CAMPOS⟭…⟬/⟭` del borrador.
+  MARCA_DUDA,
+  quitarMarcasDeDuda,
 } from './src/compose/engine';
-export type { FieldValues, ComposeWarning } from './src/compose/engine';
+export type { FieldValues, ComposeWarning, NivelDuda, OpcionesComposicion } from './src/compose/engine';
 
 export { parseFields, classifyField, offsetToLineCol, FieldType } from './src/syntax/parser';
 export type { ParsedField } from './src/syntax/parser';

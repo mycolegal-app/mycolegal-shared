@@ -228,6 +228,8 @@ describe('E927 nombres retirados (TIPO_ACTO y compañía)', () => {
     expect(codigos('{{SET ACTO_JURIDICO="Donación"}}')).toBe(1);
     expect(codigos('{{IF ES_TRANSMISION_GRATUITA}}x{{ENDIF}}')).toBe(1);
     expect(codigos('{{IF A AND ES_ACTO_SUCESORIO == "TRUE"}}x{{ENDIF}}')).toBe(1);
+    expect(codigos('{{IF ES_TESTAMENTO}}x{{ENDIF}}')).toBe(1);
+    expect(codigos('{{IF ES_TESTAMENTO_HERMANDAD_NAVARRA}}x{{ENDIF}}')).toBe(0);
     expect(codigos('Acto: {{TIPO_ACTO}}.')).toBe(1);
   });
   it('el mensaje remite a SCHEMA:, y un nombre parecido no salta', () => {

@@ -689,6 +689,8 @@ export const NOMBRES_RETIRADOS: Readonly<Record<string, string>> = {
   ES_TRANSMISION_GRATUITA: 'SCHEMA:GROUP == "TRANSMISION_GRATUITA"',
   ES_MORTIS_CAUSA: 'SCHEMA:GROUP == "MORTIS_CAUSA"',
   ES_ACTO_SUCESORIO: 'SCHEMA:GROUP == "SUCESORIO"',
+  // 13-nov-2026 (Catálogo): la unidad de acto del 0201–0204 la decide el grupo TESTAMENTO del esquema.
+  ES_TESTAMENTO: 'SCHEMA:GROUP == "TESTAMENTO"',
 };
 
 /** Los usos de un nombre retirado, por directiva. */

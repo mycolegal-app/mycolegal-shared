@@ -29,6 +29,25 @@ import {
 
 export type FieldValues = Record<string, unknown>;
 
+/**
+ * LO QUE NADIE HA CONFIRMADO (13-nov-2026, Carles). Un campo que decide un IF y está sin contestar se evalúa como
+ * falso, y el borrador escribía en firme esa rama («Declara carecer de descendencia», la huella del que no sabe
+ * firmar); uno que lleva su valor por DEFECTO o el del caso habitual, igual de en firme. Quien lo pide (Redactor, en
+ * el borrador) dice qué campos son dudosos y cómo: `"sin"` = sin contestar, `"defecto"` = por defecto o supuesto.
+ * El texto de la rama elegida por una condición cuyo resultado DEPENDE de esos campos sale envuelto en
+ * `⟬?nivel:CAMPO,CAMPO⟭ … ⟬/⟭` (también vacío, si la rama elegida no escribe nada: se sabe dónde se decidió).
+ * Sin `dudoso`, nada cambia: ni una marca.
+ */
+export type NivelDuda = "sin" | "defecto";
+export interface OpcionesComposicion {
+  dudoso?: (campo: string) => NivelDuda | null;
+}
+/** Apertura `⟬?sin:A,B⟭` (nivel y campos) o cierre `⟬/⟭` de una marca de duda. */
+export const MARCA_DUDA = /\u27EC(?:\?(sin|defecto):([^\u27ED]*)|\/)\u27ED/g;
+export function quitarMarcasDeDuda(texto: string): string {
+  return texto.includes("\u27EC") ? texto.replace(MARCA_DUDA, "") : texto;
+}
+
 /** Non-fatal issue surfaced by composeWithDiagnostics(). */
 export interface ComposeWarning {
   /** "W100" cond iter limit, "W101" for_each iter limit. */
@@ -991,8 +1010,9 @@ export function processConditionals(
   content: string,
   fields: FieldValues,
   warnings?: ComposeWarning[],
+  dudoso?: OpcionesComposicion["dudoso"],
 ): string {
-  return resolverCondicionales(prepararCondicionales(content), conValoresDeSchema(fields, content), warnings);
+  return resolverCondicionales(prepararCondicionales(content), conValoresDeSchema(fields, content), warnings, dudoso);
 }
 
 /** Un IF (o un «{{IF » que no llega a serlo, `cond: null`) con su ENDIF (-1 si no lo tiene) y los bloques de dentro. */
@@ -1035,6 +1055,7 @@ export function resolverCondicionales(
   prep: CondicionalesPreparadas,
   fields: FieldValues,
   warnings?: ComposeWarning[],
+  dudoso?: OpcionesComposicion["dudoso"],
 ): string {
   let content = prep.texto;
   if (!prep.raiz) return content;
@@ -1046,6 +1067,8 @@ export function resolverCondicionales(
   const vals: FieldValues = { ...fields };
   const { evalExpr } = crearEvaluador(vals, warnings);
   const MAX_VUELTAS = 50;
+  // Las condiciones cuyo resultado depende de un campo dudoso (`dudoso`), con su nivel y esos campos.
+  let dudas = new Map<BloqueIf, string>();
   let decision = decidir(content, prep.raiz);
   // Resolver un bloque puede FORMAR uno nuevo con lo que tenía al lado («{{» + «IF B}}…» que deja un bloque resuelto):
   // la expresión regular lo veía en la vuelta siguiente. Se repite la pasada mientras cambie algo, con lo que quede de
@@ -1061,6 +1084,7 @@ export function resolverCondicionales(
     raiz = emparejarIfs(content);
     for (const k of Object.keys(vals)) delete vals[k];
     Object.assign(vals, fields);
+    dudas = new Map();
     decision = decidir(content, raiz);
   }
 
@@ -1106,7 +1130,9 @@ export function resolverCondicionales(
     const corte = cuerpo.texto.indexOf("{{ELSE}}");
     const si = corte < 0 ? cuerpo.texto : cuerpo.texto.slice(0, corte);
     const no = corte < 0 ? "" : cuerpo.texto.slice(corte + "{{ELSE}}".length);
-    return { texto: (decision.get(b) ?? evalExpr(b.cond.trim())) ? si : no, vuelta, ok: true };
+    const elegido = (decision.get(b) ?? evalExpr(b.cond.trim())) ? si : no;
+    const duda = dudas.get(b);
+    return { texto: duda ? `\u27EC?${duda}\u27ED${elegido}\u27EC/\u27ED` : elegido, vuelta, ok: true };
   };
   return { texto: tramo(0, content.length, raiz).texto, vueltas };
   }
@@ -1129,14 +1155,18 @@ export function resolverCondicionales(
       resoluble.set(b, r);
       return r;
     };
+    // Lo que fija un SET vivo ya no es dudoso: lo decide la plantilla.
+    const fijados = new Set<string>();
     const asignar = (texto: string): void => {
       if (!texto.includes("SET")) return;
       for (const m of texto.matchAll(SET_PATRON)) {
         const v = m[2] !== undefined ? m[2] : (m[3] || "").trim();
         vals[m[1]] = v;
         vals[m[1].toUpperCase()] = v;
+        fijados.add(m[1].toUpperCase());
       }
     };
+    const nivelDe = (campo: string): NivelDuda | null => (!dudoso || fijados.has(campo) ? null : dudoso(campo));
     const recorrer = (desde: number, hasta: number, hijos: BloqueIf[]): void => {
       let pos = desde;
       for (const h of hijos) {
@@ -1152,6 +1182,14 @@ export function resolverCondicionales(
       if (!vuelta(b)) { recorrer(b.finTok, fin, b.hijos); return; }
       const si = evalExpr(b.cond!.trim());
       out.set(b, si);
+      if (dudoso) {
+        // Sólo si el RESULTADO depende de lo dudoso: en `CONFIRMADO_FALSO AND DUDOSO`, lo dudoso no decide nada.
+        const t = condicionTriestado(b.cond!.trim(), vals, (c) => nivelDe(c) !== null);
+        if (t.valor === null && t.faltan.length) {
+          const nivel = t.faltan.some((c) => nivelDe(c) === "sin") ? "sin" : "defecto";
+          dudas.set(b, `${nivel}:${t.faltan.join(",")}`);
+        }
+      }
       // El ELSE de este bloque: el primero de su cuerpo que no está dentro de un hijo.
       let corte = -1;
       for (let p = content.indexOf("{{ELSE}}", b.finTok); p >= 0 && p < fin; p = content.indexOf("{{ELSE}}", p + 1)) {
@@ -1680,6 +1718,7 @@ export function composeWithDiagnostics(
   template: string,
   fields: FieldValues,
   locale: string = DEFAULT_LOCALE,
+  opciones: OpcionesComposicion = {},
 ): { text: string; warnings: ComposeWarning[]; bloqueos: string[] } {
   const warnings: ComposeWarning[] = [];
   // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py. Un texto que llegue sin expandir: una sola lengua, nunca
@@ -1690,6 +1729,20 @@ export function composeWithDiagnostics(
   const allFields: FieldValues = { ...fields };
   const declareFixed = resolverDeclarados(template, fields, locale);
   Object.assign(allFields, declareFixed);
+  // Lo dudoso, visto desde el motor: una constante de la plantilla (`DECLARE X = v`) no lo es nunca; un
+  // `DECLARE_UNDEF` que se ha aplicado porque el campo venía vacío es un valor POR DEFECTO, no un «sin contestar».
+  let dudoso = opciones.dudoso;
+  if (dudoso) {
+    const pide = dudoso;
+    const fijas = new Set(Object.keys(extractDeclareFixedValues(template)).map((k) => k.toUpperCase()));
+    const porDefecto = new Set(Object.keys(declareFixed).map((k) => k.toUpperCase()).filter((k) => !fijas.has(k)));
+    dudoso = (campo) => {
+      const c = campo.toUpperCase();
+      if (fijas.has(c)) return null;
+      const n = pide(c);
+      return n === "sin" && porDefecto.has(c) ? "defecto" : n;
+    };
+  }
 
   // El idioma de la plantilla: lo usan los formatos de salida (`{{FECHA#date_words}}`).
   const idioma = idiomaDePlantilla(template, locale.slice(0, 2).toLowerCase());
@@ -1716,7 +1769,7 @@ export function composeWithDiagnostics(
   content = stripBindMarks(expandForEach(content, merged, warnings, idioma));
 
   // Step 6: Resolve remaining (top-level) IF blocks
-  content = processConditionals(content, merged, warnings);
+  content = processConditionals(content, merged, warnings, dudoso);
 
   // Step 6b: Honour {{EXIT_INCLUDE}} per inlined include. Runs AFTER
   // processConditionals so an EXIT_INCLUDE inside a now-pruned IF

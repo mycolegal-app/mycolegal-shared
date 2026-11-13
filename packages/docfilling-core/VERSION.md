@@ -1,5 +1,11 @@
 # @mycolegal-app/docfilling-core
 
+## 0.1.51 — 13-nov-2026
+
+Lo que nadie ha confirmado (Carles): `composeWithDiagnostics(plantilla, valores, idioma, { dudoso })`. `dudoso(campo)` dice si un campo está sin contestar (`"sin"`) o lleva un valor por defecto o supuesto (`"defecto"`); la rama elegida por cada IF cuyo RESULTADO depende de esos campos (lógica de tres valores de `condicionTriestado`: en `A AND B` con `A` falso, `B` no decide) sale envuelta en `⟬?nivel:CAMPOS⟭ … ⟬/⟭`, vacía si la rama no escribe nada. Una constante de la plantilla (`DECLARE X = v`) y lo que fija un SET vivo no son dudosos; un `DECLARE_UNDEF` aplicado sobre un campo vacío pasa de «sin» a «defecto». Sin `dudoso` la salida no cambia en nada. `MARCA_DUDA`, `quitarMarcasDeDuda`. `tests/dudas.test.ts`.
+
+`ES_TESTAMENTO` pasa a los nombres retirados (`E927`, remite a `SCHEMA:GROUP == "TESTAMENTO"`). En `_PROD` sólo queda en comentarios; `ES_TESTAMENTO_MANCOMUNADO_…` y similares no se ven afectados.
+
 ## 0.1.50 — 12-nov-2026
 
 Directiva `{{BLOQUEO: texto}}` (Carles, dictamen P30 de Javier): lo que impide dar la escritura por buena. Va dentro de un IF (`{{IF HUELLA_DENTRO_SUELO_REAL == "No"}}{{BLOQUEO: …}}{{ENDIF}}`) y no se imprime nunca. `composeWithDiagnostics` devuelve `bloqueos: string[]`, los VIVOS —los de las ramas que el caso recorre, sin repetir aunque los abra un FOR EACH varias veces—: los marca antes de resolver IF y FOR EACH y recoge las marcas que sobreviven, como la cobertura de ramas. La línea del bloqueo desaparece entera, igual que con su IF muerto. No es un campo (`FieldType.BLOQUEO`; ni `esquemaDeCampos` ni las listas lo cuentan) ni lo renombra el sufijo de un INCLUDE. Validador: `E929` sin texto; `W928` fuera de todo IF en un esquema (bloquearía siempre; en un párrafo no se avisa, su INCLUDE puede estar dentro de un IF). `bloqueosDeclarados`, `marcarBloqueos`, `bloqueosVivos`, `quitarMarcasDeBloqueo`. Sin ningún BLOQUEO en `_PROD`, los 254 esquemas dan los mismos diagnósticos que con la 0.1.49. `tests/bloqueos.test.ts`.
