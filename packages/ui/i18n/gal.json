@@ -689,6 +689,9 @@
       "btnSave": "Gardar",
       "btnSaving": "Gardando…",
       "dupTitle": "Posible cliente duplicado",
+      "compartidoTitle": "Este contacto úsase noutros expedientes",
+      "compartidoConfirm": "Cambialo en todos",
+      "compartidoCancel": "Non cambiar",
       "dupHint": "Xa existen clientes que parecen o mesmo. Usa un destes ou crea un novo igualmente.",
       "dupUse": "Usar este",
       "dupCreateAnyway": "Crear igualmente"

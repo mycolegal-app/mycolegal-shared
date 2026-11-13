@@ -145,6 +145,9 @@ export function ClienteFormDialog({
   // Candidatos duplicados devueltos por el backend (POSSIBLE_DUPLICATE).
   // Mientras haya candidatos mostramos el panel de aviso en vez de crear.
   const [duplicates, setDuplicates] = useState<DuplicateCandidate[] | null>(null);
+  // El backend avisa (CONTACTO_COMPARTIDO) de que cambiar el nombre/NIF de este contacto lo cambia en todos los
+  // expedientes que lo usan: se enseña el aviso y solo se guarda si se confirma.
+  const [compartido, setCompartido] = useState<string | null>(null);
 
   // Reset and hydrate on open.
   useEffect(() => {
@@ -152,6 +155,7 @@ export function ClienteFormDialog({
     setError("");
     setConfirmDelete(false);
     setDuplicates(null);
+    setCompartido(null);
     if (isEdit && clienteId) {
       setLoading(true);
       fetch(`${apiBase}/${clienteId}`)
@@ -228,6 +232,8 @@ export function ClienteFormDialog({
       const payload = buildPayload();
       // En creación, `force` salta la comprobación anti-duplicados del backend.
       if (!isEdit && force) payload.force = true;
+      // En edición, `force` confirma el cambio de un contacto compartido.
+      if (isEdit && force) payload.confirmarCompartido = true;
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
@@ -238,6 +244,10 @@ export function ClienteFormDialog({
       // dejamos al usuario elegir (usar existente / crear igualmente).
       if (res.status === 409 && json?.error?.code === "POSSIBLE_DUPLICATE") {
         setDuplicates((json.error.candidates as DuplicateCandidate[]) ?? []);
+        return;
+      }
+      if (res.status === 409 && json?.error?.code === "CONTACTO_COMPARTIDO") {
+        setCompartido(String(json.error.message ?? ""));
         return;
       }
       if (!res.ok) {
@@ -310,6 +320,27 @@ export function ClienteFormDialog({
 
         {error && (
           <div className="rounded-md bg-red-50 p-2 text-xs text-red-700">{error}</div>
+        )}
+
+        {compartido && (
+          <div className="space-y-2 rounded-md bg-amber-50 p-3 text-sm text-amber-800">
+            <p className="font-medium">{t("ui.clienteForm.compartidoTitle")}</p>
+            <p className="text-xs">{compartido}</p>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={saving}
+                onClick={(e) => void handleSubmit(e as unknown as React.FormEvent, true)}
+              >
+                {t("ui.clienteForm.compartidoConfirm")}
+              </Button>
+              <Button type="button" size="sm" variant="ghost" disabled={saving} onClick={() => onOpenChange(false)}>
+                {t("ui.clienteForm.compartidoCancel")}
+              </Button>
+            </div>
+          </div>
         )}
 
         {duplicates && duplicates.length > 0 ? (

@@ -689,6 +689,9 @@
       "btnSave": "Gorde",
       "btnSaving": "Gordetzen…",
       "dupTitle": "Bezero bikoiztu posiblea",
+      "compartidoTitle": "Kontaktu hau beste espediente batzuetan erabiltzen da",
+      "compartidoConfirm": "Guztietan aldatu",
+      "compartidoCancel": "Ez aldatu",
       "dupHint": "Berdina diruditen bezeroak badaude jada. Erabili horietako bat edo sortu berri bat hala ere.",
       "dupUse": "Hau erabili",
       "dupCreateAnyway": "Sortu hala ere"

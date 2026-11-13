@@ -690,6 +690,9 @@
       "btnSave": "Desar",
       "btnSaving": "Desant…",
       "dupTitle": "Possible client duplicat",
+      "compartidoTitle": "Aquest contacte s'utilitza en altres expedients",
+      "compartidoConfirm": "Canviar-lo a tots",
+      "compartidoCancel": "No canviar",
       "dupHint": "Ja existeixen clients que semblen el mateix. Fes servir un d'aquests o crea'n un de nou igualment.",
       "dupUse": "Fer servir aquest",
       "dupCreateAnyway": "Crear igualment"
