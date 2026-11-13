@@ -74,11 +74,15 @@ export interface PrevisualizacionEscritura {
   concordancias: number;
   /** El género con el que ha quedado cada persona en las concordancias («el testador»), si el servidor lo da. */
   generos?: GeneroEscritura[];
+  /** Lo que el borrador da por hecho sin que nadie lo haya confirmado (`?dudas=1`): en `markdown`, `⟬N⟭…⟬/⟭`. */
+  dudas?: DudaEscritura[];
   directivasPendientes: string[];
   plantilla: { nombre: string; ambito: string; porque: string };
   generadoAt: string | null;
   docxUrl: string;
 }
+
+export interface DudaEscritura { nivel: "sin" | "defecto"; campos: { nombre: string; etiqueta: string }[] }
 
 export interface GeneroEscritura {
   pista: string; nombre: string | null; genero: "M" | "F" | null;
@@ -96,7 +100,7 @@ export interface EscrituraModalProps {
   /** Cómo se pinta la escritura. Por defecto, texto preformateado con los huecos resaltados;
    *  una app con vista en papel (Redactor, papel notarial) pasa la suya, para que el borrador
    *  se vea igual que la vista previa. `hueco` es el que está en curso en el navegador. */
-  cuerpo?: (p: { markdown: string; hueco: HuecoEscritura | null }) => React.ReactNode;
+  cuerpo?: (p: { markdown: string; hueco: HuecoEscritura | null; dudas: DudaEscritura[] }) => React.ReactNode;
   /** «amplio»: casi todo el ancho de la pantalla (Redactor, dos páginas de papel a la vez). */
   ancho?: "normal" | "amplio";
 }
@@ -119,7 +123,7 @@ export function EscrituraModal({
     const n = ++vuelta.current;
     let data: PrevisualizacionEscritura;
     try {
-      const r = await fetch(`${apiBase}/tareas/${tareaId}/previsualizar`);
+      const r = await fetch(`${apiBase}/tareas/${tareaId}/previsualizar?dudas=1`);
       if (!r.ok) { setError(t("ui.escrituraModal.noDisponible")); return; }
       data = (await r.json()).data as PrevisualizacionEscritura;
       if (n !== vuelta.current) return;
@@ -131,7 +135,7 @@ export function EscrituraModal({
     // 12-nov-2026). La escritura se pinta ya y se corrige sola cuando llegan; si falla, se queda como estaba.
     if (data.concordancias > 0) {
       try {
-        const r = await fetch(`${apiBase}/tareas/${tareaId}/previsualizar?concordar=1`);
+        const r = await fetch(`${apiBase}/tareas/${tareaId}/previsualizar?concordar=1&dudas=1`);
         if (!r.ok || n !== vuelta.current) return;
         const conc = (await r.json()).data as PrevisualizacionEscritura;
         if (n === vuelta.current) setPrev(conc);
@@ -196,6 +200,12 @@ export function EscrituraModal({
     } finally { setCambiando(null); }
   }
   const generos = (prev?.generos ?? []).filter((g) => g.genero);
+  const dudas = prev?.dudas ?? [];
+  // Las preguntas distintas que nadie ha contestado (sombreado intenso) y las que van por defecto (suave).
+  const dudasDe = (nivel: "sin" | "defecto") =>
+    [...new Map(dudas.filter((d) => d.nivel === nivel).flatMap((d) => d.campos).map((c) => [c.nombre, c.etiqueta])).values()];
+  const sinContestar = dudasDe("sin");
+  const porDefecto = dudasDe("defecto");
 
   if (!abierto) return null;
 
@@ -250,6 +260,25 @@ export function EscrituraModal({
                 </span>
               );
             })}
+          </div>
+        )}
+
+        {/* ── lo no confirmado: qué significa el sombreado ─────────────────── */}
+        {dudas.length > 0 && (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-gray-200 px-4 py-2 text-xs text-gray-600">
+            <span className="font-medium text-gray-700">{t("ui.escrituraModal.dudas")}</span>
+            {sinContestar.length > 0 && (
+              <span className="inline-flex items-center gap-1.5" title={sinContestar.join(" · ")}>
+                <span className="inline-block h-3 w-5 rounded-sm border border-orange-300 bg-orange-100" />
+                {t("ui.escrituraModal.dudasSin", { n: sinContestar.length })}
+              </span>
+            )}
+            {porDefecto.length > 0 && (
+              <span className="inline-flex items-center gap-1.5" title={porDefecto.join(" · ")}>
+                <span className="inline-block h-3 w-5 rounded-sm border border-yellow-200 bg-yellow-50" />
+                {t("ui.escrituraModal.dudasDefecto", { n: porDefecto.length })}
+              </span>
+            )}
           </div>
         )}
 
@@ -327,8 +356,8 @@ export function EscrituraModal({
             <AlertBanner type="warning" message={t("ui.escrituraModal.faltanParrafos", { n: prev.faltantes.length })} />
           )}
           {prev && (cuerpo
-            ? cuerpo({ markdown: prev.markdown, hueco })
-            : <Escritura markdown={prev.markdown} resaltado={hueco} />)}
+            ? cuerpo({ markdown: prev.markdown, hueco, dudas })
+            : <Escritura markdown={prev.markdown.replace(/⟬(?:\d+|\/)⟭/g, "")} resaltado={hueco} />)}
         </div>
 
         {/* ── la cinta del motor (M2): sólo aquí y en los informes ───────── */}

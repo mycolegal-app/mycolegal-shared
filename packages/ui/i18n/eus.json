@@ -1395,7 +1395,10 @@
       "faltanParrafos": "Liburutegiko {n} paragrafo falta dira. Haien klausula HUTSIK ateratzen da errorerik eman gabe.",
       "dependen": "{n} hauen menpe daude",
       "generos": "Generoa eskrituran:",
-      "cambiarGenero": "Aldatu «{x}»-ra"
+      "cambiarGenero": "Aldatu «{x}»-ra",
+      "dudas": "Itzalduta: inork berretsi ez duena",
+      "dudasSin": "{n} erantzun gabe",
+      "dudasDefecto": "{n} lehenetsita"
     },
     "voz": {
       "escuchar": "Entzun",

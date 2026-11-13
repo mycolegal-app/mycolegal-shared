@@ -84,7 +84,7 @@ export type {
   GeneracionRedactorModalProps, EncargoRedactor, DestinoIncorporar,
 } from './components/shared/generacion-redactor-modal';
 export type {
-  EscrituraModalProps, PrevisualizacionEscritura, HuecoEscritura, CampoEscritura,
+  EscrituraModalProps, PrevisualizacionEscritura, HuecoEscritura, CampoEscritura, DudaEscritura,
 } from './components/shared/escritura-modal';
 export { FuentesModal } from './components/shared/fuentes-modal';
 export type { FuentesModalProps, FuenteCatalogoDTO } from './components/shared/fuentes-modal';

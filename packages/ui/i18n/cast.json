@@ -1396,7 +1396,10 @@
       "faltanParrafos": "Faltan {n} párrafos de la biblioteca. Su cláusula sale VACÍA sin dar error.",
       "dependen": "{n} dependen de éstas",
       "generos": "Género en la escritura:",
-      "cambiarGenero": "Cambiar a «{x}»"
+      "cambiarGenero": "Cambiar a «{x}»",
+      "dudas": "Sombreado: lo que nadie ha confirmado",
+      "dudasSin": "{n} sin contestar",
+      "dudasDefecto": "{n} por defecto"
     },
     "voz": {
       "escuchar": "Escuchar",

@@ -1395,7 +1395,10 @@
       "faltanParrafos": "Faltan {n} parágrafos da biblioteca. A súa cláusula sae BALEIRA sen dar erro.",
       "dependen": "{n} dependen destas",
       "generos": "Xénero na escritura:",
-      "cambiarGenero": "Cambiar a «{x}»"
+      "cambiarGenero": "Cambiar a «{x}»",
+      "dudas": "Sombreado: o que ninguén confirmou",
+      "dudasSin": "{n} sen contestar",
+      "dudasDefecto": "{n} por defecto"
     },
     "voz": {
       "escuchar": "Escoitar",

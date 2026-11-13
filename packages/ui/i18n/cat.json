@@ -1396,7 +1396,10 @@
       "faltanParrafos": "Falten {n} paràgrafs de la biblioteca. La seva clàusula surt BUIDA sense donar error.",
       "dependen": "{n} depenen d'aquestes",
       "generos": "Gènere a l'escriptura:",
-      "cambiarGenero": "Canvia a «{x}»"
+      "cambiarGenero": "Canvia a «{x}»",
+      "dudas": "Ombrejat: el que ningú no ha confirmat",
+      "dudasSin": "{n} sense contestar",
+      "dudasDefecto": "{n} per defecte"
     },
     "voz": {
       "escuchar": "Escolta",
