@@ -1398,7 +1398,7 @@
       "cambiarGenero": "Aldatu «{x}»-ra",
       "dudas": "Itzalduta: inork berretsi ez duena",
       "dudasSin": "{n} erantzun gabe",
-      "dudasDefecto": "{n} lehenetsita"
+      "dudasDefecto": "{n} ohiko kasutik"
     },
     "voz": {
       "escuchar": "Entzun",

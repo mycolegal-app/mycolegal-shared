@@ -201,7 +201,7 @@ export function EscrituraModal({
   }
   const generos = (prev?.generos ?? []).filter((g) => g.genero);
   const dudas = prev?.dudas ?? [];
-  // Las preguntas distintas que nadie ha contestado (sombreado intenso) y las que van por defecto (suave).
+  // Las preguntas distintas que nadie ha contestado (rosa) y las que ha supuesto el caso habitual (azul).
   const dudasDe = (nivel: "sin" | "defecto") =>
     [...new Map(dudas.filter((d) => d.nivel === nivel).flatMap((d) => d.campos).map((c) => [c.nombre, c.etiqueta])).values()];
   const sinContestar = dudasDe("sin");
@@ -269,13 +269,13 @@ export function EscrituraModal({
             <span className="font-medium text-gray-700">{t("ui.escrituraModal.dudas")}</span>
             {sinContestar.length > 0 && (
               <span className="inline-flex items-center gap-1.5" title={sinContestar.join(" · ")}>
-                <span className="inline-block h-3 w-5 rounded-sm border border-orange-300 bg-orange-100" />
+                <span className="inline-block h-3 w-5 rounded-sm border border-rose-300 bg-rose-100" />
                 {t("ui.escrituraModal.dudasSin", { n: sinContestar.length })}
               </span>
             )}
             {porDefecto.length > 0 && (
               <span className="inline-flex items-center gap-1.5" title={porDefecto.join(" · ")}>
-                <span className="inline-block h-3 w-5 rounded-sm border border-yellow-200 bg-yellow-50" />
+                <span className="inline-block h-3 w-5 rounded-sm border border-sky-300 bg-sky-100" />
                 {t("ui.escrituraModal.dudasDefecto", { n: porDefecto.length })}
               </span>
             )}

@@ -1399,7 +1399,7 @@
       "cambiarGenero": "Canvia a «{x}»",
       "dudas": "Ombrejat: el que ningú no ha confirmat",
       "dudasSin": "{n} sense contestar",
-      "dudasDefecto": "{n} per defecte"
+      "dudasDefecto": "{n} del cas habitual"
     },
     "voz": {
       "escuchar": "Escolta",
