@@ -23,11 +23,17 @@ describe('marcas de duda', () => {
     expect(quitarMarcasDeDuda(r)).toBe(compose(T, { TESTADOR_FIRMA: 'TRUE' }));
   });
 
-  it('por defecto es el nivel suave, y una rama vacía deja su marca vacía', () => {
-    const r = composeWithDiagnostics(T, { TESTADOR_FIRMA: 'FALSE', TIENE_DESCENDENCIA: 'TRUE' }, 'es',
-      { dudoso: dudoso([], ['TESTADOR_FIRMA']) }).text;
-    expect(r).toContain('⟬?defecto:TESTADOR_FIRMA⟭⟬/⟭');
-    expect(r).toContain('Tiene hijos.');
+  it('por defecto es el nivel suave; una rama vacía no se marca', () => {
+    const r = composeWithDiagnostics(T, { TESTADOR_FIRMA: 'TRUE' }, 'es', { dudoso: dudoso([], ['TESTADOR_FIRMA']) }).text;
+    expect(r).toContain('⟬?defecto:TESTADOR_FIRMA⟭Lo firma.⟬/⟭');
+    const vacia = composeWithDiagnostics(T, { TESTADOR_FIRMA: 'FALSE' }, 'es', { dudoso: dudoso([], ['TESTADOR_FIRMA']) }).text;
+    expect(vacia).not.toContain('TESTADOR_FIRMA');
+  });
+
+  it('la marca va por dentro de los blancos: las líneas no cambian', () => {
+    const t = 'A\n{{IF X}}\n\nTexto.\n\n{{ENDIF}}\nB';
+    const r = composeWithDiagnostics(t, { X: 'TRUE' }, 'es', { dudoso: dudoso([], ['X']) }).text;
+    expect(r).toBe(compose(t, { X: 'TRUE' }).replace('Texto.', '⟬?defecto:X⟭Texto.⟬/⟭'));
   });
 
   it('sólo si lo dudoso decide: un AND con lo confirmado en falso no se marca', () => {
@@ -42,9 +48,11 @@ describe('marcas de duda', () => {
   });
 
   it('anidadas: cada condición dudosa con su marca', () => {
-    const t = '{{IF A}}x{{IF B}}y{{ENDIF}}{{ENDIF}}';
-    const r = composeWithDiagnostics(t, { A: 'TRUE' }, 'es', { dudoso: dudoso(['B']) }).text;
-    expect(r).toBe('x⟬?sin:B⟭⟬/⟭');
-    expect([...r.matchAll(MARCA_DUDA)].map((m) => m[1] ?? '/')).toEqual(['sin', '/']);
+    const t = '{{IF A}}x{{IF B}}y{{ELSE}}z{{ENDIF}}{{ENDIF}}';
+    const r = composeWithDiagnostics(t, {}, 'es', { dudoso: dudoso(['A'], ['B']) }).text;
+    expect(r).toBe('');
+    const r2 = composeWithDiagnostics(t, { A: 'TRUE' }, 'es', { dudoso: dudoso([], ['A', 'B']) }).text;
+    expect(r2).toBe('⟬?defecto:A⟭x⟬?defecto:B⟭z⟬/⟭⟬/⟭');
+    expect([...r2.matchAll(MARCA_DUDA)].map((m) => m[1] ?? '/')).toEqual(['defecto', 'defecto', '/', '/']);
   });
 });

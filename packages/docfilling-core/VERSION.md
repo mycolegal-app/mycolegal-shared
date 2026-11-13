@@ -1,5 +1,9 @@
 # @mycolegal-app/docfilling-core
 
+## 0.1.52 — 13-nov-2026
+
+Marcas de duda (0.1.51), sin ruido y sin mover el texto: una rama que no escribe nada no se marca, y la marca va por dentro de los blancos de los bordes de la rama, así que con las marcas quitadas la salida es la misma carácter a carácter. En un testamento CAT sin confirmar, de 86 marcas a las que escriben algo.
+
 ## 0.1.51 — 13-nov-2026
 
 Lo que nadie ha confirmado (Carles): `composeWithDiagnostics(plantilla, valores, idioma, { dudoso })`. `dudoso(campo)` dice si un campo está sin contestar (`"sin"`) o lleva un valor por defecto o supuesto (`"defecto"`); la rama elegida por cada IF cuyo RESULTADO depende de esos campos (lógica de tres valores de `condicionTriestado`: en `A AND B` con `A` falso, `B` no decide) sale envuelta en `⟬?nivel:CAMPOS⟭ … ⟬/⟭`, vacía si la rama no escribe nada. Una constante de la plantilla (`DECLARE X = v`) y lo que fija un SET vivo no son dudosos; un `DECLARE_UNDEF` aplicado sobre un campo vacío pasa de «sin» a «defecto». Sin `dudoso` la salida no cambia en nada. `MARCA_DUDA`, `quitarMarcasDeDuda`. `tests/dudas.test.ts`.

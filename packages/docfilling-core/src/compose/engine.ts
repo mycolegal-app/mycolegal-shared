@@ -35,7 +35,7 @@ export type FieldValues = Record<string, unknown>;
  * firmar); uno que lleva su valor por DEFECTO o el del caso habitual, igual de en firme. Quien lo pide (Redactor, en
  * el borrador) dice qué campos son dudosos y cómo: `"sin"` = sin contestar, `"defecto"` = por defecto o supuesto.
  * El texto de la rama elegida por una condición cuyo resultado DEPENDE de esos campos sale envuelto en
- * `⟬?nivel:CAMPO,CAMPO⟭ … ⟬/⟭` (también vacío, si la rama elegida no escribe nada: se sabe dónde se decidió).
+ * `⟬?nivel:CAMPO,CAMPO⟭ … ⟬/⟭`, por dentro de los blancos de los bordes; una rama que no escribe nada no se marca.
  * Sin `dudoso`, nada cambia: ni una marca.
  */
 export type NivelDuda = "sin" | "defecto";
@@ -1132,7 +1132,10 @@ export function resolverCondicionales(
     const no = corte < 0 ? "" : cuerpo.texto.slice(corte + "{{ELSE}}".length);
     const elegido = (decision.get(b) ?? evalExpr(b.cond.trim())) ? si : no;
     const duda = dudas.get(b);
-    return { texto: duda ? `\u27EC?${duda}\u27ED${elegido}\u27EC/\u27ED` : elegido, vuelta, ok: true };
+    // Sólo lo que se ESCRIBE: una rama vacía no afirma nada, y la marca va dentro de los blancos de los bordes para no
+    // cambiar las líneas en blanco que la limpieza de la salida quita o conserva.
+    const nucleo = duda ? /^(\s*)([\s\S]*?\S)(\s*)$/.exec(elegido) : null;
+    return { texto: nucleo ? `${nucleo[1]}\u27EC?${duda}\u27ED${nucleo[2]}\u27EC/\u27ED${nucleo[3]}` : elegido, vuelta, ok: true };
   };
   return { texto: tramo(0, content.length, raiz).texto, vueltas };
   }
