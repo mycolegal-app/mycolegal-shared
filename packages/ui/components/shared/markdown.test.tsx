@@ -46,3 +46,25 @@ describe("el rail y el informe comparten renderizador", () => {
     ).toContain("22.068,00 € × 1,1000 = 24.274,80 € [1].");
   });
 });
+
+describe("renderMarkdown — formato inline (#52 consultor)", () => {
+  it("pinta el color, la negrita y el subrayado que pide conservar la plantilla", () => {
+    const html = renderMarkdown('<span style="color:#b30000; font-weight:bold;">CASO NORMAL</span> que <u>NO</u> es');
+    expect(html).toContain('<span style="color:#b30000;font-weight:bold">CASO NORMAL</span>');
+    expect(html).toContain("<u>NO</u>");
+    expect(html).not.toContain("&lt;span");
+  });
+
+  it("quita del estilo lo que no es formato y neutraliza el resto de HTML", () => {
+    const html = renderMarkdown('<span style="color:red; background:url(x); position:fixed">a</span> <script>alert(1)</script> <b onclick="x">b</b> <img src=x>');
+    expect(html).toContain('<span style="color:red">a</span>');
+    expect(html).toContain("&lt;script&gt;alert(1)&lt;/script&gt;");
+    expect(html).toContain("&lt;b onclick=");
+    expect(html).toContain("&lt;img");
+    expect(html).not.toMatch(/<(script|img|b )/);
+  });
+
+  it("deja igual el markdown sin etiquetas", () => {
+    expect(renderMarkdown("**hola** 3 < 4")).toBe("<p><strong>hola</strong> 3 &lt; 4</p>\n");
+  });
+});

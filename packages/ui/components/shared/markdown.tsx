@@ -71,8 +71,46 @@ export function normalizarLatex(text: string): string {
   );
 }
 
+/**
+ * #52 (consultor) — Al pedirle que conserve el formato de una plantilla (colores, subrayado, negrita), el modelo
+ * escribe etiquetas inline (`<span style="color:#b30000; font-weight:bold;">`, `<u>NO</u>`) y el usuario las veía
+ * en crudo. Se deja pasar SOLO ese formato: `u`, `b`, `strong`, `i`, `em`, `br` sin atributos y `span` con
+ * `color`, `font-weight`, `font-style`, `text-decoration` y `font-size`, cada uno con valores cerrados. Todo lo
+ * demás sigue neutralizado. Las etiquetas admitidas se apartan con marcadores antes de escapar `<` y se reponen
+ * reconstruidas (nunca el texto original) después de `marked`.
+ */
+const ESTILO_PERMITIDO: Record<string, RegExp> = {
+  color: /^(#[0-9a-f]{3,8}|[a-z]{3,20}|rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*(,\s*(0|1|0?\.\d+)\s*)?\))$/i,
+  "font-weight": /^(bold|bolder|normal|[1-9]00)$/i,
+  "font-style": /^(italic|normal)$/i,
+  "text-decoration": /^(underline|line-through|none)$/i,
+  "font-size": /^(0?\.\d+|[1-2](\.\d+)?)em$|^\d{2,3}%$/i,
+};
+const ETIQUETA_INLINE = /<(\/?)(u|b|strong|i|em|br|span)(\s+style\s*=\s*"([^"<>]*)")?\s*\/?>/gi;
+const MARCA = /(\d+)/g;
+
+function estiloSeguro(style: string): string {
+  return style
+    .split(";")
+    .map((d) => d.split(":").map((x) => x.trim()))
+    .filter(([p, v]) => p && v && ESTILO_PERMITIDO[p.toLowerCase()]?.test(v))
+    .map(([p, v]) => `${p.toLowerCase()}:${v}`)
+    .join(";");
+}
+
 export function renderMarkdown(text: string): string {
-  return marked.parse(normalizarLatex(text).replace(/</g, "&lt;"), { async: false }) as string;
+  const etiquetas: string[] = [];
+  const apartado = normalizarLatex(text).replace(ETIQUETA_INLINE, (m, cierre: string, tag: string, conEstilo?: string, style?: string) => {
+    const t = tag.toLowerCase();
+    if (t === "br") return (etiquetas.push("<br>"), `${etiquetas.length - 1}`);
+    // Atributos solo en `span`, y solo `style`.
+    if (conEstilo && t !== "span") return m;
+    const estilo = !cierre && t === "span" && style ? estiloSeguro(style) : "";
+    etiquetas.push(cierre ? `</${t}>` : `<${t}${estilo ? ` style="${estilo}"` : ""}>`);
+    return `${etiquetas.length - 1}`;
+  });
+  const html = marked.parse(apartado.replace(/</g, "&lt;"), { async: false }) as string;
+  return etiquetas.length ? html.replace(MARCA, (_, i: string) => etiquetas[Number(i)] ?? "") : html;
 }
 
 interface MarkdownProps extends React.HTMLAttributes<HTMLDivElement> {
