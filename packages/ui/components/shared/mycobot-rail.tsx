@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import {
   Library,
@@ -25,6 +25,8 @@ import {
   ScrollText,
   Printer,
   Trash2,
+  ArrowUp,
+  Gauge,
 } from "lucide-react";
 // El rail tenía su propio `renderMarkdown`, gemelo del compartido salvo en un
 // detalle: no desmontaba el LaTeX. Cuando `markdown.tsx` aprendió a hacerlo, esta
@@ -288,6 +290,99 @@ const MAX_INPUT_PX = 160;
 type View = "chat" | "history" | "resolucion" | "skills";
 
 /** Nombre de reserva del `.myc` exportado: mismo saneado que `exportSkill` en Consultor. */
+/**
+ * Ficha del pie del chat (skill, nivel): un botón redondeado que abre una lista hacia arriba.
+ * Solo toma color cuando su valor no es el normal, para que en reposo el pie no grite.
+ */
+type OpcionFicha = { valor: string; etiqueta: string; detalle?: string | null };
+function FichaMenu({
+  icono, etiqueta, tono = "neutro", opciones, valor, onElegir, disabled, titulo, alQuitar, quitarLabel, dataAttr,
+}: {
+  icono: ReactNode;
+  etiqueta: string;
+  tono?: "neutro" | "activo" | "aviso";
+  opciones: OpcionFicha[];
+  valor: string;
+  onElegir: (v: string) => void;
+  disabled?: boolean;
+  titulo: string;
+  alQuitar?: () => void;
+  quitarLabel?: string;
+  dataAttr?: string;
+}) {
+  const [abierto, setAbierto] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!abierto) return;
+    const fuera = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setAbierto(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setAbierto(false); };
+    document.addEventListener("mousedown", fuera);
+    document.addEventListener("keydown", esc);
+    return () => {
+      document.removeEventListener("mousedown", fuera);
+      document.removeEventListener("keydown", esc);
+    };
+  }, [abierto]);
+  const color =
+    tono === "activo" ? "bg-cyan-50 text-cyan-800 hover:bg-cyan-100"
+    : tono === "aviso" ? "bg-amber-50 text-amber-800 hover:bg-amber-100"
+    : "text-gray-500 hover:bg-gray-100";
+  return (
+    <div ref={ref} className="relative min-w-0" {...(dataAttr ? { [dataAttr]: valor } : {})}>
+      <div className={cn("flex min-w-0 items-center rounded-full", color)}>
+        <button
+          type="button"
+          onClick={() => setAbierto((v) => !v)}
+          disabled={disabled}
+          aria-haspopup="listbox"
+          aria-expanded={abierto}
+          aria-label={titulo}
+          title={titulo}
+          className="flex min-w-0 items-center gap-1 rounded-full px-2 py-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 disabled:opacity-40"
+        >
+          {icono}
+          <span className="truncate">{etiqueta}</span>
+        </button>
+        {alQuitar && (
+          <button
+            type="button"
+            onClick={alQuitar}
+            aria-label={quitarLabel}
+            title={quitarLabel}
+            className="-ml-1 mr-1 shrink-0 rounded-full p-0.5 hover:bg-black/5"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        )}
+      </div>
+      {abierto && (
+        <ul role="listbox" className="absolute bottom-full left-0 z-30 mb-1 max-h-72 w-64 overflow-y-auto rounded-lg border bg-white p-1 shadow-lg">
+          {opciones.map((o) => (
+            <li key={o.valor}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={o.valor === valor}
+                onClick={() => {
+                  onElegir(o.valor);
+                  setAbierto(false);
+                }}
+                className={cn("flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-gray-50", o.valor === valor && "bg-cyan-50")}
+              >
+                <Check className={cn("mt-0.5 h-3.5 w-3.5 shrink-0 text-cyan-600", o.valor !== valor && "invisible")} />
+                <span className="min-w-0">
+                  <span className="block font-medium text-gray-800">{o.etiqueta}</span>
+                  {o.detalle && <span className="mt-0.5 line-clamp-2 block text-[11px] text-gray-500">{o.detalle}</span>}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function nombreFicheroMyc(nombre: string): string {
   return `${nombre.replace(/[^a-zA-Z0-9._-]+/g, "-").slice(0, 60) || "skill"}.myc`;
 }
@@ -2626,70 +2721,41 @@ export function MycoBotRail({
                 }}
                 className="border-t p-3"
               >
-                {skillsDisponibles && skills.length > 0 && (
-                  <div className="mb-2 flex items-center gap-2 text-xs text-gray-600">
-                    <Sparkles className="h-3.5 w-3.5 shrink-0 text-cyan-600" />
-                    <select
-                      value={activeSkillId ?? ""}
-                      onChange={(e) => setActiveSkillId(e.target.value || null)}
-                      aria-label={t("ui.mycobot.skillSelect")}
-                      title={t("ui.mycobot.skillSelect")}
-                      className="min-w-0 flex-1 rounded-md border bg-white px-2 py-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
-                    >
-                      <option value="">{t("ui.mycobot.skillNone")}</option>
-                      {skills.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.nombre}
-                          {s.deFabrica ? " ★" : ""}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-                {attachedDocs && attachedDocs.docs.length > 0 && (
-                  <div className="mb-2 space-y-1 rounded-md border bg-gray-50 px-2 py-1 text-xs text-gray-700">
-                    {/* #44 — el adjunto es de la CONVERSACIÓN, no de una pregunta: se dice
-                        siempre, y se pueden quitar todos de una vez. */}
-                    <div className="flex items-center gap-2 border-b pb-1 text-[11px] text-gray-500">
-                      <span className="flex-1">{t("ui.mycobot.attachEveryTurn")}</span>
-                      <button
-                        type="button"
-                        onClick={() => void removeAllDocs()}
-                        className="shrink-0 rounded px-1 text-gray-500 underline hover:text-gray-800"
-                      >
-                        {t("ui.mycobot.attachRemoveAll")}
-                      </button>
-                    </div>
-                    {attachedDocs.docs.map((d) => (
-                      <div key={d.id} className="flex items-center gap-2">
-                        <Paperclip className="h-3.5 w-3.5 shrink-0 text-cyan-600" />
-                        <span className="flex-1 truncate" title={d.fileName}>{d.fileName}</span>
-                        <button
-                          type="button"
-                          onClick={() => void removeDoc(d.id)}
-                          aria-label={t("ui.mycobot.attachRemove")}
-                          className="rounded p-0.5 text-gray-400 hover:text-gray-700"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    ))}
-                    {/* #34 — el texto viaja en CADA pregunta: tamaño y coste a la vista. */}
-                    <p className="border-t pt-1 text-[11px] text-gray-500">
-                      {t("ui.mycobot.attachSummary", {
-                        tokens: attachedDocs.tokensEstimados.toLocaleString(),
-                        pct: String(Math.min(100, Math.round((attachedDocs.totalChars / attachedDocs.maxChars) * 100))),
-                      })}
-                      {attachedDocs.creditosPorPregunta != null && (
-                        <> · {t("ui.mycobot.attachCost", { creditos: attachedDocs.creditosPorPregunta.toLocaleString() })}</>
-                      )}
-                    </p>
-                  </div>
-                )}
                 {attachError && (
                   <p className="mb-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-800">{attachError}</p>
                 )}
-                <div className="flex items-end gap-2">
+                {/* Una sola tarjeta: la pregunta manda y los ajustes (adjuntar, dictar, skill, nivel)
+                    van dentro, en una línea con enviar. #769: en reposo la tarjeta va tintada para
+                    que se vea dónde escribir; al enfocarla vuelve a blanco. */}
+                <div className="rounded-xl border border-cyan-300 bg-cyan-50/70 transition-colors focus-within:border-cyan-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-cyan-100">
+                  {attachedDocs && attachedDocs.docs.length > 0 && (
+                    // #44 — el adjunto es de la CONVERSACIÓN: se queda a la vista en la tarjeta.
+                    <div className="flex flex-wrap items-center gap-1.5 px-2.5 pt-2">
+                      {attachedDocs.docs.map((d) => (
+                        <span key={d.id} className="inline-flex max-w-full items-center gap-1.5 rounded-md border bg-white px-1.5 py-0.5 text-[11.5px] text-gray-700">
+                          <Paperclip className="h-3 w-3 shrink-0 text-cyan-600" />
+                          <span className="max-w-[180px] truncate" title={d.fileName}>{d.fileName}</span>
+                          <button
+                            type="button"
+                            onClick={() => void removeDoc(d.id)}
+                            aria-label={t("ui.mycobot.attachRemove")}
+                            className="rounded p-0.5 text-gray-400 hover:text-gray-700"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </span>
+                      ))}
+                      {attachedDocs.docs.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => void removeAllDocs()}
+                          className="rounded px-1 text-[11px] text-gray-500 underline hover:text-gray-800"
+                        >
+                          {t("ui.mycobot.attachRemoveAll")}
+                        </button>
+                      )}
+                    </div>
+                  )}
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -2702,32 +2768,6 @@ export function MycoBotRail({
                       e.target.value = "";
                     }}
                   />
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={attaching || loading}
-                    aria-label={t("ui.mycobot.attach")}
-                    title={t("ui.mycobot.attach")}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border text-gray-500 hover:bg-gray-50 disabled:opacity-40"
-                  >
-                    {attaching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
-                  </button>
-                  {dictado && (
-                    <BotonDictado
-                      url={transcribeUrl}
-                      contexto={appSlug ? `mycobot-${appSlug}` : "mycobot"}
-                      disabled={loading}
-                      onAviso={setAvisoDictado}
-                      onTexto={(texto) => {
-                        // Se AÑADE a lo que hubiera y NO se envía (D3): la persona revisa y envía.
-                        setInput((prev) => (prev.trim() ? `${prev.trimEnd()} ${texto}` : texto));
-                        requestAnimationFrame(() => {
-                          const el = inputRef.current;
-                          if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
-                        });
-                      }}
-                    />
-                  )}
                   <textarea
                     ref={inputRef}
                     value={input}
@@ -2741,48 +2781,110 @@ export function MycoBotRail({
                     rows={1}
                     placeholder={t("ui.mycobot.placeholder")}
                     aria-label={t("ui.mycobot.placeholder")}
-                    // #563(a) — `overflow-y-auto` + max-height activa el scroll interno
-                    // una vez alcanzada la altura máxima; la altura la fija el efecto
-                    // de auto-grow (inputRef) según el contenido.
-                    // #769 — fondo tintado en reposo: "apenas se ve dónde escribir".
-                    // Blanco sobre el panel claro no se distinguía de nada. Mismo
-                    // tratamiento que el buscador IA de la Biblioteca; al enfocar
-                    // vuelve a blanco, que la pista es para encontrarlo, no para escribir.
-                    className="max-h-[160px] min-h-[40px] flex-1 resize-none overflow-y-auto rounded-md border border-cyan-300 bg-cyan-100 px-3 py-2 text-sm outline-none focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-cyan-500"
+                    // #563(a) — `overflow-y-auto` + max-height: scroll interno al llegar al tope; la
+                    // altura la fija el efecto de auto-grow (inputRef) según el contenido.
+                    className="block max-h-[160px] min-h-[40px] w-full resize-none overflow-y-auto bg-transparent px-3 pb-1 pt-2.5 text-sm outline-none placeholder:text-gray-500"
                   />
-                  <button
-                    type="submit"
-                    disabled={loading || !input.trim()}
-                    aria-label={t("ui.mycobot.send")}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-cyan-600 text-white hover:bg-cyan-700 disabled:opacity-40"
-                  >
-                    <Send className="h-4 w-4" />
-                  </button>
+                  <div className="flex items-center gap-0.5 px-1.5 pb-1.5">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={attaching || loading}
+                      aria-label={t("ui.mycobot.attach")}
+                      title={t("ui.mycobot.attach")}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-500 outline-none hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-cyan-500 disabled:opacity-40"
+                    >
+                      {attaching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+                    </button>
+                    {dictado && (
+                      <BotonDictado
+                        url={transcribeUrl}
+                        contexto={appSlug ? `mycobot-${appSlug}` : "mycobot"}
+                        disabled={loading}
+                        onAviso={setAvisoDictado}
+                        className="h-8 rounded-full border-transparent"
+                        onTexto={(texto) => {
+                          // Se AÑADE a lo que hubiera y NO se envía (D3): la persona revisa y envía.
+                          setInput((prev) => (prev.trim() ? `${prev.trimEnd()} ${texto}` : texto));
+                          requestAnimationFrame(() => {
+                            const el = inputRef.current;
+                            if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+                          });
+                        }}
+                      />
+                    )}
+                    {skillsDisponibles && skills.length > 0 && (() => {
+                      const activa = skills.find((s) => s.id === activeSkillId);
+                      return (
+                        <FichaMenu
+                          icono={<Sparkles className="h-3.5 w-3.5 shrink-0" />}
+                          etiqueta={activa ? `${activa.nombre}${activa.deFabrica ? " ★" : ""}` : t("ui.mycobot.skillChip")}
+                          tono={activa ? "activo" : "neutro"}
+                          titulo={t("ui.mycobot.skillSelect")}
+                          valor={activeSkillId ?? ""}
+                          onElegir={(v) => setActiveSkillId(v || null)}
+                          alQuitar={activa ? () => setActiveSkillId(null) : undefined}
+                          quitarLabel={t("ui.mycobot.skillQuitar")}
+                          opciones={[
+                            { valor: "", etiqueta: t("ui.mycobot.skillNone") },
+                            ...skills.map((s) => ({ valor: s.id, etiqueta: `${s.nombre}${s.deFabrica ? " ★" : ""}`, detalle: s.descripcion })),
+                          ]}
+                        />
+                      );
+                    })()}
+                    <FichaMenu
+                      icono={<Gauge className="h-3.5 w-3.5 shrink-0" />}
+                      etiqueta={t(nivel === "profundo" ? "ui.mycobot.nivelProfundo" : nivel === "razonamiento" ? "ui.mycobot.nivelRazonamiento" : "ui.mycobot.nivelNormal")}
+                      tono={nivel === "normal" ? "neutro" : "aviso"}
+                      titulo={t("ui.mycobot.nivelTitulo")}
+                      valor={nivel}
+                      onElegir={(v) => cambiarNivel(v as NivelChat)}
+                      disabled={loading}
+                      dataAttr="data-nivel"
+                      opciones={[
+                        { valor: "normal", etiqueta: t("ui.mycobot.nivelNormal"), detalle: t("ui.mycobot.nivelDetalleNormal") },
+                        { valor: "razonamiento", etiqueta: t("ui.mycobot.nivelRazonamiento"), detalle: t("ui.mycobot.nivelAvisoRazonamiento") },
+                        { valor: "profundo", etiqueta: t("ui.mycobot.nivelProfundo"), detalle: t("ui.mycobot.nivelAvisoProfundo") },
+                      ]}
+                    />
+                    <span className="flex-1" />
+                    <button
+                      type="submit"
+                      disabled={loading || !input.trim()}
+                      aria-label={t("ui.mycobot.send")}
+                      title={t("ui.mycobot.send")}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan-600 text-white outline-none hover:bg-cyan-700 focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-1 disabled:opacity-40"
+                    >
+                      <ArrowUp className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
-                <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] text-gray-500">
-                  <label htmlFor="mycobot-nivel">{t("ui.mycobot.nivel")}</label>
-                  <select
-                    id="mycobot-nivel"
-                    value={nivel}
-                    onChange={(e) => cambiarNivel(e.target.value as NivelChat)}
-                    disabled={loading}
-                    data-nivel
-                    className="rounded border border-gray-200 bg-white px-1.5 py-0.5 text-[11px] text-gray-700"
-                  >
-                    <option value="normal">{t("ui.mycobot.nivelNormal")}</option>
-                    <option value="razonamiento">{t("ui.mycobot.nivelRazonamiento")}</option>
-                    <option value="profundo">{t("ui.mycobot.nivelProfundo")}</option>
-                  </select>
-                  {nivel !== "normal" && (
-                    <span className="text-amber-700">
-                      {t(nivel === "profundo" ? "ui.mycobot.nivelAvisoProfundo" : "ui.mycobot.nivelAvisoRazonamiento")}
-                    </span>
-                  )}
-                </div>
+                {/* Línea pequeña: el dictado manda si tiene algo que decir; si no, el coste del nivel
+                    y de los adjuntos (solo cuando aplican) y el aviso legal. */}
                 {avisoDictado ? (
-                  <p role="status" className="mt-1.5 text-[10px] text-amber-700">{avisoDictado}</p>
+                  <p role="status" className="mt-1.5 text-center text-[10px] text-amber-700">{avisoDictado}</p>
                 ) : (
-                  <p className="mt-1.5 text-[10px] text-gray-400">{t("ui.mycobot.disclaimer")}</p>
+                  <p className="mt-1.5 text-center text-[10px] leading-snug text-gray-400">
+                    {nivel !== "normal" && (
+                      <span className="text-amber-700">
+                        {t(nivel === "profundo" ? "ui.mycobot.nivelAvisoProfundo" : "ui.mycobot.nivelAvisoRazonamiento")}{" "}
+                      </span>
+                    )}
+                    {attachedDocs && attachedDocs.docs.length > 0 && (
+                      // #34 — el texto viaja en CADA pregunta: tamaño y coste a la vista.
+                      <span className="text-gray-500">
+                        {t("ui.mycobot.attachEveryTurn")}{" "}
+                        {t("ui.mycobot.attachSummary", {
+                          tokens: attachedDocs.tokensEstimados.toLocaleString(),
+                          pct: String(Math.min(100, Math.round((attachedDocs.totalChars / attachedDocs.maxChars) * 100))),
+                        })}
+                        {attachedDocs.creditosPorPregunta != null && (
+                          <> · {t("ui.mycobot.attachCost", { creditos: attachedDocs.creditosPorPregunta.toLocaleString() })}</>
+                        )}{" "}
+                      </span>
+                    )}
+                    {t("ui.mycobot.disclaimer")}
+                  </p>
                 )}
               </form>
             </>
