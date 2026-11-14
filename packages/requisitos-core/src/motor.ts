@@ -410,8 +410,13 @@ export function evaluar(
           return undefined;
         };
         if (cands.length === 0) {
-          v = comparar(c.operador, conPresuncion(c.fact, undefined), c.valor);
-          if (v === null) { faltan.add(c.fact); faltanPorRol.add(`${c.fact}@${c.scopeRolCodigo ?? ''}`); }
+          // Sin intervinientes con datos (Redactor, antes de que los tengan): también aquí cuenta si el dato existe,
+          // con lo que presume el caso. Si no se sabe, se pide el dato del que depende (garaje de Sabadell, 2.ª pasada
+          // del 14-nov-2026: las tarjetas del régimen salían antes que las del estado civil).
+          const ex = existePara(existencias, c.fact, {}, presunciones);
+          const pend = Array.isArray(ex) && existencias.get(c.fact)?.preguntable && !(c.fact in presunciones) ? ex : null;
+          v = ex === false ? false : comparar(c.operador, conPresuncion(c.fact, undefined), c.valor);
+          if (v === null) for (const f of pend ?? [c.fact]) { faltan.add(f); faltanPorRol.add(`${f}@${c.scopeRolCodigo ?? ''}`); }
         } else {
           const porCand = cands.map((x) => {
             pendiente = null;

@@ -61,6 +61,15 @@ describe('resolverRequisitos con `existeSi`', () => {
     const res = await resolverRequisitos(conExistencias(sinDef), '0501', comprador({}));
     expect(res.preguntas.map((p) => p.fact)).toEqual(['SUJETO.REGIMEN_ECONOMICO']);
   });
+  it('sin intervinientes con datos (Redactor al empezar): también se pregunta el estado civil y no el régimen', async () => {
+    const res = await resolverRequisitos(conExistencias(), '0501', {}, { preguntasPorRol: true });
+    expect(res.preguntas.map((p) => [p.fact, p.rol])).toEqual([['SUJETO.ESTADO_CIVIL', 'COMPRADOR']]);
+  });
+  it('sin intervinientes y el caso presume soltero: la regla se descarta', async () => {
+    const res = await resolverRequisitos(conExistencias(), '0501', {}, { presunciones: { 'SUJETO.ESTADO_CIVIL': 'SOLTERO' } });
+    expect(res.preguntas).toEqual([]);
+    expect(res.descartados.map((x) => x.codigo)).toEqual(['CERT_CAPITULACIONES']);
+  });
   it('sin el método en el repositorio, como en 0.3.15', async () => {
     const res = await resolverRequisitos(repo({ tiposObjeto: TIPOS_OBJETO, reglas }), '0501', comprador({ ESTADO_CIVIL: 'SOLTERO' }));
     expect(res.preguntas.map((p) => p.fact)).toEqual(['SUJETO.REGIMEN_ECONOMICO']);

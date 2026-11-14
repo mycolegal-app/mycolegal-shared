@@ -1,5 +1,11 @@
 # @mycolegal-app/requisitos-core
 
+## 0.3.17 — existeSi también sin intervinientes (14-nov-2026)
+
+- Una condición sobre un dato de persona sin intervinientes con datos (Redactor al empezar) también mira `existeSi`:
+  si no se sabe, se pregunta el dato del que depende; si lo presumido dice que no existe, NO_APLICA. En la 2.ª pasada del
+  garaje las cuatro tarjetas del régimen salían antes que las del estado civil.
+
 ## 0.3.16 — cuándo existe un dato, en el catálogo (14-nov-2026)
 
 - `existencias?()` en el puerto (OPCIONAL) y `existePara`: un dato con `existeSi` en el catálogo (`atributo_defs_global`,
