@@ -23,6 +23,8 @@ export {
   FACT_MEDIO_PAGO,
   FACT_CAUSA,
   NO_APLICA,
+  existePara,
+  type Existencias,
   type Hechos,
   type Pregunta,
   type RequisitoResuelto,
@@ -42,6 +44,7 @@ export {
   type AjustePresuncion,
   type DerivadoDef,
   type PreguntaPor,
+  type ExisteSiDef,
 } from './src/puerto';
 
 // Escenarios base (0.3.3): cuál toca y qué presume, con lo heredado de GLOBAL, familia y subfamilia.

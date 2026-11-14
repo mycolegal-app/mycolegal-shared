@@ -2,7 +2,7 @@
 // interviniente no dejan la condición en duda, y la pregunta de tipo siempre tiene respuesta.
 import { describe, it, expect } from 'vitest';
 import { resolverRequisitos, FACT_TIPO_SUJETO } from '../src/motor';
-import { regla, cond, repo, TIPOS_OBJETO } from './ayuda';
+import { regla, cond, repo as repoBase, TIPOS_OBJETO } from './ayuda';
 import type { NodoTipo, ReglaGolden } from '../src/puerto';
 
 const TIPOS_SUJETO: NodoTipo[] = [
@@ -14,6 +14,11 @@ const TIPOS_SUJETO: NodoTipo[] = [
   { codigo: 'SL', parentCodigo: 'SOCIEDAD_CAPITAL' },
 ];
 const BASE = { tiposObjeto: TIPOS_OBJETO, tiposSujeto: TIPOS_SUJETO };
+/** El régimen sólo existe si está casado: lo declara el catálogo (`existeSi`, 0.3.16; antes, `DEPENDE_DE` en el motor). */
+const repo = (o: Parameters<typeof repoBase>[0]) => ({
+  ...repoBase(o),
+  existencias: async () => [{ fact: 'SUJETO.REGIMEN_ECONOMICO', si: [{ fact: 'SUJETO.ESTADO_CIVIL', op: 'EQ', valor: 'CASADO' }] }],
+});
 /** Condición sobre un dato de persona física, como la declara el catálogo. */
 const dePF = (codigo: string, op: string, valor: unknown, extra = {}): ReglaGolden['condiciones'][number] => {
   const c = cond('SUJETO', codigo, op, valor, extra);

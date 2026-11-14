@@ -172,6 +172,28 @@ export interface RepositorioRequisitos {
   /** Datos que no se preguntan ellos mismos sino por otro (`atributo_defs_global.preguntaPor`, catálogo
    *  1.1.64): la antigüedad de la obra se pregunta por su AÑO de terminación. OPCIONAL (0.3.14). */
   preguntasPor?(): Promise<PreguntaPor[]>;
+
+  /** Datos que sólo EXISTEN si otro dato de la misma persona o bien tiene un valor
+   *  (`atributo_defs_global.existeSi`): el régimen económico, si está casada. OPCIONAL (0.3.16): sin él,
+   *  todo dato existe (salvo por su tipo, `paraTipo`). */
+  existencias?(): Promise<ExisteSiDef[]>;
+}
+
+/**
+ * Cuándo existe un dato (`atributo_defs_global.existeSi`, Lanzamiento + Carles, 14-nov-2026): condiciones
+ * sobre OTROS datos del mismo interviniente o bien, todas a la vez (AND), con los operadores de una regla.
+ *
+ *   · se cumplen      → el dato existe y se pregunta como siempre;
+ *   · alguna no       → NO_APLICA, aunque haya una respuesta guardada (se aparta, no se borra);
+ *   · alguna no se sabe → se pregunta ESE dato, y el dependiente espera a la vuelta siguiente.
+ */
+export interface ExisteSiDef {
+  fact: string;
+  si: {
+    fact: string; op: string; valor: unknown;
+    /** Cómo se pregunta el dato de la condición, si falta. Sin él, se pregunta el dependiente, como antes. */
+    def?: { label: string; tipoDato: string; opciones: unknown; fuentePreferente: string | null };
+  }[];
 }
 
 /** Un dato que se pregunta por otro del mismo ámbito (y del mismo interviniente o bien), con cómo se pregunta éste. */

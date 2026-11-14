@@ -24,7 +24,7 @@
  *   · preguntas    — el hecho que bloquea, con su enunciado, tipo y opciones
  */
 import { decidirCapa, type Capa } from './capa';
-import type { RepositorioRequisitos, DerivadoDef } from './puerto';
+import type { RepositorioRequisitos, DerivadoDef, ExisteSiDef } from './puerto';
 
 /** TRUE / FALSE / UNKNOWN. `null` es UNKNOWN: no se conoce, que no es lo mismo que falso. */
 export type Ternario = true | false | null;
@@ -250,16 +250,40 @@ export type Cond = {
 };
 
 /**
- * Datos que dependen de OTRO dato del mismo interviniente: sólo existen si éste tiene uno de
- * esos valores. No está en el catálogo (no hay columna para expresarlo), así que se declara
- * aquí, corto y a la vista. Si crece, sube a `atributo_defs_global`.
+ * CUÁNDO EXISTE UN DATO (`atributo_defs_global.existeSi`, 0.3.16; antes, la tabla `DEPENDE_DE` escrita
+ * aquí y otra vez en Redactor): sólo si otros datos del MISMO interviniente o bien cumplen sus
+ * condiciones. El régimen económico, si está casada.
+ *
+ * `preguntable`: todas sus condiciones traen cómo preguntarlas (`def`). Sólo entonces, si una no se
+ * sabe, se pregunta ésa en lugar del dependiente (garaje de Sabadell en LOCAL, 14-nov-2026: a dos
+ * solteros se les preguntó el régimen antes que el estado civil, se contestó «Gananciales» y la
+ * escritura salió «para su sociedad de gananciales»).
  */
-const DEPENDE_DE: Record<string, { fact: string; valores: unknown[] }> = {
-  'SUJETO.REGIMEN_ECONOMICO': { fact: 'ESTADO_CIVIL', valores: ['CASADO'] },
-  'SUJETO.REGIMEN_ECONOMICO_MATRIMONIAL': { fact: 'ESTADO_CIVIL', valores: ['CASADO'] },
-  'SUJETO.REGIMEN_ES_CAPITULADO': { fact: 'ESTADO_CIVIL', valores: ['CASADO'] },
-  'SUJETO.CONYUGE_NO_SEPARADO': { fact: 'ESTADO_CIVIL', valores: ['CASADO'] },
-};
+export type Existencias = Map<string, { si: ExisteSiDef['si']; preguntable: boolean }>;
+
+/** ¿Existe el dato `fact` para quien tiene estos `hechos`? `true`, `false` o los datos de su condición que faltan. */
+export function existePara(
+  existencias: Existencias, fact: string, hechos: Record<string, unknown>, presunciones: Record<string, unknown> = {},
+): true | false | string[] {
+  const e = existencias.get(fact);
+  if (!e) return true;
+  const faltan: string[] = [];
+  for (const c of e.si) {
+    if (c.fact === fact) continue;
+    const nombre = c.fact.split('.').slice(1).join('.');
+    const v = hechos[nombre] !== undefined ? hechos[nombre] : presunciones[c.fact];
+    const r = comparar(c.op, v, c.valor);
+    if (r === false) return false;
+    if (r === null) faltan.push(c.fact);
+  }
+  return faltan.length ? faltan : true;
+}
+
+/** Las existencias del repositorio, como mapa. Sin el método, ninguna: todo dato existe. */
+async function cargarExistencias(repo: RepositorioRequisitos): Promise<Existencias> {
+  const defs = repo.existencias ? await repo.existencias() : [];
+  return new Map(defs.map((d) => [d.fact, { si: d.si, preguntable: d.si.length > 0 && d.si.every((c) => c.def) }]));
+}
 
 /**
  * Datos que se DEDUCEN DEL ROL del interviniente cuando el expediente no los trae (8-oct-2026).
@@ -316,6 +340,8 @@ export function evaluar(
    * él, nadie acompaña.
    */
   acompana: (rol: string | null | undefined) => boolean = () => false,
+  /** Cuándo existe cada dato (`existeSi`, 0.3.16). Sin ellas, todo dato existe. */
+  existencias: Existencias = new Map(),
 ): { valor: Ternario; faltan: string[]; presumidos: string[]; faltanPorRol: string[]; faltanPorSujeto: string[] } {
   if (condiciones.length === 0) return { valor: true, faltan: [], presumidos: [], faltanPorRol: [], faltanPorSujeto: [] };
   // Tercera fuente de valor, después del dato: lo que el escenario base presume. Solo
@@ -364,28 +390,49 @@ export function evaluar(
         // El tipo de bien o de interviniente no es un atributo: vive en `tipo`, no en
         // `hechos`. Una condición sobre OBJETO.TIPO / SUJETO.TIPO (reglas propias de una
         // notaría) lo lee de ahí.
+        // Los datos de su `existeSi` que faltan para el candidato que se está leyendo (ver abajo).
+        let pendiente: string[] | null = null;
         const leer = (x: { tipo?: string | null; rol?: string | null; hechos: Record<string, unknown> }): unknown => {
           if (nombre === 'TIPO') return x.tipo ?? undefined;
+          // ¿Existe el dato para éste? Si no, NO_APLICA aunque haya respuesta: un «Gananciales» contestado
+          // antes de saber que es soltero se aparta (no se borra: si resulta casado, vuelve a valer).
+          const ex = existePara(existencias, c.fact, x.hechos, presunciones);
+          if (ex === false) return NO_APLICA;
           const v = x.hechos[nombre];
           if (v !== undefined) return v;
           // ¿Lo dice su rol? (DISPONE_DE_SUS_BIENES: vendedor sí, comprador no). Sólo con un rol
           // declarado: sin rol, el comodín de Redactor lo haría a la vez disponente y adquirente.
           if (x.rol) for (const [base, valor] of DEDUCIDO_DEL_ROL[c.fact] ?? []) if (esUnRol(x.rol, base)) return valor;
-          // El dato no está: ¿es que no existe para éste? Por su tipo, o por el dato del que depende.
+          // El dato no está: ¿es que no existe para éste, por su tipo?
           if (c.paraTipo && !RAICES_TIPO.has(c.paraTipo) && x.tipo && !esUnTipo(x.tipo, c.paraTipo)) return NO_APLICA;
-          const dep = DEPENDE_DE[c.fact];
-          const base = dep ? x.hechos[dep.fact] : undefined;
-          if (dep && base !== undefined && base !== null && base !== NO_APLICA && !dep.valores.includes(base)) return NO_APLICA;
+          // ¿O es que aún no se sabe si existe? Entonces lo que falta es el dato del que depende.
+          if (Array.isArray(ex) && existencias.get(c.fact)?.preguntable) pendiente = ex;
           return undefined;
         };
-        if (cands.length === 0) v = comparar(c.operador, conPresuncion(c.fact, undefined), c.valor);
-        else {
-          const porCand = cands.map((x) => comparar(c.operador, conPresuncion(c.fact, leer(x)), c.valor));
-          v = porCand.reduce<Ternario>((a, b) => o(a, b), false);
-          if (v === null) cands.forEach((x, i) => { if (porCand[i] === null) faltanPorSujeto.add(`${c.fact}@${c.scopeRolCodigo ?? ''}#${x.id}`); });
+        if (cands.length === 0) {
+          v = comparar(c.operador, conPresuncion(c.fact, undefined), c.valor);
+          if (v === null) { faltan.add(c.fact); faltanPorRol.add(`${c.fact}@${c.scopeRolCodigo ?? ''}`); }
+        } else {
+          const porCand = cands.map((x) => {
+            pendiente = null;
+            const r = comparar(c.operador, conPresuncion(c.fact, leer(x)), c.valor);
+            return { r, pend: r === null ? pendiente as string[] | null : null };
+          });
+          v = porCand.reduce<Ternario>((a, b) => o(a, b.r), false);
+          if (v === null) cands.forEach((x, i) => {
+            const { r, pend } = porCand[i];
+            if (r !== null) return;
+            // Falta el dato del que depende: se pide ése, de este mismo interviniente o bien, y el
+            // dependiente espera a la vuelta siguiente.
+            for (const f of pend ?? [c.fact]) {
+              faltan.add(f);
+              faltanPorRol.add(`${f}@${c.scopeRolCodigo ?? ''}`);
+              faltanPorSujeto.add(`${f}@${c.scopeRolCodigo ?? ''}#${x.id}`);
+            }
+          });
         }
       }
-      if (v === null) {
+      if (v === null && ambito === 'ACTO') {
         faltan.add(c.fact);
         faltanPorRol.add(`${c.fact}@${c.scopeRolCodigo ?? ''}`);
       }
@@ -793,6 +840,10 @@ export async function resolverRequisitos(
   /** Un derivado en duda falta por lo que falta en su tramo (si se sabe cómo preguntarlo). */
   const enDuda = (fact: string) => { const d = dudas.get(fact); return d && d.si.every((c) => c.def) ? d : undefined; };
   if (derivados.length) presunciones = { ...presunciones, ...Object.fromEntries(derivados.map((d) => [d.fact, d.valor])) };
+  // Cuándo existe cada dato (`existeSi`, 0.3.16), y cómo se pregunta el dato del que depende.
+  const existencias = await cargarExistencias(repo);
+  const comoPreguntarBase = new Map<string, NonNullable<ExisteSiDef['si'][number]['def']>>();
+  for (const e of existencias.values()) for (const c of e.si) if (c.def && !comoPreguntarBase.has(c.fact)) comoPreguntarBase.set(c.fact, c.def);
 
   // Qué tipos de objeto declara el acto en conjunto. Un tipo «estrecha» si alguna otra
   // regla del acto declara un ancestro suyo: RUSTICA estrecha en una compraventa porque
@@ -828,8 +879,8 @@ export async function resolverRequisitos(
     if (grupos.size) condicionesTexto.push([...grupos.values()].map((g) => g.join(' y ')).join(' O '));
     if (r.condMedioPago) condicionesTexto.push(`Medio de pago [${FACT_MEDIO_PAGO}] incluye ${r.condMedioPago}`);
     if (r.condCausa) condicionesTexto.push(`Causa o modalidad del acto [${FACT_CAUSA}] = ${r.condCausa}`);
-    const porCuerpo = evaluar(conds, hechos, ambitoDe, presunciones, esUnRol, esUn, {}, acompana);
-    const porEjes = evaluar(ejes, hechos, ambitoDe, presunciones, esUnRol, esUn, {}, acompana);
+    const porCuerpo = evaluar(conds, hechos, ambitoDe, presunciones, esUnRol, esUn, {}, acompana, existencias);
+    const porEjes = evaluar(ejes, hechos, ambitoDe, presunciones, esUnRol, esUn, {}, acompana, existencias);
     const valorCond = y(porCuerpo.valor, porEjes.valor);
     const porCondicion = {
       valor: valorCond,
@@ -900,7 +951,7 @@ export async function resolverRequisitos(
       ],
       // Cada instancia mira a su interviniente o su bien (10-oct-2026): de quien no cumple, no se pide.
       instancias: valor === false ? [] : expandir(r.scopeGeneracion, r.roles, r.objetos, hechos, esUn, esUnRol, {
-        cumple: (fijar) => evaluar(conds, hechos, ambitoDe, presunciones, esUnRol, esUn, fijar, acompana).valor !== false,
+        cumple: (fijar) => evaluar(conds, hechos, ambitoDe, presunciones, esUnRol, esUn, fijar, acompana, existencias).valor !== false,
         tipoSujetoPresumido: tipoSujPres,
       }),
     };
@@ -966,6 +1017,15 @@ export async function resolverRequisitos(
         }
         if (!faltan.includes(porQuien(fact))) continue;
         preguntar(fact, c.scopeRolCodigo ?? null, c.atributoDef.ambito, c.atributoDef, porCondicion.faltanPorRol, porCondicion.faltanPorSujeto);
+      }
+      // El dato del que depende otro (`existeSi`) y que no es condición de la regla: el estado civil, cuando
+      // la regla mira el régimen. Se pregunta él, con su papel y su interviniente.
+      // (Si además es condición de la regla, ya está: `preguntar` no la duplica.)
+      for (const k of porCondicion.faltanPorRol) {
+        const [fact, rol] = [k.slice(0, k.lastIndexOf('@')), k.slice(k.lastIndexOf('@') + 1)];
+        const def = comoPreguntarBase.get(fact);
+        if (!def || !faltan.includes(fact)) continue;
+        preguntar(fact, rol || null, ambitoDe(fact), def, porCondicion.faltanPorRol, porCondicion.faltanPorSujeto);
       }
       // Medio de pago y causa no tienen `AtributoDef` propio en todas las bases: la pregunta se
       // compone aquí con los valores que de verdad distinguen algo en este acto.

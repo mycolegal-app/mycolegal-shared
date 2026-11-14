@@ -1,5 +1,16 @@
 # @mycolegal-app/requisitos-core
 
+## 0.3.16 — cuándo existe un dato, en el catálogo (14-nov-2026)
+
+- `existencias?()` en el puerto (OPCIONAL) y `existePara`: un dato con `existeSi` en el catálogo (`atributo_defs_global`,
+  `[{ fact, op, valor }]` sobre otros datos de la misma persona o bien) sólo existe si se cumplen. Si no, es NO_APLICA
+  **aunque tenga respuesta** (se aparta, no se borra); si aún no se sabe, se pregunta el dato del que depende, con su
+  papel y su interviniente, y el dependiente espera (garaje de Sabadell en LOCAL: a dos solteros se les preguntó el
+  régimen antes que el estado civil). Para preguntarlo hace falta su `def`; sin ella, se pregunta el dependiente.
+- Fuera la tabla `DEPENDE_DE` del motor (y su gemela de Redactor): sin `existencias()` el régimen de un soltero vuelve a
+  ser desconocido, no NO_APLICA. El catálogo lo declara.
+- `evaluar` gana un último parámetro opcional, `existencias`.
+
 ## 0.3.14 — un dato que se pregunta por otro (7-nov-2026)
 
 - `preguntasPor?()` en el puerto (OPCIONAL): un dato con `preguntaPor` en el catálogo (1.1.64) no se pregunta él,

@@ -1,5 +1,10 @@
 # mycolegal-sharedlib — Changelog
 
+## (siguiente) — cuándo existe un dato (2026-11-14)
+
+`existencias()` lee `atributo_defs_global."existeSi"` por SQL, con cómo se pregunta cada dato de sus condiciones, para
+`requisitos-core` 0.3.16. Sin la columna (entorno sin `atributo_existe_si`), nada.
+
 ## (siguiente) — preguntar un dato por otro (2026-11-07)
 
 `preguntasPor()` lee `atributo_defs_global."preguntaPor"` por SQL, con cómo se pregunta el dato de destino,

@@ -25,7 +25,7 @@
 // sharedlib cuando sólo DocFilling la declara y la usa—, y el coste no es el
 // disco: un cambio incompatible en el motor podría romper el `npm install` de
 // trece apps que no lo tocan.
-import type { RepositorioRequisitos, ReglaGolden, NodoTipo, FilaEscenario, FilaTransversal, AjustePresuncion, DerivadoDef, PreguntaPor } from '@mycolegal-app/requisitos-core';
+import type { RepositorioRequisitos, ReglaGolden, NodoTipo, FilaEscenario, FilaTransversal, AjustePresuncion, DerivadoDef, PreguntaPor, ExisteSiDef } from '@mycolegal-app/requisitos-core';
 import { ORIGEN_GOLDEN } from '@mycolegal-app/requisitos-core';
 
 // Se declara aquí y no se importa: `requisitos-core` lo exporta desde la versión de las dos
@@ -265,6 +265,41 @@ export function crearRepositorioRequisitos(client: ClienteGolden): RepositorioRe
               scopeRol: typeof c.scopeRol === 'string' ? c.scopeRol : null, paraTipo: paraTipo(String(c.fact)),
               ...(comoPreguntar.has(String(c.fact)) ? { def: comoPreguntar.get(String(c.fact))! } : {}),
             })),
+          })),
+        }];
+      });
+    },
+
+    // ── Cuándo existe un dato (14-nov-2026, requisitos-core 0.3.16) ───────────
+    async existencias() {
+      if (!client.$queryRawUnsafe) return [];
+      type Cond = { fact?: unknown; op?: unknown; valor?: unknown };
+      let filas: { ambito: string; codigo: string; existeSi: unknown }[];
+      try {
+        filas = await client.$queryRawUnsafe(
+          'SELECT "ambito", "codigo", "existeSi" FROM "atributo_defs_global" WHERE "existeSi" IS NOT NULL');
+      } catch { return []; } // sin la columna: un entorno sin la migración `atributo_existe_si`
+      if (!filas.length) return [];
+      // Cómo se pregunta cada dato de las condiciones, para preguntarlo a él si falta.
+      const citados = [...new Set(filas.flatMap((f) => (Array.isArray(f.existeSi) ? f.existeSi as Cond[] : []).map((c) => String(c.fact ?? ''))))].filter(Boolean);
+      const defs = citados.length ? await client.$queryRawUnsafe(
+        'SELECT "ambito", "codigo", "label", "tipoDato", "opciones", "fuentePreferente" FROM "atributo_defs_global" WHERE ("ambito" || \'.\' || "codigo") = ANY($1)',
+        citados) as { ambito: string; codigo: string; label: string; tipoDato: string; opciones: unknown; fuentePreferente: string | null }[] : [];
+      const comoPreguntar = new Map<string, { label: string; tipoDato: string; opciones: unknown; fuentePreferente: string | null }>();
+      for (const d of defs) {
+        const k = `${d.ambito}.${d.codigo}`;
+        if (!comoPreguntar.has(k)) comoPreguntar.set(k, { label: d.label, tipoDato: d.tipoDato, opciones: d.opciones ?? null, fuentePreferente: d.fuentePreferente ?? null });
+      }
+      const vistos = new Set<string>();
+      return filas.flatMap((f): ExisteSiDef[] => {
+        const fact = `${f.ambito}.${f.codigo}`;
+        if (vistos.has(fact) || !Array.isArray(f.existeSi) || !f.existeSi.length) return [];
+        vistos.add(fact);
+        return [{
+          fact,
+          si: (f.existeSi as Cond[]).filter((c) => c.fact && c.op).map((c) => ({
+            fact: String(c.fact), op: String(c.op), valor: c.valor,
+            ...(comoPreguntar.has(String(c.fact)) ? { def: comoPreguntar.get(String(c.fact))! } : {}),
           })),
         }];
       });
