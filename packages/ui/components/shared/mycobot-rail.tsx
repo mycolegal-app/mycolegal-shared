@@ -365,7 +365,11 @@ export function MycoBotRail({
   // modelo va escribiendo, ANTES de verificar citas y artículos. Al terminar, ambos se sustituyen
   // por la respuesta definitiva (la del `done`), que es la única que se guarda y se puede copiar.
   const [stepsLive, setStepsLive] = useState<StepRecord[]>([]);
-  const [borrador, setBorrador] = useState("");
+  // Dos borradores, porque en una duda jurídica escriben dos motores uno tras otro: el de
+  // doctrina (notas de trabajo, un paso intermedio) y luego MycoBot (la respuesta). Pintarlos en
+  // el mismo recuadro hacía que el texto se borrase y se reescribiera: parecía el mismo paso dos
+  // veces. Un evento sin `origen` (apps que no lo mandan) cuenta como respuesta.
+  const [borrador, setBorrador] = useState<{ doctrina: string; respuesta: string }>({ doctrina: "", respuesta: "" });
   // Mensajes cuyo «Ver proceso» está desplegado (por índice de mensaje).
   const [openProcess, setOpenProcess] = useState<Set<number>>(new Set());
   // Índice del mensaje cuya respuesta se acaba de copiar al portapapeles (feedback ✓).
@@ -928,10 +932,10 @@ export function MycoBotRail({
       setLoading(true);
       setStepLive(null);
       setStepsLive([]);
-      setBorrador("");
+      setBorrador({ doctrina: "", respuesta: "" });
       const steps: StepRecord[] = [];
       let answerText = "";
-      let borradorAcc = "";
+      const borradorAcc = { doctrina: "", respuesta: "" };
       try {
         const res = await fetch(askUrl, {
           method: "POST",
@@ -1032,9 +1036,11 @@ export function MycoBotRail({
               setStepsLive(steps.map((x) => ({ ...x })));
             } else if (ev.event === "borrador") {
               // `nuevo`: empieza otra redacción (o un reintento) y la anterior se descarta.
-              const b = ev.data as { texto?: string; nuevo?: boolean };
-              borradorAcc = (b.nuevo ? "" : borradorAcc) + (b.texto ?? "");
-              setBorrador(borradorAcc);
+              // Un reintento solo vacía el borrador de SU motor, nunca el del otro.
+              const b = ev.data as { texto?: string; nuevo?: boolean; origen?: "doctrina" | "respuesta" };
+              const o = b.origen === "doctrina" ? "doctrina" : "respuesta";
+              borradorAcc[o] = (b.nuevo ? "" : borradorAcc[o]) + (b.texto ?? "");
+              setBorrador({ ...borradorAcc });
             } else if (ev.event === "token") {
               answerText += (ev.data as { text?: string }).text ?? "";
             } else if (ev.event === "done") {
@@ -1074,7 +1080,7 @@ export function MycoBotRail({
         setLoading(false);
         setStepLive(null);
         setStepsLive([]);
-        setBorrador("");
+        setBorrador({ doctrina: "", respuesta: "" });
         void refreshBalance(); // la consulta puede haber gastado créditos
       }
     },
@@ -2578,16 +2584,34 @@ export function MycoBotRail({
                         <span>{t("ui.mycobot.thinking")}</span>
                       )}
                     </div>
-                    {borrador && (
-                      // Borrador: otra letra y otro color, para que no se confunda con la respuesta. Sin
-                      // enlaces de cita ni botones: las citas aún no están verificadas ni renumeradas.
-                      <div className="mt-2 rounded-md border border-dashed border-amber-300 bg-amber-50/60 p-2">
-                        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                    {borrador.doctrina && (
+                      // Notas de trabajo del motor de doctrina: otra letra y otro color, porque no son la
+                      // respuesta. Cuando MycoBot empieza a redactar se pliegan (no se borran): se ve que
+                      // ese paso terminó y se pueden releer.
+                      <details
+                        open={!borrador.respuesta}
+                        className="mt-2 rounded-md border border-dashed border-amber-300 bg-amber-50/60 p-2"
+                      >
+                        <summary className="cursor-pointer select-none text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                          {t("ui.mycobot.notasDoctrina")}
+                        </summary>
+                        <div
+                          className="mt-1 font-serif text-[13px] italic leading-relaxed text-slate-500 [&_h1]:font-semibold [&_h2]:font-semibold [&_h3]:font-semibold [&_li]:mt-0.5 [&_ol]:my-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-4"
+                          dangerouslySetInnerHTML={{ __html: renderMarkdown(borrador.doctrina) }}
+                        />
+                      </details>
+                    )}
+                    {borrador.respuesta && (
+                      // La respuesta mientras se escribe: la letra de las respuestas, algo atenuada y con
+                      // una raya a la izquierda. Sin enlaces de cita ni botones: las citas aún no están
+                      // verificadas ni renumeradas; al terminar la sustituye la definitiva.
+                      <div className="mt-2 border-l-2 border-cyan-300 pl-3">
+                        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-cyan-700">
                           {t("ui.mycobot.borrador")}
                         </p>
                         <div
-                          className="font-serif text-[13px] italic leading-relaxed text-slate-500 [&_h1]:font-semibold [&_h2]:font-semibold [&_h3]:font-semibold [&_li]:mt-0.5 [&_ol]:my-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-4"
-                          dangerouslySetInnerHTML={{ __html: renderMarkdown(borrador) }}
+                          className="text-sm leading-relaxed text-gray-600 [&_h1]:font-semibold [&_h2]:font-semibold [&_h3]:font-semibold [&_li]:mt-0.5 [&_ol]:my-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-4"
+                          dangerouslySetInnerHTML={{ __html: renderMarkdown(borrador.respuesta) }}
                         />
                       </div>
                     )}
