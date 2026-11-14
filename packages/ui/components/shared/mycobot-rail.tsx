@@ -361,6 +361,11 @@ export function MycoBotRail({
   const [loading, setLoading] = useState(false);
   // Paso en curso del bucle agéntico que se muestra en vivo (línea que se sustituye).
   const [stepLive, setStepLive] = useState<{ label: string; query?: string; hint?: string; error?: boolean } | null>(null);
+  // Mientras responde: los pasos ya dados (el último es el que está en curso) y el borrador que el
+  // modelo va escribiendo, ANTES de verificar citas y artículos. Al terminar, ambos se sustituyen
+  // por la respuesta definitiva (la del `done`), que es la única que se guarda y se puede copiar.
+  const [stepsLive, setStepsLive] = useState<StepRecord[]>([]);
+  const [borrador, setBorrador] = useState("");
   // Mensajes cuyo «Ver proceso» está desplegado (por índice de mensaje).
   const [openProcess, setOpenProcess] = useState<Set<number>>(new Set());
   // Índice del mensaje cuya respuesta se acaba de copiar al portapapeles (feedback ✓).
@@ -922,8 +927,11 @@ export function MycoBotRail({
       setMessages((m) => [...m, { role: "user", text: q }]);
       setLoading(true);
       setStepLive(null);
+      setStepsLive([]);
+      setBorrador("");
       const steps: StepRecord[] = [];
       let answerText = "";
+      let borradorAcc = "";
       try {
         const res = await fetch(askUrl, {
           method: "POST",
@@ -1021,6 +1029,12 @@ export function MycoBotRail({
                   setStepLive({ label: s.label, error: true });
                 }
               }
+              setStepsLive(steps.map((x) => ({ ...x })));
+            } else if (ev.event === "borrador") {
+              // `nuevo`: empieza otra redacción (o un reintento) y la anterior se descarta.
+              const b = ev.data as { texto?: string; nuevo?: boolean };
+              borradorAcc = (b.nuevo ? "" : borradorAcc) + (b.texto ?? "");
+              setBorrador(borradorAcc);
             } else if (ev.event === "token") {
               answerText += (ev.data as { text?: string }).text ?? "";
             } else if (ev.event === "done") {
@@ -1059,6 +1073,8 @@ export function MycoBotRail({
       } finally {
         setLoading(false);
         setStepLive(null);
+        setStepsLive([]);
+        setBorrador("");
         void refreshBalance(); // la consulta puede haber gastado créditos
       }
     },
@@ -1466,6 +1482,13 @@ export function MycoBotRail({
   useEffect(() => {
     if (view === "chat") threadRef.current?.scrollTo({ top: threadRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, loading, view]);
+  // Mientras crece el borrador, se acompaña SOLO si el usuario está al final: si ha subido a
+  // leer algo, no se le arrastra.
+  useEffect(() => {
+    const el = threadRef.current;
+    if (view !== "chat" || !el) return;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 120) el.scrollTop = el.scrollHeight;
+  }, [borrador, stepsLive, view]);
 
   // #563(a) — auto-grow del textarea: crece con el contenido hasta MAX_INPUT_PX y a
   // partir de ahí hace scroll interno. Se recalcula en cada cambio de `input` (incl.
@@ -2525,19 +2548,48 @@ export function MycoBotRail({
                   </div>
                 )}
                 {loading && (
-                  <div className="flex items-start gap-2 px-1 text-sm text-gray-500">
-                    <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin" />
-                    {stepLive ? (
-                      // Línea viva: el paso en curso (se sustituye por el siguiente).
-                      <span className="min-w-0">
-                        <span className={stepLive.error ? "text-red-500" : ""}>{stepLive.label}</span>
-                        {stepLive.hint && <span className="text-gray-400"> · {stepLive.hint}</span>}
-                        {stepLive.query && (
-                          <span className="block truncate text-[12px] italic text-gray-400">“{stepLive.query}”</span>
-                        )}
-                      </span>
-                    ) : (
-                      <span>{t("ui.mycobot.thinking")}</span>
+                  <div className="px-1 text-sm text-gray-500">
+                    {stepsLive.length > 1 && (
+                      // Pasos ya dados: se quedan a la vista para saber por dónde va.
+                      <ol className="mb-1 space-y-0.5">
+                        {stepsLive.slice(0, -1).map((s, k) => (
+                          <li key={k} className="flex items-start gap-2 text-[12px] leading-snug text-gray-400">
+                            <Check className={`mt-0.5 h-3 w-3 shrink-0 ${s.error ? "text-red-400" : "text-emerald-500"}`} />
+                            <span className="min-w-0">
+                              {s.label}
+                              {s.hint && <span> · {s.hint}</span>}
+                            </span>
+                          </li>
+                        ))}
+                      </ol>
+                    )}
+                    <div className="flex items-start gap-2">
+                      <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin" />
+                      {stepLive ? (
+                        // Línea viva: el paso en curso (se sustituye por el siguiente).
+                        <span className="min-w-0">
+                          <span className={stepLive.error ? "text-red-500" : ""}>{stepLive.label}</span>
+                          {stepLive.hint && <span className="text-gray-400"> · {stepLive.hint}</span>}
+                          {stepLive.query && (
+                            <span className="block truncate text-[12px] italic text-gray-400">“{stepLive.query}”</span>
+                          )}
+                        </span>
+                      ) : (
+                        <span>{t("ui.mycobot.thinking")}</span>
+                      )}
+                    </div>
+                    {borrador && (
+                      // Borrador: otra letra y otro color, para que no se confunda con la respuesta. Sin
+                      // enlaces de cita ni botones: las citas aún no están verificadas ni renumeradas.
+                      <div className="mt-2 rounded-md border border-dashed border-amber-300 bg-amber-50/60 p-2">
+                        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                          {t("ui.mycobot.borrador")}
+                        </p>
+                        <div
+                          className="font-serif text-[13px] italic leading-relaxed text-slate-500 [&_h1]:font-semibold [&_h2]:font-semibold [&_h3]:font-semibold [&_li]:mt-0.5 [&_ol]:my-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-4"
+                          dangerouslySetInnerHTML={{ __html: renderMarkdown(borrador) }}
+                        />
+                      </div>
                     )}
                   </div>
                 )}
