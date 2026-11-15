@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useI18n } from "../i18n";
 import { useSidebarCollapse } from "../layout/sidebar-collapse-context";
+import { fijarModeracionForo, suscribirContadoresForo } from "../../lib/foro-badge";
 
 const GOLD = "#b09a6e";
 const MESSAGES_PAGE = 50; // debe coincidir con el límite por defecto de listMessages
@@ -151,54 +152,20 @@ export function ForoLauncher() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!linked || muted) {
-      setUnread(0);
-      return;
-    }
-    let alive = true;
-    const load = async () => {
-      try {
-        const r = await fetch("/api/foro/unread");
-        if (!r.ok) return;
-        const j = await r.json();
-        if (alive) setUnread(j?.data?.unread ?? 0);
-      } catch {
-        /* noop */
-      }
-    };
-    load();
-    const id = setInterval(load, 45000);
-    return () => {
-      alive = false;
-      clearInterval(id);
-    };
-  }, [linked, muted]);
-
-  // Reportes pendientes (marca "!" del moderador). 403 → no es moderador.
+  // No leídos y reportes pendientes ("!" del moderador) salen de un único sondeo compartido
+  // (`lib/foro-badge.ts`): cada 90 s, en pausa con la pestaña oculta y uno solo aunque haya
+  // varios lanzadores montados. Silenciado → sin badge de no leídos, como siempre.
   useEffect(() => {
     if (!linked) return;
-    let alive = true;
-    const load = async () => {
-      try {
-        const r = await fetch("/api/foro/moderation");
-        if (!r.ok) {
-          if (alive && r.status === 403) setModCount(0);
-          return;
-        }
-        const j = await r.json();
-        if (alive) setModCount(Array.isArray(j?.data) ? j.data.length : 0);
-      } catch {
-        /* noop */
-      }
-    };
-    load();
-    const id = setInterval(load, 45000);
-    return () => {
-      alive = false;
-      clearInterval(id);
-    };
-  }, [linked]);
+    return suscribirContadoresForo((e) => {
+      if (!muted && e.unread !== null) setUnread(e.unread);
+      setModCount(e.modCount);
+    }, !muted);
+  }, [linked, muted]);
+
+  useEffect(() => {
+    if (!linked || muted) setUnread(0);
+  }, [linked, muted]);
 
   const toggleMute = useCallback(async () => {
     const next = !muted;
@@ -300,7 +267,7 @@ export function ForoLauncher() {
             muted={muted}
             onToggleMute={toggleMute}
             onClose={() => setDrawerOpen(false)}
-            onModCount={setModCount}
+            onModCount={fijarModeracionForo}
             onUnlinked={() => {
               setLinked(false);
               setDrawerOpen(false);
