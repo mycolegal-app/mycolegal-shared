@@ -41,14 +41,6 @@ export {
   type ResolutorDePrompts,
 } from './src/prompts';
 
-export {
-  conversarConHerramientas,
-  type DeclaracionHerramienta,
-  type EjecutarHerramienta,
-  type OpcionesAgente,
-  type PasoAgente,
-  type ResultadoAgente,
-} from './src/agente';
 
 export {
   conContingencia,

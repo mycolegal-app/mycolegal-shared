@@ -1,5 +1,9 @@
 # @mycolegal-app/ai-core
 
+## (sin publicar) — 14-nov-2026
+
+Retirado `conversarConHerramientas` (`src/agente.ts`, su test y el subpath `./agente`): ninguna app lo usaba. Redactor tiene su propio bucle (`src/lib/mycobot/agente.ts`, con respuesta anticipada y última vuelta sin herramientas al agotar el tope) y Consultor el suyo (`generateWithTools` en `src/lib/resoluciones/vertex.ts`). Se decidió (Carles, 14-nov) no unificarlos: el de Consultor sostiene todas las respuestas de MycoBot y cada petición a Vertex debe quedar idéntica. La copia de aquí divergía y confundía.
+
 ## 0.1.4 — 7-oct-2026
 
 `conversarConHerramientas` devolvía al modelo su turno RECONSTRUIDO con sólo los `functionCall`, y Gemini 3 exige de vuelta la `thoughtSignature` que acompaña a cada llamada: cualquier conversación que usara una herramienta fallaba en la segunda vuelta con un 400 («Function call is missing a thought_signature»). Ahora el turno del modelo vuelve entero, tal como llegó. Afectaba al MycoBot de la Librería de Redactor (el único consumidor) y al chat de la generación (F6). Test nuevo en `tests/agente.test.ts`.
