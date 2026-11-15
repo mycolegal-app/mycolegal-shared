@@ -9,6 +9,8 @@
 // (y la mitad de la biblioteca no las declaraba). Un bucle anidado
 // `FOR EACH IT IN PADRE.SUB` aporta `SUB` como subcampo de tipo LIST del padre.
 
+import { memoPorTexto, sinCopia } from '../compose/memo-texto';
+
 export interface ListaDeducida {
   nombre: string;
   /** subcampo → tipo ('TEXT' | 'LIST') */
@@ -40,6 +42,24 @@ function nombresDe(dentro: string): string[] {
 }
 
 export function listasDeLaPlantilla(texto: string): ResultadoListas {
+  return memoPorTexto('listasDeLaPlantilla', texto, calcularListas, copiaListas);
+}
+
+/** Copia hasta el fondo: quien recibe las listas puede tocar sus Map y Set sin cambiar lo guardado. */
+function copiaListas(r: ResultadoListas): ResultadoListas {
+  const listas = new Map<string, ListaDeducida>();
+  for (const [k, l] of r.listas) {
+    listas.set(k, {
+      nombre: l.nombre,
+      subcampos: new Map(l.subcampos),
+      condiciones: new Set(l.condiciones),
+      valores: new Map([...l.valores].map(([s, v]) => [s, new Set(v)])),
+    });
+  }
+  return { listas, soloDeElemento: new Set(r.soloDeElemento) };
+}
+
+function calcularListas(texto: string): ResultadoListas {
   const listas = new Map<string, ListaDeducida>();
   const enElemento = new Set<string>();
   const fueraDeElemento = new Set<string>();
@@ -122,6 +142,10 @@ export function listasDeLaPlantilla(texto: string): ResultadoListas {
  *     del elemento (por `IT.SUB` o dentro de un párrafo vinculado).
  */
 export function marcarListasParaSonda(texto: string): string {
+  return memoPorTexto('marcarListasParaSonda', texto, calcularMarcasDeSonda, sinCopia);
+}
+
+function calcularMarcasDeSonda(texto: string): string {
   const bucles: { it: string; lista: string }[] = [];
   const vinculos: string[] = [];
   const bucleDe = (it: string) => { for (let i = bucles.length - 1; i >= 0; i--) if (bucles[i].it === it) return bucles[i]; return null; };

@@ -1,5 +1,9 @@
 # @mycolegal-app/docfilling-core
 
+## 0.1.53 — 15-nov-2026
+
+Rendimiento, sin cambios en lo que se devuelve: `constantesFijas`, `extractDeclareFixedValues`, `listasDeLaPlantilla`, `marcarListasParaSonda` y `valoresDeSchema` sólo dependen del texto y se guardan por texto (`compose/memo-texto.ts`: una caché común, los 4 textos más recientes de 20.000 caracteres o más). Lo entregado es siempre una copia (las listas, hasta el fondo): quien llama puede modificarlo sin estropear la llamada siguiente. Redactor recalcula los campos con cada respuesta sobre el mismo esquema expandido y las repetía varias veces por respuesta: en 123 tareas reales, la respuesta siguiente pasa de 416 a 271 ms de media con el resultado idéntico. `tests/memo-texto.test.ts`.
+
 ## 0.1.52 — 13-nov-2026
 
 Marcas de duda (0.1.51), sin ruido y sin mover el texto: una rama que no escribe nada no se marca, y la marca va por dentro de los blancos de los bordes de la rama, así que con las marcas quitadas la salida es la misma carácter a carácter. En un testamento CAT sin confirmar, de 86 marcas a las que escriben algo.

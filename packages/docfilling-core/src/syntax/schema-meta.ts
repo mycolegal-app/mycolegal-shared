@@ -17,6 +17,8 @@
 // y el validador las marca como error (E926). Se siguen reconociendo (`legado`) sólo para decir dónde están; al componer
 // se omiten, como cualquier metadato, para que no salgan impresas.
 
+import { memoPorTexto } from '../compose/memo-texto';
+
 /** Las claves que un esquema puede declarar. */
 export const CLAVES_SCHEMA = ['ACT', 'FAMILY', 'VARIANT', 'GROUP', 'LANG'] as const;
 export type ClaveSchema = (typeof CLAVES_SCHEMA)[number];
@@ -121,6 +123,13 @@ export const MARCA_SCHEMA = 'SCHEMA:';
  * (al traducir); sin ella, la declarada, y `es` si no declara ninguna.
  */
 export function valoresDeSchema(texto: string, idioma?: string): Record<string, string> {
+  // Lo leído del texto se guarda (`memoPorTexto`); la lengua pedida, si la hay, se pone encima.
+  const v = memoPorTexto('valoresDeSchema', texto, calcularValoresDeSchema, (r) => ({ ...r }));
+  if (idioma) v['SCHEMA:LANG'] = idioma.toLowerCase();
+  return v;
+}
+
+function calcularValoresDeSchema(texto: string): Record<string, string> {
   const m = leerSchema(texto);
   return {
     [MARCA_SCHEMA]: '1',
@@ -130,7 +139,7 @@ export function valoresDeSchema(texto: string, idioma?: string): Record<string, 
     'SCHEMA:FAMILY:ALIAS': m.familyAlias,
     'SCHEMA:VARIANT': m.variant,
     'SCHEMA:GROUP': m.groups.join(','),
-    'SCHEMA:LANG': (idioma || m.lang || 'es').toLowerCase(),
+    'SCHEMA:LANG': (m.lang || 'es').toLowerCase(),
   };
 }
 

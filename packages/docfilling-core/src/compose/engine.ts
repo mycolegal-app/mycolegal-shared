@@ -26,6 +26,7 @@ import {
   conValoresDeSchema, evaluarAtomoSchema, MARCA_SCHEMA, quitarDeclaracionesSchema, sustituirLecturasSchema,
   valoresDeSchema,
 } from "../syntax/schema-meta";
+import { memoPorTexto, copiaObjeto, copiaSet } from "./memo-texto";
 
 export type FieldValues = Record<string, unknown>;
 
@@ -359,6 +360,10 @@ function declaracionesFijas(content: string): { texto: string; decls: Declaracio
  * mira las ramas vivas y los datos del caso.
  */
 export function extractDeclareFixedValues(content: string): Record<string, string> {
+  return memoPorTexto("extractDeclareFixedValues", content, calcularDeclareFixedValues, copiaObjeto);
+}
+
+function calcularDeclareFixedValues(content: string): Record<string, string> {
   const fixed: Record<string, string> = {};
   const declarados = new Set<string>();
   for (const d of declaracionesFijas(content).decls) {
@@ -1289,6 +1294,10 @@ export function asignacionesEnOrden(
  * valor; para el motor eso es lo mismo que su valor falso, pero no es una pregunta y quien pregunta no debe hacerla.
  */
 export function constantesFijas(texto: string): Set<string> {
+  return memoPorTexto("constantesFijas", texto, calcularConstantesFijas, copiaSet);
+}
+
+function calcularConstantesFijas(texto: string): Set<string> {
   const todas = new Map<string, number>();
   for (const m of texto.matchAll(/\{\{DECLARE(?:_UNDEF)?\s+(?:ARRAY\s+)?([\wÀ-ɏ]+)/gi)) {
     const n = m[1].toUpperCase();
