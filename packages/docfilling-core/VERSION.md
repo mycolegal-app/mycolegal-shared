@@ -1,5 +1,11 @@
 # @mycolegal-app/docfilling-core
 
+## 0.1.54 — 15-nov-2026
+
+Rendimiento, sin cambios en lo que se devuelve:
+- `parseFields` analiza cada directiva DISTINTA una vez y entrega copias propias con su posición (`offset`, `line`, `col`). Un esquema expandido repite los mismos párrafos: la compraventa 0501 tiene 29.684 directivas y 5.563 distintas. En 316 textos reales (256 esquemas expandidos y 60 podados), mismo resultado; `parseFields` p50 de 50 a 27 ms y `esquemaDeCampos` −23 %. `tests/parse-repetidas.test.ts`.
+- `defectosDeCampos(plantilla)`: `nombre` y `porDefecto` de los campos que lo tienen, como en `esquemaDeCampos(plantilla).campos` y en el mismo orden, sin el resto del esquema. Para Redactor, que los pide sobre el texto podado de cada respuesta: idéntico en 2.888 respuestas simuladas sobre tareas reales, de 60 a 39 ms. Calcula las listas sin la caché por texto (`listasSinGuardar`), para que un texto de una sola vez no ocupe el sitio de los expandidos. `tests/defectos-de-campos.test.ts`.
+
 ## 0.1.53 — 15-nov-2026
 
 Rendimiento, sin cambios en lo que se devuelve: `constantesFijas`, `extractDeclareFixedValues`, `listasDeLaPlantilla`, `marcarListasParaSonda` y `valoresDeSchema` sólo dependen del texto y se guardan por texto (`compose/memo-texto.ts`: una caché común, los 4 textos más recientes de 20.000 caracteres o más). Lo entregado es siempre una copia (las listas, hasta el fondo): quien llama puede modificarlo sin estropear la llamada siguiente. Redactor recalcula los campos con cada respuesta sobre el mismo esquema expandido y las repetía varias veces por respuesta: en 123 tareas reales, la respuesta siguiente pasa de 416 a 271 ms de media con el resultado idéntico. `tests/memo-texto.test.ts`.

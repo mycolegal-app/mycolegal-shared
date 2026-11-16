@@ -93,7 +93,7 @@ export * from './src/format';
 export { includesDe } from './src/compose/includes';
 
 // Esquema de campos (F1.5): lo que alimenta `faltantes[]` y el formulario del oficial.
-export { esquemaDeCampos, etiquetaPorDefecto, QUIEN } from './src/fields/schema';
+export { esquemaDeCampos, defectosDeCampos, etiquetaPorDefecto, QUIEN } from './src/fields/schema';
 export type { Campo, Subcampo, EsquemaDePlantilla, OpcionesEsquema, Quien } from './src/fields/schema';
 export { camposSoloCondicionales } from './src/fields/conditional-only';
 export type { ContextoCampos } from './src/fields/conditional-only';

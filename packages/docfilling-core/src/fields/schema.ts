@@ -14,7 +14,7 @@ import { getSystemFields } from '../compose/engine';
 import { tipoCanonico } from '../syntax/declare-types';
 import { camposSoloCondicionales, type ContextoCampos } from './conditional-only';
 import { instruccionesDeCampo } from './instructions';
-import { listasDeLaPlantilla } from './listas';
+import { listasDeLaPlantilla, listasSinGuardar } from './listas';
 import type { ReqDecl } from '../syntax/req-doc';
 
 /** Quién aporta el valor de un campo. */
@@ -266,4 +266,29 @@ function accionesDe(analizados: ParsedField[]): EsquemaDePlantilla['accionesHuma
     else out.pre.push(descripcion);
   }
   return out;
+}
+
+/**
+ * LOS VALORES POR DEFECTO de los campos de una plantilla: lo mismo que `nombre` y `porDefecto` de los campos de
+ * `esquemaDeCampos(plantilla)` que lo tienen, en el mismo orden, sin calcular el resto del esquema (15-nov-2026).
+ *
+ * Redactor los pide sobre el texto podado de cada respuesta (los defectos de lo que sobrevive a las condiciones ya
+ * decididas) y el esquema entero costaba ~80 ms para usar sólo esto. El defecto de un campo es el de su PRIMERA
+ * aparición, como en el esquema; lo que sólo es dato de un elemento de lista no es campo; una lista sin campo propio no
+ * tiene defecto. Los predefinidos no cambian nada aquí (sólo deciden qué es «sólo de condición» y las instrucciones).
+ */
+export function defectosDeCampos(plantilla: string): { nombre: string; porDefecto: string }[] {
+  const texto = plantilla.normalize('NFC');
+  const vistos = new Set<string>();
+  const campos: { nombre: string; porDefecto: string | null }[] = [];
+  for (const f of parseFields(texto)) {
+    const nombre = f.name || f.content;
+    if (nombre === 'HUMAN_ACTION' || nombre.startsWith('HUMAN_ACTION_')) continue;
+    if (quienDe(f, nombre) === null || vistos.has(nombre)) continue;
+    vistos.add(nombre);
+    campos.push({ nombre, porDefecto: f.inputDefault || f.declareValue || null });
+  }
+  const { soloDeElemento } = listasSinGuardar(texto);
+  return campos
+    .filter((c): c is { nombre: string; porDefecto: string } => !!c.porDefecto && !soloDeElemento.has(c.nombre.toUpperCase()));
 }

@@ -59,6 +59,12 @@ function copiaListas(r: ResultadoListas): ResultadoListas {
   return { listas, soloDeElemento: new Set(r.soloDeElemento) };
 }
 
+/** `listasDeLaPlantilla` sin pasar por la caché por texto: para textos de una sola vez (un texto podado), que si no
+ *  ocuparían el sitio de los esquemas expandidos que sí se repiten. Mismo resultado. */
+export function listasSinGuardar(texto: string): ResultadoListas {
+  return calcularListas(texto);
+}
+
 function calcularListas(texto: string): ResultadoListas {
   const listas = new Map<string, ListaDeducida>();
   const enElemento = new Set<string>();
