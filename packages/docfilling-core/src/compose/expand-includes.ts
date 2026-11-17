@@ -35,7 +35,7 @@
 import { MAX_INCLUDE_DEPTH } from '../syntax/constants';
 import { parseFields, FieldType } from '../syntax/parser';
 import { applyFieldSuffix, INC_BEGIN_MARK, INC_END_MARK, BIND_END_MARK, bindBeginMark } from './engine';
-import { resolverSeccionesDeLengua } from '../syntax/lang-section';
+import { RE_MARCA_BLOQUE, marcaBloqueInicio, marcaBloqueFin, resolverSeccionesDeLengua } from '../syntax/lang-section';
 
 /** De dónde salen los párrafos. Lo implementa la app contra su catálogo
  *  efectivo —override de la organización > global— y **filtrando por derecho de
@@ -102,6 +102,9 @@ export interface OpcionesExpansion {
   idioma?: string;
   /** Marcar lo que sale de una sección en esa lengua, para no traducirlo (`LENGUA_APROBADA_*`). */
   marcarLengua?: boolean;
+  /** Marcar cada bloque `{{LANG-SECTION}}` con su número de orden (`marcaBloqueInicio`), para emparejar dos
+   *  composiciones del mismo esquema en lenguas distintas (escritura bilingüe). */
+  marcarBloquesLengua?: boolean;
 }
 
 /** Filtro previo de `expandir`: si no casa, el texto no puede tener un `{{INCLUDE…}}`. */
@@ -131,9 +134,11 @@ export async function expandirIncludes(
   const ciclos: string[] = [];
   const usados: string[] = [];
   let sinSeccion = 0;
+  let nBloque = 0;
+  const contador = opciones.marcarBloquesLengua ? { siguiente: () => ++nBloque } : undefined;
   // Fichero a fichero y antes de expandir: ver `lang-section.ts`.
   const enSuLengua = (t: string) => {
-    const r = resolverSeccionesDeLengua(t, opciones.idioma, { marcar: opciones.marcarLengua });
+    const r = resolverSeccionesDeLengua(t, opciones.idioma, { marcar: opciones.marcarLengua, bloques: contador });
     sinSeccion += r.sinSeccion;
     return r.texto;
   };
@@ -199,6 +204,16 @@ export async function expandirIncludes(
   }
 
   // NFC en la frontera: ver la nota 4 de la cabecera.
-  const texto2 = await expandir(enSuLengua(texto.normalize('NFC')), 0, []);
+  let texto2 = await expandir(enSuLengua(texto.normalize('NFC')), 0, []);
+  // Los INCLUDE se expanden de atrás hacia delante, así que el contador numera al revés: se renumera en el orden
+  // del documento (determinista igual, pero legible: el bloque 1 es el primero).
+  if (contador) {
+    const nuevo = new Map<string, number>();
+    texto2 = texto2.replace(RE_MARCA_BLOQUE, (_m, cierre: string, n: string, ok: string | undefined) => {
+      if (!nuevo.has(n)) nuevo.set(n, nuevo.size + 1);
+      const k = nuevo.get(n)!;
+      return cierre ? marcaBloqueFin(k) : marcaBloqueInicio(k, !!ok);
+    });
+  }
   return { texto: texto2, faltantes, ciclos, usados, sinSeccion };
 }

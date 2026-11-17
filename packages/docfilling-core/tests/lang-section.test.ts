@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LENGUA_APROBADA_FIN, LENGUA_APROBADA_INICIO, auditarSeccionesDeLengua, composeWithDiagnostics, expandirIncludes, parseFields, repositorioDeMapa, resolverSeccionesDeLengua } from '../index';
+import { LENGUA_APROBADA_FIN, LENGUA_APROBADA_INICIO, RE_MARCA_BLOQUE, auditarSeccionesDeLengua, composeWithDiagnostics, expandirIncludes, parseFields, quitarMarcasDeBloque, repositorioDeMapa, resolverSeccionesDeLengua } from '../index';
 
 const PARR = `Antes.
 {{LANG-SECTION es}}
@@ -92,5 +92,43 @@ describe('la comprobación de las secciones', () => {
     expect(auditarSeccionesDeLengua('Hola.{{LANG-END}}')[0]).toContain('sin {{LANG-SECTION}}');
     expect(auditarSeccionesDeLengua('{{LANG-SECTION es}}a{{LANG-SECTION es}}b{{LANG-END}}')[0]).toContain('dos veces');
     expect(auditarSeccionesDeLengua('{{LANG-SECTION ca}}a{{LANG-END}}')[0]).toContain('falta la sección «es»');
+  });
+});
+
+describe('marcas de bloque (escritura bilingüe, 17-nov-2026)', () => {
+  const BIBLIO = new Map([
+    ['PARR_A', PARR],
+    ['PARR_B', `Fuera de bloque.\n{{LANG-SECTION es}}\nSegundo bloque.\n{{LANG-SECTION ca}}\nSegon bloc.\n{{LANG-END}}`],
+  ]);
+  const ESQ = '{{INCLUDE PARR_A}}\n\n{{INCLUDE PARR_B}}';
+  const componer = async (idioma: string) => {
+    const e = await expandirIncludes(ESQ, repositorioDeMapa(BIBLIO), { idioma, marcarBloquesLengua: true, centinelas: false });
+    return composeWithDiagnostics(e.texto, { PACTO: 'TRUE', DATOS: 'X', NOMBRE: 'Ana' } as never).text;
+  };
+  const bloques = (t: string) => [...t.matchAll(RE_MARCA_BLOQUE)].filter((m) => !m[1]).map((m) => `${m[2]}${m[3] ?? ''}`);
+
+  it('cada bloque lleva el mismo número compuesto en castellano y en catalán', async () => {
+    const es = await componer('es');
+    const ca = await componer('ca');
+    expect(bloques(es)).toEqual(['1:ok', '2:ok']);
+    expect(bloques(ca)).toEqual(['1:ok', '2:ok']);
+    expect(ca).toContain('Segon bloc.');
+    expect(es).toContain('Segundo bloque.');
+  });
+
+  it('sin la sección en esa lengua el bloque se marca sin :ok', async () => {
+    const eu = await componer('eu');
+    expect(bloques(eu)).toEqual(['1', '2']);
+  });
+
+  it('quitarMarcasDeBloque deja el texto limpio', async () => {
+    const limpio = quitarMarcasDeBloque(await componer('ca'));
+    expect(limpio).not.toMatch(/LANG-BLK/);
+    expect(limpio).toContain('Segon bloc.');
+  });
+
+  it('sin la opción, nada cambia', async () => {
+    const e = await expandirIncludes(ESQ, repositorioDeMapa(BIBLIO), { idioma: 'ca', centinelas: false });
+    expect(e.texto).not.toMatch(/LANG-BLK/);
   });
 });

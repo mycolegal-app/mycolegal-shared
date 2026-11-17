@@ -55,8 +55,27 @@ function leerBloques(texto: string): { bloques: Bloque[]; errores: string[] } {
 export const LENGUA_APROBADA_INICIO = '\u27EALANG-OK\u27EB';
 export const LENGUA_APROBADA_FIN = '\u27EA/LANG-OK\u27EB';
 
+/**
+ * LAS MARCAS DE BLOQUE (17-nov-2026, escritura bilingüe). Con `bloques`, cada bloque `{{LANG-SECTION}}` sale entre
+ * `⟪LANG-BLK:n⟫` y `⟪/LANG-BLK:n⟫` (y `⟪LANG-BLK:n:ok⟫` si sale en la lengua pedida, con su versión aprobada). `n` es
+ * el orden del bloque en la expansión entera: con el mismo esquema y la misma biblioteca, un bloque tiene el mismo `n`
+ * compuesto en castellano y en la otra lengua, y las dos composiciones se emparejan por él. Como `LENGUA_APROBADA_*`,
+ * las marcas no llegan nunca a una escritura: las quita quien las pide (`quitarMarcasDeBloque`).
+ */
+export const marcaBloqueInicio = (n: number, aprobado: boolean): string => `\u27EALANG-BLK:${n}${aprobado ? ':ok' : ''}\u27EB`;
+export const marcaBloqueFin = (n: number): string => `\u27EA/LANG-BLK:${n}\u27EB`;
+/** Las dos marcas, para leerlas: `[1]` = `/` del cierre, `[2]` = n, `[3]` = `:ok`. */
+export const RE_MARCA_BLOQUE = /\u27EA(\/?)LANG-BLK:(\d+)(:ok)?\u27EB/g;
+/** El texto sin las marcas de bloque (ni las líneas en blanco que dejan). */
+export function quitarMarcasDeBloque(texto: string): string {
+  return texto.replace(/\n*\u27EA\/?LANG-BLK:\d+(?::ok)?\u27EB\n*/g, '\n\n').replace(/^\n+/, '').replace(/\n{3,}/g, '\n\n');
+}
+
 /** El texto en esa lengua. `sinSeccion`: los bloques que no la tienen y salen en castellano (o en la primera). */
-export function resolverSeccionesDeLengua(texto: string, idioma: string = IDIOMA_POR_DEFECTO, opciones: { marcar?: boolean } = {}): { texto: string; sinSeccion: number } {
+export function resolverSeccionesDeLengua(
+  texto: string, idioma: string = IDIOMA_POR_DEFECTO,
+  opciones: { marcar?: boolean; bloques?: { siguiente: () => number } } = {},
+): { texto: string; sinSeccion: number } {
   RE_ABRE.lastIndex = 0;
   if (!RE_ABRE.test(texto)) return { texto, sinSeccion: 0 };
   const lengua = idioma.toLowerCase();
@@ -69,7 +88,12 @@ export function resolverSeccionesDeLengua(texto: string, idioma: string = IDIOMA
     if (!propia) sinSeccion++;
     const elegida = propia ?? b.secciones.find((s) => s.idioma === IDIOMA_POR_DEFECTO) ?? b.secciones[0];
     const cuerpo = elegida?.texto ?? '';
-    salida += texto.slice(desde, b.inicio) + (propia && opciones.marcar ? `\n\n${LENGUA_APROBADA_INICIO}\n\n${cuerpo}\n\n${LENGUA_APROBADA_FIN}\n\n` : cuerpo);
+    let pieza = propia && opciones.marcar ? `\n\n${LENGUA_APROBADA_INICIO}\n\n${cuerpo}\n\n${LENGUA_APROBADA_FIN}\n\n` : cuerpo;
+    if (opciones.bloques) {
+      const n = opciones.bloques.siguiente();
+      pieza = `\n\n${marcaBloqueInicio(n, !!propia)}\n\n${pieza}\n\n${marcaBloqueFin(n)}\n\n`;
+    }
+    salida += texto.slice(desde, b.inicio) + pieza;
     desde = b.fin;
   }
   return { texto: salida + texto.slice(desde), sinSeccion };
