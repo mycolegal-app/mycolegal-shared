@@ -546,18 +546,28 @@ export function MycoBotRail({
   <p class="disc">${esc(t("ui.mycobot.disclaimer"))}</p>
 </body></html>`;
 
+      // ⚠️ SE IMPRIME UNA VEZ Y CON EL CONTENIDO YA ESCRITO (incidencia de Daura & Romeo, 17-nov-2026: «al dar al
+      // botón de imprimir aparece una página en blanco», Edge en Windows). Un iframe sin `src` dispara `load` en
+      // cuanto se inserta —en Chromium, de forma síncrona y con el documento VACÍO— y otra vez al cerrar el
+      // documento escrito. Con `print()` en el `onload` salía primero el diálogo de una página en blanco. Ahora el
+      // `load` que vale es el de después de escribir (`escrito`), y un temporizador de reserva por si un navegador no
+      // lo repite. Y el marco tiene tamaño (fuera de la vista): con 0×0 hay navegadores que maquetan a ancho cero.
       const marco = document.createElement("iframe");
       marco.setAttribute("aria-hidden", "true");
-      marco.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0";
-      marco.onload = () => {
+      marco.style.cssText = "position:fixed;left:-10000px;top:0;width:800px;height:600px;border:0";
+      let escrito = false;
+      let impreso = false;
+      const lanzar = () => {
         const v = marco.contentWindow;
-        if (!v) return;
+        if (!escrito || impreso || !v) return;
+        impreso = true;
         v.focus();
         v.print();
         // El diálogo de impresión es modal: para cuando vuelve aquí ya se ha
         // cerrado. Un margen y fuera, que si no el iframe se queda en el DOM.
         window.setTimeout(() => marco.remove(), 1000);
       };
+      marco.onload = lanzar;
       document.body.appendChild(marco);
       const doc = marco.contentWindow?.document;
       if (!doc) {
@@ -566,7 +576,9 @@ export function MycoBotRail({
       }
       doc.open();
       doc.write(html);
+      escrito = true;
       doc.close();
+      window.setTimeout(lanzar, 300);
     },
     [t],
   );
