@@ -3,7 +3,7 @@
 // ENDFOR suelto: salía «[NO DISPONIBLE]» y, con IF alrededor, se comía texto
 // anterior (así se perdía media escritura del 0412).
 import { describe, it, expect } from 'vitest';
-import { composeWithDiagnostics } from '../index';
+import { composeWithDiagnostics, enumerarEnProsa } from '../index';
 
 const compone = (t: string, campos: Record<string, unknown>) =>
   (composeWithDiagnostics(t, campos as never) as { text: string }).text;
@@ -50,5 +50,27 @@ describe('FOR EACH … IN LISTA|ENUM', () => {
   });
   it('con uno solo no añade nada', () => {
     expect(compone(T, { S: [{ N: 'Ana', D: '1' }] })).toBe('**Ana**, con DNI 1, han solicitado');
+  });
+});
+
+// La lista de hijos del testamento (17-nov-2026): «Don Arnau y Doña Ariadna», con la conjunción de la lengua.
+describe('|ENUM en la lengua de la plantilla', () => {
+  const HIJOS = [{ NOMBRE: 'Arnau', SEXO: 'H' }, { NOMBRE: 'Ariadna', SEXO: 'M' }];
+  const T = '{{FOR EACH H IN HIJOS|ENUM}}{{IF H.SEXO == "H"}}Don{{ELSE}}Doña{{ENDIF}} {{H.NOMBRE}}{{ENDFOR}} Abarca Basté';
+  it('castellano: «y»', () => {
+    expect(compone(T, { HIJOS })).toBe('Don Arnau y Doña Ariadna Abarca Basté');
+  });
+  it('catalán (SCHEMA:LANG=ca): «i»', () => {
+    const ca = '{{SCHEMA:LANG=ca}}{{FOR EACH H IN HIJOS|ENUM}}{{IF H.SEXO == "H"}}el senyor{{ELSE}}la senyora{{ENDIF}} {{H.NOMBRE}}{{ENDFOR}}';
+    expect(compone(ca, { HIJOS: [...HIJOS, { NOMBRE: 'Pau', SEXO: 'H' }] }).trim()).toBe('el senyor Arnau, la senyora Ariadna i el senyor Pau');
+  });
+  it('castellano: «e» delante de i-/hi-, pero no de hie-', () => {
+    expect(enumerarEnProsa(['Arnau', 'Ignacio'], 'es')).toBe('Arnau e Ignacio');
+    expect(enumerarEnProsa(['Ana', '**Hilario**'], 'es')).toBe('Ana e **Hilario**');
+    expect(enumerarEnProsa(['agua', 'hielo'], 'es')).toBe('agua y hielo');
+  });
+  it('gallego y euskera', () => {
+    expect(enumerarEnProsa(['A', 'B'], 'gl')).toBe('A e B');
+    expect(enumerarEnProsa(['A', 'B'], 'eu')).toBe('A eta B');
   });
 });

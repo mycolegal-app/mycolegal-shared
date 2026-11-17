@@ -1410,14 +1410,30 @@ export function expandForEach(
     }
     // `IN LISTA|ENUM`: enumeración en prosa —«A, B y C»—. Lo usaban las
     // cancelaciones para los solicitantes; sin esto salían pegados.
-    if (enumerar) {
-      const items = parts.map((x) => x.trim()).filter(Boolean);
-      return items.length <= 1 ? (items[0] ?? "") : items.slice(0, -1).join(", ") + " y " + items[items.length - 1];
-    }
+    if (enumerar) return enumerarEnProsa(parts, idioma);
     return parts.join("");
   };
 
   return expandir(content, fields, 0);
+}
+
+/**
+ * `IN LISTA|ENUM`: los elementos en prosa, «A, B y C», con la conjunción de la LENGUA DE LA PLANTILLA (17-nov-2026: en
+ * catalán salía «Arnau y Ariadna»). Castellano «y», que pasa a «e» delante de i-/hi- («Arnau e Ignacio», pero «y
+ * hierro»); catalán «i»; gallego «e»; euskera «eta». Se mira la primera letra del último elemento ya compuesto, sin
+ * las negritas ni las marcas: es lo que se lee detrás de la conjunción.
+ */
+export function enumerarEnProsa(partes: string[], idioma: string = DEFAULT_LOCALE): string {
+  const items = partes.map((x) => x.trim()).filter(Boolean);
+  if (items.length <= 1) return items[0] ?? "";
+  const ultimo = items[items.length - 1];
+  const lengua = idioma.slice(0, 2).toLowerCase();
+  let y = lengua === "ca" ? "i" : lengua === "gl" ? "e" : lengua === "eu" ? "eta" : "y";
+  if (y === "y") {
+    const leido = ultimo.replace(/^[\s*_⟬⟭\p{P}]+/u, "").normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+    if (/^(i|hi)(?![aeou])/.test(leido) || /^(i|hi)$/.test(leido)) y = "e";
+  }
+  return items.slice(0, -1).join(", ") + ` ${y} ` + ultimo;
 }
 
 // Sentinels wrapping each inlined include's body. The editor's

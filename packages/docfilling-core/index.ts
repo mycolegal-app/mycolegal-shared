@@ -37,6 +37,7 @@ export {
   asignacionesEnOrden,
   constantesFijas,
   expandForEach,
+  enumerarEnProsa,
   processExitIncludes,
   processSets,
   processAutonumbers,
