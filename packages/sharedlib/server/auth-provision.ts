@@ -85,6 +85,12 @@ export interface ProvisionUserRoleArgs<TRole extends string> {
    */
   validRoles?: readonly TRole[];
   /**
+   * `authRole` del JWT. Con `'superadmin'`, una ficha local INACTIVA se reactiva: un superadmin no figura entre
+   * los usuarios de las orgs en las que entra y la reconciliación de la pantalla de usuarios se la desactiva
+   * (18-nov-2026). Para el resto no cambia nada: inactiva sigue siendo inactiva.
+   */
+  authRole?: string | null;
+  /**
    * Optional logger override. When omitted, falls back to `console.warn`
    * for FK violations. Intentional: never throw.
    */
@@ -110,6 +116,18 @@ export async function provisionUserRole<TRole extends string>(
   let userRole = await userRoleDelegate.findUnique({
     where: { authUserId_orgId: { authUserId, orgId } },
   });
+
+  if (userRole && !userRole.active && args.authRole === 'superadmin') {
+    try {
+      userRole = await userRoleDelegate.upsert({
+        where: { authUserId_orgId: { authUserId, orgId } },
+        update: { active: true },
+        create: { authUserId, orgId, role: userRole.role, displayName: email, email, active: true },
+      });
+    } catch (err) {
+      if (args.onError) args.onError(err);
+    }
+  }
 
   if (!userRole) {
     userRole = await userRoleDelegate.findFirst({

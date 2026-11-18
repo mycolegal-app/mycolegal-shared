@@ -442,6 +442,10 @@ export function mirrorOrgAndRole<TRole extends string>(
         displayName: user.displayName,
         lastLoginAt: new Date(),
         ...(writeRoleOnUpdate ? { role: appRole } : {}),
+        // Un superadmin no figura entre los usuarios de las orgs en las que entra, así que la reconciliación de
+        // la pantalla de usuarios (`admin/usuarios-routes.ts`) le desactiva la ficha local en cuanto alguien de
+        // esa org la abre. Su login la vuelve a activar (Carles sin poder entrar en Notaría, 18-nov-2026).
+        ...(user.role === 'superadmin' ? { active: true } : {}),
       },
       create: {
         authUserId: user.id,

@@ -104,3 +104,18 @@ describe('mirrorOrgAndRole — rol local en el login', () => {
     expect(s.upserts[0].update.role).toBe('AUXILIAR');
   });
 });
+
+describe('mirrorOrgAndRole — ficha de un superadmin', () => {
+  it('su login la reactiva: la reconciliación de usuarios se la desactiva al no estar en la org (18-nov-2026)', async () => {
+    const s = setup({ ok: false });
+    s.ctx.user.role = 'superadmin';
+    await provision(s);
+    expect(s.upserts[0].update.active).toBe(true);
+  });
+
+  it('el login de cualquier otro no toca `active`', async () => {
+    const s = setup({ ok: false });
+    await provision(s);
+    expect(s.upserts[0].update).not.toHaveProperty('active');
+  });
+});
