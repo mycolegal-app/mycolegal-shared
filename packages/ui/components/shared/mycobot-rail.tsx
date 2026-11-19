@@ -47,6 +47,7 @@ import { BotonDictado } from "./boton-dictado";
 import { BotonEscuchar } from "./boton-escuchar";
 import { readFuentesSel } from "../../lib/biblioteca-fuentes";
 import { FuentesModal } from "./fuentes-modal";
+import { leerStreamingMycobot, guardarStreamingMycobot } from "../../lib/mycobot-streaming";
 // Color + icono por CLASE (badge de tipo de las citas, #548): espejo de la leyenda
 // de la Biblioteca del Consultor, compartido con el modal de Fuentes. El rail
 // llevaba su propia copia, que se quedó sin las clases nuevas (ver #946). El label
@@ -465,6 +466,12 @@ export function MycoBotRail({
   // el mismo recuadro hacía que el texto se borrase y se reescribiera: parecía el mismo paso dos
   // veces. Un evento sin `origen` (apps que no lo mandan) cuenta como respuesta.
   const [borrador, setBorrador] = useState<{ doctrina: string; respuesta: string }>({ doctrina: "", respuesta: "" });
+  // #55 — `/streaming off|on`: sin borrador en vivo (los pasos siguen a la vista). Cookie del
+  // dominio padre, compartida por todas las apps; se lee tras montar para no romper la hidratación.
+  const [streaming, setStreaming] = useState(true);
+  useEffect(() => {
+    setStreaming(leerStreamingMycobot());
+  }, []);
   // Mensajes cuyo «Ver proceso» está desplegado (por índice de mensaje).
   const [openProcess, setOpenProcess] = useState<Set<number>>(new Set());
   // Índice del mensaje cuya respuesta se acaba de copiar al portapapeles (feedback ✓).
@@ -1010,6 +1017,25 @@ export function MycoBotRail({
       }
 
       setView("chat");
+
+      // Comando especial /streaming [on|off] (#55): ver o no la respuesta mientras se escribe.
+      // Se resuelve EN CLIENTE; la preferencia es del navegador (cookie compartida por las apps).
+      const mStreaming = q.toLowerCase().match(/^\/streaming(?:\s+(\S+))?$/);
+      if (mStreaming) {
+        setInput("");
+        const arg = mStreaming[1];
+        let clave: string;
+        if (arg === "on" || arg === "off") {
+          const activo = arg === "on";
+          guardarStreamingMycobot(activo);
+          setStreaming(activo);
+          clave = activo ? "ui.mycobot.streamingOn" : "ui.mycobot.streamingOff";
+        } else {
+          clave = leerStreamingMycobot() ? "ui.mycobot.streamingEstadoOn" : "ui.mycobot.streamingEstadoOff";
+        }
+        setMessages((m) => [...m, { role: "user", text: q }, { role: "bot", text: t(clave) }]);
+        return;
+      }
 
       // Comando especial /help (alias /ayuda): ayuda sobre el propio MycoBot.
       // Se resuelve EN CLIENTE (i18n, sin llamar al backend ni gastar tokens).
@@ -2691,7 +2717,7 @@ export function MycoBotRail({
                         <span>{t("ui.mycobot.thinking")}</span>
                       )}
                     </div>
-                    {borrador.doctrina && (
+                    {streaming && borrador.doctrina && (
                       // Notas de trabajo del motor de doctrina: otra letra y otro color, porque no son la
                       // respuesta. Cuando MycoBot empieza a redactar se pliegan (no se borran): se ve que
                       // ese paso terminó y se pueden releer.
@@ -2708,7 +2734,7 @@ export function MycoBotRail({
                         />
                       </details>
                     )}
-                    {borrador.respuesta && (
+                    {streaming && borrador.respuesta && (
                       // La respuesta mientras se escribe: la letra de las respuestas, algo atenuada y con
                       // una raya a la izquierda. Sin enlaces de cita ni botones: las citas aún no están
                       // verificadas ni renumeradas; al terminar la sustituye la definitiva.
