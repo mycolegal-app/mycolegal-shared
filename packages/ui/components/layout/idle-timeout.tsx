@@ -95,6 +95,9 @@ export function IdleTimeout({
   // puede volver a intentar (0 = sin restricción). Ver REFRESH_RETRY_BASE_MS.
   const failedRefreshes = useRef(0);
   const retryRefreshAfter = useRef(0);
+  // Comprobación de plazo vencido (ver su definición más abajo); en ref para que
+  // la usen el temporizador, el pulso de lectura y los oyentes sin re-crearlos.
+  const checkElapsedRef = useRef<() => boolean>(() => false);
   const onSilentRefreshRef = useRef(onSilentRefresh);
   useEffect(() => {
     onSilentRefreshRef.current = onSilentRefresh;
@@ -123,6 +126,9 @@ export function IdleTimeout({
     if (showModal) return; // Don't reset while modal is showing
     if (idleTimer.current) clearTimeout(idleTimer.current);
     idleTimer.current = setTimeout(() => {
+      // Un temporizador congelado (iOS en segundo plano) salta tarde: manda el
+      // tiempo real transcurrido, no el hecho de haber saltado.
+      if (checkElapsedRef.current()) return;
       setShowModal(true);
       setRemaining(countdownSeconds);
     }, timeoutMs);
@@ -160,10 +166,53 @@ export function IdleTimeout({
       });
   }, [refreshIntervalMs]);
 
+  const onTimeoutRef = useRef(onTimeout ?? onLogout);
+  useEffect(() => {
+    onTimeoutRef.current = onTimeout ?? onLogout;
+  }, [onTimeout, onLogout]);
+  const expiredHandled = useRef(false);
+
+  // ¿Se ha pasado el plazo de inactividad mientras la página no podía contarlo?
+  //
+  // 20-nov-2026 (Carles, Chrome en iPhone): una pestaña que se deja horas en
+  // segundo plano vuelve con la pantalla tal cual, sin login. iOS congela los
+  // temporizadores de la página en segundo plano, así que el `setTimeout` de
+  // inactividad no salta; y al volver Chrome a menudo RESTAURA la pestaña
+  // (bfcache / snapshot) sin emitir `visibilitychange`, que era lo único que lo
+  // comprobaba. Peor aún: el primer toque tras volver contaba como actividad,
+  // reiniciaba el temporizador y hasta refrescaba la sesión en silencio.
+  //
+  // Ahora se comprueba al volver (visibilitychange, pageshow, focus) y antes de
+  // contar cualquier actividad. Pasado el plazo + la cuenta atrás del aviso, la
+  // sesión ya se habría cerrado con la pestaña delante: se cierra directamente,
+  // sin ofrecer «Continuar». Dentro de la cuenta atrás, se enseña el aviso con
+  // los segundos que realmente quedan.
+  //
+  // Devuelve true si el plazo ya se cumplió (y se ha actuado).
+  checkElapsedRef.current = function checkElapsed(): boolean {
+    const elapsed = Date.now() - lastActivity.current;
+    if (elapsed < timeoutMs) return false;
+    if (idleTimer.current) clearTimeout(idleTimer.current);
+    const overMs = elapsed - timeoutMs;
+    if (overMs >= countdownSeconds * 1000) {
+      if (!expiredHandled.current) {
+        expiredHandled.current = true;
+        onTimeoutRef.current();
+      }
+    } else if (!showModal) {
+      setShowModal(true);
+      setRemaining(Math.max(1, Math.ceil(countdownSeconds - overMs / 1000)));
+    }
+    return true;
+  };
+
   // Set up activity listeners
   useEffect(() => {
+    const checkElapsed = () => checkElapsedRef.current();
+
     function handleActivity() {
       if (showModal) return;
+      if (checkElapsed()) return;
       lastRealActivity.current = Date.now();
       resetIdleTimer();
       maybeSilentRefresh();
@@ -174,30 +223,35 @@ export function IdleTimeout({
     );
 
     // Pause timer when tab is hidden, resume when visible
+    function handleReturn() {
+      if (document.hidden) return;
+      if (checkElapsed()) return;
+      if (showModal) return;
+      resetIdleTimer();
+      maybeSilentRefresh();
+    }
     function handleVisibility() {
       if (document.hidden) {
         if (idleTimer.current) clearTimeout(idleTimer.current);
       } else {
-        const elapsed = Date.now() - lastActivity.current;
-        if (elapsed >= timeoutMs) {
-          setShowModal(true);
-          setRemaining(countdownSeconds);
-        } else {
-          resetIdleTimer();
-          maybeSilentRefresh();
-        }
+        handleReturn();
       }
     }
     document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("pageshow", handleReturn);
+    window.addEventListener("focus", handleReturn);
 
-    // Initial timer
-    resetIdleTimer();
+    // Initial timer — salvo que la página vuelva ya pasada de plazo (re-ejecución
+    // del efecto tras restaurar), en cuyo caso manda checkElapsed.
+    if (!checkElapsed()) resetIdleTimer();
 
     return () => {
       ACTIVITY_EVENTS.forEach((event) =>
         document.removeEventListener(event, handleActivity)
       );
       document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("pageshow", handleReturn);
+      window.removeEventListener("focus", handleReturn);
       if (idleTimer.current) clearTimeout(idleTimer.current);
     };
   }, [resetIdleTimer, maybeSilentRefresh, timeoutMs, countdownSeconds, showModal]);
@@ -209,6 +263,8 @@ export function IdleTimeout({
       if (typeof document === "undefined") return;
       // Solo si la pestaña está realmente delante del usuario.
       if (document.hidden || !document.hasFocus()) return;
+      // Tras descongelarse, el pulso no puede tapar un plazo ya vencido.
+      if (checkElapsedRef.current()) return;
       // Cap: la lectura sola extiende la sesión hasta `READING_KEEPALIVE_CAP ×
       // timeout` desde la última interacción real; pasado eso, dejar que salte.
       if (Date.now() - lastRealActivity.current >= timeoutMs * READING_KEEPALIVE_CAP) return;
@@ -226,10 +282,23 @@ export function IdleTimeout({
     }
 
     countdownTimer.current = setInterval(() => {
+      // Cuenta atrás congelada con el móvil bloqueado: si al reanudar ya venció
+      // el plazo de verdad, se cierra sin dejar «Continuar» unos segundos más.
+      if (Date.now() - lastActivity.current >= timeoutMs + countdownSeconds * 1000) {
+        clearInterval(countdownTimer.current!);
+        if (!expiredHandled.current) {
+          expiredHandled.current = true;
+          onTimeoutRef.current();
+        }
+        return;
+      }
       setRemaining((prev) => {
         if (prev <= 1) {
           clearInterval(countdownTimer.current!);
-          (onTimeout ?? onLogout)();
+          if (!expiredHandled.current) {
+            expiredHandled.current = true;
+            onTimeoutRef.current();
+          }
           return 0;
         }
         return prev - 1;
@@ -239,7 +308,7 @@ export function IdleTimeout({
     return () => {
       if (countdownTimer.current) clearInterval(countdownTimer.current);
     };
-  }, [showModal, onLogout, onTimeout]);
+  }, [showModal, timeoutMs, countdownSeconds]);
 
   async function handleContinue() {
     // Pause the countdown while refreshing but keep the modal visible so the
