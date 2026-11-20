@@ -76,6 +76,7 @@ export {
   numerarFuentes,
   normalizarRespuesta,
   citaEnFuente,
+  citaSoloIdentificador,
   huellaContexto,
   cabeceraDelMensaje,
   loteDelMensaje,

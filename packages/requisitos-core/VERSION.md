@@ -1,5 +1,16 @@
 # @mycolegal-app/requisitos-core
 
+## 0.3.18 (sin publicar) — una prueba tiene que probar (19-nov-2026)
+
+- GEN-2026-0034 (TEST, compraventa de vivienda en Sabadell con datos ficticios): el DNI de la compradora salía cumplido
+  con el NIF del vendedor de la nota simple, y la consulta del Geoportal con la referencia catastral sola.
+- El prompt exige que la evidencia AFIRME lo que pide el requisito (nombrar la finca, la referencia o el acto no prueba
+  nada) y, en los requisitos por interviniente, una prueba por persona con su `rol`.
+- `Prueba.rol` (opcional, contra el vocabulario de roles) y `RequisitoAEvaluar.porInterviniente` (los papeles a los
+  que se pide; entra en la huella sólo si viene).
+- `citaSoloIdentificador`: una cita que es sólo un código o un número se descarta como PRUEBA (sigue valiendo como cita
+  de un dato).
+
 ## 0.3.17 — existeSi también sin intervinientes (14-nov-2026)
 
 - Una condición sobre un dato de persona sin intervinientes con datos (Redactor al empezar) también mira `existeSi`:

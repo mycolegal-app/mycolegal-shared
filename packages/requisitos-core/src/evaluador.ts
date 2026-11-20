@@ -68,6 +68,8 @@ export interface RequisitoAEvaluar {
    *  al modelo por su nombre: con las condiciones en texto se saltaba algunos —el medio de
    *  pago, la propiedad horizontal— aunque la fuente los dijera (8-oct-2026). */
   faltan?: string[];
+  /** Se pide a cada interviniente (instancias por sujeto): las pruebas van persona a persona, con su rol. */
+  porInterviniente?: string[];
 }
 
 export type Confianza = 'alta' | 'media' | 'baja';
@@ -84,7 +86,12 @@ export interface DatoLeido {
   confianza: Confianza;
 }
 
-export interface Prueba { fuente: string; cita: string }
+export interface Prueba {
+  fuente: string;
+  cita: string;
+  /** De qué interviniente es la prueba, por su rol del vocabulario, en un requisito que se pide a cada uno. */
+  rol?: string | null;
+}
 
 export interface EvaluacionRequisito {
   codigo: string;
@@ -128,6 +135,18 @@ Reglas que no se rompen:
   del vendedor o el comprador.
 - Lo dicho por el operador o en la conversación prevalece sobre un documento.
 - Si dudas, NS. Un NO o un SI equivocados son peores que un NS.
+- La EVIDENCIA de un SI tiene que AFIRMAR lo que exige ese requisito concreto. Que la fuente
+  nombre la finca, su referencia catastral, el acto o un documento NO prueba nada por sí
+  solo: «referencia catastral …» no prueba que se pidió el Sistema de Tramitación
+  Inmobiliaria ni que se consultó el Geoportal; «compraventa de una vivienda» no es la
+  declaración sobre suelos contaminados. Una CONSULTA o ACTUACIÓN de la notaría solo está
+  cumplida si la fuente dice que se hizo (o se pidió); una MANIFESTACIÓN, si la fuente
+  contiene esa manifestación. Si no la hay, NS y en «falta» lo que haría falta. Un
+  DOCUMENTO se prueba con ese documento: que otro lo mencione o cite su número (la nota
+  simple con el NIF del titular) no es el documento.
+- Un requisito que se pide a CADA interviniente (su documento de identidad, sus datos) se
+  prueba persona a persona: cada prueba lleva en «rol» el del interviniente al que se
+  refiere, y la prueba de uno (su nombre, su DNI/NIF) NUNCA vale para otro.
 - Usa SOLO los identificadores de dato, los roles, los tipos y los valores del VOCABULARIO.
   Un rol, un tipo o un valor que no esté en él no sirve: si no encaja, no lo devuelvas.
 - Si no sabes un dato, no lo devuelvas: nunca pongas «NS» como valor de un dato.
@@ -139,7 +158,7 @@ Reglas que no se rompen:
 Formato de respuesta:
 {"evaluaciones": [{"codigo": "...", "datos": [{"dato": "...", "valor": "...", "rol": null,
   "fuente": "F1", "cita": "...", "confianza": "alta|media|baja"}], "cumplido": "SI|NO|NS",
-  "evidencia": [{"fuente": "F1", "cita": "..."}], "falta": "..." }]}`;
+  "evidencia": [{"fuente": "F1", "cita": "...", "rol": null}], "falta": "..." }]}`;
 
 const CLASE_TEXTO: Record<string, string> = {
   DOCUMENTO: 'DOCUMENTO', MANIFESTACION: 'MANIFESTACIÓN', ACTUACION: 'ACTUACIÓN de la notaría',
@@ -191,6 +210,7 @@ export function loteDelMensaje(reqs: RequisitoAEvaluar[], n: number, de: number)
       : `PUEDE APLICAR — aplica si: ${r.condicionesTexto.join('; y además ') || '(condición no expresada)'}`;
     partes.push('', `[${r.codigo}] ${r.titulo}`, `  Clase: ${clase}`, `  Motor: ${motor}`);
     if (r.situacion === 'PUEDE_APLICAR' && r.faltan?.length) partes.push(`  Datos que le faltan al motor (búscalos y devuélvelos si las fuentes los dicen): ${r.faltan.map((f) => `[${f}]`).join(', ')}`);
+    if (r.porInterviniente?.length) partes.push(`  Se pide a cada interviniente (${r.porInterviniente.join(', ')}): una prueba por persona, con su rol; SI solo si consta para todos.`);
     if (r.exige) partes.push(`  Exige: ${r.exige}`);
     if (r.fundamento.length) partes.push(`  Fundamento: ${r.fundamento.join('; ')}`);
   }
@@ -236,6 +256,18 @@ export function citaEnFuente(cita: string, fuente: string): boolean {
   if (f.includes(c)) return true;
   const trozos = c.split(/\s*(?:\.\.\.|…)\s*/).filter((x) => x.length >= 25);
   return trozos.length > 0 && trozos.every((t) => f.includes(t));
+}
+
+/**
+ * ¿La cita es sólo un identificador (una referencia catastral, un número), sin nada que afirme?
+ * Vale como cita de un DATO, nunca como PRUEBA de que un requisito se cumple: «5998021DF2959H0021GA»
+ * daba por hecha la consulta del Geoportal (GEN-2026-0034, TEST, 19-nov-2026).
+ */
+export function citaSoloIdentificador(cita: string): boolean {
+  const fichas = normalizarTexto(cita).split(/[^a-z0-9ñ]+/).filter(Boolean);
+  const codigos = fichas.filter((f) => /\d/.test(f)).length;
+  const palabras = fichas.filter((f) => !/\d/.test(f) && f.length >= 3).length;
+  return codigos > 0 && palabras < 2;
 }
 
 function valorDe(v: unknown): unknown {
@@ -324,7 +356,14 @@ export function normalizarRespuesta(
       datos.push({ dato, valor, rol, fuente: p.fuente, cita: p.cita, confianza });
     }
     const evidencia = ((Array.isArray(e.evidencia) ? e.evidencia : []) as Record<string, unknown>[])
-      .map((x) => verificada(x?.fuente, x?.cita)).filter((x): x is Prueba => x !== null);
+      .map((x) => {
+        const p = verificada(x?.fuente, x?.cita);
+        if (!p) return null;
+        // Un identificador suelto no afirma nada: no prueba el requisito.
+        if (citaSoloIdentificador(p.cita)) { descartadas++; return null; }
+        const rol = x?.rol ? enLista(roles, x.rol) : null;
+        return rol ? { ...p, rol } : p;
+      }).filter((x): x is Prueba => x !== null);
     let cumplido: Veredicto = VEREDICTOS.has(e.cumplido as Veredicto) ? e.cumplido as Veredicto : 'NS';
     // Un «cumplido» sin prueba comprobada no vale: baja a «no se sabe».
     if (cumplido === 'SI' && evidencia.length === 0) cumplido = 'NS';
@@ -351,7 +390,7 @@ export function huellaContexto(ctx: ContextoEvaluacion): string {
 }
 
 function huellaRequisito(r: RequisitoAEvaluar, hCtx: string): string {
-  return huellaTexto([hCtx, r.codigo, r.situacion, ...r.condicionesTexto].join('\u0001'));
+  return huellaTexto([hCtx, r.codigo, r.situacion, ...r.condicionesTexto, ...(r.porInterviniente ?? []).map((x) => `@${x}`)].join('\u0001'));
 }
 
 // ── evaluación ───────────────────────────────────────────────────────────────

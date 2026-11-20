@@ -3,7 +3,7 @@
 // lo que no cambió—, no lo que contestaría un modelo de verdad.
 import { describe, it, expect } from 'vitest';
 import { resolverRequisitos } from '../src/motor';
-import { evaluarCaso, evaluarRequisitos, anadirDatos, citaEnFuente, numerarFuentes, type RequisitoAEvaluar, type ContextoEvaluacion } from '../src/evaluador';
+import { evaluarCaso, evaluarRequisitos, anadirDatos, citaEnFuente, citaSoloIdentificador, numerarFuentes, type RequisitoAEvaluar, type ContextoEvaluacion } from '../src/evaluador';
 import { regla, cond, repo, TIPOS_OBJETO, TIPOS_SUJETO } from './ayuda';
 
 const BASE = { tiposObjeto: TIPOS_OBJETO, tiposSujeto: TIPOS_SUJETO };
@@ -154,5 +154,43 @@ describe('tipos más concretos', () => {
     expect(conJerarquia.sujetos![0].hechos.ESTADO_CIVIL).toBe('CASADO');
     // Sin jerarquía (como antes), un rol distinto es otro interviniente.
     expect(anadirDatos(base, datos).sujetos).toHaveLength(2);
+  });
+});
+
+// GEN-2026-0034 (TEST, 19-nov-2026, compraventa de vivienda en Sabadell con datos ficticios): la
+// consulta del Geoportal salió «cumplida» con la referencia catastral como única prueba, y el DNI de la
+// compradora con el NIF del vendedor leído en la nota simple.
+describe('pruebas que no prueban (GEN-2026-0034)', () => {
+  const nota = 'TITULARES: MICO GINER, JAVIER DNI/NIF 99999999R. Referencia catastral: 5998021DF2959H0021GA.';
+  const relato = 'Compra Laura Ferrer Soler, nacida el 15 de marzo de 1990, española, ingeniera, soltera, vecindad civil catalana, DNI 00000000T.';
+  const req = (codigo: string, extra: Partial<RequisitoAEvaluar> = {}): RequisitoAEvaluar => ({
+    codigo, situacion: 'APLICA', titulo: codigo, clase: 'CONSULTA', aporta: null, tratamiento: null,
+    obligatorio: true, exige: null, condicionesTexto: [], fundamento: [], ...extra,
+  });
+
+  it('un identificador suelto no es prueba: el requisito baja a NS', async () => {
+    const { llm } = modelo({ evaluaciones: [{ codigo: 'GLOBAL-R110', cumplido: 'SI', evidencia: [{ fuente: 'F1', cita: '5998021DF2959H0021GA' }] }] });
+    const r = await evaluarRequisitos([req('GLOBAL-R110')], ctx([nota]), { llm });
+    expect(r.evaluaciones[0]).toMatchObject({ cumplido: 'NS', evidencia: [], citasDescartadas: 1 });
+  });
+
+  it('citaSoloIdentificador: códigos sí, frases no', () => {
+    expect(citaSoloIdentificador('5998021DF2959H0021GA')).toBe(true);
+    expect(citaSoloIdentificador('finca 54699')).toBe(true);
+    expect(citaSoloIdentificador('Escritura en castellano')).toBe(false);
+    expect(citaSoloIdentificador('MICO GINER, JAVIER DNI/NIF 99999999R')).toBe(false);
+    expect(citaSoloIdentificador('Precio: 340.000 euros, pagados en el acto por transferencia')).toBe(false);
+  });
+
+  it('cada prueba de un requisito por interviniente conserva su rol del vocabulario', async () => {
+    const { llm, llamadas } = modelo({ evaluaciones: [{ codigo: 'GLOBAL-R02', cumplido: 'SI', evidencia: [
+      { fuente: 'F1', cita: 'MICO GINER, JAVIER DNI/NIF 99999999R', rol: 'vendedor' },
+      { fuente: 'F2', cita: 'Compra Laura Ferrer Soler, nacida el 15 de marzo de 1990', rol: 'COMPRADOR' },
+      { fuente: 'F2', cita: 'española, ingeniera, soltera', rol: 'NOTARIO_INVENTADO' },
+    ] }] });
+    const contexto = { ...ctx([nota, relato]), catalogo: { datos: [], roles: ['VENDEDOR', 'COMPRADOR'], tiposSujeto: [], tiposObjeto: [] } };
+    const r = await evaluarRequisitos([req('GLOBAL-R02', { clase: 'DOCUMENTO', porInterviniente: ['VENDEDOR', 'COMPRADOR'] })], contexto, { llm });
+    expect(r.evaluaciones[0].evidencia.map((p) => p.rol ?? null)).toEqual(['VENDEDOR', 'COMPRADOR', null]);
+    expect(llamadas[0]).toContain('Se pide a cada interviniente (VENDEDOR, COMPRADOR)');
   });
 });
