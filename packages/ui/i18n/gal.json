@@ -787,7 +787,9 @@
       "creditsLow": "Quédanche poucos créditos de IA.",
       "creditsExhausted": "Quedaches sen créditos de IA: as funcións de intelixencia artificial están detidas.",
       "rechargePrompt": "Recarga para seguir usándoas.",
-      "ctaRecharge": "Recargar créditos"
+      "ctaRecharge": "Recargar créditos",
+      "orgEnBaja": "A túa organización está de baixa: podes consultar os teus datos, pero non crear nin modificar nada. O {fecha} suprimiranse definitivamente. Se queres unha copia, pídea respondendo ao correo de aviso.",
+      "ctaAnularBaja": "Anular a baixa"
     },
     "appShell": {
       "openMobileMenu": "Abrir menú lateral"

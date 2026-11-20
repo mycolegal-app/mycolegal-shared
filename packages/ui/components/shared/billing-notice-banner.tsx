@@ -16,6 +16,10 @@ export interface BillingNotice {
   /** APP_COURTESY_EXPIRED | APP_TRIAL_EXPIRED | APP_SUBSCRIPTION_EXPIRED | PAYMENT_METHOD_EXPIRING | CREDITS_LOW | CREDITS_EXHAUSTED */
   code: string;
   canSubscribe: boolean;
+  /** ORG_EN_BAJA: fecha (ISO) en que se suprimirán los datos de la organización. */
+  fecha?: string;
+  /** ORG_EN_BAJA: destino del botón (Config → Organización, solo al org_admin). */
+  ctaUrl?: string | null;
 }
 
 const CODE_KEY: Record<string, string> = {
@@ -25,7 +29,15 @@ const CODE_KEY: Record<string, string> = {
   PAYMENT_METHOD_EXPIRING: "paymentMethodExpiring",
   CREDITS_LOW: "creditsLow",
   CREDITS_EXHAUSTED: "creditsExhausted",
+  ORG_EN_BAJA: "orgEnBaja",
 };
+
+/**
+ * Baja con plazo (DPA §8): la organización está en baja hasta la supresión. Es el
+ * aviso más serio: no se puede descartar y su botón (solo org_admin) lleva a anularla.
+ */
+const BAJA_CODES = new Set(["ORG_EN_BAJA"]);
+const LOCALES: Record<string, string> = { CAST: "es-ES", CAT: "ca-ES", VAL: "ca-ES", GAL: "gl-ES", EUS: "eu-ES" };
 
 /** Códigos org-level de tarjeta: CTA a actualizar tarjeta, no a suscribirse. */
 const CARD_CODES = new Set(["PAYMENT_METHOD_EXPIRING"]);
@@ -49,7 +61,7 @@ export function BillingNoticeBanner({
   /** Destino de recarga (#720). Solo llega al org_admin: sin él, no hay botón. */
   creditsUrl?: string | null;
 }) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
   const visible = notices.filter((n) => !dismissed.has(`${n.appSlug}:${n.code}`));
@@ -61,8 +73,12 @@ export function BillingNoticeBanner({
         const key = `${n.appSlug}:${n.code}`;
         const isCard = CARD_CODES.has(n.code);
         const isCredit = CREDIT_CODES.has(n.code);
+        const isBaja = BAJA_CODES.has(n.code);
         const codeKey = CODE_KEY[n.code] ?? "subscriptionExpired";
-        const ctaUrl = isCard ? paymentUrl : isCredit ? creditsUrl : subscribeUrl;
+        const ctaUrl = isBaja ? n.ctaUrl : isCard ? paymentUrl : isCredit ? creditsUrl : subscribeUrl;
+        const fecha = n.fecha
+          ? new Date(n.fecha).toLocaleDateString(LOCALES[language] ?? "es-ES", { dateStyle: "long", timeZone: "Europe/Madrid" })
+          : "";
         return (
           <div
             key={key}
@@ -71,8 +87,8 @@ export function BillingNoticeBanner({
           >
             <AlertTriangle className="h-5 w-5 flex-shrink-0 text-mc-warning-500" />
             <p className="flex-1 text-sm text-mc-warning-700">
-              {t(`ui.billingNotice.${codeKey}`, { app: n.appName })}
-              {!isCard && (
+              {t(`ui.billingNotice.${codeKey}`, { app: n.appName, fecha })}
+              {!isCard && !isBaja && (
                 <>
                   {" "}
                   {n.canSubscribe
@@ -87,7 +103,9 @@ export function BillingNoticeBanner({
                 className="flex-shrink-0 rounded-lg bg-mc-warning-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
               >
                 {t(
-                  isCard
+                  isBaja
+                    ? "ui.billingNotice.ctaAnularBaja"
+                    : isCard
                     ? "ui.billingNotice.ctaUpdateCard"
                     : isCredit
                       ? "ui.billingNotice.ctaRecharge"
@@ -95,6 +113,7 @@ export function BillingNoticeBanner({
                 )}
               </a>
             )}
+            {!isBaja && (
             <button
               type="button"
               onClick={() => setDismissed((s) => new Set(s).add(key))}
@@ -103,6 +122,7 @@ export function BillingNoticeBanner({
             >
               <X className="h-4 w-4" />
             </button>
+            )}
           </div>
         );
       })}

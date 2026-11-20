@@ -787,7 +787,9 @@
       "creditsLow": "IA kreditu gutxi geratzen zaizkizu.",
       "creditsExhausted": "IA krediturik gabe geratu zara: adimen artifizialaren funtzioak geldirik daude.",
       "rechargePrompt": "Kargatu erabiltzen jarraitzeko.",
-      "ctaRecharge": "Kredituak kargatu"
+      "ctaRecharge": "Kredituak kargatu",
+      "orgEnBaja": "Zure erakundea baja emanda dago: zure datuak kontsulta ditzakezu, baina ezin duzu ezer sortu edo aldatu. {fecha}(e)an behin betiko ezabatuko dira. Kopia bat nahi baduzu, eskatu abisu-mezuari erantzunez.",
+      "ctaAnularBaja": "Baliogabetu baja"
     },
     "appShell": {
       "openMobileMenu": "Alboko menua ireki"
