@@ -13,6 +13,10 @@ import { buildScopeWhere, type ScopeContext } from './scopes';
 type PrismaLike = { $transaction: (...args: any[]) => any };
 
 /**
+ * ⚠️ 20-nov-2026: la RLS NO está activa en ninguna base (ni políticas ni roles, aunque
+ * sus migraciones figuren aplicadas) y ninguna app usa este helper. El aislamiento entre
+ * organizaciones es de aplicación. Ver mycolegal-platform/prisma/RLS_NO_ACTIVA.md.
+ *
  * Tenant context wrapper for Row-Level Security (RLS).
  *
  * Wraps a Prisma operation in a transaction that first sets the
