@@ -173,13 +173,19 @@ export interface Resultado {
 }
 
 /** Un dato derivado ya resuelto: el valor del tramo que se cumplió y su porqué. */
-export interface Derivado { fact: string; valor: unknown; porQue: string | null }
+export interface Derivado {
+  fact: string; valor: unknown; porQue: string | null;
+  /** De qué interviniente es, si el dato es de SUJETO (`derivarPorSujeto`, 0.3.19). */
+  sujetoId?: string;
+  /** Sólo una PROPUESTA (el tramo `propone`): no cuenta como sabido; quien lo usa la enseña para confirmar. */
+  propone?: boolean;
+}
 
 // ── evaluación ───────────────────────────────────────────────────────────────
 
 const OPERADOR_TEXTO: Record<string, string> = {
   EQ: '=', NE: '≠', IN: 'es uno de', NOT_IN: 'no es ninguno de', GT: '>', GTE: '≥', LT: '<', LTE: '≤',
-  INCLUYE: 'incluye', EXISTS: 'consta', NOT_EXISTS: 'no consta', IS_A: 'es un',
+  INCLUYE: 'incluye', EXISTS: 'consta', NOT_EXISTS: 'no consta', IS_A: 'es un', MATCHES: 'tiene el formato',
 };
 function valorTexto(v: unknown): string {
   if (v === true) return 'SÍ';
@@ -231,6 +237,12 @@ function comparar(op: string, valor: unknown, esperado: unknown): Ternario {
     case 'LTE': return Number(valor) <= Number(esperado);
     // El hecho puede ser un valor o una lista de valores: «¿se paga, entre otros, con cheque?».
     case 'INCLUYE': return Array.isArray(valor) ? valor.includes(esperado) : valor === esperado;
+    // El FORMATO de un dato de texto (0.3.19): el número de un DNI («8 cifras y letra»). `esperado` es una expresión
+    // regular; una mal escrita no se cumple ni se finge sabida: UNKNOWN.
+    case 'MATCHES': {
+      if (valor === null || valor === '') return false;
+      try { return new RegExp(String(esperado)).test(String(valor)); } catch { return null; }
+    }
     case 'EXISTS': return valor !== null && valor !== '';
     case 'NOT_EXISTS': return valor === null || valor === '';
     // IS_A necesita la jerarquía de tipos; hasta que se implemente NO se finge que se
@@ -557,6 +569,11 @@ export interface OpcionesMotor {
    */
   rolComodin?: boolean;
   /**
+   * Derivar también los datos de INTERVINIENTE (`SUJETO.*`), uno por cada uno (0.3.19, Redactor): la nacionalidad de
+   * quien se identifica con DNI. Sin esto, como siempre: sólo datos del ACTO.
+   */
+  derivarPorSujeto?: boolean;
+  /**
    * Una pregunta por (hecho, papel) en vez de una por hecho: `ESTADO_CIVIL` del VENDEDOR y del
    * COMPRADOR son dos preguntas, cada una con su `bloquea`. Para quien guarda los hechos por
    * papel (Redactor con `:REQ(…@ROL)`, plan REQ_CATALOGO_IUI). Por defecto, una por hecho, como
@@ -597,6 +614,7 @@ export function derivar(
 }
 
 type CtxDerivar = {
+  porSujeto?: boolean;
   esUn?: (tipo: string | null | undefined, exigido: string) => boolean;
   esUnRol?: (rol: string | null | undefined, exigido: string) => boolean;
   acompana?: (rol: string | null | undefined) => boolean;
@@ -624,23 +642,48 @@ function derivarConDudas(
   const dudas = new Map<string, DudaDerivado>();
   let pres = presunciones;
   const ambitoDe = (fact: string) => fact.split('.')[0];
+  // Los intervinientes, con lo que se les va derivando: un derivado puede salir de otro anterior en la lista.
+  const sujetos = (hechos.sujetos ?? []).map((s) => ({ ...s, hechos: { ...s.hechos } }));
+  const conSujetos = (): Hechos => ({ ...hechos, sujetos });
   for (const d of defs) {
+    // LOS DE INTERVINIENTE (0.3.19, con `porSujeto`): un valor por cada uno, con las condiciones de SUJETO mirando
+    // sólo a ése (`fijar`). Lo contestado de esa persona manda. Sin dudas: lo que falta se pregunta de esa persona,
+    // como cualquier dato suyo.
+    if (ambitoDe(d.fact) === 'SUJETO' && ctx.porSujeto) {
+      const nombre = d.fact.split('.').slice(1).join('.');
+      for (const s of sujetos) {
+        if (s.hechos[nombre] !== undefined) continue;
+        for (const t of d.tramos) {
+          const conds: Cond[] = t.si.filter((c) => c.fact !== d.fact).map((c) => ({
+            fact: c.fact, operador: c.op, valor: c.valor, scopeRolCodigo: c.scopeRol ?? null, grupo: 0, paraTipo: c.paraTipo ?? null,
+          }));
+          const r = evaluar(conds, conSujetos(), ambitoDe, pres, ctx.esUnRol, ctx.esUn, { sujetoId: s.id }, ctx.acompana);
+          if (r.valor === null) break;
+          if (r.valor === true) {
+            out.push({ fact: d.fact, valor: t.valor, porQue: t.porQue ?? null, sujetoId: s.id, ...(t.propone ? { propone: true } : {}) });
+            if (!t.propone) s.hechos[nombre] = t.valor;
+            break;
+          }
+        }
+      }
+      continue;
+    }
     // Sólo datos del ACTO: uno de interviniente o de bien sería un valor por cada uno, y las
-    // presunciones valen para todos. El catálogo hoy sólo deriva de ACTO.
+    // presunciones valen para todos.
     if (ambitoDe(d.fact) !== 'ACTO') continue;
     if (hechos.acto?.[d.fact.split('.').slice(1).join('.')] !== undefined) continue;
     for (const t of d.tramos) {
       const conds: Cond[] = t.si.filter((c) => c.fact !== d.fact).map((c) => ({
         fact: c.fact, operador: c.op, valor: c.valor, scopeRolCodigo: c.scopeRol ?? null, grupo: 0, paraTipo: c.paraTipo ?? null,
       }));
-      const r = evaluar(conds, hechos, ambitoDe, pres, ctx.esUnRol, ctx.esUn, {}, ctx.acompana);
+      const r = evaluar(conds, conSujetos(), ambitoDe, pres, ctx.esUnRol, ctx.esUn, {}, ctx.acompana);
       if (r.valor === null) {
         dudas.set(d.fact, { si: t.si.filter((c) => c.fact !== d.fact), faltan: r.faltan, faltanPorRol: r.faltanPorRol, faltanPorSujeto: r.faltanPorSujeto });
         break;
       }
       if (r.valor === true) {
-        out.push({ fact: d.fact, valor: t.valor, porQue: t.porQue ?? null });
-        pres = { ...pres, [d.fact]: t.valor };
+        out.push({ fact: d.fact, valor: t.valor, porQue: t.porQue ?? null, ...(t.propone ? { propone: true } : {}) });
+        if (!t.propone) pres = { ...pres, [d.fact]: t.valor };
         break;
       }
     }
@@ -653,12 +696,12 @@ function derivarConDudas(
 export async function derivarHechos(
   repo: RepositorioRequisitos,
   hechos: Hechos,
-  opciones: Pick<OpcionesMotor, 'presunciones' | 'rolComodin'> = {},
+  opciones: Pick<OpcionesMotor, 'presunciones' | 'rolComodin' | 'derivarPorSujeto'> = {},
 ): Promise<Derivado[]> {
   if (!repo.derivados) return [];
   const defs = await repo.derivados();
   if (!defs.length) return [];
-  return derivar(defs, hechos, opciones.presunciones ?? {}, await jerarquias(repo, opciones.rolComodin));
+  return derivar(defs, hechos, opciones.presunciones ?? {}, { ...await jerarquias(repo, opciones.rolComodin), porSujeto: opciones.derivarPorSujeto });
 }
 
 /**
@@ -836,15 +879,24 @@ export async function resolverRequisitos(
 
   // 2 ter. Los datos DERIVADOS (catálogo 1.1.63): pesan más que el caso y menos que lo contestado.
   const { derivados, dudas } = repo.derivados
-    ? derivarConDudas(await repo.derivados(), hechos, presunciones, { esUn, esUnRol, acompana })
+    ? derivarConDudas(await repo.derivados(), hechos, presunciones, { esUn, esUnRol, acompana, porSujeto: opciones.derivarPorSujeto })
     : { derivados: [] as Derivado[], dudas: new Map<string, DudaDerivado>() };
+  // Los de cada interviniente, como lo suyo (no como presunción, que valdría para todos): su pregunta desaparece.
+  const deSujeto = derivados.filter((d) => d.sujetoId && !d.propone);
+  if (deSujeto.length) {
+    hechos = { ...hechos, sujetos: (hechos.sujetos ?? []).map((s) => {
+      const suyos = deSujeto.filter((d) => d.sujetoId === s.id);
+      return suyos.length ? { ...s, hechos: { ...Object.fromEntries(suyos.map((d) => [d.fact.split('.').slice(1).join('.'), d.valor])), ...s.hechos } } : s;
+    }) };
+  }
   // Datos que se preguntan por otro (catálogo 1.1.64): la antigüedad, por el año de terminación.
   const preguntaPor = new Map((repo.preguntasPor ? await repo.preguntasPor() : []).map((p) => [p.fact, p]));
   /** El dato que se pregunta de verdad por uno que falta. */
   const porQuien = (fact: string) => preguntaPor.get(fact)?.por ?? fact;
   /** Un derivado en duda falta por lo que falta en su tramo (si se sabe cómo preguntarlo). */
   const enDuda = (fact: string) => { const d = dudas.get(fact); return d && d.si.every((c) => c.def) ? d : undefined; };
-  if (derivados.length) presunciones = { ...presunciones, ...Object.fromEntries(derivados.map((d) => [d.fact, d.valor])) };
+  const deActo = derivados.filter((d) => !d.sujetoId && !d.propone);
+  if (deActo.length) presunciones = { ...presunciones, ...Object.fromEntries(deActo.map((d) => [d.fact, d.valor])) };
   // Cuándo existe cada dato (`existeSi`, 0.3.16), y cómo se pregunta el dato del que depende.
   const existencias = await cargarExistencias(repo);
   const comoPreguntarBase = new Map<string, NonNullable<ExisteSiDef['si'][number]['def']>>();

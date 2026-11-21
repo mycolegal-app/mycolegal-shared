@@ -213,6 +213,9 @@ export interface DerivadoDef {
   tramos: {
     valor: unknown;
     porQue: string | null;
+    /** El tramo sólo PROPONE su valor (0.3.19): no cuenta como sabido y el dato se sigue preguntando; la app lo
+     *  enseña para que el oficial lo confirme (el país de residencia fiscal por el domicilio). */
+    propone?: boolean;
     si: {
       fact: string; op: string; valor: unknown; scopeRol: string | null; paraTipo: string | null;
       /** Cómo se pregunta el dato si el tramo queda en duda (0.3.13): con él se pregunta lo que falta

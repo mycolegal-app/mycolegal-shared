@@ -224,7 +224,7 @@ export function crearRepositorioRequisitos(client: ClienteGolden): RepositorioRe
     // ── Datos derivados (7-nov-2026, catálogo 1.1.63) ──────────────────────────
     async derivados() {
       if (!client.$queryRawUnsafe) return [];
-      type Tramo = { valor?: unknown; porQue?: unknown; si?: { fact?: unknown; op?: unknown; valor?: unknown; scopeRol?: unknown }[] };
+      type Tramo = { valor?: unknown; porQue?: unknown; propone?: unknown; si?: { fact?: unknown; op?: unknown; valor?: unknown; scopeRol?: unknown }[] };
       let filas: { ambito: string; codigo: string; deriva: unknown }[];
       try {
         filas = await client.$queryRawUnsafe(
@@ -260,6 +260,7 @@ export function crearRepositorioRequisitos(client: ClienteGolden): RepositorioRe
           tramos: (f.deriva as Tramo[]).map((t) => ({
             valor: t.valor,
             porQue: typeof t.porQue === 'string' ? t.porQue : null,
+            ...(t.propone === true ? { propone: true } : {}),
             si: (t.si ?? []).map((c) => ({
               fact: String(c.fact), op: String(c.op), valor: c.valor,
               scopeRol: typeof c.scopeRol === 'string' ? c.scopeRol : null, paraTipo: paraTipo(String(c.fact)),
