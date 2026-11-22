@@ -181,3 +181,23 @@ describe('sufijo de INCLUDE y pista de AUTO (15-oct-2026)', () => {
     expect(applyFieldSuffix('{{AUTO:a|b}} {{X}}', '_B')).toBe('{{AUTO:a|b}} {{X_B}}');
   });
 });
+
+describe('ordinales (Can Marcet, 22-nov-2026)', () => {
+  it('la inscripción de la nota simple, en femenino y en masculino', () => {
+    expect(aplicarFormato('1', 'ordinal_f').texto).toBe('1.ª');
+    expect(aplicarFormato('3', 'ordinal_f').texto).toBe('3.ª');
+    expect(aplicarFormato('2', 'ordinal_m').texto).toBe('2.º');
+    // Lo que ya viene abreviado se normaliza, no se duplica.
+    expect(aplicarFormato('1ª', 'ordinal_f').texto).toBe('1.ª');
+    expect(aplicarFormato('1.ª', 'ordinal_f').texto).toBe('1.ª');
+  });
+  it('en catalán', () => {
+    expect(aplicarFormato('1', 'ordinal_f', 'ca').texto).toBe('1a');
+    expect(['1', '2', '3', '4', '5'].map((n) => aplicarFormato(n, 'ordinal_m', 'ca').texto)).toEqual(['1r', '2n', '3r', '4t', '5è']);
+  });
+  it('lo que no es un número sale tal cual, con aviso', () => {
+    const r = aplicarFormato('primera', 'ordinal_f');
+    expect(r.texto).toBe('primera');
+    expect(r.problema).toBeTruthy();
+  });
+});

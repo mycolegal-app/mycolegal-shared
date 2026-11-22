@@ -1,5 +1,9 @@
 # @mycolegal-app/docfilling-core
 
+## 0.1.57 — 22-nov-2026
+
+Formatos `ordinal_f` y `ordinal_m`: el número de una inscripción, una planta, un piso, abreviado. «1» → «1.ª» / «1.º»; en catalán «1a» y «1r, 2n, 3r, 4t, 5è». Lo que ya viene abreviado («1ª», «1.ª») se normaliza; lo que no es un número sale tal cual, con aviso. Can Marcet (0405): la nota simple dice «Inscripción: 1» y la escritura decía «inscripción 1.». `tests/formatos.test.ts`.
+
 ## 0.1.54 — 15-nov-2026
 
 Rendimiento, sin cambios en lo que se devuelve:

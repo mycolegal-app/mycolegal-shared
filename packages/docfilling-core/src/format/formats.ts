@@ -43,6 +43,10 @@ export const FORMATOS: Record<string, DefFormato> = {
   date: { descripcion: 'Fecha en número', ejemplo: ['2026-10-14', '14/10/2026'] },
   date_long: { descripcion: 'Fecha con el mes en letra', ejemplo: ['2026-10-14', '14 de octubre de 2026'] },
   date_words: { descripcion: 'Fecha íntegra en letra', ejemplo: ['2026-10-14', 'catorce de octubre de dos mil veintiséis'] },
+  // El número de una inscripción, una planta, un piso: «inscripción 1.ª» (Can Marcet, 22-nov-2026: la nota simple dice
+  // «Inscripción: 1» y la escritura decía «inscripción 1.»). En catalán, «1a» y «1r, 2n, 3r, 4t, 5è».
+  ordinal_f: { descripcion: 'Ordinal abreviado femenino', ejemplo: ['1', '1.ª'] },
+  ordinal_m: { descripcion: 'Ordinal abreviado masculino', ejemplo: ['2', '2.º'] },
   upper: { descripcion: 'En mayúsculas', ejemplo: ['Ana Pérez', 'ANA PÉREZ'] },
   lower: { descripcion: 'En minúsculas', ejemplo: ['Separación de Bienes', 'separación de bienes'] },
   capitalize: { descripcion: 'Primera letra en mayúscula', ejemplo: ['gananciales', 'Gananciales'] },
@@ -214,6 +218,12 @@ function fechaEn(f: { dia: number; mes: number; anio: number }, modo: 'long' | '
 
 const dos = (n: number) => String(n).padStart(2, '0');
 
+/** «1.ª», «2.º»; en catalán «1a» y «1r», «2n», «3r», «4t», «5è». */
+function ordinal(n: number, femenino: boolean, idioma: string): string {
+  if (idioma === 'ca') return femenino ? `${n}a` : `${n}${n === 1 || n === 3 ? 'r' : n === 2 ? 'n' : n === 4 ? 't' : 'è'}`;
+  return `${n}.${femenino ? 'ª' : 'º'}`;
+}
+
 export interface ResultadoFormato {
   texto: string;
   /** Si el formato no se pudo aplicar (formato desconocido o valor que no se deja leer). */
@@ -241,6 +251,12 @@ export function aplicarFormato(valor: string, formato: string, idioma = 'es'): R
     case 'percent_words': {
       const n = leerNumero(v);
       return n === null || n < 0 ? noNumero : { texto: `${numeroEnLetras(n, lang)} ${lang === 'ca' ? 'per cent' : 'por ciento'}` };
+    }
+    case 'ordinal_f': case 'ordinal_m': {
+      // «1», «1ª», «1.º»: el número del principio; sin él, tal cual.
+      const m = /^\s*(\d+)\s*(?:\.?\s*[ªºaonrtè]{1,2}\.?)?\s*$/i.exec(v);
+      if (!m) return noNumero;
+      return { texto: ordinal(Number(m[1]), f === 'ordinal_f', lang) };
     }
     case 'date': { const x = leerFecha(v); return x ? { texto: `${dos(x.dia)}/${dos(x.mes)}/${x.anio}` } : noFecha; }
     case 'date_long': { const x = leerFecha(v); return x ? { texto: fechaEn(x, 'long', lang) } : noFecha; }
