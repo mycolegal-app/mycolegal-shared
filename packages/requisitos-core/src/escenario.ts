@@ -135,7 +135,8 @@ export function casoGeneral(actoCodigo: string): Escenario {
 
 /**
  * Pone debajo del escenario lo que hereda de sus transversales. Pura. El escenario manda sobre lo
- * heredado; lo que el escenario pregunta siempre no se presume.
+ * heredado; lo que el escenario pregunta siempre no se presume. Una fila NO_PREGUNTAR quita el hecho:
+ * ni se presume ni se pregunta (salvo que el escenario del acto o la notaría lo pidan).
  */
 export function componerTransversales(
   e: Escenario,
@@ -156,6 +157,10 @@ export function componerTransversales(
   const preguntarSiempre = [...e.preguntarSiempre];
   for (const f of heredadas.values()) {
     if (delEscenario.has(f.fact)) continue;
+    // NO_PREGUNTAR (23-nov-2026, #1101/#1102): un ámbito más específico quita un hecho heredado sin presumirle un valor
+    // —en las cancelaciones (13A) no hacen falta el estado civil ni la vecindad civil que GLOBAL pregunta a todos—.
+    // Gana como cualquier otra fila: la más específica.
+    if (f.modo === 'NO_PREGUNTAR') continue;
     if (f.modo === 'PREGUNTAR') preguntarSiempre.push({ fact: f.fact, porQue: f.porQue });
     else presunciones.push({ fact: f.fact, valor: f.valor, tema: f.tema, situacion: f.situacion, porQue: f.porQue, origen: f.fichero });
   }

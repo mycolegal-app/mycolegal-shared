@@ -225,7 +225,7 @@ export interface DerivadoDef {
   }[];
 }
 
-/** Un escenario base tal como se guarda. `presunciones[].modo`: PRESUMIR | PREGUNTAR. */
+/** Un escenario base tal como se guarda. `presunciones[].modo`: PRESUMIR | PREGUNTAR (las transversales, también NO_PREGUNTAR). */
 export interface FilaEscenario {
   actoCodigo: string;
   codigo: string;
