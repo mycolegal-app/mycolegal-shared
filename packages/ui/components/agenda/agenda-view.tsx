@@ -1231,7 +1231,7 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
   // llevarse la agenda del día en papel.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "p") {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key ?? "").toLowerCase() === "p") {
         e.preventDefault();
         imprimir();
       }

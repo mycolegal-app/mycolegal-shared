@@ -336,7 +336,8 @@ export function IncidentReporter({
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const metaOrCtrl = e.metaKey || e.ctrlKey;
-      const matchesKey = e.key.toUpperCase() === (shortcut.key || "B").toUpperCase();
+      // El autocompletado de Chrome lanza keydown sin `key` (#1102, consola de Iván, 23-nov-2026).
+      const matchesKey = (e.key ?? "").toUpperCase() === (shortcut.key || "B").toUpperCase();
       const matchesShift = shortcut.shift ? e.shiftKey : true;
       const matchesAlt = shortcut.alt ? e.altKey : true;
       if (metaOrCtrl && matchesShift && matchesAlt && matchesKey) {

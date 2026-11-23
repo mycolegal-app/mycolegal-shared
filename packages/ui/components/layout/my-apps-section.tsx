@@ -146,7 +146,7 @@ export function MyAppsSection({ apps, currentSlug, label }: MyAppsSectionProps) 
       if (e.metaKey === e.ctrlKey) return;
       if (e.key.length !== 1) return;
       if (isTypingInInput(e.target)) return;
-      const ch = e.key.toLowerCase();
+      const ch = (e.key ?? "").toLowerCase();
       const match = accelMap.get(ch);
       if (!match) return;
       e.preventDefault();
