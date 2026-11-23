@@ -756,7 +756,17 @@ async function jerarquias(repo: RepositorioRequisitos, rolComodin?: boolean) {
     ? (rol: string | null | undefined, exigido: string) => (rol ? subeRol(rol, exigido) : !acompana(exigido))
     : subeRol;
 
-  return { esUn, subeRol, acompana, esUnRol };
+  /** Los tipos de objeto por debajo de `tipo` en su árbol (sin él): LOCAL, VIVIENDA… bajo URBANO o INMUEBLE. */
+  const hijosObj = new Map<string, string[]>();
+  for (const t of tiposObj) if (t.parentCodigo) hijosObj.set(t.parentCodigo, [...(hijosObj.get(t.parentCodigo) ?? []), t.codigo]);
+  const descendientesObjeto = (tipo: string): string[] => {
+    const out: string[] = [];
+    const pila = [...(hijosObj.get(tipo) ?? [])];
+    while (pila.length && out.length < 500) { const t = pila.pop()!; if (out.includes(t)) continue; out.push(t); pila.push(...(hijosObj.get(t) ?? [])); }
+    return out;
+  };
+
+  return { esUn, subeRol, acompana, esUnRol, descendientesObjeto };
 }
 
 export async function resolverRequisitos(
@@ -770,7 +780,7 @@ export async function resolverRequisitos(
   let presunciones = opciones.presunciones ?? {};
   const porRol = Boolean(opciones.preguntasPorRol);
   const porInterviniente = Boolean(opciones.preguntasPorSujeto);
-  const { esUn, subeRol, acompana, esUnRol } = await jerarquias(repo, opciones.rolComodin);
+  const { esUn, subeRol, acompana, esUnRol, descendientesObjeto } = await jerarquias(repo, opciones.rolComodin);
   /**
    * Las opciones de la pregunta «¿qué tipo es?»: los tipos que piden las reglas en duda y
    * «Ninguno de estos». Sólo con los pedidos la pregunta podía no tener respuesta —un aumento
@@ -1152,7 +1162,10 @@ export async function resolverRequisitos(
           bloquea: [],
           roles: [],
         };
-        p.opciones = opcionesDeTipo([...(p.opciones as string[]).filter((x) => x !== TIPO_NINGUNO), ...tiposRegla]);
+        // Y los tipos CONCRETOS por debajo de los pedidos (vía A, Carles, 23-nov-2026): una regla que pide INMUEBLE
+        // dejaba elegir sólo «INMUEBLE», y MycoBot no podía decir LOCAL aunque la nota simple lo dijera (cancelación 1302
+        // BS, para el IUI). La regla se resuelve igual: `esUn` sube por el árbol.
+        p.opciones = opcionesDeTipo([...(p.opciones as string[]).filter((x) => x !== TIPO_NINGUNO), ...tiposRegla, ...tiposRegla.flatMap(descendientesObjeto)]);
         p.bloquea.push(r.codigo);
         preguntas.set(FACT_TIPO_OBJETO, p);
       }
