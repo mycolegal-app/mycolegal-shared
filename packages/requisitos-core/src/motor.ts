@@ -61,6 +61,13 @@ export interface Pregunta {
    */
   sujetoId?: string;
   objetoId?: string;
+  /**
+   * De un hecho de PERSONA: los tipos de interviniente a los que se aplican las reglas que bloquea (`condSujeto`/
+   * `sujetoTipoCodigo` de sus roles). `null` = alguna no acota (vale para cualquiera); ausente en los demás. Quien
+   * reparta una pregunta sin interviniente entre todos no debe hacerla a uno cuyo tipo conocido no encaja: GLOBAL-R48
+   * («de persona física») preguntaba el tipo de documento al banco acreedor (#1101/#1102, 23-nov-2026).
+   */
+  paraTipos?: string[] | null;
 }
 
 export interface RequisitoResuelto {
@@ -1042,13 +1049,28 @@ export async function resolverRequisitos(
         });
         const anotar = (clave: string, p: Pregunta) => {
           if (!p.bloquea.includes(r.codigo)) p.bloquea.push(r.codigo);
+          if (ambito === 'SUJETO' && p.paraTipos !== null) {
+            p.paraTipos = tiposSujeto.length ? [...new Set([...(p.paraTipos ?? []), ...tiposSujeto])] : null;
+          }
           if (p.rol && !p.roles.includes(p.rol)) p.roles.push(p.rol);
           else if (rol && !p.roles.includes(rol)) p.roles.push(rol);
           preguntas.set(clave, p);
         };
         // Por interviniente o bien: a cada uno que no lo tiene, su pregunta.
         const prefijo = `${fact}@${rol ?? ''}#`;
-        const ids = porInterviniente ? faltanPorSujeto.filter((k) => k.startsWith(prefijo)).map((k) => k.slice(prefijo.length)) : [];
+        // De quien la regla excluye por su tipo («de persona física», y es un banco) no se pide: la regla nunca le
+        // aplicará diga lo que diga (#1101/#1102, cancelación 1302: GLOBAL-R48 preguntaba el tipo de documento al
+        // acreedor, ENTIDAD_CREDITO_TIPO). Mismo criterio que `expandir`: sin tipo conocido ni presumido, se pregunta.
+        const encaja = (id: string) => {
+          if (!tiposSujeto.length || ambito !== 'SUJETO') return true;
+          const su = (hechos.sujetos ?? []).find((x) => x.id === id);
+          const presumido = !su?.tipo && !!tipoSujPres;
+          const tipo = su?.tipo ?? tipoSujPres ?? null;
+          return !tipo || tiposSujeto.some((t) => esUn(tipo, t) || (!presumido && esUn(t, tipo)));
+        };
+        const todos = porInterviniente ? faltanPorSujeto.filter((k) => k.startsWith(prefijo)).map((k) => k.slice(prefijo.length)) : [];
+        const ids = todos.filter(encaja);
+        if (todos.length && !ids.length) return;
         if (ids.length) {
           for (const id of ids) {
             const clave = `${preguntado}#${id}`;
