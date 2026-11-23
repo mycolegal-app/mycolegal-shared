@@ -1076,6 +1076,7 @@
       "rateLimited": "Massa preguntes seguides. Espera un moment.",
       "history": "Historial",
       "newConversation": "Nova conversa",
+      "hiloNuevoPorInactividad": "He començat una conversa nova perquè l'anterior feia hores que no es feia servir. Si vols continuar-la, la tens a l'historial.",
       "noHistory": "Encara no tens converses.",
       "quitarConv": "Treure de l'historial",
       "quitarConvConfirmar": "Es traurà del teu historial. No es retornen els crèdits.",

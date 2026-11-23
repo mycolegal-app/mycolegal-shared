@@ -277,6 +277,10 @@ const ONBOARD_STORAGE_KEY = "mycolegal:mycobot:onboarded";
 // (vive en la pestaña/sesión, no entre días) para rehidratarlo tras la recarga y
 // poder saltar de una referencia a otra sin reiniciar el hilo.
 const THREAD_STORAGE_KEY = "mycolegal:mycobot:thread";
+/** #6 (Formentera, 22-nov-2026) — MycoBot tiene en cuenta toda la conversación (la ficha del caso):
+ *  tras tantas horas sin preguntar, la pregunta siguiente abre una conversación nueva para no
+ *  mezclar un asunto con otro. La anterior sigue en el historial. */
+const HILO_CADUCA_MS = 4 * 60 * 60 * 1000;
 // #1 (consultor) — al pinchar una cita colapsamos el rail y navegamos full-page a
 // la ficha de la resolución para no taparla. Este flag (sesión) marca que, al
 // VOLVER a la Biblioteca (`/resoluciones`), hay que REABRIR el rail para devolver
@@ -449,6 +453,8 @@ export function MycoBotRail({
     [],
   );
   const [conversacionId, setConversacionId] = useState<string | null>(null);
+  /** Cuándo se preguntó por última vez en el hilo activo (`HILO_CADUCA_MS`). */
+  const ultimaActividadRef = useRef<number | null>(null);
   // #901 — pregunta que se quedó sin respuesta porque se cambió de pantalla
   // mientras MycoBot pensaba. Ver `recuperarPendiente` más abajo.
   const [pendiente, setPendiente] = useState<{ cid: string | null; pregunta: string } | null>(null);
@@ -937,10 +943,11 @@ export function MycoBotRail({
     try {
       const raw = window.sessionStorage.getItem(THREAD_STORAGE_KEY);
       if (!raw) return;
-      const saved = JSON.parse(raw) as { messages?: Msg[]; conversacionId?: string | null };
+      const saved = JSON.parse(raw) as { messages?: Msg[]; conversacionId?: string | null; ultimaAt?: number | null };
       if (Array.isArray(saved.messages) && saved.messages.length) {
         setMessages(saved.messages);
         setConversacionId(saved.conversacionId ?? null);
+        ultimaActividadRef.current = typeof saved.ultimaAt === "number" ? saved.ultimaAt : null;
         // #901 — Esther: "si cambio de pantalla se queda la pregunta y no
         // busca". La pregunta se guarda aquí en cuanto se envía, pero el estado
         // "pensando" no: al volver, el hilo aparecía con la pregunta, sin
@@ -975,7 +982,7 @@ export function MycoBotRail({
     try {
       window.sessionStorage.setItem(
         THREAD_STORAGE_KEY,
-        JSON.stringify({ messages, conversacionId }),
+        JSON.stringify({ messages, conversacionId, ultimaAt: ultimaActividadRef.current }),
       );
     } catch {
       /* ignore */
@@ -986,7 +993,7 @@ export function MycoBotRail({
     // #34 — `cid` explícito: quien acaba de adjuntar documentos a una conversación
     // recién creada pregunta antes de que el estado `conversacionId` se refresque.
     async (pregunta: string, cid?: string | null) => {
-      const convId = cid ?? conversacionId;
+      let convId = cid ?? conversacionId;
       const q = pregunta.trim();
       if (!q || loading) return;
 
@@ -1061,6 +1068,23 @@ export function MycoBotRail({
       setInput("");
       // #901 — si había un aviso de pregunta interrumpida, esta toma el relevo.
       setInterrumpida(null);
+      // #6 — tras horas sin uso, conversación nueva (como /nuevo), con un aviso. No si la pregunta
+      // llega con `cid` explícito: es la de unos documentos recién adjuntados a este hilo.
+      const ahora = Date.now();
+      const caducado =
+        !cid && !!convId && ultimaActividadRef.current !== null && ahora - ultimaActividadRef.current > HILO_CADUCA_MS;
+      ultimaActividadRef.current = ahora;
+      if (caducado) {
+        convId = null;
+        setConversacionId(null);
+        setViewer(null);
+        setMessages([{ role: "bot", text: t("ui.mycobot.hiloNuevoPorInactividad") }]);
+        try {
+          window.sessionStorage.removeItem(THREAD_STORAGE_KEY);
+        } catch {
+          /* ignore */
+        }
+      }
       setMessages((m) => [...m, { role: "user", text: q }]);
       setLoading(true);
       setStepLive(null);
@@ -1501,6 +1525,8 @@ export function MycoBotRail({
         }
         setMessages(msgs);
         setConversacionId(id);
+        // Retomar una conversación del historial es seguir con ella: cuenta como actividad.
+        ultimaActividadRef.current = Date.now();
       } catch {
         setMessages([{ role: "bot", text: t("ui.mycobot.error"), error: true }]);
       } finally {

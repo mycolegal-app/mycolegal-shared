@@ -1075,6 +1075,7 @@
       "rateLimited": "Demasiadas preguntas seguidas. Agarda un momento.",
       "history": "Historial",
       "newConversation": "Nova conversa",
+      "hiloNuevoPorInactividad": "Comecei unha conversa nova porque a anterior levaba horas sen uso. Se queres seguir con ela, tela no historial.",
       "noHistory": "Aínda non tes conversas.",
       "quitarConv": "Quitar do historial",
       "quitarConvConfirmar": "Quitarase do teu historial. Non se devolven os créditos.",
