@@ -26,7 +26,7 @@ describe('declarar', () => {
   it('lee código, alias, familia, variante, grupos e idioma', () => {
     expect(leerSchema(CABECERA)).toEqual({
       act: '1103', actAlias: 'ADJUDICACION_HERENCIA', family: 'F11', familyAlias: 'HERENCIAS',
-      variant: '', groups: ['TRANSMISION_GRATUITA', 'MORTIS_CAUSA'], lang: 'es',
+      variant: '', groups: ['TRANSMISION_GRATUITA', 'MORTIS_CAUSA'], lang: 'es', notRequested: [],
     });
   });
 
@@ -239,5 +239,33 @@ describe('E927 nombres retirados (TIPO_ACTO y compañía)', () => {
   it('nombresRetiradosEn, para la carga', () => {
     expect(nombresRetiradosEn('{{DECLARE TIPO_ACTO="X"}}{{IF ES_MORTIS_CAUSA}}y{{ENDIF}}').sort()).toEqual(['ES_MORTIS_CAUSA', 'TIPO_ACTO']);
     expect(nombresRetiradosEn('Texto sin nada.')).toEqual([]);
+  });
+});
+
+describe('SCHEMA:NOT_REQUESTED — documentos que el esquema no pide (#1107, Carles 24-nov-2026)', async () => {
+  const { catalogoDesdeJson } = await import('../src/ports/catalogo');
+  const cat = catalogoDesdeJson({
+    atributos: [],
+    documentos: [{ codigo: 'REQ_PODER' }, { codigo: 'REQ_ESCRITURA_HIPOTECA' }] as never,
+    roles: [{ codigo: 'ACREEDOR_HIPOTECARIO' }] as never,
+  });
+  const T = '{{SCHEMA:ACT=1302}}\n{{SCHEMA:NOT_REQUESTED=REQ_PODER@ACREEDOR_HIPOTECARIO, REQ_ESCRITURA_HIPOTECA}}\ntexto';
+  const codigos = (t: string, catalogo?: typeof cat) => validateText(t, undefined, undefined, { tipo: 'esquema', catalogo }).diagnostics.map((d) => d.code);
+
+  it('se lee: documento y papel opcional; viaja en los valores', () => {
+    expect(leerSchema(T).notRequested).toEqual([{ documento: 'REQ_PODER', papel: 'ACREEDOR_HIPOTECARIO' }, { documento: 'REQ_ESCRITURA_HIPOTECA', papel: null }]);
+    expect(valoresDeSchema(T)['SCHEMA:NOT_REQUESTED']).toBe('REQ_PODER@ACREEDOR_HIPOTECARIO,REQ_ESCRITURA_HIPOTECA');
+    expect(leerSchema('{{SCHEMA:ACT=1302}}').notRequested).toEqual([]);
+  });
+
+  it('es una clave válida: sin E920 y sin problema de forma', () => {
+    expect(codigos(T).filter((c) => c.startsWith('E'))).toEqual([]);
+    expect(codigos('{{SCHEMA:NOT_REQUESTED=req poder}}')).toContain('E923');
+  });
+
+  it('con catálogo: documento desconocido E935, papel desconocido E936', () => {
+    expect(codigos(T, cat).filter((c) => c.startsWith('E'))).toEqual([]);
+    expect(codigos('{{SCHEMA:NOT_REQUESTED=REQ_NO_EXISTE}}', cat)).toContain('E935');
+    expect(codigos('{{SCHEMA:NOT_REQUESTED=REQ_PODER@PAPEL_NO_EXISTE}}', cat)).toContain('E936');
   });
 });

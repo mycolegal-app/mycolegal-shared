@@ -5,6 +5,9 @@
 //     {{SCHEMA:VARIANT=SOBREVIVENCIA}}                  opcional, un valor
 //     {{SCHEMA:GROUP=TRANSMISION_GRATUITA, MORTIS_CAUSA}}  opcional, varios
 //     {{SCHEMA:LANG=ca}}                                sustituye a {{LANG=ca}}
+//     {{SCHEMA:NOT_REQUESTED=REQ_PODER@ACREEDOR_HIPOTECARIO, REQ_ESCRITURA_HIPOTECA}}
+//                                                       opcional: documentos del catálogo que ESTE esquema no pide
+//                                                       (con @PAPEL, sólo a ese papel); Redactor no los saca como hueco
 //
 // DECLARAR sólo en ESQUEMAS y una vez por clave. LEER en esquemas y párrafos: en un `IF` (`==`, `!=`, `IN`, `NOT IN`)
 // o impreso (`{{SCHEMA:ACT}}`), y siempre da el valor del ESQUEMA RAÍZ. Son constantes: nunca son pregunta.
@@ -20,7 +23,7 @@
 import { memoPorTexto } from '../compose/memo-texto';
 
 /** Las claves que un esquema puede declarar. */
-export const CLAVES_SCHEMA = ['ACT', 'FAMILY', 'VARIANT', 'GROUP', 'LANG'] as const;
+export const CLAVES_SCHEMA = ['ACT', 'FAMILY', 'VARIANT', 'GROUP', 'LANG', 'NOT_REQUESTED'] as const;
 export type ClaveSchema = (typeof CLAVES_SCHEMA)[number];
 
 /** Alias, variante y grupos: mayúsculas, cifras y guion bajo. */
@@ -53,6 +56,16 @@ export interface MetaSchema {
   variant: string;
   groups: string[];
   lang: string;
+  /** `SCHEMA:NOT_REQUESTED`: los documentos (código del catálogo) que el esquema no pide; `papel` null = a nadie. */
+  notRequested: { documento: string; papel: string | null }[];
+}
+
+/** Un elemento de `NOT_REQUESTED`: `REQ_X` o `REQ_X@PAPEL`. */
+const NO_PEDIDO = /^([A-Z0-9_]+)(?:@([A-Z0-9_]+))?$/;
+
+/** Los elementos de un valor de `NOT_REQUESTED` (sin validar). */
+export function elementosNoPedidos(valor: string): string[] {
+  return valor.split(',').map((x) => x.trim()).filter(Boolean);
 }
 
 /** Las declaraciones del texto en orden, también las de la forma retirada (para señalarlas). */
@@ -88,6 +101,12 @@ export function problemaDeValor(clave: string, valor: string): string | null {
     }
     case 'LANG':
       return LANG_VALOR.test(valor) ? null : `SCHEMA:LANG «${valor}» no es un código de idioma (es, ca…)`;
+    case 'NOT_REQUESTED': {
+      const els = elementosNoPedidos(valor);
+      if (!els.length) return 'SCHEMA:NOT_REQUESTED vacío: una lista de documentos del catálogo, separados por comas (REQ_PODER@ACREEDOR_HIPOTECARIO, REQ_ESCRITURA_HIPOTECA)';
+      const malos = els.filter((e) => !NO_PEDIDO.test(e));
+      return malos.length ? `SCHEMA:NOT_REQUESTED: ${malos.map((e) => `«${e}»`).join(', ')} no vale: código de documento en mayúsculas (REQ_…), con @PAPEL opcional` : null;
+    }
     default:
       return `SCHEMA:${clave} no existe: las claves son ${CLAVES_SCHEMA.join(', ')}`;
   }
@@ -95,7 +114,7 @@ export function problemaDeValor(clave: string, valor: string): string | null {
 
 /** Los metadatos del texto: la PRIMERA declaración válida de cada clave. La forma retirada no cuenta. */
 export function leerSchema(texto: string): MetaSchema {
-  const meta: MetaSchema = { act: '', actAlias: '', family: '', familyAlias: '', variant: '', groups: [], lang: '' };
+  const meta: MetaSchema = { act: '', actAlias: '', family: '', familyAlias: '', variant: '', groups: [], lang: '', notRequested: [] };
   const hechas = new Set<string>();
   for (const d of declaracionesSchema(texto)) {
     if (d.legado || hechas.has(d.clave) || problemaDeValor(d.clave, d.valor)) continue;
@@ -106,6 +125,9 @@ export function leerSchema(texto: string): MetaSchema {
       case 'VARIANT': meta.variant = d.valor; break;
       case 'GROUP': meta.groups = [...new Set(d.valor.split(',').map((g) => g.trim()))]; break;
       case 'LANG': meta.lang = d.valor.toLowerCase(); break;
+      case 'NOT_REQUESTED':
+        meta.notRequested = elementosNoPedidos(d.valor).map((e) => { const m = e.match(NO_PEDIDO)!; return { documento: m[1], papel: m[2] ?? null }; });
+        break;
     }
   }
   return meta;
@@ -140,6 +162,7 @@ function calcularValoresDeSchema(texto: string): Record<string, string> {
     'SCHEMA:VARIANT': m.variant,
     'SCHEMA:GROUP': m.groups.join(','),
     'SCHEMA:LANG': (m.lang || 'es').toLowerCase(),
+    'SCHEMA:NOT_REQUESTED': m.notRequested.map((x) => (x.papel ? `${x.documento}@${x.papel}` : x.documento)).join(','),
   };
 }
 

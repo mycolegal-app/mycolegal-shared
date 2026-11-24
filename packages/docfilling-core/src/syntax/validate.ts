@@ -84,7 +84,7 @@ export function validateText(
     ...checkIuiObsoleto(fields),
     ...checkFormatos(fields),
     ...checkSetYDeclareEnOrden(fields),
-    ...checkSchema(text, fields, opciones.tipo),
+    ...checkSchema(text, fields, opciones.tipo, opciones.catalogo),
     ...checkNombresRetirados(fields),
     ...checkBloqueos(fields, opciones.tipo),
     ...(opciones.catalogo ? checkReqCatalogo(fields, opciones.catalogo) : []),

@@ -30,7 +30,7 @@
 import { esFormato, FORMATOS } from '../format/formats';
 import { FieldType, offsetToLineCol, parseFields, type ParsedField } from './parser';
 import {
-  CLAVES_SCHEMA, clavesLeidas, comparacionesSchema, declaracionesSchema, problemaDeLiteral, problemaDeValor,
+  CLAVES_SCHEMA, clavesLeidas, comparacionesSchema, declaracionesSchema, elementosNoPedidos, problemaDeLiteral, problemaDeValor,
   type DeclaracionSchema,
 } from './schema-meta';
 import { Severity, extractIfFieldRefs, type Diagnostic } from './validator';
@@ -620,7 +620,7 @@ export function checkSetYDeclareEnOrden(fields: ParsedField[]): Diagnostic[] {
  *
  * Leer `SCHEMA:` en un párrafo suelto, sin esquema que le dé valor, NO es un error.
  */
-export function checkSchema(text: string, fields: ParsedField[], tipo?: 'esquema' | 'parrafo'): Diagnostic[] {
+export function checkSchema(text: string, fields: ParsedField[], tipo?: 'esquema' | 'parrafo', catalogo?: CatalogoReq): Diagnostic[] {
   const out: Diagnostic[] = [];
   if (!/SCHEMA|LANG/i.test(text)) return out;
   const claves = new Set<string>(CLAVES_SCHEMA);
@@ -641,6 +641,19 @@ export function checkSchema(text: string, fields: ParsedField[], tipo?: 'esquema
     } else {
       const p = problemaDeValor(d.clave, d.valor);
       if (p) out.push(diag(line, col, n, Severity.ERROR, 'E923', p));
+      // NOT_REQUESTED: cada documento ha de existir en el catálogo (E935) y su @PAPEL en los roles (E936). Sin
+      // catálogo no se mira (como los :REQ/:DOC).
+      else if (d.clave === 'NOT_REQUESTED' && catalogo) {
+        for (const e of elementosNoPedidos(d.valor)) {
+          const [doc, papel] = e.split('@');
+          if (!catalogo.documento(doc)) {
+            out.push(diag(line, col, n, Severity.ERROR, 'E935', `SCHEMA:NOT_REQUESTED: «${doc}» no es un documento del catálogo`));
+          }
+          if (papel && !catalogo.rol(papel)) {
+            out.push(diag(line, col, n, Severity.ERROR, 'E936', `SCHEMA:NOT_REQUESTED: el papel «${papel}» (en «${e}») no existe en los roles del catálogo`));
+          }
+        }
+      }
     }
     if (tipo === 'parrafo') {
       out.push(diag(line, col, n, Severity.ERROR, 'E921', `SCHEMA:${d.clave} sólo se declara en un esquema: un párrafo lo lee del esquema que lo incluye`));
