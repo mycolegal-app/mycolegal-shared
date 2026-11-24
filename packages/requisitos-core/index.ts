@@ -97,3 +97,6 @@ export {
   type Llm,
   type OpcionesEvaluacion,
 } from './src/evaluador';
+
+// Plazos de presentación por comunidad (plan PLAZOS_PRESENTACION_CCAA): sin criterio propio, todo del catálogo.
+export { plazoDeImpuesto, type TablaPlazos, type PlazoResuelto, type FilaPlazo, type ResolucionPlazos, type TramoConexion, type CasoPlazo, type UnidadPlazo } from './src/plazos';
