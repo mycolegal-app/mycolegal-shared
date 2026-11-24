@@ -106,4 +106,10 @@ describe('herramientas de punta a punta: componer y validar', async () => {
     expect(codigos('{{SYSTEM:COMPUTE<PLAZO(ITP_AJD)}}')).toContain('E931');
     expect(codigos('{{SYSTEM:COMPUTE<CUOTA(X)>}}')).toContain('E932');
   });
+
+  it('un IF con herramienta, suelto, no da E013 ni W056 (el identificador neutro no es un campo sin DECLARE)', () => {
+    const codigos = (t: string) => validateText(t).diagnostics.map((d) => d.code);
+    expect(codigos('{{IF SYSTEM:CONTACT<EULISES>.EMAIL}}x{{ENDIF}}')).toEqual([]);
+    expect(codigos('{{IF SYSTEM:COMPUTE<PLAZO(ITP_AJD)>}}x{{ENDIF}}')).toEqual([]);
+  });
 });

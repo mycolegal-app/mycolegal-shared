@@ -62,6 +62,8 @@ export function validateText(
   const original = text;
   text = sustituirHerramientas(text).texto;
   const result = validateTextGenerado(text, resolver, extraDeclared);
+  // Una herramienta se ve como un campo `__SYS_…` (su identificador neutro): no es un campo sin DECLARE (W056).
+  result.diagnostics = result.diagnostics.filter((d) => !(d.code === 'W056' && d.message.includes("'__SYS_")));
   const fields = parseFields(text);
   for (const d of deHerramientas) {
     const [line, col] = offsetToLineCol(original, d.inicio);
