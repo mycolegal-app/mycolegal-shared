@@ -52,6 +52,9 @@ describe('herramientas del motor: SYSTEM:HERRAMIENTA<…>', () => {
     expect(cod('{{SYSTEM:COMPUTE<CUOTA(X)>}}')).toEqual(['E932']);
     expect(cod('{{SYSTEM:COMPUTE<PLAZO(A, B)>}}')).toEqual(['E933']);
     expect(cod('{{SYSTEM:COMPUTE<PLAZO(ITP_AJD)>}} {{SYSTEM:CONTACT<EULISES>.TELEFONO}}')).toEqual([]);
+    const conAdmitidos = new Map([['PLAZO', { parametros: 1, admitidos: [['ITP_AJD', 'ISD_DONACIONES']] }]]);
+    expect(diagnosticosHerramientas('{{SYSTEM:COMPUTE<PLAZO(IVA)>}}', conAdmitidos).map((d) => d.codigo)).toEqual(['E934']);
+    expect(diagnosticosHerramientas('{{SYSTEM:COMPUTE<PLAZO([IMPUESTO])>}}', conAdmitidos)).toEqual([]);
   });
 
   it('el mismo cálculo dos veces se pide una vez y comparte identificador', () => {

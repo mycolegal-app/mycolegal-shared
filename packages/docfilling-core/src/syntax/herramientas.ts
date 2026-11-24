@@ -171,11 +171,12 @@ export interface DiagnosticoHerramienta { inicio: number; fin: number; codigo: s
 
 /**
  * E930 herramienta desconocida o mal escrita · E931 «<» sin cerrar · E932 función de COMPUTE que el catálogo no declara ·
- * E933 función de COMPUTE con un número de parámetros distinto del declarado.
+ * E933 función de COMPUTE con un número de parámetros distinto del declarado · E934 un parámetro LITERAL que no está entre
+ * los valores admitidos que declara el catálogo (`admitidos[i]`; un `[VAR]` no se mira aquí: lo comprueba quien calcula).
  */
 export function diagnosticosHerramientas(
   texto: string,
-  funcionesCompute?: ReadonlyMap<string, { parametros: number }> | null,
+  funcionesCompute?: ReadonlyMap<string, { parametros: number; admitidos?: (readonly string[] | null)[] }> | null,
 ): DiagnosticoHerramienta[] {
   const out: DiagnosticoHerramienta[] = [];
   for (const u of leerHerramientas(texto)) {
@@ -187,7 +188,24 @@ export function diagnosticosHerramientas(
     if (!decl) out.push({ inicio: u.inicio, fin: u.fin, codigo: 'E932', mensaje: `COMPUTE<${f.nombre}(…)>: el catálogo no declara la función ${f.nombre}` });
     else if (decl.parametros !== f.parametros.length) {
       out.push({ inicio: u.inicio, fin: u.fin, codigo: 'E933', mensaje: `COMPUTE<${f.nombre}(…)>: ${f.parametros.length} parámetro(s); el catálogo declara ${decl.parametros}` });
+    } else {
+      f.parametros.forEach((p, i) => {
+        const ok = decl.admitidos?.[i];
+        if (!ok || /^\[.*\]$/.test(p)) return;
+        if (!ok.includes(p.toUpperCase())) {
+          out.push({ inicio: u.inicio, fin: u.fin, codigo: 'E934', mensaje: `COMPUTE<${f.nombre}(…)>: «${p}» no es un valor admitido (${ok.join(', ')})` });
+        }
+      });
     }
   }
   return out;
+}
+
+/** El `catalogos/funciones_compute.json` del catálogo → el mapa que esperan el validador y `diagnosticosHerramientas`. */
+export function funcionesComputeDeCatalogo(json: { funciones?: { nombre: string; parametros?: { admitidos?: string[] }[] }[] } | null | undefined):
+  Map<string, { parametros: number; admitidos: (string[] | null)[] }> {
+  return new Map((json?.funciones ?? []).map((f) => [f.nombre.toUpperCase(), {
+    parametros: (f.parametros ?? []).length,
+    admitidos: (f.parametros ?? []).map((p) => (Array.isArray(p.admitidos) ? p.admitidos.map((a) => String(a).toUpperCase()) : null)),
+  }]));
 }

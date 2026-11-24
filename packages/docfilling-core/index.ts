@@ -157,3 +157,4 @@ export { listasDeLaPlantilla, marcarListasParaSonda, type ListaDeducida, type Re
 // Herramientas del motor: SYSTEM:CONTACT<…>, SYSTEM:CONTACTS<…>, SYSTEM:COMPUTE<…> (plan de herramientas del motor, §4.5).
 export { HERRAMIENTAS, leerHerramientas, herramientasReferidas, sustituirHerramientas, diagnosticosHerramientas, claveHerramienta, idHerramienta } from './src/syntax/herramientas';
 export type { Herramienta, UsoHerramienta, HerramientaReferida, DiagnosticoHerramienta } from './src/syntax/herramientas';
+export { funcionesComputeDeCatalogo } from './src/syntax/herramientas';

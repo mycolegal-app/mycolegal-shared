@@ -47,7 +47,7 @@ export interface OpcionesValidacion {
   /** Qué es el texto. Con `'parrafo'`, declarar `SCHEMA:` es error (E921); sin tipo no se sabe y no se mira. */
   tipo?: 'esquema' | 'parrafo';
   /** Las funciones de `SYSTEM:COMPUTE<…>` que declara el catálogo (nombre → nº de parámetros). Sin ellas, no se miran. */
-  funcionesCompute?: ReadonlyMap<string, { parametros: number }>;
+  funcionesCompute?: ReadonlyMap<string, { parametros: number; admitidos?: (readonly string[] | null)[] }>;
 }
 
 export function validateText(
