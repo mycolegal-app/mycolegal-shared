@@ -57,6 +57,13 @@ describe('herramientas del motor: SYSTEM:HERRAMIENTA<…>', () => {
     expect(diagnosticosHerramientas('{{SYSTEM:COMPUTE<PLAZO([IMPUESTO])>}}', conAdmitidos)).toEqual([]);
   });
 
+  it('lineal en el tamaño: un esquema de MB con miles de bloques y un SYSTEM: al final no tarda (24-nov-2026)', () => {
+    const t = '{{A}} texto '.repeat(200_000) + '{{SYSTEM:COMPUTE<PLAZO(ITP_AJD)>}}';
+    const t0 = Date.now();
+    expect(leerHerramientas(t)).toHaveLength(1);
+    expect(Date.now() - t0).toBeLessThan(1000);
+  });
+
   it('el mismo cálculo dos veces se pide una vez y comparte identificador', () => {
     const t = '{{SYSTEM:COMPUTE<PLAZO(ITP_AJD)>}} … {{SYSTEM:COMPUTE<PLAZO( ITP_AJD )>}}';
     expect(herramientasReferidas(t)).toHaveLength(1);

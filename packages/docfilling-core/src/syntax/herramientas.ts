@@ -43,11 +43,17 @@ const ID = /[A-Za-z_][A-Za-z0-9_]*/y;
 export function leerHerramientas(texto: string): UsoHerramienta[] {
   const out: UsoHerramienta[] = [];
   let i = 0;
+  // La siguiente aparición de `SYSTEM:` se busca una sola vez y se reutiliza mientras quede por delante: buscarla desde
+  // cada `{{` hasta el final del texto era cuadrático (esquemas de MB con miles de bloques: minutos; 24-nov-2026).
+  let sig = 0; // -1: no quedan
   while ((i = texto.indexOf('{{', i)) !== -1) {
     const cierre = texto.indexOf('}}', i + 2);
     if (cierre === -1) break;
     let j = i + 2;
-    while ((j = texto.indexOf('SYSTEM:', j)) !== -1 && j < cierre) {
+    for (;;) {
+      if (sig !== -1 && sig < j) sig = texto.indexOf('SYSTEM:', j);
+      if (sig === -1 || sig >= cierre) break;
+      j = sig;
       const ini = j;
       ID.lastIndex = j + 7;
       const m = ID.exec(texto);
