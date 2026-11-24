@@ -5,10 +5,12 @@
 // envoltura vive aquí, fuera de los ficheros generados, para que regenerar con
 // `gen-ts.py` no borre nada.
 
-import { parseFields } from './parser';
+import { parseFields, offsetToLineCol } from './parser';
+import { sustituirHerramientas, diagnosticosHerramientas } from './herramientas';
 import { getSystemFields } from '../compose/engine';
 import {
   validateText as validateTextGenerado,
+  Severity,
   type IncludeResolver,
   type ValidationResult,
 } from './validator';
@@ -44,6 +46,8 @@ export interface OpcionesValidacion {
   catalogo?: CatalogoReq;
   /** Qué es el texto. Con `'parrafo'`, declarar `SCHEMA:` es error (E921); sin tipo no se sabe y no se mira. */
   tipo?: 'esquema' | 'parrafo';
+  /** Las funciones de `SYSTEM:COMPUTE<…>` que declara el catálogo (nombre → nº de parámetros). Sin ellas, no se miran. */
+  funcionesCompute?: ReadonlyMap<string, { parametros: number }>;
 }
 
 export function validateText(
@@ -52,8 +56,18 @@ export function validateText(
   extraDeclared?: Iterable<string>,
   opciones: OpcionesValidacion = {},
 ): ValidationResult {
+  // Herramientas del motor (`SYSTEM:HERRAMIENTA<…>`): se diagnostican sobre el texto tal cual y, para el resto de
+  // comprobaciones, cada una se ve como un campo más (sus `< >` no son operadores; ver `herramientas.ts`).
+  const deHerramientas = diagnosticosHerramientas(text, opciones.funcionesCompute ?? null);
+  const original = text;
+  text = sustituirHerramientas(text).texto;
   const result = validateTextGenerado(text, resolver, extraDeclared);
   const fields = parseFields(text);
+  for (const d of deHerramientas) {
+    const [line, col] = offsetToLineCol(original, d.inicio);
+    const [endLine, endCol] = offsetToLineCol(original, d.fin);
+    result.diagnostics.push({ line, col, endLine, endCol, severity: Severity.ERROR, code: d.codigo, message: d.mensaje });
+  }
   const clavesDeSistema = new Set(Object.keys(getSystemFields()).map((k) => k.toUpperCase()));
 
   result.diagnostics.push(

@@ -153,3 +153,7 @@ export { marcarRamas, ramasRecorridas, sinMarcasDeCobertura, ramasAlcanzables } 
 export { bloqueosDeclarados, marcarBloqueos, bloqueosVivos, quitarMarcasDeBloqueo } from './src/compose/bloqueos';
 export type { RamaIf, PreguntaConOpciones, TextoMarcado } from './src/compose/cobertura';
 export { listasDeLaPlantilla, marcarListasParaSonda, type ListaDeducida, type ResultadoListas } from './src/fields/listas';
+
+// Herramientas del motor: SYSTEM:CONTACT<…>, SYSTEM:CONTACTS<…>, SYSTEM:COMPUTE<…> (plan de herramientas del motor, §4.5).
+export { HERRAMIENTAS, leerHerramientas, herramientasReferidas, sustituirHerramientas, diagnosticosHerramientas, claveHerramienta, idHerramienta } from './src/syntax/herramientas';
+export type { Herramienta, UsoHerramienta, HerramientaReferida, DiagnosticoHerramienta } from './src/syntax/herramientas';

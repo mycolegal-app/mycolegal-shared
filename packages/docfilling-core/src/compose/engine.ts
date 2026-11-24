@@ -12,6 +12,7 @@
  * 12 niveles, y el aviso `W100` salía en cada composición.
  */
 
+import { sustituirHerramientas } from '../syntax/herramientas';
 import { METADATA_PREFIXES } from "../syntax/constants";
 // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py.
 import { esPageBreak } from "../syntax/page-break";
@@ -42,6 +43,9 @@ export type FieldValues = Record<string, unknown>;
 export type NivelDuda = "sin" | "defecto";
 export interface OpcionesComposicion {
   dudoso?: (campo: string) => NivelDuda | null;
+  /** Resultados de las herramientas del motor por clave canónica (`COMPUTE<PLAZO(ITP_AJD)>`, `CONTACT<EULISES>.TELEFONO`):
+   *  los calcula quien compone (`herramientasReferidas`). Sin valor → hueco visible. Ver `syntax/herramientas.ts`. */
+  herramientas?: Record<string, string | null | undefined>;
 }
 /** Apertura `⟬?sin:A,B⟭` (nivel y campos) o cierre `⟬/⟭` de una marca de duda. */
 export const MARCA_DUDA = /\u27EC(?:\?(sin|defecto):([^\u27ED]*)|\/)\u27ED/g;
@@ -1757,6 +1761,10 @@ export function composeWithDiagnostics(
   const allFields: FieldValues = { ...fields };
   const declareFixed = resolverDeclarados(template, fields, locale);
   Object.assign(allFields, declareFixed);
+  // Step 1b: herramientas del motor (`SYSTEM:COMPUTE<…>`, `SYSTEM:CONTACT<…>`) → un campo más, con su resultado.
+  const herr = sustituirHerramientas(template, allFields, opciones.herramientas ?? {});
+  template = herr.texto;
+  Object.assign(allFields, herr.campos);
   // Lo dudoso, visto desde el motor: una constante de la plantilla (`DECLARE X = v`) no lo es nunca; un
   // `DECLARE_UNDEF` que se ha aplicado porque el campo venía vacío es un valor POR DEFECTO, no un «sin contestar».
   let dudoso = opciones.dudoso;
@@ -1864,12 +1872,18 @@ export function composeForPreview(
    * `{{IF X == "Persona Física Única"}}` still match.
    */
   highlightField?: string,
+  /** Resultados de las herramientas del motor (ver `OpcionesComposicion.herramientas`). */
+  herramientas: Record<string, string | null | undefined> = {},
 ): string {
   // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py. Ver `composeWithDiagnostics`.
   template = resolverSeccionesDeLengua(template, idiomaDePlantilla(template, locale.slice(0, 2).toLowerCase())).texto;
   const allFields: FieldValues = { ...fields };
   const declareFixed = resolverDeclarados(template, fields, locale);
   Object.assign(allFields, declareFixed);
+  // Herramientas del motor: un campo más; las que no tienen valor vuelven a su nombre al final (el hueco de la vista).
+  const herr = sustituirHerramientas(template, allFields, herramientas);
+  template = herr.texto;
+  Object.assign(allFields, herr.campos);
 
   // Phase 3 pipeline order, mirrored from compose():
   //   suffix-strip → metadata-strip → system fields → FOR EACH → IF → COUNT
@@ -1938,5 +1952,7 @@ export function composeForPreview(
   // counters stay consistent without needing per-call reset logic.
   content = processAutonumbers(content);
 
+  // Una herramienta sin resultado se queda como hueco con su nombre de verdad, no con el identificador interno.
+  for (const [id, crudo] of Object.entries(herr.nombres)) content = content.split(`{{${id}}}`).join(`{{${crudo}}}`);
   return content;
 }
