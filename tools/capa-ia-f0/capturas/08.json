@@ -1,0 +1,58 @@
+{
+  "url": "https://aiplatform.eu.rep.googleapis.com/v1beta1/projects/mycolegal-app/locations/eu/publishers/google/models/gemini-3.8-flash:generateContent",
+  "body": {
+    "generationConfig": {
+      "thinkingConfig": {
+        "thinkingBudget": 0
+      }
+    },
+    "contents": [
+      {
+        "role": "user",
+        "parts": [
+          {
+            "text": "Di \"a\"."
+          }
+        ]
+      }
+    ]
+  },
+  "status": 200,
+  "resp": {
+    "candidates": [
+      {
+        "content": {
+          "role": "model",
+          "parts": [
+            {
+              "text": "a",
+              "thoughtSignature": "AY89a18old37S9ZoQN9oc8PJtKtT8eWYLXo+exHL86lkJ1DGf3XEpMTwKYsfLEH4ej3fL/dqX7hVQVSKnyhAOb8KB40B4y6jbhexVWQH/BrN3My5NzrJHjrT85Cf+HeTJbp5cQ3Kw2dOrA8I9grYtmnyI4AYm6mzfmRDCZKthQ=="
+            }
+          ]
+        },
+        "finishReason": "STOP"
+      }
+    ],
+    "usageMetadata": {
+      "promptTokenCount": 4,
+      "candidatesTokenCount": 1,
+      "totalTokenCount": 5,
+      "trafficType": "ON_DEMAND",
+      "promptTokensDetails": [
+        {
+          "modality": "TEXT",
+          "tokenCount": 4
+        }
+      ],
+      "candidatesTokensDetails": [
+        {
+          "modality": "TEXT",
+          "tokenCount": 1
+        }
+      ]
+    },
+    "modelVersion": "gemini-3.8-flash",
+    "createTime": "2026-11-22T05:45:16.069520Z",
+    "responseId": "bIECa5CfBMuMssgPm9i9-QE"
+  }
+}

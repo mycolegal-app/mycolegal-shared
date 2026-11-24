@@ -1,0 +1,16 @@
+{
+  "name": "capa-ia-f0",
+  "version": "1.0.0",
+  "description": "F0 PLAN_TECNICO_CAPA_IA: prueba del AI SDK contra Vertex (no es un paquete)",
+  "scripts": {
+    "f0": "tsx f0.ts"
+  },
+  "type": "module",
+  "dependencies": {
+    "@ai-sdk/google-vertex": "5.0.133",
+    "ai": "7.0.164",
+    "tsx": "4.20.6",
+    "zod": "4.1.12"
+  },
+  "private": true
+}

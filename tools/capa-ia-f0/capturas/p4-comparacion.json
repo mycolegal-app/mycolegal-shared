@@ -1,0 +1,80 @@
+{
+  "aisdk": {
+    "generationConfig": {
+      "maxOutputTokens": 200,
+      "temperature": 0,
+      "responseMimeType": "application/json",
+      "responseJsonSchema": {
+        "type": "object",
+        "required": [
+          "nombre",
+          "dni"
+        ],
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "dni": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "contents": [
+      {
+        "role": "user",
+        "parts": [
+          {
+            "text": "Juan Pérez, DNI 00000000T, compra."
+          }
+        ]
+      }
+    ],
+    "systemInstruction": {
+      "parts": [
+        {
+          "text": "Extrae datos."
+        }
+      ]
+    }
+  },
+  "nuestro": {
+    "systemInstruction": {
+      "parts": [
+        {
+          "text": "Extrae datos."
+        }
+      ]
+    },
+    "contents": [
+      {
+        "role": "user",
+        "parts": [
+          {
+            "text": "Juan Pérez, DNI 00000000T, compra."
+          }
+        ]
+      }
+    ],
+    "generationConfig": {
+      "temperature": 0,
+      "maxOutputTokens": 200,
+      "responseMimeType": "application/json",
+      "responseSchema": {
+        "type": "OBJECT",
+        "properties": {
+          "nombre": {
+            "type": "STRING"
+          },
+          "dni": {
+            "type": "STRING"
+          }
+        },
+        "required": [
+          "nombre",
+          "dni"
+        ]
+      }
+    }
+  }
+}

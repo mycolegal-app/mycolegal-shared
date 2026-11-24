@@ -1,0 +1,184 @@
+{
+  "url": "https://aiplatform.eu.rep.googleapis.com/v1beta1/projects/mycolegal-app/locations/eu/publishers/google/models/gemini-3.8-flash:generateContent",
+  "body": {
+    "generationConfig": {},
+    "contents": [
+      {
+        "role": "user",
+        "parts": [
+          {
+            "text": "¿Qué superficie catastral tiene la finca registral número 4521? Necesitas encadenar las tres herramientas."
+          }
+        ]
+      },
+      {
+        "role": "model",
+        "parts": [
+          {
+            "functionCall": {
+              "name": "buscar_finca",
+              "args": {
+                "numero": "4521"
+              }
+            },
+            "thoughtSignature": "AY89a1+8MzMTBqMOHwxNp/GLVwXLwioJtM6sXzoM0Zg767HkrfGusTISrOnif//g8jT2RHupH96G1UTv9og3IlnbgIWulY3TPqKInUs3zZFIHGPrg4OpP/Nr/utW6MJn4+UdaUI1Q9GQyjo/OyCmrA4YQDCvuKr2LyUIcNugnhHdoSytzspl2assjV4yy+L1yLKNHOJ94Pj3QTSzMUy7+h3nFLY7KgqaQyOL6gfcEhY1oo3EcHUc+8oAG1zWYtTua0aqiCBOUy2I7lQ8EwS7g6SU0SMpmIoHQVOdWln/5zv1f0x4Fw4EomVNICe+WPmsXnhMnStEsBX/ho7g0i/HeimmdgaEFCWVthQr7tLY0pgGcK/xXVQMoFqAqjpI9IhnVIm6ePs+LDFnsKtA9nu7+pZg4W08/xRnjOIh0Pm5so0oMGbOzGbKXey/W2yaET4WJv/zg/ud1T68mh5XzNdWD83rp+vADVG4rw87h9ITCyIkL8kZflt6SbuZXEQfk4BYMJi02wRm5WHvnmcmLWjVxjtWlyeAPkZRk9A3QNb9NnTZ7Q8GghYTtEO6XE+5+VpRYETcd4JC6K5SSMqoHgcrwZtrBEmzwQ5qfyCExDFQX/vGJAwow4EvaiMFYNIjlEBDhvHbdU+EwIzPIBw+FX6LK+Ml9Jow4msogyA+bk5kKlDwsAq85ih9bR3Zny8GAxgf7Pku6u0ZjDaDMGRQ/ClrUyKy6bu/DeyfzH1BDHBCAzL4M+z7k8ik922TTWIAl1cNVEGD0xdfbc2TBzb9"
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "parts": [
+          {
+            "functionResponse": {
+              "name": "buscar_finca",
+              "response": {
+                "name": "buscar_finca",
+                "content": {
+                  "id": "F-001"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "role": "model",
+        "parts": [
+          {
+            "functionCall": {
+              "name": "referencia_catastral",
+              "args": {
+                "id": "F-001"
+              }
+            },
+            "thoughtSignature": "AY89a18fjB3Zq4NQ4BJ1nZwR3f/X/nvCUKcOYja/ULjFoUtibStQTgObhShy/3oK6w2Xky10/PlA2Mm9nw6r1+715Q9Rmqor+AA9xkNN0kBCr1/jLcqfSVfCYe9Lc2rlGeB4L8jwOJ3AfmsuXojTlfAB3Ev4c5i1EazYv+WB7678Z3+yCM1hTE0PR8876JKBZlVg5/vu13RBbeepJe37DReWPqYiK/rnqPE8nolTxXIV7d/wRwvoqaUN9779SzM1jXuC22D7eeBXGfKN25op5og="
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "parts": [
+          {
+            "functionResponse": {
+              "name": "referencia_catastral",
+              "response": {
+                "name": "referencia_catastral",
+                "content": {
+                  "refcat": "RC-SINT-123"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "systemInstruction": {
+      "parts": [
+        {
+          "text": "Usa las herramientas una a una; no adivines datos."
+        }
+      ]
+    },
+    "tools": [
+      {
+        "functionDeclarations": [
+          {
+            "name": "buscar_finca",
+            "description": "Busca una finca por su número registral y devuelve su identificador interno",
+            "parametersJsonSchema": {
+              "type": "object",
+              "properties": {
+                "numero": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "numero"
+              ]
+            }
+          },
+          {
+            "name": "referencia_catastral",
+            "description": "Devuelve la referencia catastral de una finca por su identificador interno (F-xxx)",
+            "parametersJsonSchema": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id"
+              ]
+            }
+          },
+          {
+            "name": "superficie_catastral",
+            "description": "Devuelve la superficie en m² dada una referencia catastral",
+            "parametersJsonSchema": {
+              "type": "object",
+              "properties": {
+                "refcat": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "refcat"
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "toolConfig": {
+      "functionCallingConfig": {
+        "mode": "AUTO"
+      }
+    }
+  },
+  "status": 200,
+  "resp": {
+    "candidates": [
+      {
+        "content": {
+          "role": "model",
+          "parts": [
+            {
+              "functionCall": {
+                "name": "superficie_catastral",
+                "args": {
+                  "refcat": "RC-SINT-123"
+                },
+                "id": "call_1015461706591946892"
+              },
+              "thoughtSignature": "AY89a1+c7mu1ruDNofWtH1v5YmuJiq5tfUakQ/4UeF4fM3INcFREt9WG1Qo0tbh4SaD7IrOgth3DemG1ZG89s7giez3LxRL4mwHydfli0ag6Orh4ZmLu9lRXVohl04Y0ojR2u62uUEoqB3KVlG0cmBsUcEnDGoHOlDsQ84QkIpEsBrvRMXFra/IVcza9BgCjVyyMXpWsUfu6wIRV80Fq9yr3lQTBKrpaACpUUHnbyMiSFa7d9RV+ehsJdcIbMlyrBvNGZe+yTQo/gFodiBVBzKqb0pKRIn3bkV0mbsKV09ej1CkFaw=="
+            }
+          ]
+        },
+        "finishReason": "STOP"
+      }
+    ],
+    "usageMetadata": {
+      "promptTokenCount": 415,
+      "candidatesTokenCount": 28,
+      "totalTokenCount": 495,
+      "trafficType": "ON_DEMAND",
+      "promptTokensDetails": [
+        {
+          "modality": "TEXT",
+          "tokenCount": 415
+        }
+      ],
+      "candidatesTokensDetails": [
+        {
+          "modality": "TEXT",
+          "tokenCount": 28
+        }
+      ],
+      "thoughtsTokenCount": 52
+    },
+    "modelVersion": "gemini-3.8-flash",
+    "createTime": "2026-11-22T05:45:04.519716Z",
+    "responseId": "YIECa6TcH8uMssgPm9i9-QE"
+  }
+}

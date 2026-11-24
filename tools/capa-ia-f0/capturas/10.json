@@ -1,0 +1,55 @@
+{
+  "url": "https://aiplatform.eu.rep.googleapis.com/v1beta1/projects/mycolegal-app/locations/eu/publishers/google/models/gemini-3.8-flash:generateContent",
+  "body": {
+    "generationConfig": {},
+    "contents": [
+      {
+        "role": "user",
+        "parts": [
+          {
+            "text": "Di \"c\"."
+          }
+        ]
+      }
+    ]
+  },
+  "status": 200,
+  "resp": {
+    "candidates": [
+      {
+        "content": {
+          "role": "model",
+          "parts": [
+            {
+              "text": "c",
+              "thoughtSignature": "AY89a18FLfEewS3O/85bnQbqVui/HtpmtD7z9o84uExT6x4I6haXXMWTLFcuVNc/lGkBwx5ubR5Yg12eRUaN0RzePlmW15iS39LMKJarAciBXtx3i+Gv6YFt7GtmCvCnPwA2Pq1uF0CTTsSdihBzviaHqBpMvr3RXt5Dl1LbPW4mL0l2jPtgWD13hkkBntKNoxiXSFQU0wMEsMSisB/3vvU/kbMyfTEC+VIsMYrJjWe9Sl/e0qJVfnvcnAD4/NVLCRNeu9aoaLDT9I06CxCFVtCi4+iYeJpAp5MMlUMV9ohgGqQy1uPsu1Rrk18gBLNDcBwen634NEha6tt2oVDAXezLXX6ms/7LWPS9ffZWhYXq6LQfSLNGti08725U+h93TgN0QjAwu9LR6K6mRwDKqqnKimDWBRCkPOF8h5VcNYSxWdZ9NY4uc4AZV0i+zt/jm5SLdiflmKjas0QxhvwC0iMPwOdreObUtJkH75my7Q+zXDuZvE7CFf709/qxdRFsK5a9KnEA0KaH3LT+ei2s6BVOybh5YtIAYGS3s5AsfM4jBJsVzkSHfe6SZsdelPiUqJqVesUlRJu0OvZfP/RoSpZcaxR5HUrL/q38iJzZ71yDosHA2xOBgFin6AYmTbbk3bM+WPprwiemMHR+rzc="
+            }
+          ]
+        },
+        "finishReason": "STOP"
+      }
+    ],
+    "usageMetadata": {
+      "promptTokenCount": 4,
+      "candidatesTokenCount": 1,
+      "totalTokenCount": 120,
+      "trafficType": "ON_DEMAND",
+      "promptTokensDetails": [
+        {
+          "modality": "TEXT",
+          "tokenCount": 4
+        }
+      ],
+      "candidatesTokensDetails": [
+        {
+          "modality": "TEXT",
+          "tokenCount": 1
+        }
+      ],
+      "thoughtsTokenCount": 115
+    },
+    "modelVersion": "gemini-3.8-flash",
+    "createTime": "2026-11-22T05:45:19.368908Z",
+    "responseId": "b4ECa4zCFvGMssgPsOzwmA0"
+  }
+}

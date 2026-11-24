@@ -1,0 +1,19 @@
+[
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "text",
+        "text": "La finca registral número **4521** (con identificador interno **F-001** y referencia catastral **RC-SINT-123**) tiene una superficie catastral de **87,5 m²**.",
+        "providerOptions": {
+          "googleVertex": {
+            "thoughtSignature": "AY89a1/dHaaYxXj9sy+5o5FSshCrjlnYY9SCNz7ghOyhqIG8ZLbvbW+/v0F04ewvMe+oBfzJMG+WRLeMKzUqOqWSeUy56B0HqhoaQattPqxAe3y9M8p0Shh5M4mP4vPhDZThJcZQcQmP4NwEghzNDA5ZjAWkOfOEECBAoBe1VjZ/pgK1/vpIBYyPceM0pe8pT+zmCn3PLD722mVAHaic9LauEj76EQBcMJmWOzLtbz5RO/nTQhbMzX3Mvzo9M7wfuZ0UI7iy1ziya7jPwiVBjKxjp8b5qCLO3XxyUD+RPdC5M6S0gS6o5QcI"
+          },
+          "vertex": {
+            "thoughtSignature": "AY89a1/dHaaYxXj9sy+5o5FSshCrjlnYY9SCNz7ghOyhqIG8ZLbvbW+/v0F04ewvMe+oBfzJMG+WRLeMKzUqOqWSeUy56B0HqhoaQattPqxAe3y9M8p0Shh5M4mP4vPhDZThJcZQcQmP4NwEghzNDA5ZjAWkOfOEECBAoBe1VjZ/pgK1/vpIBYyPceM0pe8pT+zmCn3PLD722mVAHaic9LauEj76EQBcMJmWOzLtbz5RO/nTQhbMzX3Mvzo9M7wfuZ0UI7iy1ziya7jPwiVBjKxjp8b5qCLO3XxyUD+RPdC5M6S0gS6o5QcI"
+          }
+        }
+      }
+    ]
+  }
+]

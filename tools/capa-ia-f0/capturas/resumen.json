@@ -1,0 +1,8 @@
+{
+  "P1 host EU": "NO — https://aiplatform.eu.rep.googleapis.com/v1beta1/projects/mycolegal-app/locations/eu/publishers/google/models/gemini-3.5-flash-lite:generateContent → «hola»",
+  "P2 thoughtSignature": "SÍ — 4 peticiones (status 200,200,200,200); functionCall reenviadas 6, con firma 6; firma en response.messages: true; respuesta «La finca registral número **4521** (con identificador interno **F-001** y referencia catastral **RC-SINT-123**) tiene un»",
+  "P3 cachedContents": "SÍ — body.cachedContent=true; cachedContentTokenCount=17222; «1036»",
+  "P4 cuerpo exacto": "SÍ — capturable con fetch propio (sí). ¿Idéntico al nuestro? false. Claves AI SDK: generationConfig,contents,systemInstruction; generationConfig: {\"maxOutputTokens\":200,\"temperature\":0,\"responseMimeType\":\"application/json\",\"responseJsonSchema\":{\"type\":\"object\",\"required\":[\"nombre\",\"dni\"],\"properties\":{\"nombre\":{\"type\":\"string\"},\"dni\":{\"type\":\"string\"}}}}",
+  "P5 thinking": "SÍ — 3.8-flash: {\"thinkingBudget\":0} (200); argon: {\"thinkingLevel\":\"low\"} (200); sin opciones generationConfig={}",
+  "Extra streaming": "true — «1, 2, 3, 4, 5.»"
+}

@@ -1,0 +1,58 @@
+{
+  "url": "https://aiplatform.eu.rep.googleapis.com/v1beta1/projects/mycolegal-app/locations/eu/publishers/google/models/gemini-4-argon:generateContent",
+  "body": {
+    "generationConfig": {
+      "thinkingConfig": {
+        "thinkingLevel": "low"
+      }
+    },
+    "contents": [
+      {
+        "role": "user",
+        "parts": [
+          {
+            "text": "Di \"b\"."
+          }
+        ]
+      }
+    ]
+  },
+  "status": 200,
+  "resp": {
+    "candidates": [
+      {
+        "content": {
+          "role": "model",
+          "parts": [
+            {
+              "text": "b",
+              "thoughtSignature": "AY89a19jX0xDkQuNzhCxLFlnjRSHp8ls77kkUQULhdY24XNCdtksszoN9PTp1/YnOj5q/E5peKDTQQuYRPjz1Rz574Nw1NdEdxjnlsqfmVihU8b9x7D85bKCvVPLO+ZIuNk6PpVsyk/c8u+wZa5g06UQOmoiqBA8YeE="
+            }
+          ]
+        },
+        "finishReason": "STOP"
+      }
+    ],
+    "usageMetadata": {
+      "promptTokenCount": 35,
+      "candidatesTokenCount": 5,
+      "totalTokenCount": 40,
+      "trafficType": "ON_DEMAND",
+      "promptTokensDetails": [
+        {
+          "modality": "TEXT",
+          "tokenCount": 35
+        }
+      ],
+      "candidatesTokensDetails": [
+        {
+          "modality": "TEXT",
+          "tokenCount": 5
+        }
+      ]
+    },
+    "modelVersion": "gemini-4-argon",
+    "createTime": "2026-11-22T05:45:17.271843Z",
+    "responseId": "bYECa-PLELKMssgP6qjrsAU"
+  }
+}

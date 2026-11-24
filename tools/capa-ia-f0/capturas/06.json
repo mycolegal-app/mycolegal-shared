@@ -1,0 +1,63 @@
+{
+  "url": "https://aiplatform.eu.rep.googleapis.com/v1beta1/projects/mycolegal-app/locations/eu/publishers/google/models/gemini-3.8-flash:generateContent",
+  "body": {
+    "generationConfig": {},
+    "contents": [
+      {
+        "role": "user",
+        "parts": [
+          {
+            "text": "¿Qué precio tiene la cláusula 37? Solo el número."
+          }
+        ]
+      }
+    ],
+    "cachedContent": "projects/207082247811/locations/eu/cachedContents/4254231764580433920"
+  },
+  "status": 200,
+  "resp": {
+    "candidates": [
+      {
+        "content": {
+          "role": "model",
+          "parts": [
+            {
+              "text": "1036",
+              "thoughtSignature": "AY89a18WBbmD3TxaEnSzAyxCSDwz2Re0sFO9fx0XmXIbM/ZP7Nh1UfL0wft9j5HUjktrzzVa81LCR08UBbQTJBIB1haxMcMVeNNObiX9aypczrfTNv2RGRWWwrSZIVfxRzdL8oPLejc2u5dkASfTpS1igGaNhynn6y9wTu3/WBVkcb1Yjg6tpCEktHi5q+PvvfiDRr65GHl/62YRekPW554R25Ucr2uLcA8Q4shjfU6iw5Bz0iW0xPKS5qRk9CcCrq26xvjU5fT/9FI/GwcvhuRmZ/tPBny5t+XPDPhikLMPz23XJt9S9H1HL5RoINzOcRg2fNqvjRE7rR0Sjvtsq8wi9jT2U9ZcU2ApIRmN1JjAoJVMAOgAjP3VpYzJyxf+7ZzE7hMwWMq62NKm5lyU9CTUhgZNL+i7ncwbOugyqtf9CRglS7ZxfYS2oZCbe9WXpGAg/RM897xeJ9k8obcmg6whpg1usjxZYhlAPBAOqoxmyJ0eRD0uR95gymrk6ROXus4guhSxbGEm4Yot8A4KT7Z1"
+            }
+          ]
+        },
+        "finishReason": "STOP"
+      }
+    ],
+    "usageMetadata": {
+      "promptTokenCount": 17236,
+      "candidatesTokenCount": 4,
+      "totalTokenCount": 17336,
+      "cachedContentTokenCount": 17222,
+      "trafficType": "ON_DEMAND",
+      "promptTokensDetails": [
+        {
+          "modality": "TEXT",
+          "tokenCount": 17236
+        }
+      ],
+      "cacheTokensDetails": [
+        {
+          "modality": "TEXT",
+          "tokenCount": 17222
+        }
+      ],
+      "candidatesTokensDetails": [
+        {
+          "modality": "TEXT",
+          "tokenCount": 4
+        }
+      ],
+      "thoughtsTokenCount": 96
+    },
+    "modelVersion": "gemini-3.8-flash",
+    "createTime": "2026-11-22T05:45:12.841845Z",
+    "responseId": "aIECa_WwM7KMssgP6qjrsAU"
+  }
+}

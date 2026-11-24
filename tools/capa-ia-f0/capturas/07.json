@@ -1,0 +1,80 @@
+{
+  "url": "https://aiplatform.eu.rep.googleapis.com/v1beta1/projects/mycolegal-app/locations/eu/publishers/google/models/gemini-3.5-flash-lite:generateContent",
+  "body": {
+    "generationConfig": {
+      "maxOutputTokens": 200,
+      "temperature": 0,
+      "responseMimeType": "application/json",
+      "responseJsonSchema": {
+        "type": "object",
+        "required": [
+          "nombre",
+          "dni"
+        ],
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "dni": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "contents": [
+      {
+        "role": "user",
+        "parts": [
+          {
+            "text": "Juan Pérez, DNI 00000000T, compra."
+          }
+        ]
+      }
+    ],
+    "systemInstruction": {
+      "parts": [
+        {
+          "text": "Extrae datos."
+        }
+      ]
+    }
+  },
+  "status": 200,
+  "resp": {
+    "candidates": [
+      {
+        "content": {
+          "role": "model",
+          "parts": [
+            {
+              "text": "{\n  \"nombre\": \"Juan Pérez\",\n  \"dni\": \"00000000T\"\n}",
+              "thoughtSignature": "AY89a18SswdROkc/T2XyAauYW1s2wXvji102/sHpEmhUwzDKdFwXP6+lfFqrEgjyW6YoXUTciRt2gE7HAgc8KtXvqykCJDAO5HBvfpSKRBJO0J5B1pfEcYwbZ4kOnn4DkzBpf395JuAxopP2NS/fP1gc68kLHkw="
+            }
+          ]
+        },
+        "finishReason": "STOP"
+      }
+    ],
+    "usageMetadata": {
+      "promptTokenCount": 87,
+      "candidatesTokenCount": 28,
+      "totalTokenCount": 115,
+      "trafficType": "ON_DEMAND",
+      "promptTokensDetails": [
+        {
+          "modality": "TEXT",
+          "tokenCount": 87
+        }
+      ],
+      "candidatesTokensDetails": [
+        {
+          "modality": "TEXT",
+          "tokenCount": 28
+        }
+      ]
+    },
+    "modelVersion": "gemini-3.5-flash-lite",
+    "createTime": "2026-11-22T05:45:15.344954Z",
+    "responseId": "a4ECa_qGFfGMssgPsOzwmA0"
+  }
+}

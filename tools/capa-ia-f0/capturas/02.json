@@ -1,0 +1,124 @@
+{
+  "url": "https://aiplatform.eu.rep.googleapis.com/v1beta1/projects/mycolegal-app/locations/eu/publishers/google/models/gemini-3.8-flash:generateContent",
+  "body": {
+    "generationConfig": {},
+    "contents": [
+      {
+        "role": "user",
+        "parts": [
+          {
+            "text": "¿Qué superficie catastral tiene la finca registral número 4521? Necesitas encadenar las tres herramientas."
+          }
+        ]
+      }
+    ],
+    "systemInstruction": {
+      "parts": [
+        {
+          "text": "Usa las herramientas una a una; no adivines datos."
+        }
+      ]
+    },
+    "tools": [
+      {
+        "functionDeclarations": [
+          {
+            "name": "buscar_finca",
+            "description": "Busca una finca por su número registral y devuelve su identificador interno",
+            "parametersJsonSchema": {
+              "type": "object",
+              "properties": {
+                "numero": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "numero"
+              ]
+            }
+          },
+          {
+            "name": "referencia_catastral",
+            "description": "Devuelve la referencia catastral de una finca por su identificador interno (F-xxx)",
+            "parametersJsonSchema": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id"
+              ]
+            }
+          },
+          {
+            "name": "superficie_catastral",
+            "description": "Devuelve la superficie en m² dada una referencia catastral",
+            "parametersJsonSchema": {
+              "type": "object",
+              "properties": {
+                "refcat": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "refcat"
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "toolConfig": {
+      "functionCallingConfig": {
+        "mode": "AUTO"
+      }
+    }
+  },
+  "status": 200,
+  "resp": {
+    "candidates": [
+      {
+        "content": {
+          "role": "model",
+          "parts": [
+            {
+              "functionCall": {
+                "name": "buscar_finca",
+                "args": {
+                  "numero": "4521"
+                },
+                "id": "call_11562705898024218978"
+              },
+              "thoughtSignature": "AY89a1+8MzMTBqMOHwxNp/GLVwXLwioJtM6sXzoM0Zg767HkrfGusTISrOnif//g8jT2RHupH96G1UTv9og3IlnbgIWulY3TPqKInUs3zZFIHGPrg4OpP/Nr/utW6MJn4+UdaUI1Q9GQyjo/OyCmrA4YQDCvuKr2LyUIcNugnhHdoSytzspl2assjV4yy+L1yLKNHOJ94Pj3QTSzMUy7+h3nFLY7KgqaQyOL6gfcEhY1oo3EcHUc+8oAG1zWYtTua0aqiCBOUy2I7lQ8EwS7g6SU0SMpmIoHQVOdWln/5zv1f0x4Fw4EomVNICe+WPmsXnhMnStEsBX/ho7g0i/HeimmdgaEFCWVthQr7tLY0pgGcK/xXVQMoFqAqjpI9IhnVIm6ePs+LDFnsKtA9nu7+pZg4W08/xRnjOIh0Pm5so0oMGbOzGbKXey/W2yaET4WJv/zg/ud1T68mh5XzNdWD83rp+vADVG4rw87h9ITCyIkL8kZflt6SbuZXEQfk4BYMJi02wRm5WHvnmcmLWjVxjtWlyeAPkZRk9A3QNb9NnTZ7Q8GghYTtEO6XE+5+VpRYETcd4JC6K5SSMqoHgcrwZtrBEmzwQ5qfyCExDFQX/vGJAwow4EvaiMFYNIjlEBDhvHbdU+EwIzPIBw+FX6LK+Ml9Jow4msogyA+bk5kKlDwsAq85ih9bR3Zny8GAxgf7Pku6u0ZjDaDMGRQ/ClrUyKy6bu/DeyfzH1BDHBCAzL4M+z7k8ik922TTWIAl1cNVEGD0xdfbc2TBzb9"
+            }
+          ]
+        },
+        "finishReason": "STOP"
+      }
+    ],
+    "usageMetadata": {
+      "promptTokenCount": 147,
+      "candidatesTokenCount": 20,
+      "totalTokenCount": 315,
+      "trafficType": "ON_DEMAND",
+      "promptTokensDetails": [
+        {
+          "modality": "TEXT",
+          "tokenCount": 147
+        }
+      ],
+      "candidatesTokensDetails": [
+        {
+          "modality": "TEXT",
+          "tokenCount": 20
+        }
+      ],
+      "thoughtsTokenCount": 148
+    },
+    "modelVersion": "gemini-3.8-flash",
+    "createTime": "2026-11-22T05:45:00.828917Z",
+    "responseId": "XIECa_XLMrKMssgP6qjrsAU"
+  }
+}

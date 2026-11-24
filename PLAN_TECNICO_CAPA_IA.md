@@ -1,6 +1,6 @@
 # PLAN TÉCNICO — Capa común de IA en `ai-core`: la plataforma, independiente de Vertex
 
-> Estado: **F0 hecha (22-nov): `vertex-gemini` a mano, AI SDK para el resto; tipos cerrados. Siguiente: F1** · Fecha: 21-nov-2026 · Repo dueño: `mycolegal-shared` (`packages/ai-core`)
+> Estado: **⏸ listo para lanzar, en espera (24-nov, Carles: «lo lanzaremos en otro momento»).** F0 hecha (22-nov): `vertex-gemini` a mano, AI SDK para el resto, tipos cerrados. Lo siguiente, cuando se lance, es F1 (§10) · Fecha: 21-nov-2026 · Repo dueño: `mycolegal-shared` (`packages/ai-core`)
 >
 > **Repos afectados:**
 > - `mycolegal-shared`: `ai-core` y, para vaciarlo, `sharedlib`.
@@ -317,7 +317,7 @@ El AI SDK (`ai`) ya tiene proveedores para Vertex, OpenAI-compatible, Anthropic 
 | 5 | `thinkingBudget` (3.x) y `thinkingLevel` (4.x) | **Sí** | Pasan tal cual por `providerOptions.vertex.thinkingConfig`; sin opciones no añade nada por su cuenta |
 | + | Streaming, embeddings, `gs://` | Sí | `streamGenerateContent?alt=sse`; `text-multilingual-embedding-002` con `task_type` → 768 dimensiones; `gs://` va como `fileData`. El uso trae el `usageMetadata` crudo (sirve para `recordLlmCall`) |
 
-**Lectura:** por el criterio, **adaptadores sobre el AI SDK**. El precio es el principio 2: con el SDK la paridad con Vertex es **semántica, no byte a byte** (`responseJsonSchema` en lugar de `responseSchema`). Si se acepta, F2 compara cuerpos normalizados y respuestas reales de los 9 sitios con esquema; si no, el adaptador `vertex-gemini` se escribe a mano (capa propia solo para Gemini) y el SDK se usa para los demás proveedores. Script y capturas: scratchpad de la sesión, `f0-aisdk/`.
+**Lectura:** por el criterio, **adaptadores sobre el AI SDK**. El precio es el principio 2: con el SDK la paridad con Vertex es **semántica, no byte a byte** (`responseJsonSchema` en lugar de `responseSchema`). Si se acepta, F2 compara cuerpos normalizados y respuestas reales de los 9 sitios con esquema; si no, el adaptador `vertex-gemini` se escribe a mano (capa propia solo para Gemini) y el SDK se usa para los demás proveedores. Script y capturas: [`tools/capa-ia-f0/`](tools/capa-ia-f0/README.md).
 
 **Decisión (22-nov, Carles):** **`vertex-gemini` a mano**, con paridad byte a byte (principio 2 intacto), y **AI SDK para los demás adaptadores** (`openai-compatible`, `anthropic`, futuros), con versión exacta fijada. Motivos: todo el tráfico de producción es Gemini y no debe cambiar ninguna respuesta; la traducción Gemini ya existe en el código y solo se reúne; el SDK ahorra trabajo justo en los proveedores que no tenemos y su ritmo de versiones queda lejos del camino de los clientes. Es reversible: si más adelante los 9 sitios con esquema salen iguales con el SDK, Gemini puede pasar al SDK sin tocar apps.
 
@@ -431,6 +431,32 @@ Estimación total: **16–19 jornadas**.
 1. **Alcance de la primera versión:** ¿transcripción, voz y embeddings desde la tanda en que se migra su app (como está escrito), o solo texto en la primera vuelta y el resto después? Lo escrito evita dejar caminos de Vertex sueltos.
 2. **¿Se migra también `consultor/descripcion/generar.ts`** (809 líneas, Catastro), o se deja para el final de F6 si se complica?
 3. **Comprobación de F8:** ¿en las pruebas de cada app (vitest) o como paso del build/deploy? Lo primero es más simple; lo segundo no se puede saltar.
+
+## 10. Cómo retomarlo
+
+Todo lo decidido hasta el 24-nov está en este documento. La prueba F0 se puede repetir con [`tools/capa-ia-f0/`](tools/capa-ia-f0/README.md).
+
+**Antes de empezar F1:**
+
+1. Repasar §2.2 contra el código del día: el inventario es del 21-nov y las apps siguen cambiando. Para encontrar sitios nuevos que monten cuerpos Gemini:
+   ```bash
+   grep -rlE "generationConfig|functionDeclarations|systemInstruction" --include='*.ts' mycolegal-*/src | grep -v node_modules
+   ```
+   El 22-nov eran 22 ficheros, más `sharedlib/server/model-endpoint.ts`.
+2. Hacer la misma comprobación con las claves que no caben en §3.3, que el 22-nov no usaba nadie: `allowedFunctionNames`, `safetySettings`, `labels`, `candidateCount`, `stopSequences`, `googleSearch`, `includeThoughts`, `mediaResolution`. Si alguna ha entrado, ampliar la interfaz antes de F1.
+3. Si ha pasado mucho tiempo, volver a pasar `tools/capa-ia-f0` con la versión del AI SDK de ese momento. Solo afecta a F9 y F10, pero conviene saber si cambió algo (por ejemplo, si ya envía `responseSchema` o `v1`).
+4. Avisar a Lanzamiento antes de cada despliegue en LOCAL de una tanda (§5).
+
+**Orden de trabajo** (§4):
+- F1 y F2 solo tocan `ai-core`: no cambian ninguna app ni despliegan nada.
+- F3 es la primera migración de BD (platform).
+- F4 a F7 migran una tanda cada una.
+
+**Notas para la F9, sacadas de la F0:**
+- La opción del proveedor Vertex en el SDK se llama `providerOptions.vertex`.
+- La `thoughtSignature` vuelve en `response.messages[].content[].providerOptions`; los adaptadores sobre el SDK la guardan en `Mensaje.opaco`.
+- El uso llega crudo en `usage.raw`, con la misma forma que el `usageMetadata` de Vertex.
+- El SDK no crea cachés: lo haría el adaptador, aunque en F9 no hace falta porque `openai-compatible` no tiene caché explícita.
 
 ## Fuera de alcance
 

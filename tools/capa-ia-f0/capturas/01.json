@@ -1,0 +1,54 @@
+{
+  "url": "https://aiplatform.eu.rep.googleapis.com/v1beta1/projects/mycolegal-app/locations/eu/publishers/google/models/gemini-3.5-flash-lite:generateContent",
+  "body": {
+    "generationConfig": {},
+    "contents": [
+      {
+        "role": "user",
+        "parts": [
+          {
+            "text": "Responde solo: hola"
+          }
+        ]
+      }
+    ]
+  },
+  "status": 200,
+  "resp": {
+    "candidates": [
+      {
+        "content": {
+          "role": "model",
+          "parts": [
+            {
+              "text": "hola",
+              "thoughtSignature": "AY89a1+K7vkIOy7LcV5R1nev43SFbzEK/RI21G2AzT1lLGPR8ib/rkviqXEDGf/J5uXBRD+om1/reVMXG30pHL8bbZ9UNZ/LmfyEFD81tW98VxyAh2g1LRSIrfiIF7DSl/P3ipYKlEri/Jeo0852bbKqUI4ggX8="
+            }
+          ]
+        },
+        "finishReason": "STOP"
+      }
+    ],
+    "usageMetadata": {
+      "promptTokenCount": 5,
+      "candidatesTokenCount": 1,
+      "totalTokenCount": 6,
+      "trafficType": "ON_DEMAND",
+      "promptTokensDetails": [
+        {
+          "modality": "TEXT",
+          "tokenCount": 5
+        }
+      ],
+      "candidatesTokensDetails": [
+        {
+          "modality": "TEXT",
+          "tokenCount": 1
+        }
+      ]
+    },
+    "modelVersion": "gemini-3.5-flash-lite",
+    "createTime": "2026-11-22T05:44:59.484295Z",
+    "responseId": "W4ECa8fHHfGMssgPsOzwmA0"
+  }
+}
