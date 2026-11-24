@@ -1,4 +1,4 @@
-# PLAN TÉCNICO — Datos de contactos en las plantillas DocFilling: `{{SYSTEM:CONTACT:…}}`
+# PLAN TÉCNICO — Datos de contactos en las plantillas DocFilling: `{{SYSTEM:CONTACT<…>}}`
 
 > Estado: **Decisiones D1–D6 cerradas por Carles (24-nov-2026, §6). Sin código. Siguiente: F1** · Fecha: 23-nov-2026, revisado 24-nov-2026 · Repo dueño: `mycolegal-shared` (`packages/docfilling-core`)
 >
@@ -22,7 +22,7 @@
 Que una plantilla pueda **leer los datos de un contacto de la base de datos** (razón social, NIF, domicilio, teléfono, correo), en vez de llevarlos escritos a mano:
 
 ```
-* "{{SYSTEM:CONTACT:EULISES.NOMBRE}}", con domicilio en {{SYSTEM:CONTACT:EULISES.DOMICILIO}}, teléfono {{SYSTEM:CONTACT:EULISES.TELEFONO}}
+* "{{SYSTEM:CONTACT<EULISES>.NOMBRE}}", con domicilio en {{SYSTEM:CONTACT<EULISES>.DOMICILIO}}, teléfono {{SYSTEM:CONTACT<EULISES>.TELEFONO}}
 ```
 
 El contacto se puede nombrar de tres formas:
@@ -70,7 +70,7 @@ vinculada. En Notaría, Contactos **muestra** el tipo pero no deja elegirlo: la 
 
 ## 4. La sintaxis
 
-### 4.1 Un valor: `{{SYSTEM:CONTACT:<selector>.<CAMPO>[#formato]}}`
+### 4.1 Un valor: `{{SYSTEM:CONTACT<selector>.CAMPO[#formato]}}`
 
 Selectores:
 
@@ -84,7 +84,7 @@ Campos:
 - Básicos: `NOMBRE` (razón social, o nombre y apellidos si es persona física), `NIF`, `TELEFONO`, `EMAIL`, `DIRECCION`, `CP`, `CIUDAD`, `PROVINCIA`.
 - `DOMICILIO`: compuesto como «calle…, CP Ciudad (Provincia)».
 - `TIPO`: GESTORIA, BANCO…
-- Admiten los formatos de siempre: `{{SYSTEM:CONTACT:EULISES.NOMBRE#upper}}`.
+- Admiten los formatos de siempre: `{{SYSTEM:CONTACT<EULISES>.NOMBRE#upper}}`.
 
 Reglas:
 - En un **valor**, el selector tiene que dar **exactamente un** contacto.
@@ -93,25 +93,53 @@ Reglas:
   - En los dos casos **nunca sale un texto vacío**: el hueco se ve y Redactor no deja dar la escritura por buena.
 - Un **campo vacío** en la ficha (el contacto existe pero no tiene teléfono) da `[NO DISPONIBLE]`, como hoy un `SYSTEM:` sin valor. Redactor lo señala diciendo **dónde se corrige** (la ficha del contacto, no la plantilla).
 
-### 4.2 Las opciones de una pregunta: `SYSTEM:CONTACTS:<patrón>`
+### 4.2 Las opciones de una pregunta: `SYSTEM:CONTACTS<patrón>`
 
 ```
-{{DECLARE REPRESENTANTE_FISCAL_REGISTRAL:INPUT(Seleccione el representante fiscal y registral|Notario,Propio_Interesado,SYSTEM:CONTACTS:Gestoría*)}}
+{{DECLARE REPRESENTANTE_FISCAL_REGISTRAL:INPUT(Seleccione el representante fiscal y registral|Notario,Propio_Interesado,SYSTEM:CONTACTS<Gestoría*>)}}
 ```
 
-- Las opciones fijas se mantienen. `SYSTEM:CONTACTS:<patrón>` se sustituye por **un elemento por cada contacto que case**.
+- Las opciones fijas se mantienen. `SYSTEM:CONTACTS<patrón>` se sustituye por **un elemento por cada contacto que case**.
 - El **valor guardado es el código** (estable) y la **etiqueta es el nombre**. Así los `{{IF REPRESENTANTE_FISCAL_REGISTRAL == "EULISES"}}` de hoy siguen funcionando.
-- Filtro por tipo, sin depender del nombre: `SYSTEM:CONTACTS:tipo=GESTORIA` y combinable, `SYSTEM:CONTACTS:tipo=GESTORIA;Ges*` (ver D3).
+- Filtro por tipo, sin depender del nombre: `SYSTEM:CONTACTS<tipo=GESTORIA>` y combinable, `SYSTEM:CONTACTS<tipo=GESTORIA;Ges*>` (ver D3).
 
 ### 4.3 En condiciones
 
-`{{IF SYSTEM:CONTACT:[REPRESENTANTE_FISCAL_REGISTRAL].EMAIL}}…{{ENDIF}}` es verdadero si el contacto existe y tiene ese campo. Sirve para que una sola frase valga para todas las gestorías: «…, correo {{…EMAIL}}» solo si lo tiene.
+`{{IF SYSTEM:CONTACT<[REPRESENTANTE_FISCAL_REGISTRAL]>.EMAIL}}…{{ENDIF}}` es verdadero si el contacto existe y tiene ese campo. Sirve para que una sola frase valga para todas las gestorías: «…, correo {{…EMAIL}}» solo si lo tiene.
 
 ### 4.4 Fuera de este plan
 
 - Recorrer contactos con `FOR EACH`: no hay caso de uso.
 - Escribir en contactos desde una plantilla.
 - Contactos de un expediente concreto. Eso son los intervinientes y van por `:REQ(SUJETO…)`.
+
+### 4.5 Sintaxis general: datos de la notaría y herramientas del motor (Carles, 24-nov-2026)
+
+`SYSTEM:` tiene dos clases de cosas, y se escriben distinto para que se vean distintas:
+
+| Forma | Qué es | Ejemplo |
+|---|---|---|
+| `SYSTEM:DATO` | dato fijo de la notaría (predefinidos) | `{{SYSTEM:NOMBRE_NOTARIO}}` |
+| `SYSTEM:HERRAMIENTA<argumento>` | herramienta del motor | `{{SYSTEM:CONTACT<EULISES>.TELEFONO}}` |
+
+- **Herramientas (lista cerrada):** `CONTACT<selector>`, `CONTACTS<patrón>` (opciones de una pregunta) y
+  `COMPUTE<función(p1, p2…)>` (resultado de un cálculo).
+- **Campo y formato, detrás del cierre:** `{{SYSTEM:CONTACT<[REPRESENTANTE]>.NOMBRE#upper}}`,
+  `{{SYSTEM:COMPUTE<PLAZO(ITP_AJD)>}}`. Las variables, entre corchetes dentro de los `< >`:
+  `{{SYSTEM:COMPUTE<PLAZO([IMPUESTO])>}}`.
+- **`COMPUTE`:** las funciones se declaran **en el catálogo** (nombre, parámetros y qué devuelven), no en el código.
+  La primera es `PLAZO(impuesto)`, del plan `mycolegal-consultor/PLAN_TECNICO_PLAZOS_PRESENTACION_CCAA.md`. Una
+  función desconocida es un error del validador. `docfilling-core` no calcula: recibe el resultado (lo calcula
+  requisitos-core con el catálogo y Redactor se lo pasa). Si no se puede calcular (comunidad supuesta, varias
+  comunidades…), sale un hueco visible y no se puede dar la escritura por buena; nunca una cifra dudosa. Cada valor
+  calculado queda en `valoresFuente` con su cita, para el «por qué» de Redactor.
+- **Formatos (`#amount_words`, `#upper`) no son herramientas:** presentan un dato que ya está.
+- **⚠️ `<` y `>` ya son operadores en las condiciones** (`{{IF TOTAL <= 500000}}`). El analizador tiene que leer
+  `SYSTEM:NOMBRE<…>` como una sola pieza, con los `< >` emparejados, **antes** de buscar operadores:
+  `{{IF SYSTEM:COMPUTE<PLAZO(ITP_AJD)> > 0}}` debe entenderse bien. Un `<` de herramienta sin cerrar es un error del
+  validador.
+- Word y markdown: los `< >` están dentro de `{{ }}`. El motor los sustituye antes de componer el documento y
+  `docx-a-md.py` sólo desescapa dentro de las llaves.
 
 ## 5. Dónde viven los datos y cómo se resuelven
 
@@ -136,7 +164,7 @@ contacto en las notarías que lo tengan; en las demás, hueco visible (D5) y Red
 
 - `docfilling-core` es puro (no toca la BD) y lo sigue siendo. Recibe el directorio en las opciones de composición (`OpcionesComposicion.contactos: ContactoDF[]`) y hace él la selección: código, variable o patrón, la unicidad, los formatos y los huecos.
 - Además expone `contactosReferidos(texto)`: la lista de selectores y campos que usa una plantilla. Sirve para la auditoría y para que Redactor sepa qué tiene que preguntar.
-- **Redactor** lee los contactos con código de la organización, se los pasa al motor y expande `SYSTEM:CONTACTS:` en las opciones de las preguntas. Al generar, apunta en `valoresFuente` qué contacto y qué versión usó (`fuente: 'contacto'`, id, `updatedAt`).
+- **Redactor** lee los contactos con código de la organización, se los pasa al motor y expande `SYSTEM:CONTACTS<…>` en las opciones de las preguntas. Al generar, apunta en `valoresFuente` qué contacto y qué versión usó (`fuente: 'contacto'`, id, `updatedAt`).
 - La escritura entregada ya queda congelada en `markdownFinal`. Cambiar mañana un teléfono **no altera** lo que ya está firmado.
 
 ### 5.4 Validación
@@ -155,7 +183,7 @@ En la carga de la biblioteca, una auditoría nueva **«contactos»**:
 
 | # | Decisión | Decidido |
 |---|---|---|
-| **D1** | Sintaxis | `{{SYSTEM:CONTACT:<sel>.<CAMPO>}}` para un valor y `SYSTEM:CONTACTS:<patrón>` para listas |
+| **D1** | Sintaxis | `{{SYSTEM:CONTACT<sel>.CAMPO}}` para un valor y `SYSTEM:CONTACTS<patrón>` para listas; herramientas con `< >` y datos de la notaría sin ellos (§4.5, Carles 24-nov-2026) |
 | **D2** | De dónde salen | **De los contactos de la notaría** (catálogo local de Tramitación y gestorías de portal, por su ficha de `clientes`). Sin directorio común (§5.2) |
 | **D3** | Qué mira el comodín | Código y nombre, sin acentos ni mayúsculas, más filtro de tipo aparte (`tipo=GESTORIA`) |
 | **D4** | El código | `clientes.codigoLocal`, ensanchado de 8 a 32 y único por organización. Es el mismo código que usa Tramitación; hay que comprobar que nada depende de los 8 caracteres |
@@ -168,10 +196,10 @@ En la carga de la biblioteca, una auditoría nueva **«contactos»**:
 |---|---|---|---|
 | **F0** | Decisiones D1–D6 y, con Tramitación, confirmar que se puede ensanchar `codigoLocal` | Carles, B&F | — |
 | **F1** | **Datos.** Migración: `codigoLocal` a VarChar(32) e índice único parcial `(orgId, codigoLocal)`. Alta en los Contactos de **Micó** de las gestorías que hoy escribe a mano la plantilla (con código, NIF, domicilio, teléfono y correo, sacados del texto actual y repasados con Iván; GRUPO BC en dos: `GRUPO_BC_BS` y `GRUPO_BC_CB`), y códigos a las cuatro de portal vinculadas | B&F (migración), Catálogo e Iván (datos) | 1,5 j |
-| **F2** | **Motor** (`docfilling-core`): parser y validador de `SYSTEM:CONTACT`/`CONTACTS`, selección (código, variable, patrón), campos compuestos, formatos, condiciones, huecos y avisos, `contactosReferidos()`. Tests, incluidos los de unicidad y acentos. Manual de sintaxis (`redactor/docs/sintaxis/`, cuyos ejemplos son test). Publicar versión | B&F | 2–3 j |
-| **F3** | **Redactor**: leer el directorio (propio sobre global) y pasarlo a `compose`; expandir `SYSTEM:CONTACTS` en las opciones; puerta de «dar por buena» con huecos de contacto; `valoresFuente`; autocompletar códigos en el editor de la biblioteca | B&F | 2 j |
+| **F2** | **Motor** (`docfilling-core`): parser y validador de las herramientas `SYSTEM:HERRAMIENTA<…>` (`CONTACT`, `CONTACTS`, `COMPUTE`; regla de los `< >` frente a los operadores, §4.5), selección (código, variable, patrón), campos compuestos, formatos, condiciones, huecos y avisos, `contactosReferidos()`. Tests, incluidos los de unicidad y acentos. Manual de sintaxis (`redactor/docs/sintaxis/`, cuyos ejemplos son test). Publicar versión | B&F | 2–3 j |
+| **F3** | **Redactor**: leer los contactos con código de la organización y pasarlos a `compose`; expandir `SYSTEM:CONTACTS` en las opciones; puerta de «dar por buena» con huecos de contacto; `valoresFuente`; autocompletar códigos en el editor de la biblioteca | B&F | 2 j |
 | **F4** | **Notaría**: en Contactos, elegir el tipo (GESTORÍA, BANCO, ASESOR) con el permiso `clientes:tipoExterno:write` y el campo «Código para plantillas», obligatorio y único en la notaría cuando el tipo es gestoría | B&F | 1 j |
-| **F5** | **Biblioteca**: reescribir `PARR_TRAMITACION_REGISTRAL_3_REPRESENTANTE_CB` y su VAR. Una sola frase de designación con campos condicionados, la comunicación de aranceles leyendo `EMAIL`/`TELEFONO` y las opciones desde `SYSTEM:CONTACTS:tipo=GESTORIA`. Auditoría «contactos» en la carga. Comprobar con el motor los casos de la #1103 (E-Ulises, GARSA, GRUPO BC por banco, sin gestoría) | Catálogo | 1 j |
+| **F5** | **Biblioteca**: reescribir `PARR_TRAMITACION_REGISTRAL_3_REPRESENTANTE_CB` y su VAR. Una sola frase de designación con campos condicionados, la comunicación de aranceles leyendo `EMAIL`/`TELEFONO` y las opciones desde `SYSTEM:CONTACTS<tipo=GESTORIA>`. Auditoría «contactos» en la carga. Comprobar con el motor los casos de la #1103 (E-Ulises, GARSA, GRUPO BC por banco, sin gestoría) | Catálogo | 1 j |
 | **F6** | LOCAL → prueba de Redactor (cancelación Sabadell) → TEST con e2e → PROD. El orden importa: los contactos de Micó dados de alta **antes** que la biblioteca que los lee | Todos, con el OK de Carles en cada entorno | — |
 
 Total aproximado: **8 jornadas**, la mayor parte de B&F.
