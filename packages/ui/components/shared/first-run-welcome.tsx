@@ -55,7 +55,23 @@ interface FirstRunWelcomeProps {
 interface InviteRow {
   displayName: string;
   email: string;
+  /** Por qué no salió la invitación de esta persona (mensaje de auth). */
+  error?: string;
+  /** El rechazo es por dominio no autorizado: se puede invitar con acuse (#727). */
+  fueraDeDominio?: boolean;
+  /** El org_admin confirma que la dirección es de su despacho aunque esté fuera de dominio. */
+  confirmaFueraDeDominio?: boolean;
 }
+
+/** Respuesta de `/api/team/invite`, persona a persona. */
+interface InviteResult {
+  email: string;
+  ok: boolean;
+  code?: string | null;
+  message?: string;
+}
+
+const CODIGOS_FUERA_DE_DOMINIO = new Set(["DOMAIN_NOT_AUTHORIZED", "DOMAIN_NOT_AUTHORIZED_SHARED"]);
 
 const BRAND_GOLD = "#b09a6e";
 
@@ -71,6 +87,8 @@ export function FirstRunWelcome({ appSlug, appName, logo, steps, adminUrl = "/ad
   ]);
   const [submitting, setSubmitting] = useState(false);
   const [teamDone, setTeamDone] = useState<null | "invited" | "later">(null);
+  // Aviso general del alta: invitaciones que no han salido (el detalle va en cada fila).
+  const [teamError, setTeamError] = useState<string | null>(null);
   // "No volver a mostrar": marcada por defecto (una bienvenida se ve una vez). Si
   // el usuario la desmarca, NO se marca el tour como visto → reaparece la próxima
   // sesión. Solo gobierna el tour de la app; el paso de equipo se marca siempre.
@@ -150,27 +168,84 @@ export function FirstRunWelcome({ appSlug, appName, logo, steps, adminUrl = "/ad
     }
   }
 
+  /**
+   * Envía las invitaciones. Devuelve `false` si alguna no ha salido: entonces el
+   * paso de equipo sigue abierto, sin las que sí salieron y con el motivo en cada
+   * fila. Antes no se miraba la respuesta y se decía «Invitaciones enviadas»
+   * aunque auth las hubiera rechazado todas (Notaría de Piedrabuena, 24-nov-2026).
+   */
+  async function invitar(): Promise<boolean> {
+    const people = rows
+      .map((r) => ({
+        displayName: r.displayName.trim(),
+        email: r.email.trim(),
+        ...(r.fueraDeDominio && r.confirmaFueraDeDominio ? { confirmaFueraDeDominio: true } : {}),
+      }))
+      .filter((r) => r.displayName && r.email);
+    if (people.length === 0) {
+      setTeamDone("later");
+      return true;
+    }
+    setTeamError(null);
+    let results: InviteResult[] | null = null;
+    try {
+      const res = await fetch("/api/team/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ people }),
+      });
+      const json = await res.json().catch(() => null);
+      results = Array.isArray(json?.data?.results) ? (json.data.results as InviteResult[]) : null;
+    } catch {
+      results = null;
+    }
+    if (!results) {
+      setTeamError("No se han podido enviar las invitaciones. Vuelve a intentarlo o hazlo más tarde desde Administración → Invitar usuario.");
+      return false;
+    }
+    const porEmail = new Map(results.map((r) => [r.email.toLowerCase(), r]));
+    const fallidas = rows.filter((r) => {
+      const x = porEmail.get(r.email.trim().toLowerCase());
+      return r.displayName.trim() && r.email.trim() && x && !x.ok;
+    });
+    if (fallidas.length === 0) {
+      setTeamDone("invited");
+      return true;
+    }
+    const enviadas = results.filter((r) => r.ok).length;
+    setRows(
+      fallidas.map((r) => {
+        const x = porEmail.get(r.email.trim().toLowerCase())!;
+        const fuera = CODIGOS_FUERA_DE_DOMINIO.has(x.code ?? "");
+        return {
+          displayName: r.displayName,
+          email: r.email,
+          error: x.message || "No se ha podido enviar la invitación.",
+          fueraDeDominio: fuera,
+          confirmaFueraDeDominio: false,
+        };
+      }),
+    );
+    setTeamError(
+      (enviadas > 0 ? `${enviadas === 1 ? "Se ha enviado 1 invitación" : `Se han enviado ${enviadas} invitaciones`}. ` : "") +
+        (fallidas.length === 1 ? "Esta no ha salido:" : `Estas ${fallidas.length} no han salido:`),
+    );
+    return false;
+  }
+
   async function finishAll(invite: boolean) {
     setSubmitting(true);
+    // Con alguna invitación sin salir, el paso sigue abierto y sin marcar: el
+    // org_admin ve por qué y decide (corregir, confirmar o «Ahora no»). Fuera del
+    // try/finally, que cierra el modal.
+    if (invite && !(await invitar())) {
+      if (!forced && showWelcome && remember) await mark(`welcome:${appSlug}`);
+      setSubmitting(false);
+      return;
+    }
     try {
       if (invite) {
-        const people = rows
-          .map((r) => ({ displayName: r.displayName.trim(), email: r.email.trim() }))
-          .filter((r) => r.displayName && r.email);
-        if (people.length > 0) {
-          try {
-            await fetch("/api/team/invite", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ people }),
-            });
-            setTeamDone("invited");
-          } catch {
-            setTeamDone("later");
-          }
-        } else {
-          setTeamDone("later");
-        }
+        // Ya enviadas todas (o no había a quién): `invitar` ha dejado `teamDone`.
       } else if (showTeam) {
         setTeamDone("later");
       }
@@ -241,7 +316,7 @@ export function FirstRunWelcome({ appSlug, appName, logo, steps, adminUrl = "/ad
         {/* Escenario: captura del elemento o formulario de alta */}
         <div className="relative mx-5 mt-3 h-[204px] overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
           {isTeamStep ? (
-            <TeamForm rows={rows} setRows={setRows} done={teamDone} />
+            <TeamForm rows={rows} setRows={setRows} done={teamDone} error={teamError} />
           ) : current.image ? (
             <img
               src={current.image}
@@ -348,10 +423,12 @@ function TeamForm({
   rows,
   setRows,
   done,
+  error,
 }: {
   rows: InviteRow[];
   setRows: React.Dispatch<React.SetStateAction<InviteRow[]>>;
   done: null | "invited" | "later";
+  error: string | null;
 }) {
   if (done === "invited") {
     return (
@@ -360,27 +437,55 @@ function TeamForm({
       </div>
     );
   }
-  function update(idx: number, field: keyof InviteRow, value: string) {
-    setRows((prev) => prev.map((r, k) => (k === idx ? { ...r, [field]: value } : r)));
+  function update(idx: number, field: "displayName" | "email", value: string) {
+    // Al corregir la dirección, el motivo del rechazo anterior ya no vale.
+    setRows((prev) => prev.map((r, k) => (k === idx
+      ? { ...r, [field]: value, ...(field === "email" ? { error: undefined, fueraDeDominio: false, confirmaFueraDeDominio: false } : {}) }
+      : r)));
+  }
+  function confirmar(idx: number, value: boolean) {
+    setRows((prev) => prev.map((r, k) => (k === idx ? { ...r, confirmaFueraDeDominio: value } : r)));
   }
   return (
     <div className="flex h-full flex-col gap-2 overflow-auto p-3">
       <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Alta asistida · opcional</span>
+      {error && (
+        <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-2 py-1.5 text-[12px] font-medium text-red-800">
+          {error}
+        </p>
+      )}
       {rows.map((r, idx) => (
-        <div key={idx} className="grid grid-cols-[1fr_1.3fr] gap-1.5">
-          <input
-            value={r.displayName}
-            onChange={(e) => update(idx, "displayName", e.target.value)}
-            placeholder="Nombre y apellidos"
-            className="h-8 min-w-0 rounded-lg border border-gray-200 px-2 text-[12px] outline-none focus:border-cyan-500"
-          />
-          <input
-            value={r.email}
-            onChange={(e) => update(idx, "email", e.target.value)}
-            placeholder="email@despacho.com"
-            type="email"
-            className="h-8 min-w-0 rounded-lg border border-gray-200 px-2 text-[12px] outline-none focus:border-cyan-500"
-          />
+        <div key={idx} className="flex flex-col gap-1">
+          <div className="grid grid-cols-[1fr_1.3fr] gap-1.5">
+            <input
+              value={r.displayName}
+              onChange={(e) => update(idx, "displayName", e.target.value)}
+              placeholder="Nombre y apellidos"
+              className="h-8 min-w-0 rounded-lg border border-gray-200 px-2 text-[12px] outline-none focus:border-cyan-500"
+            />
+            <input
+              value={r.email}
+              onChange={(e) => update(idx, "email", e.target.value)}
+              placeholder="email@despacho.com"
+              type="email"
+              className={cn(
+                "h-8 min-w-0 rounded-lg border px-2 text-[12px] outline-none focus:border-cyan-500",
+                r.error ? "border-red-300" : "border-gray-200",
+              )}
+            />
+          </div>
+          {r.error && <p className="text-[11.5px] leading-snug text-red-700">{r.error}</p>}
+          {r.fueraDeDominio && (
+            <label className="flex cursor-pointer items-start gap-2 text-[11.5px] font-medium leading-snug text-red-900">
+              <input
+                type="checkbox"
+                checked={!!r.confirmaFueraDeDominio}
+                onChange={(e) => confirmar(idx, e.target.checked)}
+                className="mt-0.5 h-3.5 w-3.5 rounded border-red-300"
+              />
+              <span>Confirmo que esta persona trabaja en mi despacho: invitar a esta dirección.</span>
+            </label>
+          )}
         </div>
       ))}
       <button
