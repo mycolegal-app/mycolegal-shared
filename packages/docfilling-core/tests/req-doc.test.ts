@@ -6,7 +6,7 @@ import { validateText } from '../src/syntax/validate';
 import { extractDeclareFixedValues } from '../src/compose/engine';
 import { esquemaDeCampos } from '../src/fields/schema';
 import { implicaciones, inversa, tieneVuelta, normalizarValor } from '../src/fields/req';
-import { leerReq, pelarReqDoc } from '../src/syntax/req-doc';
+import { leerReq, pelarReqDoc, ordinalDeComodin } from '../src/syntax/req-doc';
 
 const uno = (t: string) => {
   const fs = parseFields(t);
@@ -391,5 +391,25 @@ describe('Campo.pregunta: el texto del :INPUT', () => {
     const c = esquemaDeCampos(t).campos.find((x) => x.nombre === 'TIPO_FINCA_PH')!;
     expect(c.pregunta).toBe('Tipo de Finca a efectos de Catastro');
     expect(c.etiqueta).toBe('Tipo finca ph');
+  });
+});
+
+describe('@*~N: la N-ésima persona del papel del bloque (25-nov-2026)', () => {
+  it('se lee como rol y da su ordinal', () => {
+    expect(leerReq('SUJETO.TELEFONO@*~2')?.rol).toBe('*~2');
+    expect(ordinalDeComodin('*~2')).toBe(2);
+    expect(ordinalDeComodin('*~12')).toBe(12);
+    expect(ordinalDeComodin('*')).toBeNull();
+    expect(ordinalDeComodin('VENDEDOR')).toBeNull();
+  });
+  it('~1, ~0 o un papel con ~ siguen mal formados', () => {
+    expect(leerReq('SUJETO.TELEFONO@*~1')).toBeNull();
+    expect(leerReq('SUJETO.TELEFONO@*~0')).toBeNull();
+    expect(leerReq('SUJETO.TELEFONO@VENDEDOR~2')).toBeNull();
+  });
+  it('no avisa W909 (no es un rol del catálogo, pero tampoco lo pretende)', () => {
+    const t = '{{DECLARE COMP_CONYUGE2_TELEFONO:[Teléfono del cónyuge 2.]:REQ(SUJETO.TELEFONO@*~2)}}';
+    const f = uno(t);
+    expect(f.req[0].rol).toBe('*~2');
   });
 });

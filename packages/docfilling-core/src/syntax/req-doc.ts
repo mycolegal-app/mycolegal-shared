@@ -6,7 +6,9 @@
 //
 // - `:REQ(<hecho o dato>[@<ROL>] [; <valor del campo>=<valor del catálogo>]…)` dice a qué
 //   hecho o dato del catálogo equivale el campo. Puede haber varios: cuando un valor del campo
-//   fija varios hechos a la vez, cada hecho lleva el suyo. `@*` = algún interviniente; sin rol,
+//   fija varios hechos a la vez, cada hecho lleva el suyo. `@*` = algún interviniente; `@*~2` = la SEGUNDA persona del
+//   papel que dé el bloque (el sufijo del campo: el cónyuge 2 de «Los cónyuges», sea VENDEDOR~2, el segundo
+//   representante del mismo menor o TESTADOR~2; Carles, 25-nov-2026); sin rol,
 //   el hecho es del acto o del objeto. En una lista (`DECLARE ARRAY`), `:REQ(@ROL)` sin hecho
 //   da el papel a todos sus subcampos. Un tercer segmento apunta a un COMPONENTE de un dato
 //   compuesto del catálogo (una LISTA o una DIRECCION con `campos`): `:REQ(ACTO.PAGOS.CUANTIA)`,
@@ -47,7 +49,12 @@ export interface ReqDoc {
 }
 
 const REF = /^([A-Z][A-Z0-9_]*)\.([A-Z0-9_]+)(?:\.([A-Z0-9_]+))?$/;
-const ROL = /^(\*|[A-Z][A-Z0-9_]*)$/;
+const ROL = /^(\*(?:~[2-9]|~[1-9]\d+)?|[A-Z][A-Z0-9_]*)$/;
+/** `@*~N`: la N-ésima persona del papel del bloque (N ≥ 2), o null si el rol no es de esa forma. */
+export function ordinalDeComodin(rol: string | null | undefined): number | null {
+  const m = /^\*~(\d+)$/.exec(rol ?? '');
+  return m ? Number(m[1]) : null;
+}
 
 /** Cierre del paréntesis que abre en `abre`, contando anidados y saltando comillas.
  *  -1 si no se cierra. */

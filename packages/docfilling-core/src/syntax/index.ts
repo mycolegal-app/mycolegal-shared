@@ -1,7 +1,7 @@
 // Capa de LENGUAJE: reconocer, clasificar y validar.
 export { parseFields, classifyField, offsetToLineCol, FieldType } from './parser';
 export type { ParsedField } from './parser';
-export { pelarReqDoc, leerReq, leerDoc, quitarReqDoc } from './req-doc';
+export { pelarReqDoc, leerReq, leerDoc, quitarReqDoc, ordinalDeComodin } from './req-doc';
 export type { ReqDecl, ReqDoc } from './req-doc';
 export { validateText } from './validate';
 export type { OpcionesValidacion } from './validate';

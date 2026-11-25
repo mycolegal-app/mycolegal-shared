@@ -1,5 +1,10 @@
 # @mycolegal-app/docfilling-core
 
+## 0.1.61 — 25-nov-2026
+
+- `:REQ(X@*~N)`: la N-ésima persona (N ≥ 2) del papel que dé el bloque. El cónyuge 2 de «Los cónyuges» sin fijar el papel: `COMP_CONYUGE2_TELEFONO:REQ(SUJETO.TELEFONO@*~2)` vale para VENDEDOR~2, para el segundo representante del mismo menor y para TESTADOR~2. Lo resuelve quien compone (Redactor, por el sufijo del campo). `ordinalDeComodin(rol)`. No avisa W909. `@*~1`, `@*~0` y `@PAPEL~N` siguen mal formados (E906). `tests/req-doc.test.ts`.
+- Sin W056 por el identificador neutro de una herramienta (`__SYS_COMPUTE_…`) en un IF.
+
 ## 0.1.57 — 22-nov-2026
 
 Formatos `ordinal_f` y `ordinal_m`: el número de una inscripción, una planta, un piso, abreviado. «1» → «1.ª» / «1.º»; en catalán «1a» y «1r, 2n, 3r, 4t, 5è». Lo que ya viene abreviado («1ª», «1.ª») se normaliza; lo que no es un número sale tal cual, con aviso. Can Marcet (0405): la nota simple dice «Inscripción: 1» y la escritura decía «inscripción 1.». `tests/formatos.test.ts`.
