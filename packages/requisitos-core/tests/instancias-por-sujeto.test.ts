@@ -81,3 +81,41 @@ describe('instancias por interviniente o bien', () => {
     expect(await instancias(h, 'NOTA')).toEqual(['F1', 'F3']);
   });
 });
+
+describe('regla por persona que no se cumple para NINGUNO de su papel (0701-R07, 25-nov-2026)', () => {
+  // Sin scopeRol: «menor» es la persona de la instancia (convención del catálogo). El menor es el donatario.
+  const autorizacion = regla({
+    codigo: 'R07', scopeGeneracion: 'POR_SUJETO',
+    roles: [{ rolCodigo: 'DONANTE', sujetoTipoCodigo: null }],
+    condiciones: [cond('SUJETO', 'ES_MENOR', 'EQ', true)],
+  });
+  const resolverD = (h: Parameters<typeof resolverRequisitos>[2]) =>
+    resolverRequisitos(repo({ tiposObjeto: TIPOS_OBJETO, tiposSujeto: TIPOS_SUJETO, reglas: [autorizacion] }), '0701', h);
+
+  it('la donante mayor de edad y el donatario menor: no aplica', async () => {
+    const r = await resolverD({ sujetos: [
+      { id: 'DONANTE', rol: 'DONANTE', tipo: 'PERSONA_FISICA', hechos: { ES_MENOR: false } },
+      { id: 'DONATARIO', rol: 'DONATARIO', tipo: 'PERSONA_FISICA', hechos: { ES_MENOR: true } },
+    ] });
+    expect(r.descartados.map((x) => x.codigo)).toContain('R07');
+    expect([...r.firmes, ...r.condicionados].map((x) => x.codigo)).not.toContain('R07');
+  });
+
+  it('la donante menor: aplica, de ella', async () => {
+    const r = await resolverD({ sujetos: [{ id: 'DONANTE', rol: 'DONANTE', tipo: 'PERSONA_FISICA', hechos: { ES_MENOR: true } }] });
+    expect(r.firmes.find((x) => x.codigo === 'R07')?.instancias).toEqual([{ sujetoId: 'DONANTE' }]);
+  });
+
+  it('sin saber de la donante: sigue en duda, no se descarta', async () => {
+    const r = await resolverD({ sujetos: [
+      { id: 'DONANTE', rol: 'DONANTE', tipo: 'PERSONA_FISICA', hechos: {} },
+      { id: 'DONATARIO', rol: 'DONATARIO', tipo: 'PERSONA_FISICA', hechos: { ES_MENOR: true } },
+    ] });
+    expect(r.descartados.map((x) => x.codigo)).not.toContain('R07');
+  });
+
+  it('sin nadie de su papel todavía: como antes (no hay a quién mirar)', async () => {
+    const r = await resolverD({ sujetos: [{ id: 'DONATARIO', rol: 'DONATARIO', tipo: 'PERSONA_FISICA', hechos: { ES_MENOR: true } }] });
+    expect(r.descartados.map((x) => x.codigo)).not.toContain('R07');
+  });
+});

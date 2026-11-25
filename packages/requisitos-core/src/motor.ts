@@ -981,7 +981,20 @@ export async function resolverRequisitos(
     if (porCondicion.valor === false) diag.descartadasPorCondicion++;
     else if (porObjeto === false) diag.descartadasPorObjeto++;
     else if (porSujeto === false) diag.descartadasPorSujeto++;
-    const valor = y(y(porCondicion.valor, porObjeto), porSujeto);
+    let valor = y(y(porCondicion.valor, porObjeto), porSujeto);
+    // Cada instancia mira a su interviniente o su bien (10-oct-2026): de quien no cumple, no se pide.
+    const porCadaUno = { cumple: (fijar: { sujetoId?: string; objetoId?: string }) => evaluar(conds, hechos, ambitoDe, presunciones, esUnRol, esUn, fijar, acompana, existencias).valor !== false, tipoSujetoPresumido: tipoSujPres };
+    let instancias = valor === false ? [] : expandir(r.scopeGeneracion, r.roles, r.objetos, hechos, esUn, esUnRol, porCadaUno);
+    // Una regla POR persona o POR bien que no se cumple para NINGUNO de los suyos no aplica, aunque la evaluación de
+    // conjunto se cumpla con otro: sin `scopeRol`, «menor» es la persona de la instancia (convención del catálogo), y en
+    // la donación a un nieto menor se pedía a la donante la autorización judicial de un menor (0701-R07, 25-nov-2026).
+    // Sin nadie de su papel todavía, sigue como estaba: no hay a quién mirar.
+    if (valor !== false && !instancias.length && /^POR_(SUJETO|OBJETO)/.test(r.scopeGeneracion)
+      && expandir(r.scopeGeneracion, r.roles, r.objetos, hechos, esUn, esUnRol, { tipoSujetoPresumido: tipoSujPres }).length) {
+      valor = false;
+      instancias = [];
+      diag.descartadasPorCondicion++;
+    }
     const faltan = valor === null
       ? [...new Set([...porCondicion.faltan.flatMap((f) => enDuda(f)?.faltan ?? [f]).map(porQuien), ...(porObjeto === null ? [FACT_TIPO_OBJETO] : []), ...(porSujeto === null ? [FACT_TIPO_SUJETO] : [])])]
       : [];
@@ -1023,11 +1036,7 @@ export async function resolverRequisitos(
         ...(acotaPorObjeto ? [`El bien es de tipo [${FACT_TIPO_OBJETO}] ${tiposRegla.join(' o ')}`] : []),
         ...(tiposSujeto.length ? [`Algún interviniente es de tipo [${FACT_TIPO_SUJETO}] ${tiposSujeto.join(' o ')}`] : []),
       ],
-      // Cada instancia mira a su interviniente o su bien (10-oct-2026): de quien no cumple, no se pide.
-      instancias: valor === false ? [] : expandir(r.scopeGeneracion, r.roles, r.objetos, hechos, esUn, esUnRol, {
-        cumple: (fijar) => evaluar(conds, hechos, ambitoDe, presunciones, esUnRol, esUn, fijar, acompana, existencias).valor !== false,
-        tipoSujetoPresumido: tipoSujPres,
-      }),
+      instancias,
     };
 
     if (valor === false) descartados.push(resuelto);
