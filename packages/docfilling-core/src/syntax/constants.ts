@@ -151,6 +151,15 @@ export const DIRECTIVES: readonly DirectiveSpec[] = [
     runtimeOwner: "composer",
   },
   // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py. 12-nov-2026, ver compose/bloqueos.ts.
+  // 25-nov-2026: ABORT es el nombre (Carles); BLOQUEO sigue como alias obsoleto (W929) mientras se migra la biblioteca.
+  {
+    name: "ABORT",
+    prefixes: ["ABORT:"],
+    isMetadata: true,
+    isBlock: false,
+    endDirective: null,
+    runtimeOwner: "backend",
+  },
   {
     name: "BLOQUEO",
     prefixes: ["BLOQUEO:"],
@@ -311,6 +320,7 @@ export const KNOWN_DIRECTIVE_PREFIXES = [
   "SUMMARY:",
   "SCHEMA_ACT:",
   "SCHEMA:",
+  "ABORT:",
   "BLOQUEO:",
   "COMMENT:",
   "COMMENT_BEGIN",
@@ -353,6 +363,7 @@ export const METADATA_PREFIXES = [
   "SUMMARY:",
   "SCHEMA_ACT:",
   "SCHEMA:",
+  "ABORT:",
   "BLOQUEO:",
   "COMMENT:",
   "COMMENT_BEGIN",

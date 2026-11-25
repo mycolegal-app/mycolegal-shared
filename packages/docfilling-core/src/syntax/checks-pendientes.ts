@@ -729,7 +729,8 @@ export function checkNombresRetirados(fields: ParsedField[]): Diagnostic[] {
 }
 
 /**
- * `{{BLOQUEO: texto}}` (12-nov-2026, ver `compose/bloqueos.ts`):
+ * `{{ABORT: texto}}` (antes `{{BLOQUEO: …}}`; 12-nov-2026, renombrada el 25-nov, ver `compose/bloqueos.ts`):
+ * - `W929` escrita aún como BLOQUEO: vale igual, pero el nombre es ABORT.
  * - `E929` sin texto: el oficial no sabría qué tiene que arreglar.
  * - `W928` fuera de todo IF, en un esquema: bloquearía SIEMPRE, y la escritura no se podría dar nunca por buena. En
  *   un párrafo no se avisa: su INCLUDE puede estar dentro de un IF del esquema.
@@ -745,10 +746,13 @@ export function checkBloqueos(fields: ParsedField[], tipo?: 'esquema' | 'parrafo
       continue;
     }
     if (f.fieldType !== FieldType.BLOQUEO) continue;
-    if (!f.content.replace(/^\s*BLOQUEO\s*:/i, '').trim()) {
-      out.push(diag(f.line, f.col, f.raw.length, Severity.ERROR, 'E929', 'BLOQUEO sin texto: diga qué impide dar la escritura por buena y cómo se resuelve'));
+    if (/^\s*BLOQUEO\s*:/i.test(f.content)) {
+      out.push(diag(f.line, f.col, f.raw.length, Severity.WARNING, 'W929', 'BLOQUEO es el nombre antiguo: escriba {{ABORT: …}} (funciona igual)'));
+    }
+    if (!f.content.replace(/^\s*(?:ABORT|BLOQUEO)\s*:/i, '').trim()) {
+      out.push(diag(f.line, f.col, f.raw.length, Severity.ERROR, 'E929', 'ABORT sin texto: diga qué impide dar la escritura por buena y cómo se resuelve'));
     } else if (ifs === 0 && tipo !== 'parrafo') {
-      out.push(diag(f.line, f.col, f.raw.length, Severity.WARNING, 'W928', 'BLOQUEO fuera de todo IF: bloquea siempre y la escritura no se podría dar nunca por buena'));
+      out.push(diag(f.line, f.col, f.raw.length, Severity.WARNING, 'W928', 'ABORT fuera de todo IF: impide siempre dar la escritura por buena'));
     }
   }
   return out;

@@ -11,8 +11,13 @@
  * condiciones por otro camino que pudiera no coincidir con el del motor.
  */
 
-/** `{{BLOQUEO: texto}}`; el texto es lo que se le dice al oficial. */
-export const RE_BLOQUEO = /\{\{\s*BLOQUEO\s*:\s*([^}]*?)\s*\}\}/gi;
+/**
+ * `{{ABORT: texto}}`; el texto es lo que se le dice al oficial. Hasta el 25-nov-2026 se llamaba `{{BLOQUEO: …}}` (Carles):
+ * se sigue aceptando, con el aviso W929, mientras la biblioteca no esté migrada en los tres entornos.
+ */
+export const RE_BLOQUEO = /\{\{\s*(?:ABORT|BLOQUEO)\s*:\s*([^}]*?)\s*\}\}/gi;
+/** Lo mismo, con el nombre nuevo. */
+export const RE_ABORT = RE_BLOQUEO;
 const MARCA = (i: number) => `\x00BLQ:${i}\x00`;
 const RE_MARCA = /\x00BLQ:(\d+)\x00/g;
 

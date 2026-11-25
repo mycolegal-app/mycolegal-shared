@@ -312,8 +312,8 @@ export function stripDirectives(content: string): string {
   content = content.replace(/^[ \t]*\{\{(?:HUMAN_ACTION|HUMAN_ACTION_PRE|HUMAN_ACTION_POST|END_HUMAN_ACTION)(?::[^}]*)?\}\}[ \t]*\n/gim, "");
   content = content.replace(/\{\{(?:HUMAN_ACTION|HUMAN_ACTION_PRE|HUMAN_ACTION_POST|END_HUMAN_ACTION)(?::[^}]*)?\}\}/gi, "");
   // `{{BLOQUEO: …}}` no se imprime nunca (`composeWithDiagnostics` los marca antes y devuelve los vivos).
-  content = content.replace(/^[ \t]*\{\{\s*BLOQUEO\s*:[^}]*\}\}[ \t]*\n/gim, "");
-  content = content.replace(/\{\{\s*BLOQUEO\s*:[^}]*\}\}/gi, "");
+  content = content.replace(/^[ \t]*\{\{\s*(?:ABORT|BLOQUEO)\s*:[^}]*\}\}[ \t]*\n/gim, "");
+  content = content.replace(/\{\{\s*(?:ABORT|BLOQUEO)\s*:[^}]*\}\}/gi, "");
   // 5. // line comments (whole line including trailing newline)
   content = content.replace(/^[ \t]*\/\/[^\n]*\n?/gm, "");
   return content;
@@ -397,10 +397,16 @@ function calcularDeclareFixedValues(content: string): Record<string, string> {
  * cada respuesta) sobre el mismo esquema expandido de ~3 MB, y rehacerlo era la mitad del coste. Es una función pura
  * del texto: guardarlo no cambia el resultado.
  */
-const PREPARADOS = new Map<string, { decls: DeclaracionFija[]; marcado: string; cond: CondicionalesPreparadas }>();
+// 25-nov-2026 (Rendimiento, OOM): con tope en BYTES (la plantilla, que es la clave, más lo guardado), no sólo en número
+// de plantillas: 16 variantes de un esquema de 10 MB podían quedarse con cientos de MB.
+type Preparado = { decls: DeclaracionFija[]; marcado: string; cond: CondicionalesPreparadas; bytes: number };
+const PREPARADOS = new Map<string, Preparado>();
 const PREPARADOS_MAX = 16;
+const PREPARADOS_MAX_BYTES = 32 * 1024 * 1024;
+let preparadosBytes = 0;
 function preparacionDeDeclarados(template: string): { decls: DeclaracionFija[]; marcado: string; cond: CondicionalesPreparadas } {
-  const hecho = PREPARADOS.get(template);
+  const clave = template;
+  const hecho = PREPARADOS.get(clave);
   if (hecho) return hecho;
   const { texto, decls } = declaracionesFijas(template);
   // Cada declaración, sustituida por una marca: las que sobreviven a las condiciones están vivas.
@@ -416,9 +422,16 @@ function preparacionDeDeclarados(template: string): { decls: DeclaracionFija[]; 
   marcado = (marcado + texto.slice(pos)).replace(/^[ \t]*\/\/[^\n]*\n?/gm, "");
   marcado = (marcado.match(/\{\{[\s\S]*?\}\}|\x00[^\x00]*\x00|\u0007\d+\u0007/g) ?? []).join("\n");
   marcado = stripDirectives(stripFieldSuffixes(marcado));
-  const r = { decls, marcado, cond: prepararCondicionales(marcado) };
-  if (PREPARADOS.size >= PREPARADOS_MAX) PREPARADOS.delete(PREPARADOS.keys().next().value!);
-  PREPARADOS.set(template, r);
+  // Lo retenido: la plantilla (la clave), lo marcado (2 bytes/carácter) y las declaraciones, estimado por su texto.
+  const bytes = template.length * 2 + marcado.length * 2 + decls.reduce((n, d) => n + 64 + (d.hasta - d.desde) * 2, 0);
+  const r: Preparado = { decls, marcado, cond: prepararCondicionales(marcado), bytes };
+  while (PREPARADOS.size && (PREPARADOS.size >= PREPARADOS_MAX || preparadosBytes + bytes > PREPARADOS_MAX_BYTES)) {
+    const [viejo, v] = PREPARADOS.entries().next().value!;
+    PREPARADOS.delete(viejo);
+    preparadosBytes -= v.bytes;
+  }
+  PREPARADOS.set(clave, r);
+  preparadosBytes += bytes;
   return r;
 }
 
@@ -582,7 +595,7 @@ export function applyFieldSuffix(content: string, suffix: string): string {
 
     if (upper.startsWith("SYSTEM:")) return full;
     if (/^SCHEMA\s*:/.test(upper)) return full;
-    if (/^BLOQUEO\s*:/.test(upper)) return full;
+    if (/^(?:ABORT|BLOQUEO)\s*:/.test(upper)) return full;
     if (_SYSTEM_FIELDS_SET.has(upper)) return full;
     // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py.
     // El salto de página no es un campo: renombrarlo con el sufijo del INCLUDE
@@ -1462,7 +1475,7 @@ export function stripBindMarks(content: string): string {
   return content.replace(/\x00BIND:[\w\u00C0-\u024F]+\x00/g, "").split(BIND_END_MARK).join("");
 }
 
-const DIRECTIVAS_NO_CAMPO = /^\s*(?:DECLARE|COMMENT|INCLUDE|TAGS|SUMMARY|SCHEMA_ACT|SCHEMA\s*:|BLOQUEO\s*:|DEPENDENCY|MAP_IUI|HUMAN_ACTION|END_HUMAN_ACTION|LANG|WORD_STYLE|@autonumber|AUTO[:(]|SYSTEM:|FOR\s+EACH|ENDFOR|END[\s_]+FOR|EXIT_INCLUDE)/i;
+const DIRECTIVAS_NO_CAMPO = /^\s*(?:DECLARE|COMMENT|INCLUDE|TAGS|SUMMARY|SCHEMA_ACT|SCHEMA\s*:|ABORT\s*:|BLOQUEO\s*:|DEPENDENCY|MAP_IUI|HUMAN_ACTION|END_HUMAN_ACTION|LANG|WORD_STYLE|@autonumber|AUTO[:(]|SYSTEM:|FOR\s+EACH|ENDFOR|END[\s_]+FOR|EXIT_INCLUDE)/i;
 
 /** Dentro de las regiones vinculadas a `iterador`, `NOMBRE` → `ITERADOR.NOMBRE`
  *  para los nombres que trae el elemento. Respeta comillas. */

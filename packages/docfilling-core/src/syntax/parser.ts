@@ -206,7 +206,7 @@ export function classifyField(content: string): FieldType {
   // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py. Ver schema-meta.ts.
   if (/^SCHEMA\s*:/.test(upper)) return FieldType.SCHEMA;
   // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py. Ver bloqueos.ts: no es un campo.
-  if (/^BLOQUEO\s*:/.test(upper)) return FieldType.BLOQUEO;
+  if (/^(?:ABORT|BLOQUEO)\s*:/.test(upper)) return FieldType.BLOQUEO;
   if (upper.startsWith("COMMENT:")) return FieldType.COMMENT;
   // DECLARE ARRAY must be checked before plain DECLARE (longer-prefix wins).
   if (upper.startsWith("DECLARE ARRAY ") || upper === "DECLARE ARRAY") return FieldType.DECLARE_ARRAY;
@@ -604,7 +604,7 @@ function analizarDirectiva(raw: string, interior: string): ParsedField {
 
     // ⚠️ PARCHE A MANO — NO QUITAR AL REGENERAR CON gen-ts.py.
     case FieldType.BLOQUEO: {
-      pf.name = "BLOQUEO";
+      pf.name = /^\s*BLOQUEO/i.test(pf.content) ? "BLOQUEO" : "ABORT";
       break;
     }
 

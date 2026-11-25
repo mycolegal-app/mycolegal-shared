@@ -11,31 +11,53 @@
 // COPIA de lo guardado cuando es mutable (objeto, Map, Set): quien llama puede modificar lo que recibe sin estropear la
 // respuesta siguiente.
 
-const MAX_TEXTOS = 4;
+// 25-nov-2026 (Rendimiento; OOM del principal de Redactor LOCAL con techo de 752 MB): la caché se limita por BYTES, no por
+// número de textos. Con esquemas expandidos de 7-13 MB (2 bytes por carácter en cuanto hay un «…» o un «€»), cuatro
+// textos eran ya 100 MB. La clave sigue siendo el texto: probada una huella (FNV-1a + djb2), calcularla sobre 8,6 MB
+// costaba 17 ms por llamada frente a 2,7 ms de buscar el texto en el Map; con el tope, lo que retiene el texto ya cuenta.
+const MAX_BYTES = 80 * 1024 * 1024;
 const MIN_LARGO = 20_000;
 
-const TEXTOS = new Map<string, Map<string, unknown>>();
+const TEXTOS = new Map<string, { porFuncion: Map<string, unknown>; bytes: number }>();
+let bytesTotal = 0;
+
+/** Lo que ocupa un texto con lo calculado para él, estimado por lo alto: el doble del propio texto (2 bytes/carácter,
+ *  y lo calculado —listas, marcas— no suele pasar de otro tanto). */
+const bytesDe = (texto: string) => texto.length * 4;
 
 /** `calcular(texto)` guardado bajo `nombre` para ese texto. El resultado guardado no se entrega nunca: sí `copia(r)`. */
 export function memoPorTexto<T>(nombre: string, texto: string, calcular: (t: string) => T, copia: (r: T) => T): T {
   if (texto.length < MIN_LARGO) return calcular(texto);
-  let porFuncion = TEXTOS.get(texto);
-  if (porFuncion) {
+  const k = texto;
+  let e = TEXTOS.get(k);
+  if (e) {
     // El más reciente al final: se descarta el que lleva más tiempo sin usarse.
-    TEXTOS.delete(texto);
-    TEXTOS.set(texto, porFuncion);
+    TEXTOS.delete(k);
+    TEXTOS.set(k, e);
   } else {
-    porFuncion = new Map();
-    if (TEXTOS.size >= MAX_TEXTOS) TEXTOS.delete(TEXTOS.keys().next().value!);
-    TEXTOS.set(texto, porFuncion);
+    e = { porFuncion: new Map(), bytes: bytesDe(texto) };
+    // Fuera los más viejos hasta que quepa; siempre se queda al menos el de ahora.
+    while (TEXTOS.size && bytesTotal + e.bytes > MAX_BYTES) {
+      const [viejo, v] = TEXTOS.entries().next().value!;
+      TEXTOS.delete(viejo);
+      bytesTotal -= v.bytes;
+    }
+    TEXTOS.set(k, e);
+    bytesTotal += e.bytes;
   }
-  if (!porFuncion.has(nombre)) porFuncion.set(nombre, calcular(texto));
-  return copia(porFuncion.get(nombre) as T);
+  if (!e.porFuncion.has(nombre)) e.porFuncion.set(nombre, calcular(texto));
+  return copia(e.porFuncion.get(nombre) as T);
 }
 
 /** Para los tests: vacía la caché. */
 export function olvidarMemoPorTexto(): void {
   TEXTOS.clear();
+  bytesTotal = 0;
+}
+
+/** Para los tests y las mediciones: cuántos textos y cuántos bytes estimados guarda. */
+export function estadoMemoPorTexto(): { textos: number; bytes: number } {
+  return { textos: TEXTOS.size, bytes: bytesTotal };
 }
 
 export const sinCopia = <T>(r: T): T => r;

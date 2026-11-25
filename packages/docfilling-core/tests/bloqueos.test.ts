@@ -38,14 +38,32 @@ describe('BLOQUEO en el validador', () => {
   const codigos = (t: string, tipo?: 'esquema' | 'parrafo') =>
     validateText(t, undefined, undefined, tipo ? { tipo } : {}).diagnostics.map((d) => d.code).filter((c) => /9(28|29)$/.test(c));
 
-  it('dentro de un IF no avisa', () => expect(codigos(HUELLA)).toEqual([]));
+  it('dentro de un IF no avisa', () => expect(codigos(HUELLA.replace('{{BLOQUEO:', '{{ABORT:'))).toEqual([]));
   it('W928 fuera de todo IF en un esquema; en un párrafo no', () => {
-    expect(codigos('{{BLOQUEO: Siempre.}}\nTexto.')).toEqual(['W928']);
-    expect(codigos('{{BLOQUEO: Siempre.}}\nTexto.', 'parrafo')).toEqual([]);
+    expect(codigos('{{ABORT: Siempre.}}\nTexto.')).toEqual(['W928']);
+    expect(codigos('{{ABORT: Siempre.}}\nTexto.', 'parrafo')).toEqual([]);
   });
-  it('E929 sin texto', () => expect(codigos('{{IF X}}{{BLOQUEO: }}{{ENDIF}}')).toEqual(['E929']));
+  it('E929 sin texto', () => expect(codigos('{{IF X}}{{ABORT: }}{{ENDIF}}')).toEqual(['E929']));
   it('no añade otros diagnósticos', () => {
-    const otros = validateText(HUELLA).diagnostics.filter((d) => /BLOQUEO/i.test(d.message));
+    const otros = validateText(HUELLA.replace('{{BLOQUEO:', '{{ABORT:')).diagnostics.filter((d) => /BLOQUEO/i.test(d.message));
     expect(otros).toEqual([]);
+  });
+});
+
+describe('ABORT, el nombre nuevo de BLOQUEO (25-nov-2026)', () => {
+  const ABORT = HUELLA.replace('{{BLOQUEO:', '{{ABORT:');
+  it('se compone igual: vivo en `bloqueos`, nunca impreso', () => {
+    const r = composeWithDiagnostics(ABORT, { HUELLA_DENTRO_SUELO_REAL: 'No' });
+    expect(r.bloqueos).toEqual(composeWithDiagnostics(HUELLA, { HUELLA_DENTRO_SUELO_REAL: 'No' }).bloqueos);
+    expect(r.text).not.toMatch(/ABORT|huella se sale|\x00/);
+    expect(composeWithDiagnostics(ABORT, { HUELLA_DENTRO_SUELO_REAL: 'Sí' }).bloqueos).toEqual([]);
+    expect(bloqueosDeclarados(ABORT)).toEqual(bloqueosDeclarados(HUELLA));
+  });
+  it('no es un campo y no avisa; BLOQUEO sí avisa W929 (obsoleto) pero sigue valiendo', () => {
+    expect(esquemaDeCampos(ABORT).campos.map((c) => c.nombre)).not.toContain('ABORT');
+    const codigos = (t: string) => validateText(t).diagnostics.map((d) => d.code);
+    expect(codigos(ABORT)).not.toContain('W929');
+    expect(codigos(HUELLA)).toContain('W929');
+    expect(codigos('{{IF X}}{{ABORT: }}{{ENDIF}}')).toContain('E929');
   });
 });

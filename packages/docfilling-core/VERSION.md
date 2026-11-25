@@ -1,5 +1,10 @@
 # @mycolegal-app/docfilling-core
 
+## 0.1.62 — 25-nov-2026
+
+- `{{ABORT: texto}}` es el nombre de lo que antes era `{{BLOQUEO: texto}}` (Carles): misma semántica (dentro de un IF, infranqueable, `bloqueos` vivos al componer, nunca se imprime). `{{BLOQUEO: …}}` se sigue aceptando igual, con el aviso **W929** («nombre antiguo»), mientras la biblioteca no esté migrada en los tres entornos; luego se quitará. E929 y W928 hablan ya de ABORT. `RE_ABORT` (= `RE_BLOQUEO`). `tests/bloqueos.test.ts`.
+- Memoria (Rendimiento: el principal de Redactor LOCAL murió por OOM con techo de 752 MB): `memoPorTexto` se limita por BYTES (80 MB estimados, 4 bytes por carácter de texto) y `PREPARADOS` por bytes también (32 MB, contando la plantilla, que es la clave) además de las 16 entradas. Con textos de 8,4 MB: lo retenido tras soltarlos, de 58 a 24 MB; las lecturas repetidas, de 1.807 a 1.687 ms. La clave sigue siendo el texto: una huella costaba 17 ms por llamada sobre 8,6 MB frente a 2,7 ms del `Map` por texto.
+
 ## 0.1.61 — 25-nov-2026
 
 - `:REQ(X@*~N)`: la N-ésima persona (N ≥ 2) del papel que dé el bloque. El cónyuge 2 de «Los cónyuges» sin fijar el papel: `COMP_CONYUGE2_TELEFONO:REQ(SUJETO.TELEFONO@*~2)` vale para VENDEDOR~2, para el segundo representante del mismo menor y para TESTADOR~2. Lo resuelve quien compone (Redactor, por el sufijo del campo). `ordinalDeComodin(rol)`. No avisa W909. `@*~1`, `@*~0` y `@PAPEL~N` siguen mal formados (E906). `tests/req-doc.test.ts`.
