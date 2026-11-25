@@ -1,5 +1,13 @@
 # @mycolegal-app/requisitos-core
 
+## 0.3.24 — 25-nov-2026
+
+Una regla POR_SUJETO / POR_OBJETO que no se cumple para NINGUNO de los suyos (su papel y su tipo) no aplica: se descarta,
+aunque la evaluación de conjunto («basta que uno») se cumpla con otra persona. Sin `scopeRol`, la condición es de la persona
+de la instancia (convención del catálogo, 0701.md §3): en la donación a un nieto menor, 0701-R07 (autorización judicial de un
+menor) salía firme y sin instancias, pedida a la donante de 1948. Sin nadie de su papel todavía, sigue como estaba.
+`tests/instancias-por-sujeto.test.ts`.
+
 ## 0.3.18 (sin publicar) — una prueba tiene que probar (19-nov-2026)
 
 - GEN-2026-0034 (TEST, compraventa de vivienda en Sabadell con datos ficticios): el DNI de la compradora salía cumplido
