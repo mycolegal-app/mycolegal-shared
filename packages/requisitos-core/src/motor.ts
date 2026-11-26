@@ -804,10 +804,13 @@ export async function resolverRequisitos(
   // consulta la hace el adaptador (`puerto.ts` dice qué debe devolver): el filtro de capa,
   // los `include` y los `orderBy` son suyos, y es lo que permite que este motor no sepa de
   // Prisma (D30). La legacy no tiene transversales: todas sus filas llevan acto.
+  const capaBase = variante ? await decidirCapa(repo, variante.base, opciones.capa) : false;
   const reglas = variante
     ? mezclarReglas(
-        await repo.reglasDeActo({ actoCodigo: variante.base, estados: opciones.estados ?? null, soloGolden: await decidirCapa(repo, variante.base, opciones.capa) }),
-        await repo.reglasDeActo({ actoCodigo, estados: opciones.estados ?? null, soloGolden: await decidirCapa(repo, actoCodigo, opciones.capa) }),
+        await repo.reglasDeActo({ actoCodigo: variante.base, estados: opciones.estados ?? null, soloGolden: capaBase }),
+        // La capa de las reglas propias de una variante es la de su BASE: con 0 reglas propias en el universal,
+        // decidirla por la variante caía en la HEREDADA y metía sus filas MIG: (Catálogo, 26-nov-2026).
+        await repo.reglasDeActo({ actoCodigo, estados: opciones.estados ?? null, soloGolden: capaBase }),
       )
     : await repo.reglasDeActo({
         actoCodigo,

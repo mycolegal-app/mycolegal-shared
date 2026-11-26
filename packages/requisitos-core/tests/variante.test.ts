@@ -73,6 +73,21 @@ describe('actos variante (varianteDe + hechosFijos)', () => {
     expect(e?.codigo).toBe('NUEVA_TERMINADA_28_4');
   });
 
+  it('con 0 reglas propias en el universal, la variante usa la capa del base: no lee sus heredadas (MIG:)', async () => {
+    const pedidas: { acto: string; soloGolden: boolean }[] = [];
+    const base = repoVariante();
+    const r = await resolverRequisitos({
+      ...base,
+      async actosConGolden(codigos: string[]) { return new Set(codigos.filter((c) => c === '0405')); },
+      async reglasDeActo(a: { actoCodigo: string; soloGolden: boolean }) {
+        pedidas.push({ acto: a.actoCodigo, soloGolden: a.soloGolden });
+        return a.actoCodigo === '0405' ? R0405 : [];
+      },
+    } as RepositorioRequisitos, '0405-4', {});
+    expect(pedidas).toEqual([{ acto: '0405', soloGolden: true }, { acto: '0405-4', soloGolden: true }]);
+    expect(r.firmes.map((x) => x.codigo)).toContain("0405-R01");
+  });
+
   it('sin `varianteDe` en el repositorio, todo como antes', async () => {
     const r = await resolverRequisitos(repoVariante(false), '0405-4', {});
     expect(r.firmes.map((x) => x.codigo).sort()).toEqual(['0405-4-R01', '0405-4-R05']);
