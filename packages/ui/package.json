@@ -1,6 +1,6 @@
 {
   "name": "@mycolegal-app/ui",
-  "version": "3.2.79",
+  "version": "3.2.80",
   "type": "module",
   "sideEffects": [
     "**/*.css"
