@@ -31,6 +31,7 @@
 // Lo que sale son PRESUNCIONES: el motor las aplica sólo a lo que no se sabe y un dato del
 // expediente las pisa siempre.
 import { FACT_TIPO_OBJETO } from './motor';
+import { escenariosDeVariante, varianteDe } from './variante';
 import type { RepositorioRequisitos, FilaEscenario, FilaTransversal, AjustePresuncion, NodoTipo } from './puerto';
 
 export interface Presuncion {
@@ -234,14 +235,19 @@ export function elegirEscenario(
 
 const padresDe = (nodos: NodoTipo[]) => new Map(nodos.map((n) => [n.codigo, n.parentCodigo]));
 
-async function leer(repo: RepositorioRequisitos, actoCodigo: string) {
+async function leer(repo: RepositorioRequisitos, actoCodigoPedido: string) {
+  // 26-nov-2026 — Acto VARIANTE: los casos (y lo heredado) son los de su base, quitando los que contradicen sus hechos
+  // fijos (`variante.ts`).
+  const variante = await varianteDe(repo, actoCodigoPedido);
+  const actoCodigo = variante?.base ?? actoCodigoPedido;
   // Opcionales en el puerto: un repositorio anterior a 0.3.3 no los tiene y el acto va sin
   // escenario, que es lo que pasaba hasta ahora.
   const [propios, filas] = await Promise.all([
     repo.escenariosDeActo ? repo.escenariosDeActo(actoCodigo) : Promise.resolve([] as FilaEscenario[]),
     repo.presuncionesTransversales ? repo.presuncionesTransversales(actoCodigo) : Promise.resolve([] as FilaTransversal[]),
   ]);
-  return { propios: propios.map(escenarioDeFila), filas };
+  const casos = propios.map(escenarioDeFila);
+  return { propios: variante ? escenariosDeVariante(casos, variante.hechosFijos) : casos, filas, actoBase: actoCodigo };
 }
 
 /**
@@ -275,7 +281,7 @@ export async function escenarioPara(
   actoCodigo: string,
   opciones: OpcionesEscenario = {},
 ): Promise<EscenarioResuelto | null> {
-  const { propios, filas } = await leer(repo, actoCodigo);
+  const { propios, filas, actoBase: base } = await leer(repo, actoCodigo);
   const lista = propios.length ? propios : filas.length ? [casoGeneral(actoCodigo)] : [];
   if (lista.length === 0) return null;
   const padres = opciones.tipoObjeto || filas.some((f) => f.objetoTipoCodigo)
@@ -285,7 +291,7 @@ export async function escenarioPara(
   const compuesto = filas.length
     ? componerTransversales(elegido.escenario, filas, { ccaaCodigo: opciones.ccaaCodigo, tipoObjeto: opciones.tipoObjeto }, padres)
     : elegido.escenario;
-  const ajustes = opciones.orgId && repo.ajustesDePresuncion ? await repo.ajustesDePresuncion(opciones.orgId, actoCodigo) : [];
+  const ajustes = opciones.orgId && repo.ajustesDePresuncion ? await repo.ajustesDePresuncion(opciones.orgId, base) : [];
   const { escenario, n } = aplicarAjustes(compuesto, ajustes);
   return {
     ...escenario,

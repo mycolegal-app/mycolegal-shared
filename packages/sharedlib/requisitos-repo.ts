@@ -197,6 +197,24 @@ export function crearRepositorioRequisitos(client: ClienteGolden): RepositorioRe
       }));
     },
 
+    // Actos «-n» (26-nov-2026): una variante hereda las reglas y los escenarios de su acto base, con unos
+    // hechos fijos. Por SQL y mirando antes si la columna existe: un SELECT que falla dentro de una
+    // transacción la deja abortada, así que no vale el try/catch de `derivados`.
+    async varianteDe(actoCodigo) {
+      if (!client.$queryRawUnsafe) return null;
+      const [col] = await client.$queryRawUnsafe(
+        `SELECT count(*)::int AS n FROM information_schema.columns
+          WHERE table_name = 'legal_acts_global' AND column_name IN ('varianteDe', 'hechosFijos')`) as { n: number }[];
+      if (Number(col?.n) < 2) return null;
+      const [fila] = await client.$queryRawUnsafe(
+        'SELECT "varianteDe" AS base, "hechosFijos" AS fijos FROM "legal_acts_global" WHERE "codigo" = $1',
+        actoCodigo) as { base: string | null; fijos: unknown }[];
+      if (!fila?.base) return null;
+      const fijos = fila.fijos && typeof fila.fijos === 'object' && !Array.isArray(fila.fijos)
+        ? fila.fijos as Record<string, unknown> : {};
+      return { base: fila.base, hechosFijos: fijos };
+    },
+
     async presuncionesTransversales(actoCodigo) {
       if (!client.presuncionTransversalGlobal) return [];
       const [acto] = await client.legalActGlobal.findMany({

@@ -24,6 +24,7 @@
  *   · preguntas    — el hecho que bloquea, con su enunciado, tipo y opciones
  */
 import { decidirCapa, type Capa } from './capa';
+import { conHechosFijos, mezclarReglas, sinFijos, varianteDe } from './variante';
 import type { RepositorioRequisitos, DerivadoDef, ExisteSiDef } from './puerto';
 
 /** TRUE / FALSE / UNKNOWN. `null` es UNKNOWN: no se conoce, que no es lo mismo que falso. */
@@ -772,12 +773,19 @@ async function jerarquias(repo: RepositorioRequisitos, rolComodin?: boolean) {
 export async function resolverRequisitos(
   repo: RepositorioRequisitos,
   actoCodigo: string,
-  hechos: Hechos,
+  hechosEntrada: Hechos,
   opciones: OpcionesMotor = {},
 ): Promise<Resultado> {
+  let hechos = hechosEntrada;
   const ccaa = opciones.ccaaCodigo ?? '';
   // Lo del caso; lo derivado se le suma más abajo (`derivar`).
   let presunciones = opciones.presunciones ?? {};
+  // 26-nov-2026 — Acto VARIANTE (0405-4): reglas del base + las suyas, y sus hechos fijos como hechos conocidos.
+  const variante = await varianteDe(repo, actoCodigo);
+  if (variante) {
+    hechos = conHechosFijos(hechos, variante.hechosFijos);
+    presunciones = sinFijos(presunciones, variante.hechosFijos);
+  }
   const porRol = Boolean(opciones.preguntasPorRol);
   const porInterviniente = Boolean(opciones.preguntasPorSujeto);
   const { esUn, subeRol, acompana, esUnRol, descendientesObjeto } = await jerarquias(repo, opciones.rolComodin);
@@ -796,11 +804,16 @@ export async function resolverRequisitos(
   // consulta la hace el adaptador (`puerto.ts` dice qué debe devolver): el filtro de capa,
   // los `include` y los `orderBy` son suyos, y es lo que permite que este motor no sepa de
   // Prisma (D30). La legacy no tiene transversales: todas sus filas llevan acto.
-  const reglas = await repo.reglasDeActo({
-    actoCodigo,
-    estados: opciones.estados ?? null,
-    soloGolden: await decidirCapa(repo, actoCodigo, opciones.capa),
-  });
+  const reglas = variante
+    ? mezclarReglas(
+        await repo.reglasDeActo({ actoCodigo: variante.base, estados: opciones.estados ?? null, soloGolden: await decidirCapa(repo, variante.base, opciones.capa) }),
+        await repo.reglasDeActo({ actoCodigo, estados: opciones.estados ?? null, soloGolden: await decidirCapa(repo, actoCodigo, opciones.capa) }),
+      )
+    : await repo.reglasDeActo({
+        actoCodigo,
+        estados: opciones.estados ?? null,
+        soloGolden: await decidirCapa(repo, actoCodigo, opciones.capa),
+      });
 
   const diag = {
     reglasConsideradas: reglas.length,

@@ -156,6 +156,11 @@ export interface RepositorioRequisitos {
   /** Los escenarios del acto (`acto_escenario_base`) con sus presunciones (`acto_presuncion`)
    *  ordenadas por `orden`; el por defecto primero. */
   escenariosDeActo?(actoCodigo: string): Promise<FilaEscenario[]>;
+  /**
+   * 26-nov-2026 — Acto VARIANTE (0405-4 de 0405): su acto base y los hechos que fija (`legal_acts_global.varianteDe` y
+   * `hechosFijos`). Opcional: sin él (repositorio anterior) todos los actos son normales. `null` = no es variante.
+   */
+  varianteDe?(actoCodigo: string): Promise<{ base: string; hechosFijos: Record<string, unknown> } | null>;
 
   /** Las presunciones transversales que alcanzan al acto (`presuncion_transversal_global`):
    *  ámbito `TODOS`, su FAMILIA y su SUBFAMILIA. */
