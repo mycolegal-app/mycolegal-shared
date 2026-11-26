@@ -50,6 +50,22 @@ export interface ModelEndpointConfig {
 
 const CACHE_MS = 60_000;
 
+/**
+ * Residencia del dato (26-nov-2026, decisión de Carles): la IA SÓLO se invoca en endpoints de la UE —la multi-región
+ * `eu` o una región `europe-*`—. Un modelo que sólo exista en `global` (u otra región) no se usa: se falla claro en vez
+ * de mandarlo fuera de la UE en silencio. Lo que lo impide antes es Admin, que no deja asignarlo a ninguna tarea.
+ */
+export function esUbicacionUe(location: string): boolean {
+  return location === 'eu' || location.startsWith('europe-');
+}
+
+export class ModeloFueraDeUeError extends Error {
+  constructor(readonly model: string, readonly location: string) {
+    super(`El modelo ${model} sólo se sirve en «${location}», fuera de la UE: no se usa. Asigna en Admin › IA un modelo con endpoint en la UE.`);
+    this.name = 'ModeloFueraDeUeError';
+  }
+}
+
 export function createModelEndpointResolver(config: ModelEndpointConfig) {
   const defaultLocation = config.defaultLocation || process.env.GCP_LOCATION || 'europe-west4';
   const cache = new Map<string, { valor: ModelEndpoint; expira: number }>();
@@ -65,8 +81,9 @@ export function createModelEndpointResolver(config: ModelEndpointConfig) {
     if (provider === 'anthropic') {
       return { host: 'aiplatform.eu.rep.googleapis.com', location: 'eu', provider, verb };
     }
+    // Gemini 3.x: la multi-región UE (antes iba a `global`, sin residencia).
     if (model.startsWith('gemini-3')) {
-      return { host: 'aiplatform.googleapis.com', location: 'global', provider, verb };
+      return { host: 'aiplatform.eu.rep.googleapis.com', location: 'eu', provider, verb };
     }
     return { host: `${defaultLocation}-aiplatform.googleapis.com`, location: defaultLocation, provider, verb };
   }
@@ -85,6 +102,7 @@ export function createModelEndpointResolver(config: ModelEndpointConfig) {
       // Catálogo sin migrar en esta app: seguimos con la heurística de reserva.
     }
 
+    if (!esUbicacionUe(valor.location)) throw new ModeloFueraDeUeError(model, valor.location);
     cache.set(model, { valor, expira: Date.now() + CACHE_MS });
     return valor;
   }

@@ -29,17 +29,19 @@ export interface VertexModelConfig {
   location: string;
 }
 
-/** Región del modelo. Regla RGPD: `gemini-3*` solo existe en el endpoint GLOBAL. */
+/** Región del modelo. Residencia UE (26-nov-2026): `gemini-3*` va a la multi-región `eu`, nunca a `global`. */
 export function vertexLocationFor(model: string, defaultLocation: string): string {
-  return model.startsWith('gemini-3') ? 'global' : defaultLocation;
+  return model.startsWith('gemini-3') ? 'eu' : defaultLocation;
 }
 
-/** Host REST según la región (`global` va sin prefijo). */
+/** Host REST según la región: la multi-región `eu` es `aiplatform.eu.rep…`. `global` (sin residencia UE) no se admite. */
 export function vertexHost(location: string): string {
-  return location === 'global' ? 'aiplatform.googleapis.com' : `${location}-aiplatform.googleapis.com`;
+  if (location === 'eu') return 'aiplatform.eu.rep.googleapis.com';
+  if (!location.startsWith('europe-')) throw new Error(`Región de Vertex fuera de la UE («${location}»): no se usa.`);
+  return `${location}-aiplatform.googleapis.com`;
 }
 
-/** URL REST del modelo (con la regla gemini-3→global embebida). */
+/** URL REST del modelo (siempre en la UE). */
 export function vertexModelUrl(model: string, verb: string, cfg: VertexModelConfig): string {
   const loc = vertexLocationFor(model, cfg.location);
   return `https://${vertexHost(loc)}/v1/projects/${cfg.project}/locations/${loc}/publishers/google/models/${model}:${verb}`;
