@@ -134,7 +134,9 @@
       "appTosTitle": "Aplikazioaren baldintzak",
       "appTosIntro": "{app} kontratatu aurretik, berrikusi eta onartu bere baldintzak.",
       "appTosAcceptLabel": "{app} aplikazioaren baldintzak irakurri eta onartzen ditut.",
-      "gateCancel": "Utzi"
+      "gateCancel": "Utzi",
+      "adminPendingNotice": "Zure administratzaileak notariotzaren baldintza berriak onartzeko ditu oraindik:",
+      "adminPendingDismiss": "Itxi oharra"
     },
     "userAccount": {
       "title": "Nire kontua",

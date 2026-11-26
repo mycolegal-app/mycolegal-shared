@@ -135,7 +135,9 @@
       "appTosTitle": "Condiciones de la aplicación",
       "appTosIntro": "Antes de contratar {app}, revisa y acepta sus condiciones.",
       "appTosAcceptLabel": "He leído y acepto las condiciones de {app}.",
-      "gateCancel": "Cancelar"
+      "gateCancel": "Cancelar",
+      "adminPendingNotice": "Tu administrador tiene pendiente aceptar las nuevas condiciones de la notaría:",
+      "adminPendingDismiss": "Cerrar aviso"
     },
     "userAccount": {
       "title": "Mi cuenta",

@@ -9,6 +9,11 @@
  * si `/api/legal/pending` no existe (404) o falla, no bloquea (no hay nada que
  * aceptar). El backend exime a los superadmins.
  *
+ * 25-nov-2026 — Las condiciones de la NOTARÍA (PLATFORM_TOS, DPA) sólo las acepta
+ * el org_admin. Al resto de usuarios auth no se las devuelve en `pending` sino en
+ * `pendingAdmin` (sin texto): no bloquean, y se pinta un aviso discreto de que su
+ * administrador las tiene pendientes. La privacidad la sigue aceptando cada uno.
+ *
  * Requiere que la app exponga el proxy `/api/legal/*` hacia auth
  * (`/legal/pending`, `/legal/accept`) — ver `proxyToAuth` de
  * `@mycolegal-app/ui/server/auth-proxy`.
@@ -28,31 +33,89 @@ interface PendingDoc {
   language: string;
 }
 
+interface PendingAdminDoc {
+  kind: string;
+  title: string;
+  version: string;
+}
+
 // Solo se guarda (10 min, sessionStorage) el «nada pendiente»: un documento por
-// aceptar se pide siempre de nuevo, y tras aceptar se fuerza la red.
-async function fetchPending(forzar = false): Promise<PendingDoc[]> {
-  const r = await pedirConCacheDeSesion<{ pending?: PendingDoc[] }>("/api/legal/pending", {
+// aceptar se pide siempre de nuevo, y tras aceptar se fuerza la red. Lo que tiene
+// pendiente el administrador sí viaja en lo guardado: si lo acepta, el aviso puede
+// tardar hasta 10 min en irse, y a cambio no se pide en cada página.
+async function fetchPending(forzar = false): Promise<{ pending: PendingDoc[]; pendingAdmin: PendingAdminDoc[] }> {
+  const r = await pedirConCacheDeSesion<{ pending?: PendingDoc[]; pendingAdmin?: PendingAdminDoc[] }>("/api/legal/pending", {
     vidaMs: 10 * 60_000,
     forzar,
     guardarSi: (json) => !Array.isArray(json?.pending) || json.pending.length === 0,
   });
-  if (!r.ok) return [];
-  return Array.isArray(r.json?.pending) ? r.json.pending : [];
+  if (!r.ok) return { pending: [], pendingAdmin: [] };
+  return {
+    pending: Array.isArray(r.json?.pending) ? r.json.pending : [],
+    pendingAdmin: Array.isArray(r.json?.pendingAdmin) ? r.json.pendingAdmin : [],
+  };
+}
+
+const CLAVE_AVISO_CERRADO = "mc:legal:avisoAdminCerrado";
+
+/** Aviso discreto para quien no es administrador: no bloquea y se puede cerrar (hasta la próxima sesión). */
+function AvisoAdminPendiente({ docs }: { docs: PendingAdminDoc[] }) {
+  const { t } = useI18n();
+  const firma = docs.map((d) => `${d.kind}@${d.version}`).join("|");
+  const [cerrado, setCerrado] = useState(() => {
+    try {
+      return sessionStorage.getItem(CLAVE_AVISO_CERRADO) === firma;
+    } catch {
+      return false;
+    }
+  });
+  if (cerrado) return null;
+  return (
+    <div
+      role="status"
+      className="fixed bottom-4 left-1/2 z-[110] flex w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-lg print:hidden"
+    >
+      <span className="flex-1">
+        {t("ui.legal.adminPendingNotice")}{" "}
+        <span className="font-medium">{docs.map((d) => d.title).join(" · ")}</span>
+      </span>
+      <button
+        type="button"
+        onClick={() => {
+          try {
+            sessionStorage.setItem(CLAVE_AVISO_CERRADO, firma);
+          } catch {
+            /* sin sessionStorage se cierra sólo en esta página */
+          }
+          setCerrado(true);
+        }}
+        aria-label={t("ui.legal.adminPendingDismiss")}
+        className="shrink-0 text-amber-700 hover:text-amber-900"
+      >
+        ×
+      </button>
+    </div>
+  );
 }
 
 export function LegalGate() {
   const { t } = useI18n();
   const [pending, setPending] = useState<PendingDoc[] | null>(null);
+  const [pendingAdmin, setPendingAdmin] = useState<PendingAdminDoc[]>([]);
   const [checked, setChecked] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchPending().then(setPending);
+    fetchPending().then((r) => {
+      setPending(r.pending);
+      setPendingAdmin(r.pendingAdmin);
+    });
   }, []);
 
-  // null = aún cargando; [] = nada pendiente. En ambos casos no renderizamos.
-  if (!pending || pending.length === 0) return null;
+  // null = aún cargando; [] = nada pendiente. En ambos casos no hay ventana; como mucho, el aviso del administrador.
+  if (!pending) return null;
+  if (pending.length === 0) return pendingAdmin.length ? <AvisoAdminPendiente docs={pendingAdmin} /> : null;
 
   async function acceptAll() {
     setBusy(true);
@@ -69,7 +132,7 @@ export function LegalGate() {
           return;
         }
       }
-      const next = await fetchPending(true);
+      const { pending: next } = await fetchPending(true);
       setChecked(false);
       if (next.length === 0) {
         // Recargamos para que el estado de la app refleje el acceso ya concedido.
