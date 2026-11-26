@@ -1901,8 +1901,10 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
 
       {/* #185 — diálogo de hito de agenda (consulta/reunión/otro). */}
       {form && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          {/* 26-nov-2026 — más ancho y con el cuerpo desplazable: con «Repetir» el diálogo pasaba del alto de la
+              pantalla y «Guardar» quedaba fuera de alcance. Cabecera y botones quedan siempre a la vista. */}
+          <div className="flex max-h-[calc(100vh-2rem)] w-full max-w-2xl flex-col rounded-lg bg-white p-6 shadow-xl">
             <h3 className="mb-3 text-lg font-semibold">
               {form.id
                 ? t("agendaPage.editarHito")
@@ -2076,7 +2078,7 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
                 <p className="mt-1 text-[11px] text-gray-500">{t("agendaPage.vincularExpedienteHint")}</p>
               </div>
             )}
-            <div className="space-y-3">
+            <div className="-mx-1 min-h-0 flex-1 space-y-3 overflow-y-auto px-1">
               {form.modo === "firma" ? (
                 <div>
                   <label className="mb-1 block text-sm font-medium">{t("agendaPage.expediente")} *</label>
