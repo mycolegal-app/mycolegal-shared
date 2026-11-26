@@ -1,5 +1,9 @@
 # @mycolegal-app/docfilling-core
 
+## 0.1.63 — 26-nov-2026
+
+- **`:HUMAN_INPUT(desc|op1,op2)`**: como `:INPUT(…)`, pero el dato lo da SIEMPRE una persona (encargo de Carles vía Redactor). `{{DECLARE X:HUMAN_INPUT(…):[ayuda]}}` no imprime nada, igual que `DECLARE X:INPUT`, y `{{X:HUMAN_INPUT(…)}}` en el texto se imprime como un INPUT. En el esquema, `quien = 'persona'` y `soloPersona: true` (manda aunque la primera aparición del campo sea una referencia); la IA no la contesta, no la propone ni la lee de los documentos: lo aplica quien consume el esquema. El parser lo lee como `:INPUT(` y marca `ParsedField.soloPersona`, así que el validador (E050, divergencias, auditoría de condiciones), la cobertura y el compositor lo tratan como un INPUT. Caso: `ACCION_REGISTRO` («Acción en el Registro», `VAR_EXP_C_DIRECTOR`), que MycoBot contestaba «No desea» al leer un encargo de Notaría. `tests/human-input.test.ts`.
+
 ## 0.1.62 — 25-nov-2026
 
 - `{{ABORT: texto}}` es el nombre de lo que antes era `{{BLOQUEO: texto}}` (Carles): misma semántica (dentro de un IF, infranqueable, `bloqueos` vivos al componer, nunca se imprime). `{{BLOQUEO: …}}` se sigue aceptando igual, con el aviso **W929** («nombre antiguo»), mientras la biblioteca no esté migrada en los tres entornos; luego se quitará. E929 y W928 hablan ya de ABORT. `RE_ABORT` (= `RE_BLOQUEO`). `tests/bloqueos.test.ts`.

@@ -186,7 +186,7 @@ export function checkInputConOptions(fields: ParsedField[]): Diagnostic[] {
   for (const f of fields) {
     if (f.fieldType !== FieldType.DECLARE && f.fieldType !== FieldType.DECLARE_ARRAY) continue;
     const c = f.content.toUpperCase();
-    if (!c.includes(':INPUT(') || !c.includes(':OPTIONS(')) continue;
+    if (!/:(?:HUMAN_)?INPUT\(/.test(c) || !c.includes(':OPTIONS(')) continue;
     const d = diag(f.line, f.col, f.raw.length, Severity.ERROR, 'W900',
       `DECLARE ${f.name}: lleva :INPUT(...) y :OPTIONS(...) a la vez, y así el motor ` +
       'pierde las opciones y el valor por defecto. Usa una sola forma: ' +

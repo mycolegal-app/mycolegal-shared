@@ -204,7 +204,7 @@ function scanBalanced(content: string, start: number, openCh: string, closeCh: s
 // Directive keywords accepted as `:KEYWORD(...)` suffixes on a placeholder.
 // Order matters for longest-prefix match (INPUT_FINAL before INPUT).
 const PLACEHOLDER_PAREN_DIRECTIVES = [
-  "INPUT_FINAL", "INPUT", "HELP", "DEFAULT", "OPTIONS",
+  "HUMAN_INPUT", "INPUT_FINAL", "INPUT", "HELP", "DEFAULT", "OPTIONS",
 ];
 
 // Walk forward from `pos` (which should be at `:`) consuming any
@@ -678,7 +678,7 @@ export function applyFieldSuffix(content: string, suffix: string): string {
     if (m) return `{{${m[1]}${m[2]}${suffix}${m[3]}}}`;
 
     // NAME:INPUT(...) / NAME:INPUT_FINAL(...)
-    m = body.match(/^([\w\u00C0-\u024F]+)(:INPUT(?:_FINAL)?\()([\s\S]*)$/i);
+    m = body.match(/^([\w\u00C0-\u024F]+)(:(?:HUMAN_)?INPUT(?:_FINAL)?\()([\s\S]*)$/i);
     if (m) return `{{${m[1]}${suffix}${m[2]}${m[3]}}}`;
 
     // NAME:HELP(...)

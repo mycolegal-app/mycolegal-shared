@@ -62,16 +62,18 @@ const RE_TOKEN = /\{\{IF\s+([^}]+)\}\}|\{\{ELSE\}\}|\{\{ENDIF\}\}|\x00INC_BEGIN\
 
 /** Las opciones de un `:INPUT(etiqueta|a,b,"c, d")`, respetando comillas. */
 function opcionesDeInput(resto: string): string[] {
-  const ini = resto.search(/:INPUT\(/);
+  const cab = /:(?:HUMAN_)?INPUT\(/.exec(resto);
+  const ini = cab ? cab.index : -1;
+  const largo = cab ? cab[0].length : ':INPUT('.length;
   if (ini < 0) return [];
   // Hasta el paréntesis que cierra el INPUT, contando los de dentro («Sí (Concurso Abierto)»).
   let d = 0;
   let fin = -1;
-  for (let i = ini + ':INPUT('.length - 1; i < resto.length; i++) {
+  for (let i = ini + largo - 1; i < resto.length; i++) {
     if (resto[i] === '(') d++;
     else if (resto[i] === ')') { d--; if (d === 0) { fin = i; break; } }
   }
-  const cuerpo = resto.slice(ini + ':INPUT('.length, fin < 0 ? resto.length : fin);
+  const cuerpo = resto.slice(ini + largo, fin < 0 ? resto.length : fin);
   const barra = cuerpo.indexOf('|');
   if (barra < 0) return [];
   const out: string[] = [];

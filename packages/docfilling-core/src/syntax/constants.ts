@@ -69,7 +69,7 @@ export const DOCUBOT_PATTERN = /\{\{DOCUBOT\s*\(\s*(\w+)\s*,\s*[\"']([^\"']+)[\"
 export const HELP_SUFFIX_PATTERN = /:HELP\(([^)]+)\)/;
 
 /** INPUT / INPUT_FINAL: {{FIELD:INPUT(desc|opt1,opt2)}} */
-export const INPUT_PATTERN = /\{\{([^:]+):(INPUT(?:_FINAL)?)\(([^)]+)\)\}\}/gi;
+export const INPUT_PATTERN = /\{\{([^:]+):(HUMAN_INPUT|INPUT(?:_FINAL)?)\(([^)]+)\)\}\}/gi;
 
 /** DECLARE: {{DECLARE FIELD:[instruction]}} */
 export const DECLARE_PATTERN = new RegExp(String.raw`\{\{DECLARE\s+(` + W + String.raw`+)`, 'iu');

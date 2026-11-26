@@ -118,6 +118,9 @@ export interface ParsedField {
   /** For DECLARE: escrito `DECLARE_UNDEF` — sólo declara si nadie ha dado valor antes (`resolverDeclarados`). El resto
    *  del nodo es el de un DECLARE: `content` llega normalizado a `DECLARE …` y `raw` conserva lo escrito. */
   declareSoloSiIndefinido: boolean;
+  /** `:HUMAN_INPUT(…)` (26-nov-2026): como `:INPUT(…)`, pero el dato lo da SIEMPRE una persona; la IA no lo
+   *  contesta ni lo propone. El resto del motor lo ve como `:INPUT(…)`. */
+  soloPersona: boolean;
   /** For DECLARE / DECLARE ARRAY: lleva algún `:IUI(...)`, que está RETIRADO (W913): el IUI vive
    *  ahora en el catálogo universal y el campo enlaza con él por `:REQ` (plan REQ_CATALOGO_IUI,
    *  DC8). El parser lo sigue pelando para que no ensucie el resto del DECLARE. */
@@ -166,6 +169,7 @@ function createParsedField(partial: Partial<ParsedField> & Pick<ParsedField, "ra
     declareType: "",
     declareInstruction: "",
     declareSoloSiIndefinido: false,
+    soloPersona: false,
     iuiObsoleto: false,
     inputDefault: "",
     langCode: "",
@@ -529,6 +533,11 @@ function analizarDirectiva(raw: string, interior: string): ParsedField {
   const undef = /^DECLARE_UNDEF\s+/i.exec(content);
   if (undef) content = "DECLARE " + content.slice(undef[0].length);
 
+  // `:HUMAN_INPUT(` se lee como `:INPUT(` y se marca: así el resto del parser, el validador y el compositor lo
+  // tratan igual que un INPUT (opciones, tipo, E050, divergencias…) y sólo cambia quién lo contesta.
+  const humano = /:HUMAN_INPUT\(/i.test(content);
+  if (humano) content = content.replace(/:HUMAN_INPUT\(/gi, ":INPUT(");
+
   const ftype = classifyField(content);
   const pf = createParsedField({
     raw,
@@ -540,6 +549,7 @@ function analizarDirectiva(raw: string, interior: string): ParsedField {
   });
   pf.formatos = formatos;
   pf.declareSoloSiIndefinido = !!undef;
+  pf.soloPersona = humano;
 
   const upper = content.toUpperCase().trim();
 

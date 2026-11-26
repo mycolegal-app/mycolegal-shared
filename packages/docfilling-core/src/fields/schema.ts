@@ -21,7 +21,7 @@ import type { ReqDecl } from '../syntax/req-doc';
 export const QUIEN = {
   /** La extrae la IA de los documentos. */
   IA: 'ia',
-  /** La aporta una persona (INPUT / INPUT_FINAL). */
+  /** La aporta una persona (INPUT / INPUT_FINAL / HUMAN_INPUT). */
   PERSONA: 'persona',
   /** La resuelve el motor y no se pide nunca (sistema, AUTO, COUNT, SET, `@…`). */
   MOTOR: 'solo',
@@ -64,6 +64,9 @@ export interface Campo {
   req: ReqDecl[];
   /** `:DOC(…)`: de qué tipos de documento del catálogo sale la respuesta. */
   doc: string[];
+  /** `:HUMAN_INPUT(…)` en alguna declaración (26-nov-2026): la contesta SIEMPRE una persona. La IA no la responde,
+   *  no la propone ni la saca de los documentos; `quien` es `persona`. */
+  soloPersona: boolean;
 }
 
 export interface EsquemaDePlantilla {
@@ -157,13 +160,18 @@ export function esquemaDeCampos(
     if (!reqDocDe.has(f.name)) reqDocDe.set(f.name, { req: f.req, doc: f.doc });
   }
 
+  // `:HUMAN_INPUT(…)` en CUALQUIER aparición manda: el dato se suele pintar antes de su `DECLARE` (como
+  // `ESTADO_CIVIL_TESTADOR`) y la primera aparición, una referencia, diría `ia`.
+  const soloPersona = new Set(analizados.filter((f) => f.soloPersona && f.name).map((f) => f.name));
+
   for (const f of analizados) {
     const nombre = f.name || f.content;
     // El parser clasifica `{{HUMAN_ACTION[_FASE]:…}}` como extraído; no es un
     // campo, es trabajo humano y va aparte.
     if (nombre === 'HUMAN_ACTION' || nombre.startsWith('HUMAN_ACTION_')) continue;
 
-    const quien = quienDe(f, nombre);
+    const base = quienDe(f, nombre);
+    const quien = base !== null && soloPersona.has(nombre) ? QUIEN.PERSONA : base;
     if (quien === null || vistos.has(nombre)) continue;
     vistos.add(nombre);
 
@@ -192,6 +200,7 @@ export function esquemaDeCampos(
       soloCondicional: soloCondicionales.has(nombre),
       req: [...(reqDocDe.get(nombre)?.req ?? [])],
       doc: [...(reqDocDe.get(nombre)?.doc ?? [])],
+      soloPersona: soloPersona.has(nombre),
     });
   }
 
@@ -210,7 +219,7 @@ export function esquemaDeCampos(
         nombre: l.nombre, quien: QUIEN.IA, categoria: FieldType.DECLARE_ARRAY, tipo: 'TEXT',
         etiqueta: etiquetar(l.nombre), pregunta: null, opciones: [], instruccion: instrucciones[l.nombre] || null,
         porDefecto: null, esArray: true, subcampos: [], soloCondicional: false,
-        req: [], doc: [],
+        req: [], doc: [], soloPersona: false,
       };
       campos.push(c);
     }
