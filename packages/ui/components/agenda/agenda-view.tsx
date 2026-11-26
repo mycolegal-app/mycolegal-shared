@@ -130,6 +130,11 @@ type EventoForm = {
   // cambiar de modo (una firma agendada no se convierte en un bloqueo) y que se
   // pueda saltar a la ficha.
   firmaExistente: boolean;
+  // #1113 — cita periódica (sólo al crear una cita manual): cada N semanas hasta una fecha. "" = no se repite.
+  repetirCada?: "" | "1" | "2" | "3" | "4";
+  repetirHasta?: string;
+  // La serie de la cita que se edita (para ofrecer borrar «esta y las siguientes»).
+  serieId?: string | null;
 };
 
 // Convierte un Date a valor de <input type="datetime-local"> en horario local.
@@ -875,6 +880,7 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
       expedienteVinculadoRef: (ev.meta?.expedienteRef as string | null) ?? null,
       expedienteVinculadoAnulado: ev.meta?.expedienteAnulado === true,
       firmaExistente: false,
+      serieId: (ev.meta?.serieId as string | null) ?? null,
     });
   }
 
@@ -932,6 +938,11 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
           setSaving(false);
           return;
         }
+        if (!form.id && form.repetirCada && (!form.repetirHasta || form.repetirHasta < form.inicio.slice(0, 10))) {
+          setError(t("agendaPage.errRepetirHasta"));
+          setSaving(false);
+          return;
+        }
         const payload = {
           titulo: form.titulo.trim(),
           tipo: form.tipo,
@@ -947,6 +958,10 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
           asignadoId: form.asignadoId || null,
           agendadoPorId: form.agendadoPorId || null,
           importante: form.importante,
+          // #1113 — sólo al crear: el servidor crea una cita por repetición.
+          ...(!form.id && form.modo === "hito" && form.repetirCada && form.repetirHasta
+            ? { repetir: { cadaSemanas: Number(form.repetirCada), hasta: form.repetirHasta } }
+            : {}),
           // #964 — vínculo a un expediente existente, solo si se ha cambiado aquí.
           ...(form.id && form.vinculoCambiado ? { expedienteId: form.expedienteVinculadoId } : {}),
         };
@@ -972,9 +987,11 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
   async function borrarEvento() {
     if (!form?.id) return;
     if (!confirm(t("agendaPage.confirmBorrar"))) return;
+    // #1113 — en una cita de una serie: Aceptar = esta y las siguientes; Cancelar = sólo esta.
+    const serie = form.serieId ? confirm(t("agendaPage.confirmBorrarSerie")) : false;
     setSaving(true);
     try {
-      const res = await fetch(`${apiBase}/agenda/eventos/${form.id}`, { method: "DELETE" });
+      const res = await fetch(`${apiBase}/agenda/eventos/${form.id}${serie ? "?serie=siguientes" : ""}`, { method: "DELETE" });
       if (!res.ok) throw new Error(t("agendaPage.errBorrar"));
       setForm(null);
       refetchActual();
@@ -2441,6 +2458,39 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
                   />
                 </div>
               </div>
+              {/* #1113 — cita periódica: sólo al crear una cita manual. Cada repetición queda como una cita normal. */}
+              {form.modo === "hito" && !form.id && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">{t("agendaPage.repetir")}</label>
+                    <select
+                      value={form.repetirCada ?? ""}
+                      onChange={(e) => setForm({ ...form, repetirCada: e.target.value as EventoForm["repetirCada"] })}
+                      className="w-full rounded-md border px-2 py-2 text-sm"
+                      data-testid="agenda-repetir"
+                    >
+                      <option value="">{t("agendaPage.repetirNo")}</option>
+                      <option value="1">{t("agendaPage.repetirCada1")}</option>
+                      {(["2", "3", "4"] as const).map((n) => (
+                        <option key={n} value={n}>{t("agendaPage.repetirCadaN").replace("{n}", n)}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {form.repetirCada ? (
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">{t("agendaPage.repetirHasta")}</label>
+                      <input
+                        type="date"
+                        value={form.repetirHasta ?? ""}
+                        min={form.inicio.slice(0, 10)}
+                        onChange={(e) => setForm({ ...form, repetirHasta: e.target.value })}
+                        className="w-full rounded-md border px-2 py-2 text-sm"
+                        data-testid="agenda-repetir-hasta"
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              )}
               {form.modo === "hito" && (
                 <div>
                   <label className="mb-1 block text-sm font-medium">{t("agendaPage.descripcion")}</label>
