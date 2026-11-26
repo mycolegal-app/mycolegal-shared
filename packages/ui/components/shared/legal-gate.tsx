@@ -13,6 +13,9 @@
  * el org_admin. Al resto de usuarios auth no se las devuelve en `pending` sino en
  * `pendingAdmin` (sin texto): no bloquean, y se pinta un aviso discreto de que su
  * administrador las tiene pendientes. La privacidad la sigue aceptando cada uno.
+ * Pasados 30 días desde su entrada en vigor (`bloquea`), si el administrador sigue
+ * sin aceptarlas, también se bloquea al usuario, con una ventana SIN botón de
+ * aceptar: sólo puede hacerlo el administrador.
  *
  * Requiere que la app exponga el proxy `/api/legal/*` hacia auth
  * (`/legal/pending`, `/legal/accept`) — ver `proxyToAuth` de
@@ -37,6 +40,10 @@ interface PendingAdminDoc {
   kind: string;
   title: string;
   version: string;
+  /** Fin del plazo del administrador (ISO). */
+  plazoHasta?: string;
+  /** Plazo vencido: también bloquea al usuario. */
+  bloquea?: boolean;
 }
 
 // Solo se guarda (10 min, sessionStorage) el «nada pendiente»: un documento por
@@ -47,13 +54,34 @@ async function fetchPending(forzar = false): Promise<{ pending: PendingDoc[]; pe
   const r = await pedirConCacheDeSesion<{ pending?: PendingDoc[]; pendingAdmin?: PendingAdminDoc[] }>("/api/legal/pending", {
     vidaMs: 10 * 60_000,
     forzar,
-    guardarSi: (json) => !Array.isArray(json?.pending) || json.pending.length === 0,
+    // Un bloqueo por plazo vencido no se guarda: en cuanto el administrador acepte, se tiene que levantar.
+    guardarSi: (json) =>
+      (!Array.isArray(json?.pending) || json.pending.length === 0) &&
+      !(Array.isArray(json?.pendingAdmin) && json.pendingAdmin.some((d) => d.bloquea)),
   });
   if (!r.ok) return { pending: [], pendingAdmin: [] };
   return {
     pending: Array.isArray(r.json?.pending) ? r.json.pending : [],
     pendingAdmin: Array.isArray(r.json?.pendingAdmin) ? r.json.pendingAdmin : [],
   };
+}
+
+/** Plazo vencido y el administrador sin aceptar: el usuario no puede seguir, ni aceptar él. */
+function BloqueoAdminPendiente({ docs }: { docs: PendingAdminDoc[] }) {
+  const { t } = useI18n();
+  return (
+    <div
+      role="alertdialog"
+      aria-modal="true"
+      className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4 print:hidden"
+    >
+      <div className="w-full max-w-lg space-y-3 rounded-2xl bg-white px-6 py-5 shadow-2xl">
+        <h2 className="text-lg font-bold text-gray-900">{t("ui.legal.adminBlockTitle")}</h2>
+        <p className="text-sm text-gray-600">{t("ui.legal.adminBlockBody")}</p>
+        <p className="text-sm font-medium text-gray-800">{docs.map((d) => d.title).join(" · ")}</p>
+      </div>
+    </div>
+  );
 }
 
 const CLAVE_AVISO_CERRADO = "mc:legal:avisoAdminCerrado";
@@ -115,7 +143,12 @@ export function LegalGate() {
 
   // null = aún cargando; [] = nada pendiente. En ambos casos no hay ventana; como mucho, el aviso del administrador.
   if (!pending) return null;
-  if (pending.length === 0) return pendingAdmin.length ? <AvisoAdminPendiente docs={pendingAdmin} /> : null;
+  const vencidos = pendingAdmin.filter((d) => d.bloquea);
+  // La privacidad propia se acepta primero (su ventana sale antes); después, si toca, el bloqueo del administrador.
+  if (pending.length === 0) {
+    if (vencidos.length) return <BloqueoAdminPendiente docs={vencidos} />;
+    return pendingAdmin.length ? <AvisoAdminPendiente docs={pendingAdmin} /> : null;
+  }
 
   async function acceptAll() {
     setBusy(true);

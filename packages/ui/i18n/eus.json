@@ -136,7 +136,9 @@
       "appTosAcceptLabel": "{app} aplikazioaren baldintzak irakurri eta onartzen ditut.",
       "gateCancel": "Utzi",
       "adminPendingNotice": "Zure administratzaileak notariotzaren baldintza berriak onartzeko ditu oraindik:",
-      "adminPendingDismiss": "Itxi oharra"
+      "adminPendingDismiss": "Itxi oharra",
+      "adminBlockTitle": "Zure notariotzak ez ditu indarreko baldintzak onartu",
+      "adminBlockBody": "MycoLegal erabiltzen jarraitzeko, zure notariotzako administratzaileak sartu eta baldintza berriak onartu behar ditu. Eskatu iezaiozu: onartu bezain laster, jarraitu ahal izango duzu."
     },
     "userAccount": {
       "title": "Nire kontua",

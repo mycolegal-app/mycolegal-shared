@@ -137,7 +137,9 @@
       "appTosAcceptLabel": "He llegit i accepto les condicions de {app}.",
       "gateCancel": "Cancel·lar",
       "adminPendingNotice": "El teu administrador té pendent acceptar les noves condicions de la notaria:",
-      "adminPendingDismiss": "Tanca l'avís"
+      "adminPendingDismiss": "Tanca l'avís",
+      "adminBlockTitle": "La teva notaria no ha acceptat les condicions vigents",
+      "adminBlockBody": "Per continuar fent servir MycoLegal, l'administrador de la teva notaria ha d'entrar i acceptar les noves condicions. Demana-l'hi: tan aviat com les accepti, podràs continuar."
     },
     "userAccount": {
       "title": "El meu compte",

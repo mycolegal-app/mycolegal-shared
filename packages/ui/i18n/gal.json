@@ -136,7 +136,9 @@
       "appTosAcceptLabel": "Lin e acepto as condicións de {app}.",
       "gateCancel": "Cancelar",
       "adminPendingNotice": "O teu administrador ten pendente aceptar as novas condicións da notaría:",
-      "adminPendingDismiss": "Pechar aviso"
+      "adminPendingDismiss": "Pechar aviso",
+      "adminBlockTitle": "A túa notaría non aceptou as condicións vixentes",
+      "adminBlockBody": "Para seguir usando MycoLegal, o administrador da túa notaría ten que entrar e aceptar as novas condicións. Pídello: en canto as acepte, poderás continuar."
     },
     "userAccount": {
       "title": "A miña conta",
