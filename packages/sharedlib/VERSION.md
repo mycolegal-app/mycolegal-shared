@@ -1,5 +1,13 @@
 # mycolegal-sharedlib — Changelog
 
+## 0.12.49 — plantillas de documento en DocFilling (2026-11-27)
+
+`document-docfilling` (subpath nuevo; `@mycolegal-app/docfilling-core` como peerDependency opcional): compone las
+plantillas de LegiFirma y Pólizas con el motor, las valida, lee los datos de la notaría de la configuración común de
+Config y del notario firmante, no genera si falta alguno (`FALTAN_DATOS_NOTARIA`) y funde el `.docx` en platform con el
+Word de membrete de la plantilla (`documento_membrete`) o con la carta genérica (`carta-generica.ts`). En
+`document-templates`, `soloFormato` y `bodyFormat: 'DOCFILLING'`. PLAN_TECNICO_PLANTILLAS_DOCFILLING_APPS.
+
 ## (siguiente) — cuándo existe un dato (2026-11-14)
 
 `existencias()` lee `atributo_defs_global."existeSi"` por SQL, con cómo se pregunta cada dato de sus condiciones, para

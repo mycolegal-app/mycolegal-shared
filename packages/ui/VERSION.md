@@ -5,6 +5,16 @@
 
 ---
 
+## 3.2.81 — editor de plantillas DocFilling (2026-11-27)
+
+Type: **revision**
+
+- `shared/docfilling-template-editor.tsx` (nuevo): editor en texto plano de las plantillas DocFilling de LegiFirma y
+  Pólizas, con paleta (datos del documento y de la notaría), Comprobar con el motor, vista previa, Word de prueba,
+  Word de membrete por plantilla, idioma y solo lectura.
+- `DocumentTemplatesManager` lo monta cuando la plantilla trae `bodyFormat: 'DOCFILLING'`; el resto, igual.
+- Textos `ui.documentTemplates.docfilling.*` en los cuatro idiomas.
+
 ## 3.2.38 — Manuales imprimibles / PDF (2026-10-15)
 
 Type: **revision**
