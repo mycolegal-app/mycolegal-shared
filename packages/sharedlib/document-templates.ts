@@ -101,10 +101,13 @@ export async function listarPlantillas(opts: {
   catalogo: DocumentTemplateEntry[];
   /** Idioma que se está editando. Las apps monolingües lo omiten. */
   idioma?: string;
+  /** Sólo los overrides de este formato: los de otro (un HTML antiguo en una app que ya edita en DocFilling)
+   *  se tratan como si no existieran y la pantalla abre sobre el texto por defecto. */
+  soloFormato?: 'HTML' | 'MARKDOWN' | 'DOCFILLING';
 }): Promise<EstadoPlantilla[]> {
   const idioma = normalizarIdioma(opts.idioma);
   const overrides: OverrideFila[] = await prisma.documentoPlantilla.findMany({
-    where: { orgId: opts.orgId, appSlug: opts.appSlug },
+    where: { orgId: opts.orgId, appSlug: opts.appSlug, ...(opts.soloFormato ? { bodyFormat: opts.soloFormato } : {}) },
     select: { eventKey: true, idioma: true, bodyHtml: true, active: true, updatedAt: true },
   });
   const porClave = new Map(overrides.map((o) => [`${o.eventKey}:${o.idioma}`, o]));
@@ -140,6 +143,8 @@ export async function resolverCuerpo(opts: {
   eventKey: string;
   catalogo: DocumentTemplateEntry[];
   idioma?: string;
+  /** Ver `listarPlantillas`: un override de otro formato no se imprime; sale el texto por defecto. */
+  soloFormato?: 'HTML' | 'MARKDOWN' | 'DOCFILLING';
 }): Promise<string | undefined> {
   const entrada = buscarEntrada(opts.catalogo, opts.eventKey);
   if (!entrada) return undefined;
@@ -158,6 +163,7 @@ export async function resolverCuerpo(opts: {
         eventKey: opts.eventKey,
         idioma: { in: idiomasCandidatos(idioma) },
         active: true,
+        ...(opts.soloFormato ? { bodyFormat: opts.soloFormato } : {}),
       },
       select: { idioma: true, bodyHtml: true },
     });
@@ -188,8 +194,9 @@ export async function guardarPlantilla(opts: {
   catalogo: DocumentTemplateEntry[];
   alRestaurar: 'borrar' | 'desactivar';
   idioma?: string;
-  /** 'HTML' (por defecto) o 'MARKDOWN' (Pólizas edita en markdown, #622). */
-  bodyFormat?: 'HTML' | 'MARKDOWN';
+  /** 'HTML' (por defecto), 'MARKDOWN' (Pólizas edita en markdown, #622) o 'DOCFILLING' (27-nov: LegiFirma y
+   *  Pólizas; la validación la hace la ruta con `validarPlantillaDocumento` ANTES de llamar aquí). */
+  bodyFormat?: 'HTML' | 'MARKDOWN' | 'DOCFILLING';
   /** Rechaza macros que no estén en el catálogo de la entrada. */
   validarMacros?: boolean;
 }): Promise<ResultadoGuardar> {

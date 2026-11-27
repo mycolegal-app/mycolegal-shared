@@ -19,7 +19,9 @@
 import { marked } from 'marked';
 
 /** Formato en que la notaría edita el cuerpo de la plantilla. */
-export type BodyFormat = 'HTML' | 'MARKDOWN';
+/** `DOCFILLING` (27-nov): plantillas en sintaxis DocFilling que se componen con el motor y salen sólo en
+ *  `.docx` (LegiFirma y Pólizas, ver `document-docfilling`). `componerDocumento` no las pinta. */
+export type BodyFormat = 'HTML' | 'MARKDOWN' | 'DOCFILLING';
 
 /**
  * Escapa los caracteres con significado en HTML.

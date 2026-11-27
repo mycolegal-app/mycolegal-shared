@@ -1,6 +1,6 @@
 # PLAN TÉCNICO — Plantillas de documento con el motor DocFilling en Legifirma y Pólizas
 
-> Estado: **propuesta, sin implementar** · Fecha: 16-nov-2026 (rev. 2, mismo día) · Repo dueño: `mycolegal-shared`
+> Estado: **corte de lanzamiento (F5+F6) con código el 27-nov, sin desplegar**: shared y platform commiteados; el código de LegiFirma y Pólizas queda SIN COMMITEAR hasta publicar `sharedlib` y `ui` (ver Notas, 27-nov) · Fecha: 16-nov-2026 (rev. 2), 27-nov (código) · Repo dueño: `mycolegal-shared`
 > (`sharedlib` + `ui`); consumidoras: `mycolegal-legifirma` y `mycolegal-polizas`; toca también `mycolegal-platform`
 > (esquema compartido) y `mycolegal-redactor` (piezas que se suben a shared).
 >
@@ -69,7 +69,7 @@ navegador y ahí acaba (comprobado el 16-nov en `provision-recibo/route.ts`, `of
 
 | # | Decisión | Estado |
 |---|---|---|
-| **D1** ✅ | Alcance de la sintaxis | **Decidido (Carles, 16-nov).** Campos de la app, **campos predefinidos de la notaría** (`{{SYSTEM:NOMBRE_NOTARIO}}` y los demás, §3.6), `IF`/`ELSE`/`ENDIF`, formatos `#…`, `FOR EACH`, `{{BLOQUEO}}`, y para el Word `{{WORD_STYLE:X}}` y `{{PAGEBREAK}}`. Fuera: `DECLARE`, `:INPUT`, `:REQ`, `INCLUDE` y biblioteca. No son esquemas de Redactor: no entran en el catálogo de atributos ni en la biblioteca |
+| **D1** ✅ | Alcance de la sintaxis | **Decidido (Carles, 16-nov).** Campos de la app, **campos predefinidos de la notaría** (`{{SYSTEM:NOMBRE_NOTARIO}}` y los demás, §3.6), `IF`/`ELSE`/`ENDIF`, formatos `#…`, `FOR EACH`, `{{ABORT: texto}}` (antes `BLOQUEO`, alias obsoleto desde core 0.1.62), y para el Word `{{WORD_STYLE:X}}` y `{{PAGEBREAK}}`. Fuera: `DECLARE`, `:INPUT`, `:REQ`, `INCLUDE` y biblioteca. No son esquemas de Redactor: no entran en el catálogo de atributos ni en la biblioteca |
 | **D2** ✅ | Presentación | **Consecuencia de D6.** Ya no hay marco HTML ni CSS en el catálogo: la presentación es la del Word de la notaría. El cuerpo sólo lleva texto y, cuando haga falta, el nombre de un estilo de su plantilla. Desaparece el uso de `cssOverride` en las plantillas DocFilling |
 | **D3** ✅ | Qué puede editar la notaría | **Decidido (Carles, 16-nov): todo el texto.** También la cláusula de protección de datos: va al final del cuerpo, con `{{WORD_STYLE:Texto legal}}` para que salga con la letra pequeña que la notaría defina en su Word. El diseño (cabecera, logo, pie, márgenes) lo edita en su propio Word |
 | **D4** | Campo sin valor | Por defecto: **sale vacío**, como hoy. La generación avisa (las `warnings` de `composeWithDiagnostics`) y la vista previa lo marca. En un documento que se entrega al cliente, un `[NO DISPONIBLE]` es peor que un hueco |
@@ -217,6 +217,13 @@ El objetivo: que la notaría escriba sus datos una vez y le sirvan en las tres a
         notarías usan el texto por defecto del catálogo.
       - **Word de membrete subidos: 0.** `docfilling_plantilla_estilo` está vacía; tampoco Redactor tiene ninguno en
         PROD. Al principio todas las plantillas saldrán con la carta genérica (D8) hasta que la notaría suba el suyo.
+      - ⚠️ **Corregido el 27-nov:** la medición de abajo miró sólo `configuracion` (la común, que escribe Config ›
+        Organización vía `notaria/api/inter/org-config` y que lee Pólizas). **Legifirma lee otra tabla,
+        `legifirma_configuracion`**, que no se midió. Medida el 27-nov en PROD: **167 organizaciones** tienen allí
+        `notaria_ciudad`, `notaria_notario_colegio` y `notaria_notario_nombre`, **todas vacías salvo Micó** (las tres
+        rellenas). Y en la común, Micó **no** tiene `notaria_ciudad` ni `notaria_notario_colegio`. Consecuencia para F5:
+        antes de que Legifirma deje de leer su tabla, copiar esos tres valores de Micó a la configuración común (o al
+        predefinido); si no, Micó pierde datos que hoy sí le salen.
       - **Claves `notaria_*`: 0 en toda la tabla `configuracion`.** Las 49 organizaciones con datos tienen sólo
         claves `org.*` (`org.nombre_comercial`, `org.direccion`, `org.telefono`, `org.email_contacto`, `org.cif`).
         No hay nada que copiar a los predefinidos.
@@ -272,6 +279,11 @@ El objetivo: que la notaría escriba sus datos una vez y le sirvan en las tres a
       (memoria *«.xlsx de script: abrir con Excel»*: vale igual para un `.docx`).
 
 ### F6 — Pólizas
+- [ ] **Partir de `polizas` 7646a39 (B&F, 27-nov, arreglo de PROD)** y conservar su comportamiento: vuelven los
+      comparecientes (en el modelo viejo, `applyTemplateMacros(…, raw)` los sustituye sin escapar en la misma pasada;
+      con DocFilling, la lista JSON + `FOR EACH` lo sustituye), `nombresDeActos` (nombre del acto del catálogo de Notaría,
+      con el código de respaldo) y `422 NOTARIO_REQUERIDO` antes de componer si no hay notario firmante. Su test
+      `apply-template-macros.test.ts` se mantiene mientras viva el camino `MARKDOWN`.
 - [ ] Ruta de plantillas (`api/catalogs/document-templates`) con F1; rutas de membrete.
 - [ ] `INTERVENCION_POLIZA` en DocFilling, castellano y catalán (una fila por `idioma`, como hoy; el idioma lo decide
       la tabla, no la declaración de lengua del motor). `comparecientes` → lista JSON +
@@ -315,3 +327,43 @@ independiente del plan: los tres documentos leen datos de la notaría de claves 
 propuesto, sin esperar al plan: que lean lo que sí hay (`org.*` de la configuración y los predefinidos del notario y del
 colegio) en `provision-recibo/route.ts`, `oficio-traslado.ts` y `polizas/[id]/intervencion/route.ts`. **Carles lo
 descarta (16-nov): no se hace arreglo aparte; se resuelve dentro del plan (§3.6).**
+
+**27-nov — Corte de lanzamiento implementado (Carles da la orden por la sesión «Lanzamiento comercial»).** Lo que hay:
+
+- `sharedlib/document-docfilling.ts` (+ test, 0 fallos): componer, validar (W056/W071 filtrados; P001–P007 propios),
+  datos de la notaría desde la `configuracion` COMÚN + `organizations` + notario firmante de `user_roles` (con su
+  nombre del censo), lo que falta → 422 `FALTAN_DATOS_NOTARIA`, fusión con platform y `generarDocumento`.
+  `carta-generica.ts` (generada con `tools/carta-generica/gen.py`, validada por platform). `document-templates.ts`
+  gana `soloFormato` y `bodyFormat: 'DOCFILLING'`.
+- `ui`: `DocFillingTemplateEditor` (texto plano, paleta en dos grupos, Comprobar, Word de prueba, membrete, idioma y
+  solo lectura) y `DocumentTemplatesManager` lo monta con `bodyFormat: 'DOCFILLING'`. Textos en los 4 idiomas.
+- platform: tabla `documento_membrete` (migración `20261127030000`) y fuera el paquete de siembra
+  `legifirma-plantillas` (10.3 de lanzamiento: copiaba `document_templates` de Micó a cualquier alta).
+- LegiFirma (F5) y Pólizas (F6): catálogos en DocFilling, rutas de generación sólo `.docx`, rutas de editor y de
+  membrete, ficha de LegiFirma con botón que enseña el error en vez de abrir un JSON. LegiFirma deja de sembrar
+  `notaria_*` en `legifirma_configuracion`.
+
+**Desviaciones del diseño, y por qué:**
+
+1. **El membrete va en una tabla propia con el fichero dentro** (`documento_membrete`, uno por organización + app +
+   plantilla), no en `DocfillingPlantillaEstilo` + bucket. (a) Las apps tienen bucket propio y en LOCAL está vacío: no
+   se habría podido probar con la notaría ZZ. (b) Añadir el ámbito `DOCUMENTO` al enum obligaba a tocar el espejo y la
+   escalera de Redactor, que lee esa tabla entera: filas que no entiende. Así Redactor no se entera. Por SQL desde
+   sharedlib: las apps no espejan el modelo.
+2. **Editor en área de texto, sin CodeMirror**: el resaltado queda para después del lanzamiento (§3.4).
+3. **Redactor no se toca**: los predefinidos se leen en sharedlib desde Config, con los mismos nombres `SYSTEM:`, pero
+   Redactor sigue con su `predefinidos.ts` (su código es de la sesión Redactor). Diferencia conocida: Redactor toma el
+   único usuario con rol NOTARIO; aquí sólo cuenta el **marcado como notario firmante** (regla #632/#633 de LegiFirma y
+   Pólizas, y 10.2 de lanzamiento: avisar). Decidir si se igualan.
+4. `FECHA` es un campo de sistema del motor: los de la app se llaman `FECHA_RECIBO`, `FECHA_OFICIO`, `FECHA_POLIZA`.
+5. Un dato de la notaría por el que se pregunta en un IF (`{{IF SYSTEM:TELEFONO_NOTARIA}}…`) es opcional: no bloquea.
+
+**Probado:** tests de sharedlib, LegiFirma (226) y Pólizas (155) en verde; tipos de las cinco piezas; y de punta a
+punta contra LOCAL, sólo lectura, con la notaría ZZ: datos de Config leídos, los tres documentos fundidos por el
+platform local con la carta genérica, sin avisos. A ZZ le falta el notario firmante (tiene un NOTARIO sin marcar): el
+oficio y la diligencia piden marcarlo en Config › Notarios.
+
+**Falta para LOCAL:** publicar `sharedlib` y `ui` (las apps se construyen con lo publicado), commitear LegiFirma y
+Pólizas con su `package-lock` (dependencia nueva `docfilling-core`), migración de platform y avisar a Lanzamiento
+antes de desplegar. **Antes de PROD:** copiar a la configuración común los `notaria_ciudad`/`notaria_notario_colegio`
+de Micó y marcar su notario firmante (F0, corregido el 27-nov).

@@ -24,6 +24,12 @@ import {
 } from "lucide-react";
 
 import { useI18n } from "../i18n/i18n-context";
+import {
+  DocFillingTemplateEditor,
+  type CampoNotariaDocFilling,
+  type MembreteDocFilling,
+  type PlantillaDocFilling,
+} from "./docfilling-template-editor";
 
 /**
  * Shape returned by /api/admin/document-templates.
@@ -56,6 +62,16 @@ export interface DocumentTemplateEntry {
   body: string | null;
   active: boolean;
   updatedAt: string | null;
+  /**
+   * `DOCFILLING` (LegiFirma y Pólizas, 27-nov-2026): la plantilla está en sintaxis DocFilling y se edita en
+   * TEXTO PLANO con `DocFillingTemplateEditor` (ni TipTap ni HTML), y sale en .docx con su Word de membrete.
+   * Ausente = el editor de siempre (Archivo, Tramitación…).
+   */
+  bodyFormat?: "HTML" | "MARKDOWN" | "DOCFILLING";
+  /** Sólo DOCFILLING: los datos de la notaría (`{{SYSTEM:…}}`) con su valor actual. */
+  camposNotaria?: CampoNotariaDocFilling[];
+  /** Sólo DOCFILLING: el Word de membrete de esta plantilla, si lo hay. */
+  membrete?: MembreteDocFilling | null;
 }
 
 export interface DocumentTemplatesManagerProps {
@@ -413,8 +429,18 @@ export function DocumentTemplatesManager({
         })}
       </aside>
 
+      {/* Editor DocFilling (texto plano + membrete) — LegiFirma y Pólizas */}
+      {selected && selected.bodyFormat === "DOCFILLING" && (
+        <DocFillingTemplateEditor
+          plantilla={selected as unknown as PlantillaDocFilling}
+          endpoint={endpoint}
+          onToast={onToast}
+          onChanged={load}
+        />
+      )}
+
       {/* Editor — selected template */}
-      {selected && (
+      {selected && selected.bodyFormat !== "DOCFILLING" && (
         <div className="rounded-lg border border-gray-200 bg-white p-4 space-y-3">
           <div className="flex items-start justify-between gap-4">
             <div>

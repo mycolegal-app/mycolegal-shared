@@ -38,6 +38,8 @@
     "pdf-client.ts",
     "document-render.ts",
     "docx-client.ts",
+    "carta-generica.ts",
+    "document-docfilling.ts",
     "document-templates.ts",
     "requisitos-repo.ts",
     "idiomas-documento.ts",
@@ -49,7 +51,8 @@
     "jose": ">=5",
     "next": ">=14",
     "zod": ">=3",
-    "@mycolegal-app/requisitos-core": ">=0.3.0"
+    "@mycolegal-app/requisitos-core": ">=0.3.0",
+    "@mycolegal-app/docfilling-core": ">=0.1.63"
   },
   "peerDependenciesMeta": {
     "@google-cloud/storage": {
@@ -68,6 +71,9 @@
       "optional": true
     },
     "@mycolegal-app/requisitos-core": {
+      "optional": true
+    },
+    "@mycolegal-app/docfilling-core": {
       "optional": true
     }
   },
