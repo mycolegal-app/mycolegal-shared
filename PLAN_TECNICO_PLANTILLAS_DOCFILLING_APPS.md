@@ -1,6 +1,6 @@
 # PLAN TÉCNICO — Plantillas de documento con el motor DocFilling en Legifirma y Pólizas
 
-> Estado: **corte de lanzamiento (F5+F6) con código el 27-nov, sin desplegar**: shared y platform commiteados; el código de LegiFirma y Pólizas queda SIN COMMITEAR hasta publicar `sharedlib` y `ui` (ver Notas, 27-nov) · Fecha: 16-nov-2026 (rev. 2), 27-nov (código) · Repo dueño: `mycolegal-shared`
+> Estado: **corte de lanzamiento (F5+F6) en LOCAL desde el 27-nov**, probado con la notaría ZZ; falta TEST y PROD (con OK de Carles) y, antes de PROD, los datos de LegiFirma de Micó en Config · Fecha: 16-nov-2026 (rev. 2), 27-nov (código y LOCAL)
 > (`sharedlib` + `ui`); consumidoras: `mycolegal-legifirma` y `mycolegal-polizas`; toca también `mycolegal-platform`
 > (esquema compartido) y `mycolegal-redactor` (piezas que se suben a shared).
 >
@@ -367,3 +367,20 @@ oficio y la diligencia piden marcarlo en Config › Notarios.
 Pólizas con su `package-lock` (dependencia nueva `docfilling-core`), migración de platform y avisar a Lanzamiento
 antes de desplegar. **Antes de PROD:** copiar a la configuración común los `notaria_ciudad`/`notaria_notario_colegio`
 de Micó y marcar su notario firmante (F0, corregido el 27-nov).
+
+**27-nov, tarde — publicado y en LOCAL** (orden de Carles: «publica tú los dos paquetes y sigue»). sharedlib 0.12.49 y
+ui 3.2.81 publicados por el workflow (push b2996e2). Commits: legifirma e25bb12, polizas 18f64f3, platform 672ec2b
++ 0ace714 (apps.json `usesDocfillingCore`). LOCAL: platform (migración `documento_membrete` aplicada), legifirma y
+polizas desplegados. Prueba por HTTP como `zzpol-admin` en la notaría ZZ:
+
+- Siembra repetida sin `force`: ya no ofrece `legifirma-plantillas`; ZZ queda con **0 filas** en `document_templates`
+  (se borró antes su copia de «actas:bmn:certificados» de Tramitación de Micó). Con `force`, la siembra falla en la
+  minutación (FK de `minutacion_escala_tramos`): ajeno a esto, y se deshace entero (transacción).
+- Marcado «ZZ Admin Pólizas» como notario firmante (pedido por Lanzamiento para las capturas).
+- Recibo, oficio y diligencia → 200 `.docx`, sin huecos, sin nada de Micó; la diligencia con sus dos comparecientes y
+  el nombre del acto; el oficio en texto plano para SIGNO también.
+- Editor: el listado trae `bodyFormat`, datos de la notaría (a ZZ le faltan teléfono, correo y CIF: opcionales) y
+  membrete; guardar con errores → 422 `PLANTILLA_INVALIDA` con línea y columna.
+- Membrete: subir un Word con cabecera → el recibo sale con esa cabecera y su tamaño de página; quitarlo → vuelve la
+  carta genérica.
+- No probado: la pantalla del editor en un navegador (la API sí). Lo verá Lanzamiento al hacer las capturas.
