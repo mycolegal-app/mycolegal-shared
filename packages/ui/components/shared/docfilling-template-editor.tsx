@@ -5,10 +5,10 @@
 //
 // Lo monta `DocumentTemplatesManager` cuando la plantilla viene con `bodyFormat: 'DOCFILLING'`.
 //
-// TEXTO PLANO, A PROPÓSITO. El `MarkdownEditor` (TipTap ↔ markdown) estropea la sintaxis: devuelve
-// `{{TIPO\_DOC}}` y pega las líneas de `{{IF}}`/`{{ENDIF}}` al párrafo de al lado (medido el 16-nov). Aquí la
-// notaría ve y edita exactamente lo que se guarda. El editor con resaltado (CodeMirror) llegará después del
-// lanzamiento y sustituirá el área de texto sin cambiar el contrato con la API.
+// NO es el `MarkdownEditor`: TipTap ↔ markdown estropea la sintaxis (devuelve `{{TIPO\_DOC}}` y pega las líneas de
+// `{{IF}}`/`{{ENDIF}}` al párrafo de al lado, medido el 16-nov). La notaría edita exactamente lo que se guarda, en
+// `DocFillingCodeEditor` (CodeMirror, 27-nov): resaltado de las directivas, números de línea y las líneas con
+// errores marcadas tras «Comprobar».
 //
 // Contrato con la API de la app (`endpoint`, p. ej. `/api/admin/document-templates`):
 //   PATCH  /{eventKey}            { bodyHtml }           → 422 { error, diagnostics } si hay errores
@@ -18,6 +18,7 @@
 //   GET|PUT|DELETE /{eventKey}/membrete  (PUT multipart `fichero`) → el Word de membrete de esa plantilla
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { DocFillingCodeEditor, type DocFillingCodeEditorHandle } from "./docfilling-code-editor";
 import { AlertTriangle, CheckCircle2, Download, FileText, Trash2, Upload } from "lucide-react";
 import { useI18n } from "../i18n/i18n-context";
 
@@ -121,7 +122,7 @@ export function DocFillingTemplateEditor({ plantilla, endpoint, onToast, onChang
   const [vista, setVista] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState<null | "comprobar" | "guardar" | "word" | "restaurar" | "membrete">(null);
   const [hallazgosMembrete, setHallazgosMembrete] = useState<{ nivel: string; mensaje: string }[] | null>(null);
-  const ta = useRef<HTMLTextAreaElement | null>(null);
+  const editor = useRef<DocFillingCodeEditorHandle | null>(null);
   const fichero = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -140,27 +141,12 @@ export function DocFillingTemplateEditor({ plantilla, endpoint, onToast, onChang
 
   function insertar(token: string) {
     if (soloLectura) return;
-    const el = ta.current;
-    if (!el) {
-      setTexto((p) => p + token);
-      return;
-    }
-    const ini = el.selectionStart ?? texto.length;
-    const fin = el.selectionEnd ?? texto.length;
-    setTexto(texto.slice(0, ini) + token + texto.slice(fin));
-    requestAnimationFrame(() => {
-      el.focus();
-      el.setSelectionRange(ini + token.length, ini + token.length);
-    });
+    if (editor.current) editor.current.insertar(token);
+    else setTexto((p) => p + token);
   }
 
   function irALinea(line: number, col: number) {
-    const el = ta.current;
-    if (!el) return;
-    const lineas = texto.split("\n");
-    const pos = lineas.slice(0, Math.max(0, line - 1)).reduce((n, l) => n + l.length + 1, 0) + Math.max(0, col - 1);
-    el.focus();
-    el.setSelectionRange(pos, pos);
+    editor.current?.irALinea(line, col);
   }
 
   function tokenDeCampo(c: CampoDocFilling): string {
@@ -341,14 +327,14 @@ export function DocFillingTemplateEditor({ plantilla, endpoint, onToast, onChang
               </button>
             ))}
           </div>
-          <textarea
-            ref={ta}
+          <DocFillingCodeEditor
+            ref={editor}
             value={texto}
-            onChange={(e) => setTexto(e.target.value)}
+            onChange={setTexto}
             readOnly={soloLectura}
-            spellCheck={false}
-            className="w-full min-h-[420px] rounded border border-gray-200 bg-gray-50/50 p-3 font-mono text-xs leading-relaxed focus:outline-none focus:ring-1 focus:ring-cyan"
-            aria-label={t("ui.documentTemplates.docfilling.textoLabel")}
+            diagnosticos={diagnosticos}
+            ariaLabel={t("ui.documentTemplates.docfilling.textoLabel")}
+            className="w-full rounded border border-gray-200 bg-gray-50/50 focus-within:ring-1 focus-within:ring-cyan"
           />
           <p className="text-[10px] text-gray-500">{t("ui.documentTemplates.docfilling.ayudaSintaxis")}</p>
 

@@ -1,5 +1,13 @@
 # mycolegal-sharedlib — Changelog
 
+## 0.12.50 — quién firma: regla común a todas las apps (2026-11-27)
+
+`server/notarios-firmantes` (nuevo): `notariosFirmantes`, `notarioFirmanteUnico`, `notarioFirmantePorId`,
+`esNotarioFirmanteDeOrg` y `esCorreoNotarialOficial`. Firman los marcados en Config › Notarios; si no hay ninguno
+marcado, el administrador (rol NOTARIO) con correo notarial oficial, el mismo criterio con que Notaría marca al notario
+en el alta. Nunca el rol a secas, porque también lo llevan administración y soporte (#78). El nombre sale del censo:
+la ficha vinculada o la única cuyo correo es el del usuario. `datosNotaria` (document-docfilling) usa esta regla.
+
 ## 0.12.49 — plantillas de documento en DocFilling (2026-11-27)
 
 `document-docfilling` (subpath nuevo; `@mycolegal-app/docfilling-core` como peerDependency opcional): compone las

@@ -20,6 +20,7 @@
 // `@mycolegal-app/docfilling-core` es peerDependency: sólo lo instalan las apps que importan este
 // subpath. `@prisma/client` igual que en el resto de sharedlib: resuelve al cliente de la app.
 
+import { notariosFirmantes, notarioFirmantePorId } from './server/notarios-firmantes';
 import {
   composeWithDiagnostics,
   validateText,
@@ -137,7 +138,7 @@ export interface DatosNotaria {
  *   · el notario firmante de `user_roles` (Config › Notarios), con su nombre del censo si está vinculado.
  *
  * `notarioFirmanteId`: el que diga el documento (la actuación, la póliza). Si no dice ninguno, el
- * único firmante marcado de la organización; con varios, ninguno (decide la persona).
+ * único firmante según la regla común (server/notarios-firmantes); con varios, ninguno (decide la persona).
  */
 export async function datosNotaria(
   db: DbSql,
@@ -154,37 +155,17 @@ export async function datosNotaria(
       `SELECT name, colegio FROM organizations WHERE id = $1`,
       orgId,
     ),
+    // La regla de quién firma es la común a todas las apps (server/notarios-firmantes).
     opts.notarioFirmanteId
-      ? Promise.resolve([{ id: opts.notarioFirmanteId }])
-      : db.$queryRawUnsafe<{ id: string }[]>(
-          `SELECT id FROM user_roles WHERE "orgId" = $1 AND active = true AND "esNotarioFirmante" = true LIMIT 2`,
-          orgId,
-        ),
+      ? notarioFirmantePorId(db, orgId, opts.notarioFirmanteId).then((n) => (n ? [n] : []))
+      : notariosFirmantes(db, orgId),
   ]);
 
   const c = new Map(cfg.map((f) => [f.clave, (f.valor ?? '').trim()]));
   const o = org[0] ?? { name: null, colegio: null };
-  const firmanteId = firmantes.length === 1 ? firmantes[0].id : null;
-
-  let notario: { nombre: string | null; poblacion: string | null } = { nombre: null, poblacion: null };
-  if (firmanteId) {
-    const filas = await db.$queryRawUnsafe<{ censo: string | null; usuario: string | null; poblacion: string | null }[]>(
-      `SELECT COALESCE(NULLIF(TRIM(n."nombreCompleto"), ''), n.nombre) AS censo,
-              ur."displayName" AS usuario,
-              p.nombre AS poblacion
-         FROM user_roles ur
-         LEFT JOIN notarios n ON n.id = ur."notarioDirectorioId"
-         LEFT JOIN notario_poblaciones p ON p.id = n."poblacionId"
-        WHERE ur.id = $1 AND ur."orgId" = $2
-        LIMIT 1`,
-      firmanteId,
-      orgId,
-    );
-    const f = filas[0];
-    // Un displayName que es un correo es un usuario que no ha rellenado su perfil: no firma así.
-    const usuario = f?.usuario?.trim() && !f.usuario.includes('@') ? f.usuario.trim() : null;
-    notario = { nombre: f?.censo?.trim() || usuario, poblacion: f?.poblacion?.trim() || null };
-  }
+  const firmante = firmantes.length === 1 ? firmantes[0] : null;
+  const firmanteId = firmante?.id ?? null;
+  const notario = { nombre: firmante?.nombre ?? null, poblacion: firmante?.poblacion ?? null };
 
   const localidad = c.get('notaria_ciudad') ?? '';
   const municipio = localidad ? municipioDe(localidad) : '';

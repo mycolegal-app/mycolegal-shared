@@ -1,5 +1,11 @@
 // Plantillas de documento con DocFilling (LegiFirma, Pólizas).
 //   npx tsx document-docfilling.test.ts
+import {
+  notariosFirmantes,
+  notarioFirmanteUnico,
+  esNotarioFirmanteDeOrg,
+  esCorreoNotarialOficial,
+} from './server/notarios-firmantes';
 import assert from 'node:assert/strict';
 import {
   componerPlantilla,
@@ -148,19 +154,24 @@ const notaria: DatosNotaria = {
 }
 
 // --- Datos de la notaría desde Config (BD simulada) ------------------------------
+// Fila de `user_roles` tal como la devuelve SELECT_FIRMANTES (server/notarios-firmantes).
+const ur = (id: string, o: Partial<{ usuario: string; email: string; marcado: boolean; esAdmin: boolean; censo: string; poblacion: string }> = {}) => ({
+  id, usuario: o.usuario ?? null, email: o.email ?? '', marcado: o.marcado ?? false, esAdmin: o.esAdmin ?? false,
+  censoId: o.censo ? 'n-' + id : null, censo: o.censo ?? null, poblacion: o.poblacion ?? null,
+});
+const dbCon = (usuarios: ReturnType<typeof ur>[], cfg: { clave: string; valor: string }[] = [], org = { name: 'X', colegio: null as string | null }): DbSql => ({
+  async $queryRawUnsafe(q: string, ...v: unknown[]) {
+    if (q.includes('FROM configuracion')) return cfg as never;
+    if (q.includes('FROM organizations')) return [org] as never;
+    if (q.includes('FROM user_roles ur')) return (q.includes('WHERE ur.id = $1') ? usuarios.filter((u) => u.id === v[0]) : usuarios) as never;
+    throw new Error('consulta inesperada: ' + q);
+  },
+});
 {
-  const db: DbSql = {
-    async $queryRawUnsafe(q: string) {
-      if (q.includes('FROM configuracion')) return [
-        { clave: 'org.nombre_comercial', valor: 'Notaría Ejemplo' }, { clave: 'org.direccion', valor: 'C/ Mayor, 1' },
-        { clave: 'notaria_ciudad', valor: '08202 Sabadell (Barcelona)' }, { clave: 'notaria_notario_colegio', valor: 'Ilustre Colegio Notarial de Cataluña' },
-      ] as never;
-      if (q.includes('FROM organizations')) return [{ name: 'org-slug', colegio: null }] as never;
-      if (q.includes('"esNotarioFirmante" = true')) return [{ id: 'ur1' }] as never;
-      if (q.includes('FROM user_roles ur')) return [{ censo: null, usuario: 'Ana Pérez', poblacion: null }] as never;
-      throw new Error('consulta inesperada: ' + q);
-    },
-  };
+  const db = dbCon([ur('ur1', { usuario: 'Ana Pérez', marcado: true })], [
+    { clave: 'org.nombre_comercial', valor: 'Notaría Ejemplo' }, { clave: 'org.direccion', valor: 'C/ Mayor, 1' },
+    { clave: 'notaria_ciudad', valor: '08202 Sabadell (Barcelona)' }, { clave: 'notaria_notario_colegio', valor: 'Ilustre Colegio Notarial de Cataluña' },
+  ], { name: 'org-slug', colegio: null });
   const d = await datosNotaria(db, 'org1');
   assert.equal(d.valores.NOMBRE_NOTARIA, 'Notaría Ejemplo');
   assert.equal(d.valores.MUNICIPIO_NOTARIA, 'Sabadell');
@@ -172,14 +183,7 @@ const notaria: DatosNotaria = {
 }
 {
   // Varios firmantes y el documento no dice cuál: sin notario, y lo dice.
-  const db: DbSql = {
-    async $queryRawUnsafe(q: string) {
-      if (q.includes('"esNotarioFirmante" = true')) return [{ id: 'a' }, { id: 'b' }] as never;
-      if (q.includes('FROM organizations')) return [{ name: 'X', colegio: 'Madrid' }] as never;
-      return [] as never;
-    },
-  };
-  const d = await datosNotaria(db, 'org1');
+  const d = await datosNotaria(dbCon([ur('a', { usuario: 'A', marcado: true }), ur('b', { usuario: 'B', marcado: true })], [], { name: 'X', colegio: 'Madrid' }), 'org1');
   assert.equal(d.valores.NOMBRE_NOTARIO, '');
   assert.equal(d.variosFirmantes, true);
   assert.equal(d.valores.NOMBRE_NOTARIA, 'X', 'sin nombre comercial, el de la organización');
@@ -187,15 +191,44 @@ const notaria: DatosNotaria = {
 }
 {
   // Un usuario sin perfil (displayName = correo) no firma con su correo.
-  const db: DbSql = {
-    async $queryRawUnsafe(q: string) {
-      if (q.includes('FROM user_roles ur')) return [{ censo: null, usuario: 'zz@x.local', poblacion: null }] as never;
-      if (q.includes('FROM organizations')) return [{ name: 'X', colegio: null }] as never;
-      return [] as never;
-    },
-  };
-  const d = await datosNotaria(db, 'org1', { notarioFirmanteId: 'ur9' });
+  const d = await datosNotaria(dbCon([ur('ur9', { usuario: 'zz@x.local', marcado: true })]), 'org1', { notarioFirmanteId: 'ur9' });
   assert.equal(d.valores.NOMBRE_NOTARIO, '');
+}
+
+// --- Quién firma: la regla común (server/notarios-firmantes) ----------------------
+{
+  // Micó: dos administradores (rol NOTARIO), uno SuperAdmin; firma el marcado.
+  const db = dbCon([
+    ur('sa', { usuario: 'SuperAdmin', esAdmin: true, email: 'soporte@mycolegal.app' }),
+    ur('jm', { usuario: 'Javier Micó Giner', esAdmin: true, marcado: true, email: 'x@correonotarial.org' }),
+  ]);
+  assert.deepEqual((await notariosFirmantes(db, 'o')).map((n) => n.id), ['jm']);
+}
+{
+  // Nadie marcado: cuenta el administrador con correo notarial oficial, con el nombre del censo.
+  const db = dbCon([
+    ur('of', { usuario: 'oficina@notariaejemplo.es', esAdmin: true, email: 'oficina@notariaejemplo.es' }),
+    ur('nt', { usuario: 'lasensio@correonotarial.org', esAdmin: true, email: 'lasensio@correonotarial.org', censo: 'Laura Asensio García', poblacion: 'Madrid' }),
+    ur('em', { usuario: 'Empleado', email: 'empleado@notariado.org' }),
+  ]);
+  const f = await notariosFirmantes(db, 'o');
+  assert.deepEqual(f.map((n) => [n.id, n.nombre, n.poblacion, n.marcado]), [['nt', 'Laura Asensio García', 'Madrid', false]]);
+  const d = await datosNotaria(db, 'o');
+  assert.equal(d.valores.NOMBRE_NOTARIO, 'Laura Asensio García');
+  assert.equal(d.valores.POBLACION_NOTARIO, 'Madrid');
+  assert.equal(await esNotarioFirmanteDeOrg(db, 'o', 'of'), false, 'un administrador sin correo notarial no firma');
+}
+{
+  // Nadie marcado y ningún correo notarial (p. ej. sólo SuperAdmin): no hay firmante; se pide marcarlo.
+  const db = dbCon([ur('sa', { usuario: 'SuperAdmin', esAdmin: true, email: 'soporte@mycolegal.app' })]);
+  assert.deepEqual(await notariosFirmantes(db, 'o'), []);
+  assert.equal(await notarioFirmanteUnico(db, 'o'), null);
+}
+{
+  assert.equal(esCorreoNotarialOficial('A@CorreoNotarial.org'), true);
+  assert.equal(esCorreoNotarialOficial('a@sub.notariado.org'), true);
+  assert.equal(esCorreoNotarialOficial('a@notariado.org.es'), false);
+  assert.equal(esCorreoNotarialOficial(null), false);
 }
 
 // --- Utilidades -----------------------------------------------------------------

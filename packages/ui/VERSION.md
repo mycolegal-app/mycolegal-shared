@@ -5,6 +5,16 @@
 
 ---
 
+## (siguiente) — editor de plantillas DocFilling con CodeMirror (2026-11-27)
+
+Type: **revision**
+
+- `shared/docfilling-code-editor.tsx` (nuevo): `DocFillingCodeEditor`, CodeMirror 6 ligero. Resalta las directivas
+  `{{…}}` por clase (campo, `SYSTEM:`, IF/FOR EACH, WORD_STYLE/PAGEBREAK/ABORT, ITEM.X), numera las líneas, marca las
+  que tienen diagnósticos y expone `insertar()` e `irALinea()`.
+- `DocFillingTemplateEditor` lo usa en lugar del área de texto; el contrato con la API no cambia.
+- Dependencias nuevas: `@codemirror/state`, `@codemirror/view` y `@codemirror/commands`.
+
 ## 3.2.81 — editor de plantillas DocFilling (2026-11-27)
 
 Type: **revision**
