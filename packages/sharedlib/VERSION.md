@@ -1,5 +1,10 @@
 # mycolegal-sharedlib — Changelog
 
+## 0.12.53 — idioma: «EU» cuenta como EUS (2026-11-27)
+
+`server/language`: `pickLanguage('EU')` devuelve `EUS`. Era el código con que el perfil de auth guardaba el euskera, y sin
+el alias ni la cookie `mc_lang` ni el JWT lo reconocían.
+
 ## 0.12.52 — org-entitlement: una respuesta sin booleano es un fallo (2026-11-27)
 
 `orgHasApp`: si auth responde sin `data.active` booleano, decide `siFalla` y no se cachea. Con 'conceder' sólo un

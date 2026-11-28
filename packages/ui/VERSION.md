@@ -5,6 +5,13 @@
 
 ---
 
+## 3.2.84 — «Mi cuenta»: euskera con EUS y valenciano (2026-11-27)
+
+Type: **revision**
+
+- `UserAccountDialog`: el euskera se envía como `EUS` (antes «EU», que las apps no reconocían y dejaban la app en
+  castellano) y se ofrece también valenciano (`VAL`). Clave nueva `ui.userAccount.lang.val`.
+
 ## 3.2.83 — agenda sin lenguaje de Notaría en las apps sin expedientes (2026-11-27)
 
 Type: **revision**

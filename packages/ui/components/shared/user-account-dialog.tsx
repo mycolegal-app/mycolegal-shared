@@ -73,7 +73,10 @@ interface UserAccountDialogProps {
 const LANGUAGE_OPTIONS = [
   { value: "CAST", labelKey: "ui.userAccount.lang.cast" },
   { value: "CAT", labelKey: "ui.userAccount.lang.cat" },
-  { value: "EU", labelKey: "ui.userAccount.lang.eus" },
+  { value: "VAL", labelKey: "ui.userAccount.lang.val" },
+  // EUS, el código que usan las apps (sharedlib/server/language): con «EU» la cookie mc_lang no se
+  // ponía y quien elegía euskera seguía en castellano (Lanzamiento, 27-nov-2026).
+  { value: "EUS", labelKey: "ui.userAccount.lang.eus" },
   { value: "GAL", labelKey: "ui.userAccount.lang.gal" },
 ];
 

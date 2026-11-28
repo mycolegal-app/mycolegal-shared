@@ -24,6 +24,9 @@ export function isValidLanguage(value: unknown): value is Language {
 
 /** Type-safe pick: returns the value if it's a valid Language, else null. */
 export function pickLanguage(value: unknown): Language | null {
+  // «EU» es el código que guardaba el perfil de auth para el euskera (el resto del sistema usa EUS):
+  // sin este alias, quien lo elegía seguía en castellano (27-nov-2026).
+  if (value === 'EU') return 'EUS';
   return isValidLanguage(value) ? value : null;
 }
 
