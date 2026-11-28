@@ -25,6 +25,10 @@ export interface WelcomeStep {
   image?: string;
   /** Texto alternativo de la imagen. */
   imageAlt?: string;
+  /** Sólo para el org_admin (p. ej. la lista de puesta en marcha). */
+  adminOnly?: boolean;
+  /** Contenido propio del escenario en lugar de la captura (con scroll si no cabe). */
+  content?: React.ReactNode;
 }
 
 interface MeOnboarding {
@@ -96,6 +100,7 @@ export function FirstRunWelcome({ appSlug, appName, logo, steps, adminUrl = "/ad
   // Relanzado a mano desde el (?) del toolbar (evento `mycolegal:open-firstrun`):
   // muestra SOLO el tour de la app (no el paso de equipo, que es una acción puntual).
   const [forced, setForced] = useState(false);
+  const [isOrgAdmin, setIsOrgAdmin] = useState(false);
 
   // Decide si mostrarse a partir del estado central de onboarding.
   useEffect(() => {
@@ -109,9 +114,10 @@ export function FirstRunWelcome({ appSlug, appName, logo, steps, adminUrl = "/ad
         if (me.impersonatedBy) return;
         const seen = me.onboarding?.welcomeSeen ?? [];
         const teamSeen = me.onboarding?.teamOnboardingSeen ?? false;
-        const isOrgAdmin = (me.authRole ?? me.role) === "org_admin";
+        const admin = (me.authRole ?? me.role) === "org_admin";
+        setIsOrgAdmin(admin);
         const w = !seen.includes(appSlug);
-        const t = isOrgAdmin && !teamSeen;
+        const t = admin && !teamSeen;
         setShowWelcome(w);
         setShowTeam(t);
         setOpen(w || t);
@@ -141,12 +147,13 @@ export function FirstRunWelcome({ appSlug, appName, logo, steps, adminUrl = "/ad
   // Lista efectiva de pasos: en modo relanzado, solo el tour de la app. En
   // arranque, tour (si no visto) + paso de equipo (si org_admin).
   const effectiveSteps = useMemo(() => {
-    if (forced) return steps;
+    const visibles = steps.filter((s) => !s.adminOnly || isOrgAdmin);
+    if (forced) return visibles;
     const list: WelcomeStep[] = [];
-    if (showWelcome) list.push(...steps);
+    if (showWelcome) list.push(...visibles);
     if (showTeam) list.push({ key: "team", title: "Da de alta a tu equipo", text: "" });
     return list;
-  }, [forced, showWelcome, showTeam, steps]);
+  }, [forced, showWelcome, showTeam, steps, isOrgAdmin]);
 
   // `ready` solo gobierna la apertura AUTOMÁTICA (evita parpadeo antes del fetch);
   // el relanzado manual (`forced`) puede abrir sin esperar.
@@ -317,6 +324,8 @@ export function FirstRunWelcome({ appSlug, appName, logo, steps, adminUrl = "/ad
         <div className="relative mx-5 mt-3 h-[204px] overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
           {isTeamStep ? (
             <TeamForm rows={rows} setRows={setRows} done={teamDone} error={teamError} />
+          ) : current.content ? (
+            <div className="h-full overflow-y-auto bg-white p-3">{current.content}</div>
           ) : current.image ? (
             <img
               src={current.image}
