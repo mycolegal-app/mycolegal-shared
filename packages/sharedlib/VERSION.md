@@ -1,5 +1,12 @@
 # mycolegal-sharedlib — Changelog
 
+## 0.12.51 — ¿la organización tiene la app? (2026-11-27)
+
+`org-entitlement` (nuevo): `orgHasApp(orgId, slug, { siFalla, sinOrgReal?, ttlMs? })` e `isRealOrgId`. Pregunta a auth
+(`/internal/orgs/:org/apps/:slug`, clave de servicio) por la ORGANIZACIÓN, no por los permisos del usuario. Si auth no
+responde, decide `siFalla` ('conceder' para no tumbar un servicio, 'denegar' para no escribir en otra app). Unifica las
+copias de consultor (`orgHasApp`) y redactor (`orgTieneRedactor`); la usan LegiFirma y Pólizas para el registro en FacturaE.
+
 ## 0.12.50 — quién firma: regla común a todas las apps (2026-11-27)
 
 `server/notarios-firmantes` (nuevo): `notariosFirmantes`, `notarioFirmanteUnico`, `notarioFirmantePorId`,

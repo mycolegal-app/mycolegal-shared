@@ -20,6 +20,7 @@
     "db.ts",
     "inter-auth.ts",
     "org-apps.ts",
+    "org-entitlement.ts",
     "safe-transaction.ts",
     "auth-client.ts",
     "data-scope.ts",
