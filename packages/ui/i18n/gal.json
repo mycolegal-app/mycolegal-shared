@@ -1573,6 +1573,7 @@
   "agendaPage": {
     "title": "Axenda",
     "subtitle": "Sinaturas previstas e protocolos asinados",
+    "subtitleSinExpedientes": "Citas, sinaturas, bloqueos e fitos da notaría",
     "onlyMine": "Só as miñas asignacións",
     "errLoad": "Erro ao cargar a axenda",
     "btnToday": "Hoxe",

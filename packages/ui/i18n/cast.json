@@ -1574,6 +1574,7 @@
   "agendaPage": {
     "title": "Agenda",
     "subtitle": "Firmas previstas y protocolos firmados",
+    "subtitleSinExpedientes": "Citas, firmas, bloqueos e hitos de la notaría",
     "onlyMine": "Solo mis asignaciones",
     "errLoad": "Error al cargar la agenda",
     "btnToday": "Hoy",

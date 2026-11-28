@@ -36,6 +36,12 @@ assert.equal(await orgHasApp(ORG, 'facturae', { siFalla: 'conceder' }), true);
 respuesta = async () => new Response('x', { status: 500 });
 assert.equal(await orgHasApp(ORG, 'facturae', { siFalla: 'conceder' }), true);
 
+// Respuesta sin booleano: cuenta como fallo y no se cachea.
+_limpiarCacheOrgHasApp();
+respuesta = async () => new Response(JSON.stringify({ data: {} }));
+assert.equal(await orgHasApp(ORG, 'facturae', { siFalla: 'conceder' }), true);
+assert.equal(await orgHasApp(ORG, 'facturae', { siFalla: 'denegar' }), false);
+
 // Sin org real no se pregunta.
 const antes = llamadas;
 assert.equal(await orgHasApp('_system', 'facturae', { siFalla: 'denegar' }), false);

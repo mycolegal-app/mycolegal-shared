@@ -1573,6 +1573,7 @@
   "agendaPage": {
     "title": "Agenda",
     "subtitle": "Aurreikusitako sinadurak eta sinatutako protokoloak",
+    "subtitleSinExpedientes": "Notariako hitzorduak, sinadurak, blokeoak eta mugarriak",
     "onlyMine": "Nire esleipenak bakarrik",
     "errLoad": "Errorea agenda kargatzean",
     "btnToday": "Gaur",

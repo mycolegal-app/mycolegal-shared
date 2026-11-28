@@ -1,5 +1,10 @@
 # mycolegal-sharedlib — Changelog
 
+## 0.12.52 — org-entitlement: una respuesta sin booleano es un fallo (2026-11-27)
+
+`orgHasApp`: si auth responde sin `data.active` booleano, decide `siFalla` y no se cachea. Con 'conceder' sólo un
+`active:false` explícito niega el acceso (como hacía `orgTieneRedactor`).
+
 ## 0.12.51 — ¿la organización tiene la app? (2026-11-27)
 
 `org-entitlement` (nuevo): `orgHasApp(orgId, slug, { siFalla, sinOrgReal?, ttlMs? })` e `isRealOrgId`. Pregunta a auth

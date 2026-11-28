@@ -1288,7 +1288,8 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
           agrupación. Ahora: acción principal · filtros de lo que se ve ·
           desbordamiento con lo que se usa una vez por semana. */}
       <div className="flex items-start justify-between gap-4 pb-3">
-        <PageTitle title={t("agendaPage.title")} subtitle={t("agendaPage.subtitle")} />
+        {/* Sin expedientes (LegiFirma, Pólizas…) la agenda no habla de «protocolos firmados» (Lanzamiento 10.5). */}
+        <PageTitle title={t("agendaPage.title")} subtitle={t(conExpedientes ? "agendaPage.subtitle" : "agendaPage.subtitleSinExpedientes")} />
         <div className="flex flex-wrap items-center justify-end gap-2">
           {/* #372/#628 — alta directa de una cita manual (sin arrastrar un
               hueco) y, colgando de ella, el bloqueo: son la misma familia. */}
@@ -1309,12 +1310,15 @@ export function AgendaView({ apiBase = "/api", capacidades }: AgendaViewProps) {
             label={t("agendaPage.chipWeekend")}
             title={t("agendaPage.showWeekend")}
           />
-          <ToolbarChip
-            checked={showFirmados}
-            onChange={setShowFirmados}
-            label={t("agendaPage.chipFirmados")}
-            title={t("agendaPage.showFirmados")}
-          />
+          {/* Los «firmados» son protocolos de Notaría: sin expedientes no hay que mostrar. */}
+          {conExpedientes && (
+            <ToolbarChip
+              checked={showFirmados}
+              onChange={setShowFirmados}
+              label={t("agendaPage.chipFirmados")}
+              title={t("agendaPage.showFirmados")}
+            />
+          )}
           <ToolbarChip
             checked={onlyMine}
             onChange={setOnlyMine}

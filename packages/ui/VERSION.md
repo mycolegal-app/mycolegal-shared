@@ -5,6 +5,14 @@
 
 ---
 
+## 3.2.83 — agenda sin lenguaje de Notaría en las apps sin expedientes (2026-11-27)
+
+Type: **revision**
+
+- `AgendaView` con `capacidades.expedientes = false` (LegiFirma, Pólizas…): subtítulo neutro
+  (`agendaPage.subtitleSinExpedientes`, «Citas, firmas, bloqueos e hitos de la notaría») y sin el filtro «Firmados»,
+  que muestra protocolos de Notaría (Lanzamiento 10.5).
+
 ## 3.2.82 — editor de plantillas con CodeMirror; app no contratada desde otra app (2026-11-27)
 
 Type: **revision**

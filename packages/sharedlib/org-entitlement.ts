@@ -50,10 +50,13 @@ export async function orgHasApp(orgId: string, slug: string, opts: OrgHasAppOpti
       { headers: { 'X-Service-Key': clave }, signal: AbortSignal.timeout(5000) },
     );
     if (!res.ok) return siFalla;
-    const json = (await res.json().catch(() => null)) as { data?: { active?: boolean } } | null;
-    const activa = json?.data?.active === true;
-    cache.set(k, { activa, hasta: ahora + (opts.ttlMs ?? 60_000) });
-    return activa;
+    const json = (await res.json().catch(() => null)) as { data?: { active?: unknown } } | null;
+    const active = json?.data?.active;
+    // Sólo un booleano de auth es una respuesta: otra cosa (cuerpo raro) cuenta como fallo, no se
+    // cachea y decide `siFalla` (con 'conceder', sólo un `active:false` explícito niega; Redactor).
+    if (typeof active !== 'boolean') return siFalla;
+    cache.set(k, { activa: active, hasta: ahora + (opts.ttlMs ?? 60_000) });
+    return active;
   } catch {
     return siFalla;
   }
