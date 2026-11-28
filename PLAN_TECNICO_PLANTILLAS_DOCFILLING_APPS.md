@@ -1,6 +1,6 @@
 # PLAN TÉCNICO — Plantillas de documento con el motor DocFilling en Legifirma y Pólizas
 
-> Estado: **corte de lanzamiento (F5+F6) en LOCAL desde el 27-nov**, probado con la notaría ZZ; falta TEST y PROD (con OK de Carles) y, antes de PROD, los datos de LegiFirma de Micó en Config · Fecha: 16-nov-2026 (rev. 2), 27-nov (código y LOCAL)
+> Estado: **corte de lanzamiento (F5+F6) en PROD el 27-nov** (legifirma e25bb12, polizas 18f64f3, platform d04effb; e2e TEST 211/0 y 22/0). Micó ya tenía en Config ciudad, colegio y notario firmante: nada que copiar. Pendiente: CodeMirror, alinear Redactor · Fecha: 16-nov-2026 (rev. 2), 27-nov (código y LOCAL)
 > (`sharedlib` + `ui`); consumidoras: `mycolegal-legifirma` y `mycolegal-polizas`; toca también `mycolegal-platform`
 > (esquema compartido) y `mycolegal-redactor` (piezas que se suben a shared).
 >
