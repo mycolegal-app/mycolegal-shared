@@ -1520,6 +1520,36 @@
         "GAL": "Galego",
         "EUS": "Euskara"
       }
+    },
+    "welcome": {
+      "headerWelcome": "Dámosche a benvida a",
+      "skip": "Omitir",
+      "notNow": "Agora non",
+      "byMycoLegal": "by MycoLegal",
+      "dontShowAgain": "Non volver amosar",
+      "next": "Seguinte",
+      "prev": "Anterior",
+      "start": "Comezar a usar {app}",
+      "sendInvites": "Enviar invitacións",
+      "stepAria": "Paso {n}",
+      "teamTitle": "Dá de alta o teu equipo",
+      "teamText": "Son os teus oficiais e tramitadores quen máis aproveitan a ferramenta. Invítaos agora (opcional) ou retómao cando queiras desde Administración → Invitar usuario.",
+      "teamDoneText": "Invitacións enviadas. Poderás xestionar accesos e roles en Administración cando queiras.",
+      "teamDoneShort": "✓ Invitacións enviadas ao teu equipo",
+      "teamBadge": "Alta asistida · opcional",
+      "namePlaceholder": "Nome e apelidos",
+      "emailPlaceholder": "email@despacho.com",
+      "confirmOutsideDomain": "Confirmo que esta persoa traballa no meu despacho: invitar a este enderezo.",
+      "addPerson": "Engadir outra persoa",
+      "inviteNote": "Enviaráselles unha invitación por correo para crear o seu acceso.",
+      "later": "Prefires facelo despois?",
+      "laterLink": "Administración → Invitar usuario",
+      "inviteErrorAll": "Non se puideron enviar as invitacións. Téntao de novo ou faino máis tarde desde Administración → Invitar usuario.",
+      "inviteErrorOne": "Non se puido enviar a invitación.",
+      "sentOne": "Enviouse 1 invitación",
+      "sentMany": "Enviáronse {n} invitacións",
+      "failedOne": "Esta non saíu:",
+      "failedMany": "Estas {n} non saíron:"
     }
   },
   "unidad": {

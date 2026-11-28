@@ -1520,6 +1520,36 @@
         "GAL": "Galego",
         "EUS": "Euskara"
       }
+    },
+    "welcome": {
+      "headerWelcome": "Ongi etorri",
+      "skip": "Saltatu",
+      "notNow": "Orain ez",
+      "byMycoLegal": "MycoLegal-en eskutik",
+      "dontShowAgain": "Ez erakutsi berriro",
+      "next": "Hurrengoa",
+      "prev": "Aurrekoa",
+      "start": "Hasi {app} erabiltzen",
+      "sendInvites": "Bidali gonbidapenak",
+      "stepAria": "{n}. urratsa",
+      "teamTitle": "Eman altan zure taldea",
+      "teamText": "Zure ofizialek eta izapidegileek aprobetxatzen dute gehien tresna. Gonbidatu orain (aukerakoa) edo egin nahi duzunean Administrazioa → Gonbidatu erabiltzailea atalean.",
+      "teamDoneText": "Gonbidapenak bidali dira. Sarbideak eta rolak Administrazioan kudeatu ahal izango dituzu nahi duzunean.",
+      "teamDoneShort": "✓ Gonbidapenak bidali zaizkio zure taldeari",
+      "teamBadge": "Alta lagundua · aukerakoa",
+      "namePlaceholder": "Izen-abizenak",
+      "emailPlaceholder": "email@bulegoa.com",
+      "confirmOutsideDomain": "Baieztatzen dut pertsona hau nire bulegoan lan egiten duela: gonbidatu helbide hau.",
+      "addPerson": "Gehitu beste pertsona bat",
+      "inviteNote": "Posta bidez gonbidapen bat bidaliko zaie beren sarbidea sortzeko.",
+      "later": "Geroago egin nahi duzu?",
+      "laterLink": "Administrazioa → Gonbidatu erabiltzailea",
+      "inviteErrorAll": "Ezin izan dira gonbidapenak bidali. Saiatu berriro edo egin geroago Administrazioa → Gonbidatu erabiltzailea atalean.",
+      "inviteErrorOne": "Ezin izan da gonbidapena bidali.",
+      "sentOne": "Gonbidapen 1 bidali da",
+      "sentMany": "{n} gonbidapen bidali dira",
+      "failedOne": "Hau ez da bidali:",
+      "failedMany": "Hauek ez dira bidali ({n}):"
     }
   },
   "unidad": {

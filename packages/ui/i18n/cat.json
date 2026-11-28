@@ -1521,6 +1521,36 @@
         "GAL": "Galego",
         "EUS": "Euskara"
       }
+    },
+    "welcome": {
+      "headerWelcome": "Et donem la benvinguda a",
+      "skip": "Ometre",
+      "notNow": "Ara no",
+      "byMycoLegal": "by MycoLegal",
+      "dontShowAgain": "No tornar a mostrar",
+      "next": "Següent",
+      "prev": "Anterior",
+      "start": "Començar a fer servir {app}",
+      "sendInvites": "Enviar invitacions",
+      "stepAria": "Pas {n}",
+      "teamTitle": "Dona d'alta el teu equip",
+      "teamText": "Són els teus oficials i tramitadors qui més aprofiten l'eina. Convida'ls ara (opcional) o reprèn-ho quan vulguis des d'Administració → Convidar usuari.",
+      "teamDoneText": "Invitacions enviades. Podràs gestionar accessos i rols a Administració quan vulguis.",
+      "teamDoneShort": "✓ Invitacions enviades al teu equip",
+      "teamBadge": "Alta assistida · opcional",
+      "namePlaceholder": "Nom i cognoms",
+      "emailPlaceholder": "email@despatx.com",
+      "confirmOutsideDomain": "Confirmo que aquesta persona treballa al meu despatx: convidar aquesta adreça.",
+      "addPerson": "Afegir una altra persona",
+      "inviteNote": "Se'ls enviarà una invitació per correu per crear el seu accés.",
+      "later": "Prefereixes fer-ho després?",
+      "laterLink": "Administració → Convidar usuari",
+      "inviteErrorAll": "No s'han pogut enviar les invitacions. Torna-ho a provar o fes-ho més tard des d'Administració → Convidar usuari.",
+      "inviteErrorOne": "No s'ha pogut enviar la invitació.",
+      "sentOne": "S'ha enviat 1 invitació",
+      "sentMany": "S'han enviat {n} invitacions",
+      "failedOne": "Aquesta no ha sortit:",
+      "failedMany": "Aquestes {n} no han sortit:"
     }
   },
   "unidad": {

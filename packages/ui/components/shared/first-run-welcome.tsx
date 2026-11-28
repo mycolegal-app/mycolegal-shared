@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { X, ChevronLeft, ChevronRight, Plus, Loader2 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { pedirAuthMe } from "../../lib/auth-me";
+import { useI18n } from "../i18n/i18n-context";
 
 // #558 — Bienvenida first-run. Se monta UNA vez en el app-shell de cada app
 // (como <IncidentReporter/> o <MycoBotRail/>). Es autocontenido: consulta
@@ -80,6 +81,8 @@ const CODIGOS_FUERA_DE_DOMINIO = new Set(["DOMAIN_NOT_AUTHORIZED", "DOMAIN_NOT_A
 const BRAND_GOLD = "#b09a6e";
 
 export function FirstRunWelcome({ appSlug, appName, logo, steps, adminUrl = "/admin" }: FirstRunWelcomeProps) {
+  // Textos en el idioma de la notaría (ui.welcome.*, 28-nov: salían en castellano en cat/eus/gal).
+  const { t } = useI18n();
   const [ready, setReady] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [showTeam, setShowTeam] = useState(false);
@@ -151,9 +154,9 @@ export function FirstRunWelcome({ appSlug, appName, logo, steps, adminUrl = "/ad
     if (forced) return visibles;
     const list: WelcomeStep[] = [];
     if (showWelcome) list.push(...visibles);
-    if (showTeam) list.push({ key: "team", title: "Da de alta a tu equipo", text: "" });
+    if (showTeam) list.push({ key: "team", title: t("ui.welcome.teamTitle"), text: "" });
     return list;
-  }, [forced, showWelcome, showTeam, steps, isOrgAdmin]);
+  }, [forced, showWelcome, showTeam, steps, isOrgAdmin, t]);
 
   // `ready` solo gobierna la apertura AUTOMÁTICA (evita parpadeo antes del fetch);
   // el relanzado manual (`forced`) puede abrir sin esperar.
@@ -207,7 +210,7 @@ export function FirstRunWelcome({ appSlug, appName, logo, steps, adminUrl = "/ad
       results = null;
     }
     if (!results) {
-      setTeamError("No se han podido enviar las invitaciones. Vuelve a intentarlo o hazlo más tarde desde Administración → Invitar usuario.");
+      setTeamError(t("ui.welcome.inviteErrorAll"));
       return false;
     }
     const porEmail = new Map(results.map((r) => [r.email.toLowerCase(), r]));
@@ -227,15 +230,15 @@ export function FirstRunWelcome({ appSlug, appName, logo, steps, adminUrl = "/ad
         return {
           displayName: r.displayName,
           email: r.email,
-          error: x.message || "No se ha podido enviar la invitación.",
+          error: x.message || t("ui.welcome.inviteErrorOne"),
           fueraDeDominio: fuera,
           confirmaFueraDeDominio: false,
         };
       }),
     );
     setTeamError(
-      (enviadas > 0 ? `${enviadas === 1 ? "Se ha enviado 1 invitación" : `Se han enviado ${enviadas} invitaciones`}. ` : "") +
-        (fallidas.length === 1 ? "Esta no ha salido:" : `Estas ${fallidas.length} no han salido:`),
+      (enviadas > 0 ? `${enviadas === 1 ? t("ui.welcome.sentOne") : t("ui.welcome.sentMany", { n: enviadas })}. ` : "") +
+        (fallidas.length === 1 ? t("ui.welcome.failedOne") : t("ui.welcome.failedMany", { n: fallidas.length })),
     );
     return false;
   }
@@ -289,9 +292,9 @@ export function FirstRunWelcome({ appSlug, appName, logo, steps, adminUrl = "/ad
 
   const primaryLabel = isLast
     ? isTeamStep
-      ? "Enviar invitaciones"
-      : `Empezar a usar ${appName}`
-    : "Siguiente";
+      ? t("ui.welcome.sendInvites")
+      : t("ui.welcome.start", { app: appName })
+    : t("ui.welcome.next");
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/55 p-4 backdrop-blur-[2px]">
@@ -307,7 +310,7 @@ export function FirstRunWelcome({ appSlug, appName, logo, steps, adminUrl = "/ad
             </span>
           )}
           <div className="min-w-0">
-            <div className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Te damos la bienvenida a</div>
+            <div className="text-[11px] font-bold uppercase tracking-wider text-gray-400">{t("ui.welcome.headerWelcome")}</div>
             <div className="truncate text-[15px] font-bold tracking-tight text-gray-900">MycoLegal · {appName}</div>
           </div>
           <button
@@ -316,14 +319,14 @@ export function FirstRunWelcome({ appSlug, appName, logo, steps, adminUrl = "/ad
             disabled={submitting}
             className="ml-auto flex items-center gap-1 rounded-md px-2 py-1 text-xs text-gray-400 hover:text-gray-600"
           >
-            {isTeamStep ? "Ahora no" : "Omitir"} <X className="h-3.5 w-3.5" />
+            {isTeamStep ? t("ui.welcome.notNow") : t("ui.welcome.skip")} <X className="h-3.5 w-3.5" />
           </button>
         </div>
 
         {/* Escenario: captura del elemento o formulario de alta */}
         <div className="relative mx-5 mt-3 h-[204px] overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
           {isTeamStep ? (
-            <TeamForm rows={rows} setRows={setRows} done={teamDone} error={teamError} />
+            <TeamForm rows={rows} setRows={setRows} done={teamDone} error={teamError} t={t} />
           ) : current.content ? (
             <div className="h-full overflow-y-auto bg-white p-3">{current.content}</div>
           ) : current.image ? (
@@ -341,7 +344,7 @@ export function FirstRunWelcome({ appSlug, appName, logo, steps, adminUrl = "/ad
               )}
               <div>
                 <div className="text-[15px] font-bold text-gray-900">{appName}</div>
-                <div className="text-[12.5px] text-gray-500">by MycoLegal</div>
+                <div className="text-[12.5px] text-gray-500">{t("ui.welcome.byMycoLegal")}</div>
               </div>
             </div>
           )}
@@ -355,8 +358,8 @@ export function FirstRunWelcome({ appSlug, appName, logo, steps, adminUrl = "/ad
           <p className="mt-1 max-w-[52ch] text-[13.5px] text-gray-600">
             {isTeamStep
               ? teamDone === "invited"
-                ? "Invitaciones enviadas. Podrás gestionar accesos y roles en Administración cuando quieras."
-                : "Son tus oficiales y tramitadores quienes más aprovechan la herramienta. Invítalos ahora (opcional) o retómalo cuando quieras desde Administración → Invitar usuario."
+                ? t("ui.welcome.teamDoneText")
+                : t("ui.welcome.teamText")
               : current.text}
           </p>
         </div>
@@ -371,7 +374,7 @@ export function FirstRunWelcome({ appSlug, appName, logo, steps, adminUrl = "/ad
                 onChange={(e) => setRemember(e.target.checked)}
                 className="h-3.5 w-3.5 rounded border-gray-300 accent-cyan-600"
               />
-              No volver a mostrar
+              {t("ui.welcome.dontShowAgain")}
             </label>
           </div>
         )}
@@ -383,7 +386,7 @@ export function FirstRunWelcome({ appSlug, appName, logo, steps, adminUrl = "/ad
               <button
                 key={s.key + idx}
                 type="button"
-                aria-label={`Paso ${idx + 1}`}
+                aria-label={t("ui.welcome.stepAria", { n: idx + 1 })}
                 onClick={() => setI(idx)}
                 className={cn(
                   "h-2 rounded-full transition-all",
@@ -400,7 +403,7 @@ export function FirstRunWelcome({ appSlug, appName, logo, steps, adminUrl = "/ad
               disabled={submitting}
               className="inline-flex h-9 items-center gap-1 rounded-lg border border-gray-200 px-3 text-[13px] font-semibold text-gray-700 hover:bg-gray-50"
             >
-              <ChevronLeft className="h-4 w-4" /> Anterior
+              <ChevronLeft className="h-4 w-4" /> {t("ui.welcome.prev")}
             </button>
           )}
           <button
@@ -417,9 +420,9 @@ export function FirstRunWelcome({ appSlug, appName, logo, steps, adminUrl = "/ad
 
         {isTeamStep && (
           <div className="px-5 pb-4 -mt-2 text-[11.5px] text-gray-400">
-            ¿Prefieres hacerlo luego?{" "}
+            {t("ui.welcome.later")}{" "}
             <a href={adminUrl} className="font-semibold text-cyan-700 hover:underline">
-              Administración → Invitar usuario
+              {t("ui.welcome.laterLink")}
             </a>
           </div>
         )}
@@ -433,7 +436,9 @@ function TeamForm({
   setRows,
   done,
   error,
+  t,
 }: {
+  t: (key: string, params?: Record<string, string | number>) => string;
   rows: InviteRow[];
   setRows: React.Dispatch<React.SetStateAction<InviteRow[]>>;
   done: null | "invited" | "later";
@@ -442,7 +447,7 @@ function TeamForm({
   if (done === "invited") {
     return (
       <div className="flex h-full items-center justify-center px-6 text-center">
-        <p className="text-[13.5px] font-semibold text-cyan-700">✓ Invitaciones enviadas a tu equipo</p>
+        <p className="text-[13.5px] font-semibold text-cyan-700">{t("ui.welcome.teamDoneShort")}</p>
       </div>
     );
   }
@@ -457,7 +462,7 @@ function TeamForm({
   }
   return (
     <div className="flex h-full flex-col gap-2 overflow-auto p-3">
-      <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Alta asistida · opcional</span>
+      <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">{t("ui.welcome.teamBadge")}</span>
       {error && (
         <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-2 py-1.5 text-[12px] font-medium text-red-800">
           {error}
@@ -469,13 +474,13 @@ function TeamForm({
             <input
               value={r.displayName}
               onChange={(e) => update(idx, "displayName", e.target.value)}
-              placeholder="Nombre y apellidos"
+              placeholder={t("ui.welcome.namePlaceholder")}
               className="h-8 min-w-0 rounded-lg border border-gray-200 px-2 text-[12px] outline-none focus:border-cyan-500"
             />
             <input
               value={r.email}
               onChange={(e) => update(idx, "email", e.target.value)}
-              placeholder="email@despacho.com"
+              placeholder={t("ui.welcome.emailPlaceholder")}
               type="email"
               className={cn(
                 "h-8 min-w-0 rounded-lg border px-2 text-[12px] outline-none focus:border-cyan-500",
@@ -492,7 +497,7 @@ function TeamForm({
                 onChange={(e) => confirmar(idx, e.target.checked)}
                 className="mt-0.5 h-3.5 w-3.5 rounded border-red-300"
               />
-              <span>Confirmo que esta persona trabaja en mi despacho: invitar a esta dirección.</span>
+              <span>{t("ui.welcome.confirmOutsideDomain")}</span>
             </label>
           )}
         </div>
@@ -502,9 +507,9 @@ function TeamForm({
         onClick={() => setRows((prev) => [...prev, { displayName: "", email: "" }])}
         className="inline-flex h-7 items-center justify-center gap-1 rounded-lg border border-dashed border-gray-300 text-[12px] text-gray-500 hover:border-cyan-400 hover:text-cyan-700"
       >
-        <Plus className="h-3.5 w-3.5" /> Añadir otra persona
+        <Plus className="h-3.5 w-3.5" /> {t("ui.welcome.addPerson")}
       </button>
-      <span className="text-[11px] text-gray-400">Se les enviará una invitación por email para crear su acceso.</span>
+      <span className="text-[11px] text-gray-400">{t("ui.welcome.inviteNote")}</span>
     </div>
   );
 }
