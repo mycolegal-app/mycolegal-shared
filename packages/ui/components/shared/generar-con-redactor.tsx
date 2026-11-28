@@ -12,6 +12,7 @@ import { FileText, Loader2 } from "lucide-react";
 import { Button } from "../ui/button";
 import { useI18n } from "../i18n/i18n-context";
 import { GeneracionRedactorModal, type EncargoRedactor, type DestinoIncorporar } from "./generacion-redactor-modal";
+import { AppNoContratada } from "../layout/app-no-contratada";
 
 interface DocumentoRedactor {
   tareaId: string;
@@ -37,6 +38,8 @@ export interface GenerarConRedactorProps {
   className?: string;
 }
 
+class NoContratadoError extends Error {}
+
 export function GenerarConRedactor({
   encargoUrl, entidad, apiBase = "/api/redactor", titulo, etiqueta, soloLista, className,
 }: GenerarConRedactorProps) {
@@ -46,12 +49,17 @@ export function GenerarConRedactor({
   const [docs, setDocs] = useState<DocumentoRedactor[]>([]);
   const [pidiendo, setPidiendo] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // La notaría no tiene Redactor (402 REDACTOR_NO_CONTRATADO del canal de servicio): el botón se
+  // queda y abre la ficha de contratar/interés en vez de un error (Lanzamiento, 27-nov-2026).
+  const [noContratado, setNoContratado] = useState(false);
+  const [ficha, setFicha] = useState(false);
 
   // Por sus VALORES, no por el objeto: la app lo crea en cada render y sería un bucle de peticiones.
   const { app, tipo, id } = entidad;
   const cargarDocs = useCallback(async () => {
     const qs = new URLSearchParams({ app, tipo, id }).toString();
     const r = await fetch(`${apiBase}/tareas?${qs}`).catch(() => null);
+    if (r?.status === 402) { setNoContratado(true); return; }
     if (r?.ok) setDocs(((await r.json()).data ?? []) as DocumentoRedactor[]);
   }, [apiBase, app, tipo, id]);
   useEffect(() => { void cargarDocs(); }, [cargarDocs]);
@@ -60,17 +68,20 @@ export function GenerarConRedactor({
   const pedirEncargo = useCallback(async () => {
     const r = await fetch(encargoUrl).catch(() => null);
     const j = await r?.json().catch(() => null);
+    if (r?.status === 402 || j?.error?.code === "REDACTOR_NO_CONTRATADO") throw new NoContratadoError();
     if (!r?.ok || !j?.data?.encargo) throw new Error(j?.error?.message ?? t("ui.generacionRedactor.noDisponible"));
     setDestino(j.data.incorporarEn);
     return j.data.encargo as EncargoRedactor;
   }, [encargoUrl, t]);
 
   async function generar() {
+    if (noContratado) { setFicha(true); return; }
     setPidiendo(true);
     setError(null);
     try {
       setModal({ encargo: await pedirEncargo() });
     } catch (e) {
+      if (e instanceof NoContratadoError) { setNoContratado(true); setFicha(true); return; }
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setPidiendo(false);
@@ -119,6 +130,7 @@ export function GenerarConRedactor({
         </div>
       )}
 
+      {ficha && <AppNoContratada slug="redactor" nombre="Redactor" onClose={() => setFicha(false)} />}
       {modal && (
         <GeneracionRedactorModal
           abierto

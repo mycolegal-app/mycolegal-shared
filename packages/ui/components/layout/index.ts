@@ -12,3 +12,8 @@ export { IdleTimeout } from "./idle-timeout";
 export { AppSidebar } from "./app-sidebar";
 export type { AppSidebarProps, AppSidebarNavItem } from "./app-sidebar";
 export { CreditsUrlProvider, useCreditsUrl } from "./credits-url-context";
+// Lanzamiento 27-nov-2026: la ficha de «Más apps» y su uso desde otra app para una app no contratada.
+export { SubscribeAppModal } from "./subscribe-app-modal";
+export type { SubscribableApp } from "./subscribe-app-modal";
+export { AppNoContratada } from "./app-no-contratada";
+export type { AppNoContratadaProps } from "./app-no-contratada";

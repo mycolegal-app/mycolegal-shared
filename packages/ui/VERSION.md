@@ -5,7 +5,7 @@
 
 ---
 
-## (siguiente) — editor de plantillas DocFilling con CodeMirror (2026-11-27)
+## 3.2.82 — editor de plantillas con CodeMirror; app no contratada desde otra app (2026-11-27)
 
 Type: **revision**
 
@@ -14,6 +14,12 @@ Type: **revision**
   que tienen diagnósticos y expone `insertar()` e `irALinea()`.
 - `DocFillingTemplateEditor` lo usa en lugar del área de texto; el contrato con la API no cambia.
 - Dependencias nuevas: `@codemirror/state`, `@codemirror/view` y `@codemirror/commands`.
+- `layout/app-no-contratada.tsx` (nuevo): `AppNoContratada({ slug, nombre?, onClose })`. Para una app que la notaría
+  no tiene, pulsada desde otra: abre la ficha de «Más apps» con los datos de venta de `/api/auth/me` (Contratar si es
+  vendible, «Avisadme» si no). Nunca un error (Lanzamiento 1.4/10.2).
+- Se exportan `SubscribeAppModal`, `SubscribableApp` y `AppNoContratada` desde `components/layout`.
+- `GenerarConRedactor`: si Redactor responde 402 `REDACTOR_NO_CONTRATADO`, el botón se queda y abre `AppNoContratada`
+  en vez de mostrar el error.
 
 ## 3.2.81 — editor de plantillas DocFilling (2026-11-27)
 
