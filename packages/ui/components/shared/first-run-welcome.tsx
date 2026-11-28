@@ -115,8 +115,12 @@ export function FirstRunWelcome({ appSlug, appName, logo, steps, adminUrl = "/ad
         const me: MeResponse = j?.data ?? {};
         // Nunca durante impersonación: contaminaría el flag del usuario real.
         if (me.impersonatedBy) return;
-        const seen = me.onboarding?.welcomeSeen ?? [];
-        const teamSeen = me.onboarding?.teamOnboardingSeen ?? false;
+        // Sin estado de onboarding (proxy `/api/auth/me` de la app que no lo reenvía, o auth caído) NO se
+        // sabe si ya se vio: no se abre. Antes se tomaba por «nunca visto» y salía en cada carga
+        // (LegiFirma, e2e LOCAL 28-nov-2026). El (?) del toolbar lo sigue abriendo a mano.
+        if (!me.onboarding || !Array.isArray(me.onboarding.welcomeSeen)) return;
+        const seen = me.onboarding.welcomeSeen;
+        const teamSeen = me.onboarding.teamOnboardingSeen ?? false;
         const admin = (me.authRole ?? me.role) === "org_admin";
         setIsOrgAdmin(admin);
         const w = !seen.includes(appSlug);
